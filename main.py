@@ -8,6 +8,6 @@ from ui import MainWindow
 
 if __name__ == "__main__":
 	app = QApplication(sys.argv)
-	window = MainWindow(project="examples")	
+	window = MainWindow(parent=app, project="examples")	
 	window.show()
 	sys.exit(app.exec())

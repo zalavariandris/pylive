@@ -1,5 +1,5 @@
 import sys
-from PySide6.QtWidgets import QApplication, QMainWindow, QPlainTextEdit, QVBoxLayout, QHBoxLayout, QWidget, QLabel
+from PySide6.QtWidgets import QApplication, QMainWindow, QPlainTextEdit, QPushButton, QVBoxLayout, QHBoxLayout, QWidget, QLabel
 from PySide6.QtGui import QColor, QSyntaxHighlighter, QTextCharFormat, QFont, QTextCursor
 from PySide6.QtCore import QRegularExpression, QTimer
 
@@ -41,8 +41,8 @@ import types
 from textwrap import dedent
 import inspect
 class MainWindow(QWidget):
-	def __init__(self, project=None, definitions=[]):
-		super().__init__()
+	def __init__(self, parent=None, project=None, definitions=[]):
+		super().__init__(parent=parent)
 
 		# self.main_script = Path(main_script).read_text()
 
@@ -67,6 +67,10 @@ class MainWindow(QWidget):
 		editor_pane.layout().addWidget(self.consol)
 		self.layout().addWidget(editor_pane, 1)
 		self.layout().addWidget(self.preview, 1)
+
+		self.restartButton = QPushButton("restart")
+		self.restartButton.clicked.connect(self.restart)
+		self.layout().addWidget(self.restartButton)
 		
 		# Set window properties
 		self.setWindowTitle("Simple PySide6 Code Editor")
@@ -75,6 +79,10 @@ class MainWindow(QWidget):
 
 		self.update()
 		self.main_node = None
+
+	def restart(self):
+		raise NotImplementedError
+
 
 	def on_reset(self, cb):
 		self.reset_callbacks.append(cb)
