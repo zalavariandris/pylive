@@ -44,3 +44,8 @@ class Operator(Node):
 			print("no return")
 		else:
 			self.triggerOut("out")
+
+if __name__ == "__main__":
+	tickNode = TickNode(window)
+	printNode = PrintNode(window)
+	tickNode.tickPort.connect(printNode.input_port)

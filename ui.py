@@ -54,6 +54,13 @@ class MainWindow(QWidget):
 		class Main(Node):
 			def __init__(self, window):
 				self.message = "hello"
+				self.label = QLabel()
+				self.label.setText("hello")
+				window.preview.layout().addWidget(self.label)
+
+			def destroy(self):
+				self.label.deleteLater()
+
 		""")))
 
 		self.editor.textChanged.connect(self.update)
@@ -76,13 +83,12 @@ class MainWindow(QWidget):
 		self.setWindowTitle("Simple PySide6 Code Editor")
 		self.setGeometry(200, 200, 800, 600)
 
-
-		self.update()
 		self.main_node = None
+		self.update()
+		
 
 	def restart(self):
 		raise NotImplementedError
-
 
 	def on_reset(self, cb):
 		self.reset_callbacks.append(cb)
@@ -108,7 +114,7 @@ class MainWindow(QWidget):
 			print("main node:", self.main_node_class, Node)
 
 			if self.main_node is not None:
-				self.main_node.on_destroy()
+				self.main_node.destroy()
 			self.main_node = self.main_node_class(self)
 			self.consol.setText(f"{self.main_node_class}")
 			

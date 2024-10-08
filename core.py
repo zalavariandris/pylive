@@ -28,15 +28,15 @@ class Node:
 	def __init__(self, window):
 		self.in_ports = []
 		self.out_ports = []
-		self.destroy_callbacks = []
 
 	def on_destroy(self, callback):
 		self.destroy_callbacks.append(callback)
 
 	def destroy(self):
-		for cb in self.destroy_callbacks:
-			cb()
-		self.destroy_callbacks = []
+		pass
+
+	def __del__(self):
+		self.destroy()
 
 	def triggerIn(self, name):
 		port = TriggerInPort(name)
