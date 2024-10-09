@@ -14,8 +14,12 @@ from core import TriggerInPort, TriggerOutPort
 from datetime import datetime
 
 class NodeGraph():
+	port_connected = Signal()
 	def __init__(self):
 		self.widget = QGraphicsView()
+
+	def create_node(self):
+		pass
 
 class AppContainer(QWidget):
 	logChanged = Signal(str)
@@ -181,8 +185,6 @@ class AppEditor(QWidget):
 		# create grapheditor
 		self.grapheditor = NodeGraph()
 		self.lefttabwidget.addTab(self.grapheditor.widget, "graph")
-
-
 
 		# create appcontainer
 		self.appcontainer = AppContainer()
