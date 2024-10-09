@@ -11,6 +11,7 @@ class CodeEditor(QPlainTextEdit):
 		super().__init__(parent)
 		self.setFont(QFont("Operator Mono", 10))
 		self.setTabStopDistance(self.fontMetrics().horizontalAdvance(' ') * 4)
+		self.setLineWrapMode(QPlainTextEdit.NoWrap)
 		
 		# Syntax highlighting
 		self.highlighter = PythonSyntaxHighlighter(self.document())
@@ -88,7 +89,27 @@ class MainWindow(QWidget):
 		
 
 	def restart(self):
-		raise NotImplementedError
+			# Remove the existing preview widget
+			self.layout().removeWidget(self.preview)
+			self.preview.deleteLater()
+			
+			# Create a new PreviewWidget
+			self.preview = PreviewWidget()
+			
+			# Insert the new preview widget into the layout
+			# Assuming the layout is QHBoxLayout and preview should be the second widget
+			self.layout().insertWidget(1, self.preview, 1)
+			
+			# Reset the main_node
+			if self.main_node is not None:
+				try:
+					self.main_node.destroy()
+				except Exception as err:
+					self.consol.setText(str(err))
+			self.main_node = None
+			
+			# Update the UI
+			self.update()
 
 	def on_reset(self, cb):
 		self.reset_callbacks.append(cb)

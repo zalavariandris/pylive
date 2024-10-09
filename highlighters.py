@@ -53,9 +53,9 @@ colors = {
 
 
 STYLES = {
-    'keyword':  format(colors['pink']),
+    'keyword':  format(colors['grey']),
     'operator': format(colors['red2']),
-    'brace':    format(colors['white']),
+    'brace':    format(colors['grey']),
     'defclass': format(colors['orange'], 'bold'),
     'string':   format(colors['green']),
     'string2':  format(colors['green']),

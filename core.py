@@ -36,7 +36,11 @@ class Node:
 		pass
 
 	def __del__(self):
-		self.destroy()
+		try:
+			self.destroy()
+		except Exception as err:
+			pass
+
 
 	def triggerIn(self, name):
 		port = TriggerInPort(name)
