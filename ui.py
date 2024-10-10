@@ -1,7 +1,10 @@
+#pip install git+https://github.com/C3RV1/NodeGraphQt-PySide6
+
 
 from core import Node
 import types
 from textwrap import dedent
+
 import inspect
 import sys
 from PySide6.QtGui import *
@@ -9,17 +12,11 @@ from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
 from pathlib import Path
-from core import TriggerInPort, TriggerOutPort
+from core import Graph, Node, TriggerInPort, TriggerOutPort
 
 from datetime import datetime
 
-class NodeGraph():
-	port_connected = Signal()
-	def __init__(self):
-		self.widget = QGraphicsView()
-
-	def create_node(self):
-		pass
+from NodeGraphQt import NodeGraph, BaseNode
 
 class AppContainer(QWidget):
 	logChanged = Signal(str)
@@ -29,8 +26,6 @@ class AppContainer(QWidget):
 		self.label = QLabel(self)
 		self.label.setText("<output>")
 		self.layout().addWidget(self.label)
-
-		self.main_node = None
 
 	def setCode(self, code:str):
 		self.code = code
@@ -50,8 +45,8 @@ class AppContainer(QWidget):
 
 		import ticknode
 
-		ticknode.main(self.main_node, self)
-		self.main_node.out_ports['output'].subscribe(self.display)
+		# ticknode.main(self.main_node, self)
+		# self.main_node.out_ports['output'].subscribe(self.display)
 		# try:
 		# 	self.log("compiling...")
 		# 	compiled_code = compile(self.code, "main_function", "exec")
@@ -146,53 +141,96 @@ class CodeEditor(QWidget):
 		super().resizeEvent(event)
 
 
-class AppEditor(QWidget):
+class AppEditor(QMainWindow):
 	def __init__(self, parent=None):
 		super().__init__(parent=parent)
 		# Set window properties
 		self.setWindowTitle("AppEditor")
 
-		example_file = "ticknode.py"
+		self.G = Graph("main")
+		self.edgemap = {}
+		self.nodemap = {}
+		self.portmap = {}
+		ticknode = self.G.node("ticknode")
+		outlet = ticknode.outlet("out")
+		prevnode = self.G.node("prevnode")
+		inlet = prevnode.inlet("in")
+		outlet.connect(inlet)
 
-		# create layout
-		self.setLayout(QHBoxLayout())
+		# create central layout
+		self.setCentralWidget(QWidget())
+		self.centralWidget().setLayout(QVBoxLayout())
 
+		# left pane
 		self.leftpane = QWidget()
 		self.leftpane.setLayout(QHBoxLayout())
-		self.layout().addWidget(self.leftpane, 1)
+		self.centralWidget().layout().addWidget(self.leftpane, 1)
 		self.lefttabwidget = QTabWidget()
 		self.leftpane.layout().addWidget(self.lefttabwidget)
 
+		# right pane
 		self.rightpane = QWidget()
 		self.rightpane.setLayout(QVBoxLayout())
-		self.layout().addWidget(self.rightpane, 1)
+		self.centralWidget().layout().addWidget(self.rightpane, 1)
 
 		# create toolbar
-		self.restartButton = QPushButton("restart")
-		self.restartButton.clicked.connect(self.restart)
-		self.rightpane.layout().addWidget(self.restartButton)
+		toolbar = self.addToolBar("main")
 
-		# create codeeditor
-		self.codeeditor = CodeEditor()
-		self.codeeditor.setCode(example_file)
-		self.codeeditor.codeChanged.connect(self.update)
-		self.lefttabwidget.addTab(self.codeeditor, "code")
+		add_node_button = QPushButton("add")
+		add_node_button.clicked.connect(self.add_node)
+		toolbar.addWidget(add_node_button)
 
-		# create consol
-		self.consol = QLabel()
-		self.leftpane.layout().addWidget(self.consol)
+		restartButton = QPushButton("restart")
+		restartButton.clicked.connect(self.restart)
+		toolbar.addWidget(restartButton)
 
 		# create grapheditor
 		self.grapheditor = NodeGraph()
+
+		for n in self.G.nodes:
+			node = BaseNode()
+			for port in n.outlets:
+				outlet = node.add_output(port.name)
+				self.portmap[port] = outlet
+
+			for port in n.inlets:
+				inlet = node.add_input(port.name)
+				self.portmap[port] = inlet
+
+			self.grapheditor.add_node(node)
+			node.set_name(n.name)
+			self.nodemap[n]=node
+
+		for n in self.G.nodes:
+			for outlet in n.outlets:
+				for inlet in outlet.targets:
+					self.portmap[outlet].connect_to(self.portmap[inlet])
+
+		@self.G.event
+		def on_node(n):
+			node = BaseNode()
+			for port in n.outlets:
+				outlet = node.add_output(port.name)
+				self.portmap[port] = outlet
+			self.grapheditor.add_node(node)
+			node.set_name(n.name)
+			self.nodemap[n]=node
+
+
 		self.lefttabwidget.addTab(self.grapheditor.widget, "graph")
+
+		# create codeeditor
+		self.codeeditor = CodeEditor()
+		self.codeeditor.setCode("")
+		self.codeeditor.codeChanged.connect(self.update)
+		self.lefttabwidget.addTab(self.codeeditor, "code")
 
 		# create appcontainer
 		self.appcontainer = AppContainer()
-		self.appcontainer.setCode(example_file)
+		self.appcontainer.setCode("")
 		self.appcontainer.logChanged.connect(self.setStatus)
 		self.rightpane.layout().addWidget(self.appcontainer)
 		
-
 
 		# self.main_node = None
 		
@@ -202,8 +240,17 @@ class AppEditor(QWidget):
 		# 	self.appcontainer.execute()
 		# self.codeeditor.codeChanged.connect(update_app_code)
 
+		self.statusBar().showMessage("started")
+
+	@Slot()
+	def add_node(self):
+		try:
+			self.G.node("node")
+		except AssertionError as err:
+			print(err)
+
 	def setStatus(self, msg):
-		self.consol.setText(msg)
+		self.statusBar().showMessage(msg)
 		
 	def restart(self):
 		self.rightpane.layout().removeWidget(self.appcontainer)
