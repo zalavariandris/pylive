@@ -207,13 +207,13 @@ class AppEditor(QMainWindow):
 		# create node list editor
 		self.nodesheeteditor = QTableView()
 		self.nodesmodel = QStandardItemModel()
-        self.nodesmodel.setHorizontalHeaderLabels(['name', 'xpos', 'ypos', 'script'])
-        for n in self.G.nodes:
-        	name_item =   QStandardItem(n.name)
-            posx_item =   QStandardItem(0)
-            posy_item =   QStandardItem(0)
-            script_item = QStandardItem(scripts[name])
-        	self.model.appendRow([n.name, 0, 0, f"#{n.name}"])
+		self.nodesmodel.setHorizontalHeaderLabels(['name', 'xpos', 'ypos', 'script'])
+		for n in self.G.nodes:
+			name_item =   QStandardItem(n.name)
+			posx_item =   QStandardItem(0)
+			posy_item =   QStandardItem(0)
+			script_item = QStandardItem(scripts[name])
+			self.model.appendRow([n.name, 0, 0, f"#{n.name}"])
 
 		# create appcontainer
 		self.appcontainer = AppContainer()
