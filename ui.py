@@ -196,24 +196,47 @@ class AppEditor(QMainWindow):
 		self.setCentralWidget(QWidget())
 		self.centralWidget().setLayout(QHBoxLayout())
 
-		# create codeeditor
-		self.codeeditor = CodeEditor()
-		self.codeeditor.setCode("")
-		self.codeeditor.codeChanged.connect(self.update)
+		# # create codeeditor
+		# self.codeeditor = CodeEditor()
+		# self.codeeditor.setCode("")
+		# self.codeeditor.codeChanged.connect(self.update)
 		
 		# create grapheditor
 		self.grapheditor = self.add_view(self.G)
 
-		# create node list editor
-		self.nodesheeteditor = QTableView()
+
+		# create the QT model
 		self.nodesmodel = QStandardItemModel()
 		self.nodesmodel.setHorizontalHeaderLabels(['name', 'xpos', 'ypos', 'script'])
 		for n in self.G.nodes:
 			name_item =   QStandardItem(n.name)
 			posx_item =   QStandardItem(0)
 			posy_item =   QStandardItem(0)
-			script_item = QStandardItem(scripts[name])
-			self.model.appendRow([n.name, 0, 0, f"#{n.name}"])
+			script_item = QStandardItem(self.scripts[n.name])
+			self.nodesmodel.appendRow([name_item, posx_item, posy_item, script_item])
+		self.selectionmodel = QItemSelectionModel()
+
+		# create the node sheet editor
+		self.nodeheeteditor = QTableView()
+		self.nodeheeteditor.setModel(self.nodesmodel)
+		self.nodeheeteditor.setSelectionModel(self.selectionmodel)
+
+		# create node details editor
+		self.details_widget = QWidget()
+		self.details_widget.setLayout(QFormLayout())
+
+		self.name_edit = QLineEdit()
+		self.script_edit = QLineEdit()
+		self.details_widget.layout().addRow("Name:", self.name_edit)
+		self.details_widget.layout().addRow("Script:", self.script_edit)
+
+		self.mapper = QDataWidgetMapper()
+		self.mapper.setModel(self.nodesmodel)
+		self.mapper.addMapping(self.name_edit, 0)
+		# self.mapper.addMapping(self.xpos_edit, 1)
+		# self.mapper.addMapping(self.ypos_edit, 2)
+		self.mapper.addMapping(self.script_edit, 3)
+
 
 		# create appcontainer
 		self.appcontainer = AppContainer()
@@ -221,8 +244,8 @@ class AppEditor(QMainWindow):
 		self.appcontainer.logChanged.connect(self.setStatus)
 
 		# add editors to layout
-		self.centralWidget().layout().addWidget(self.codeeditor, 1)
-		self.centralWidget().layout().addWidget(self.nodesheeteditor, 1)
+		self.centralWidget().layout().addWidget(self.details_widget, 1)
+		self.centralWidget().layout().addWidget(self.nodeheeteditor, 1)
 		self.centralWidget().layout().addWidget(self.grapheditor.widget, 1)
 		self.centralWidget().layout().addWidget(self.appcontainer, 1)
 
