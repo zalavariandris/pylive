@@ -144,110 +144,156 @@ class CodeEditor(QWidget):
 class AppEditor(QMainWindow):
 	def __init__(self, parent=None):
 		super().__init__(parent=parent)
-		# Set window properties
-		self.setWindowTitle("AppEditor")
 
+		# create test DATA
 		self.G = Graph("main")
-		self.edgemap = {}
-		self.nodemap = {}
-		self.portmap = {}
+		self.views = {}
 		ticknode = self.G.node("ticknode")
 		outlet = ticknode.outlet("out")
 		prevnode = self.G.node("prevnode")
 		inlet = prevnode.inlet("in")
 		outlet.connect(inlet)
 
-		# create central layout
-		self.setCentralWidget(QWidget())
-		self.centralWidget().setLayout(QVBoxLayout())
+		self.scripts = {
+			"ticknode": """#ticknode""",
+			"prevnode": """#prevnode"""
+		}
 
-		# left pane
-		self.leftpane = QWidget()
-		self.leftpane.setLayout(QHBoxLayout())
-		self.centralWidget().layout().addWidget(self.leftpane, 1)
-		self.lefttabwidget = QTabWidget()
-		self.leftpane.layout().addWidget(self.lefttabwidget)
+		self.selection = QStringListModel(self)
+		self.selection.setStringList([])
 
-		# right pane
-		self.rightpane = QWidget()
-		self.rightpane.setLayout(QVBoxLayout())
-		self.centralWidget().layout().addWidget(self.rightpane, 1)
+		@self.selection.rowsInserted.connect
+		def nodes_added_to_selection(parent, first, last):
+			print("rowsInserted", parent, first, last)
+
+		@self.selection.rowsRemoved.connect
+		def nodes_added_to_selection(parent, first, last):
+			print("rowsRemoved", parent, first, last)
+
+		@self.selection.rowsRemoved.connect
+		def nodes_added_to_selection(parent, first, last):
+			print("rowsRemoved", parent, first, last)
+
+		# Set window properties
+		self.setWindowTitle("AppEditor")
+		self.resize(1500, 800)
 
 		# create toolbar
 		toolbar = self.addToolBar("main")
 
-		add_node_button = QPushButton("add")
-		add_node_button.clicked.connect(self.add_node)
+		add_node_button = QPushButton("create node")
+		add_node_button.clicked.connect(lambda: self.G.node("node"))
 		toolbar.addWidget(add_node_button)
 
 		restartButton = QPushButton("restart")
 		restartButton.clicked.connect(self.restart)
 		toolbar.addWidget(restartButton)
 
-		# create grapheditor
-		self.grapheditor = NodeGraph()
+		# crate statusbar
+		self.statusBar().showMessage("started")
 
-		for n in self.G.nodes:
-			node = BaseNode()
-			for port in n.outlets:
-				outlet = node.add_output(port.name)
-				self.portmap[port] = outlet
-
-			for port in n.inlets:
-				inlet = node.add_input(port.name)
-				self.portmap[port] = inlet
-
-			self.grapheditor.add_node(node)
-			node.set_name(n.name)
-			self.nodemap[n]=node
-
-		for n in self.G.nodes:
-			for outlet in n.outlets:
-				for inlet in outlet.targets:
-					self.portmap[outlet].connect_to(self.portmap[inlet])
-
-		@self.G.event
-		def on_node(n):
-			node = BaseNode()
-			for port in n.outlets:
-				outlet = node.add_output(port.name)
-				self.portmap[port] = outlet
-			self.grapheditor.add_node(node)
-			node.set_name(n.name)
-			self.nodemap[n]=node
-
-
-		self.lefttabwidget.addTab(self.grapheditor.widget, "graph")
+		# create central layout
+		self.setCentralWidget(QWidget())
+		self.centralWidget().setLayout(QHBoxLayout())
 
 		# create codeeditor
 		self.codeeditor = CodeEditor()
 		self.codeeditor.setCode("")
 		self.codeeditor.codeChanged.connect(self.update)
-		self.lefttabwidget.addTab(self.codeeditor, "code")
+		
+		# create grapheditor
+		self.grapheditor = self.add_view(self.G)
+
+		# create node list editor
+		self.nodesheeteditor = QTableView()
+		self.nodesmodel = QStandardItemModel()
+        self.nodesmodel.setHorizontalHeaderLabels(['name', 'xpos', 'ypos', 'script'])
+        for n in self.G.nodes:
+        	name_item =   QStandardItem(n.name)
+            posx_item =   QStandardItem(0)
+            posy_item =   QStandardItem(0)
+            script_item = QStandardItem(scripts[name])
+        	self.model.appendRow([n.name, 0, 0, f"#{n.name}"])
 
 		# create appcontainer
 		self.appcontainer = AppContainer()
 		self.appcontainer.setCode("")
 		self.appcontainer.logChanged.connect(self.setStatus)
-		self.rightpane.layout().addWidget(self.appcontainer)
-		
 
-		# self.main_node = None
-		
-		# self.appcontainer.execute()
-		# def update_app_code():
-		# 	self.appcontainer.setCode(self.codeeditor.code())
-		# 	self.appcontainer.execute()
-		# self.codeeditor.codeChanged.connect(update_app_code)
+		# add editors to layout
+		self.centralWidget().layout().addWidget(self.codeeditor, 1)
+		self.centralWidget().layout().addWidget(self.nodesheeteditor, 1)
+		self.centralWidget().layout().addWidget(self.grapheditor.widget, 1)
+		self.centralWidget().layout().addWidget(self.appcontainer, 1)
 
-		self.statusBar().showMessage("started")
+	def add_view(self, obj):
+		match obj:
+			case Graph():
+				grapheditor = NodeGraph()
+				grapheditor.data = obj
+				self.views[obj] = grapheditor
 
-	@Slot()
-	def add_node(self):
-		try:
-			self.G.node("node")
-		except AssertionError as err:
-			print(err)
+				# add nodes
+				for n in obj.nodes:
+					node = self.add_view(n)
+
+				# connect nodes
+				for n in obj.nodes:
+					for outlet in n.outlets:
+						for inlet in outlet.targets:
+							self.views[outlet].connect_to(self.views[inlet])
+
+				# observer model
+				@obj.event
+				def on_node(n):
+					self.add_view(n)
+
+				#listen to view events
+				@grapheditor.port_connected.connect
+				def connect_ports(inlet, outlet):
+					print(f"user connected ports: {outlet} to {inlet}")
+					outlet.data.connect(inlet.data)
+
+				@grapheditor.port_disconnected.connect
+				def disconnect_ports(inlet, outlet):
+					print(f"user disconnected ports: {outlet} to {inlet}")
+					outlet.data.disconnect(inlet.data)
+
+				# Correctly connect the selection changed signal
+				@grapheditor.node_selection_changed.connect
+				def select_node(nodes_selected, nodes_unselected):
+					if nodes_selected:
+						n = nodes_selected[0].data  # Ensure this retrieves the correct node data
+						self.selection.setStringList([n.name])
+						print(f"Selected Node: {n.name}")  # Debug output to confirm selection
+
+					
+				return grapheditor
+
+			case Node():
+				node = BaseNode()
+				node.data = obj
+				self.views[obj]=node
+				for p in obj.outlets:
+					self.add_view(p)
+
+				for p in obj.inlets:
+					self.add_view(p)
+
+				self.views[obj.graph].add_node(node)
+				node.set_name(obj.name)
+				return node
+
+			case TriggerOutPort():
+				outlet = self.views[obj.node].add_output(obj.name)
+				outlet.data = obj
+				self.views[obj] = outlet
+				return outlet
+			case TriggerInPort():
+				inlet = self.views[obj.node].add_input(obj.name)
+				inlet.data = obj
+				self.views[obj] = inlet
+				return inlet
 
 	def setStatus(self, msg):
 		self.statusBar().showMessage(msg)

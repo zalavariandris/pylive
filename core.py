@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QLabel
+from typing import Iterable
 
 def unique_name(name, names):
 	# Extract all existing names
@@ -21,8 +21,9 @@ def unique_name(name, names):
 
 import weakref
 class TriggerInPort:
-	def __init__(self, name):
+	def __init__(self, name, node):
 		self._name = name
+		self._node = node
 		self._events = {
 			'on_trigger': set(),
 			'on_destroy': set()
@@ -31,6 +32,10 @@ class TriggerInPort:
 	@property
 	def name(self):
 		return self._name
+
+	@property
+	def node(self):
+		return self._node
 
 	def event(self, fn):
 		self._events[fn.__name__].add(fn)
@@ -51,10 +56,14 @@ class TriggerInPort:
 	def __repr__(self):
 		return f"Inlet({self.name})"
 
+	def __hash__(self):
+		return hash( (self.__class__, self._name) )
+
 
 class TriggerOutPort:
-	def __init__(self, name):
+	def __init__(self, name, node):
 		self._name = name
+		self._node = node
 		self._events = {
 			'on_destroy': set(),
 			'on_connect': set(),
@@ -64,6 +73,10 @@ class TriggerOutPort:
 
 	def __repr__(self):
 		return f"Outlet({self.name})"
+
+	@property
+	def node(self):
+		return self._node
 
 	@property
 	def name(self):
@@ -100,11 +113,14 @@ class TriggerOutPort:
 		for target in self._targets:
 			target.trigger(props)
 
+	def __hash__(self):
+		return hash( (self.__class__, self._name) )
 
 
 class Node:
-	def __init__(self, name):
+	def __init__(self, name, graph):
 		self._name = name
+		self._graph = graph
 		self._events = dict({
 			"on_destroy": []
 		})
@@ -117,6 +133,10 @@ class Node:
 	@property
 	def name(self):
 		return self._name
+
+	@property
+	def graph(self):
+		return self._graph
 
 	@property
 	def inlets(self):
@@ -147,16 +167,20 @@ class Node:
 	def inlet(self, name):
 		assert( name not in [n.name for n in self._in_ports])
 		# create an inlet
-		port = TriggerInPort(name)
+		port = TriggerInPort(name, self)
 		self._in_ports[name] = port
 		return port
 
 	def outlet(self, name):
 		assert( name not in [n.name for n in self._out_ports])
 		# create an outlet
-		port = TriggerOutPort(name)
+		port = TriggerOutPort(name, self)
 		self._out_ports[name] = port
 		return port
+
+	def __hash__(self):
+		return hash( (self.__class__, self._name) )
+
 
 import re
 class Graph:
@@ -196,7 +220,7 @@ class Graph:
 		#create a node
 		name = self.unique_name(name)
 		assert( name not in [n.name for n in self._nodes])
-		node = Node(name)
+		node = Node(name, self)
 		for cb in self._events['on_node']:
 			cb(node)
 		self._nodes.add(node)
@@ -206,6 +230,36 @@ class Graph:
 		names = [n.name for n in self.nodes]
 		return unique_name(name, names)
 
+	def __hash__(self):
+		return hash( (self.__class__, self._name) )
+
+def root_nodes(G:Graph)->Iterable[Node]:
+	"""Yield all root nodes (nodes without outlets) in the graph."""
+	for node in G._nodes:
+		if not list(node.inlets):  # Check if the node has no outlets
+			yield node  # Yield the root node
+
+def dfs(G:Graph)->Iterable[Node]:
+	"""Perform DFS starting from the root notes and yield each node."""
+
+	start_nodes = root_nodes(G)
+	visited = set()  # Set to track visited nodes
+
+	def dfs_visit(node):
+		"""Recursive helper function to perform DFS."""
+		visited.add(node)
+		yield node  # Yield the current node
+
+		# Iterate through all adjacent edges from the current node
+		for outlet in node.outlets:
+			for target in outlet.targets:
+				if target.node not in visited:  # Check if the target node has been visited
+					yield from dfs_visit(target.node)  # Recursive call
+
+	for start_node in start_nodes:
+		if start_node not in visited:  # Check if the start node has been visited
+			yield from dfs_visit(start_node)  # Start DFS from the start node
+
 
 if __name__ == "__main__":
 	g = Graph("main")
@@ -214,7 +268,7 @@ if __name__ == "__main__":
 	def on_node(node):
 		print(f"node added: {node}")
 
-	ticknode = g.node(Node("ticknode"))
+	ticknode = g.node("ticknode")
 	outlet = ticknode.outlet("out")
 	@outlet.event
 	def on_connect(outlet, inlet):
@@ -222,7 +276,7 @@ if __name__ == "__main__":
 	@outlet.event
 	def on_disconnect(outlet, inlet):
 		print(f"disconnected: {outlet} from {inlet}")
-	prevnode = g.node(Node("prevnode"))
+	prevnode = g.node("prevnode")
 	inlet = prevnode.inlet("in")
 
 	outlet.connect(inlet)
@@ -234,13 +288,13 @@ if __name__ == "__main__":
 	outlet.trigger("hello worlds")
 	print(list(g.edges))
 
+	print("edges:", list(g.edges))
+
+
+	print("# DFS #")
+	for n in reversed(list(dfs(g))):
+		print("-", n)
+
 	outlet.disconnect(inlet)
-
 	outlet.trigger("this msg is not received")
-
-	print(list(g.edges))
-
-
-
-
 
