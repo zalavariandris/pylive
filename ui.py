@@ -237,7 +237,6 @@ class AppEditor(QMainWindow):
 		# self.mapper.addMapping(self.ypos_edit, 2)
 		self.mapper.addMapping(self.script_edit, 3)
 
-
 		# create appcontainer
 		self.appcontainer = AppContainer()
 		self.appcontainer.setCode("")
