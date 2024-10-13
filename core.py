@@ -1,23 +1,6 @@
 from typing import Iterable
 
-def unique_name(name, names):
-	# Extract all existing names
-	
-	digit = 1
-
-	# Regex to extract the name part (without trailing digits)
-	match = re.search(r'(.*?)(\d*)$', name)
-	if match:
-		# Name part without digits
-		name_part = match.group(1)
-	
-	# Loop to find a unique name
-	while name in names:
-		# Append the current digit to the name part
-		name = f"{name_part}{digit}"
-		digit += 1
-	
-	return name
+from unique import unique_name
 
 import weakref
 class TriggerInPort:
