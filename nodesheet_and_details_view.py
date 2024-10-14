@@ -39,100 +39,8 @@ from Panel import Panel
 from GraphModel import GraphModel
 from GraphView import GraphView
 from GraphDetailsView import GraphDetailsView
-
-
-class GraphRunner(QWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent=parent)
-
-        self.setLayout(QVBoxLayout())
-        self.title_label = QLabel()
-        self.content_frame = QTextEdit()
-        self.layout().addWidget(self.title_label)
-        self.layout().addWidget(self.content_frame)
-
-        toolbar = QToolBar()
-        toolbar.addAction(QAction("restart", self))
-
-        self.layout().setMenuBar(toolbar)
-
-        self.model = None
-        self.selectionmodel = None
-
-        self.logs = ""
-
-    def setModel(self, graphmodel:GraphModel):
-        self.model = graphmodel
-
-        self.model.nodesInserted.connect(self.run)
-        self.model.nodesRemoved.connect(self.run)
-        self.model.nodeChanged.connect(self.run)
-
-
-        self.model.inletChanged.connect(self.run)
-        self.model.outletChanged.connect(self.run)
-
-        self.model.edgesInserted.connect(self.run)
-        self.model.edgesRemoved.connect(self.run)
-        self.model.edgeChanged.connect(self.run)
-
-        self.run()
-
-    def setSelectionModel(self, node_selectionmodel):
-        self.selectionmodel = node_selectionmodel
-
-        @self.selectionmodel.currentRowChanged.connect
-        def currentRowChanged(current: QModelIndex, previous: QModelIndex):
-            self.run()
-
-        @self.selectionmodel.selectionChanged.connect
-        def selectionChanged(selected:List[QModelIndex], deselected:List[QModelIndex]):
-            self.run()
-
-    def log(self, text="", end="\n"):
-        self.logs+=f"{text}{end}"
-
-        self.content_frame.setPlainText(self.logs)
-
-    def clear(self):
-        self.logs = ""
-        self.content_frame.setPlainText(self.logs)
-
-    @Slot()
-    def run(self):
-        self.clear()
-        
-
-        if self.selectionmodel and self.selectionmodel.hasSelection():
-            node = self.selectionmodel.currentIndex()
-            self.log(f"{node.siblingAtColumn(1).data()} {node.data()}")
-            self.log("Inlets")
-            for inlet in self.model.findInlets(node):
-                self.log(f"- {inlet.siblingAtColumn(2).data()}, {inlet.data()}")
-            self.log("Outlets")
-            for outlet in self.model.findOutlets(node):
-                self.log(f"- {outlet.siblingAtColumn(2).data()}, {outlet.data()}")
-            self.log()
-            self.log("Source nodes")
-            for source in self.model.findConnectedNodes(node, direction="SOURCE"):
-                self.log(f"- {source.siblingAtColumn(1).data()}, {source.data()}")
-            self.log()
-            self.log("Target nodes")
-            for source in self.model.findConnectedNodes(node, direction="TARGET"):
-                self.log(f"- {source.siblingAtColumn(1).data()}, {source.data()}")
-
-        else:
-            self.log("# Root Nodes")
-            for node in self.model.rootRodes():
-                self.log(f"- {node.siblingAtColumn(1).data()} {node.data()}")
-            self.log()
-            self.log("# DFS")
-            self.log("## roots")
-            for node in self.model.rootRodes():
-                self.log(node.data())
-            self.log("## path")
-            for node in reversed(list(self.model.dfs())):
-                self.log(node.data())
+from GraphRunner import GraphRunner
+from pathlib import Path
 
 class AppEditor(QMainWindow):
     def __init__(self, parent=None):
@@ -149,12 +57,9 @@ class AppEditor(QMainWindow):
         self.outlets_selectionmodel = QItemSelectionModel(self.graphmodel.outlets)
         self.edges_selectionmodel =   QItemSelectionModel(self.graphmodel.edges)
 
-        ### CREATE NODES ###
-        ticknode_id =      self.graphmodel.addNode(name="ticknode",    posx=0, posy=0, script="#%%\n")
-        preview_id =       self.graphmodel.addNode(name="previewnode", posx=260, posy=0, script="#%%\n")
-        tick_outlet_id =   self.graphmodel.addOutlet(owner_id=ticknode_id, name="tick")
-        display_inlet_id = self.graphmodel.addInlet(owner_id=preview_id, name="display")
-        self.graphmodel.addEdge(tick_outlet_id, display_inlet_id)
+        self.read("script_cache_test.py")
+
+        self.autosave = False
 
         ### SETUP ACTIONS ###
         self.setupActions()
@@ -166,15 +71,15 @@ class AppEditor(QMainWindow):
         def setup_table_view(model, selectionmodel=None):
             table_view = QTableView()
             table_view.setSelectionBehavior(QTableView.SelectRows)
-            table_view.setModel(self.graphmodel.nodes)
-            table_view.setSelectionModel(self.nodes_selectionmodel)
+            table_view.setModel(model)
+            table_view.setSelectionModel(selectionmodel)
             table_view.resizeColumnsToContents()
             return table_view
 
         self.nodes_sheet_view =   setup_table_view(self.graphmodel.nodes,   self.nodes_selectionmodel)
         self.inlets_sheet_view =  setup_table_view(self.graphmodel.inlets,  self.inlets_selectionmodel)
         self.outlets_sheet_view = setup_table_view(self.graphmodel.outlets, self.outlets_selectionmodel)
-        self.edges_sheet_view =   setup_table_view(self.graphmodel.nodes,   self.edges_selectionmodel)
+        self.edges_sheet_view =   setup_table_view(self.graphmodel.edges,   self.edges_selectionmodel)
 
         ### Graph View ###
         self.graphview = GraphView()
@@ -249,15 +154,34 @@ class AppEditor(QMainWindow):
         sheets_widget.addTab(ports_tab, "ports")
         sheets_widget.addTab(edges_tab, "edges")
 
-
-        self.graph_runner = GraphRunner()
-        self.graph_runner.setModel(self.graphmodel)
-        self.graph_runner.setSelectionModel(self.nodes_selectionmodel)
+        ### crate preview widget
+        self.preview_widget = QLabel()
         
+        ### layout all panels
         self.centralWidget().layout().addWidget(sheets_widget, 1)
         self.centralWidget().layout().addWidget(self.graphview, 1)
         self.centralWidget().layout().addWidget(self.details_view, 1)
-        self.centralWidget().layout().addWidget(self.graph_runner, 1)
+        self.centralWidget().layout().addWidget(self.preview_widget, 1)
+
+        # bind make script when graph changes
+        self.graphmodel.nodesInserted.connect(self.run)
+        self.graphmodel.nodesRemoved.connect(self.run)
+        self.graphmodel.nodeChanged.connect(self.run)
+        self.graphmodel.inletChanged.connect(self.run)
+        self.graphmodel.outletChanged.connect(self.run)
+        self.graphmodel.edgesInserted.connect(self.run)
+        self.graphmodel.edgesRemoved.connect(self.run)
+        self.graphmodel.edgeChanged.connect(self.run)
+
+    def run(self):
+        script = "# Script\n"
+        for node in reversed(list(self.graphmodel.dfs())):
+            script += "#%%" + "\n" # add new cell
+            script += node.siblingAtColumn(4).data() + "\n"
+
+        self.preview_widget.setText(script)
+        if self.autosave:
+            self.write(script, "script_cache_test.py")
 
     def setupActions(self):
         ### Setup Action ###
@@ -338,6 +262,41 @@ class AppEditor(QMainWindow):
                 return  # No node is selected, exit the function
             self.graphmodel.removeEdges(index.row() for index in selected_indexes) # remove the nodes from the graphmodel
             self.edges_selectionmodel.clearSelection() # Clear any remaining selection in the nodes view
+
+    def read(self, path: Path):
+        path = Path(path)
+        script = path.read_text(encoding="utf-8")
+        cells = []
+        for line_number, line in enumerate(script.split("\n")):
+            isNewCell = line.startswith("#%%") or line_number==0
+            if isNewCell:
+                cells.append("")
+            cells[-1]+=line+"\n"
+
+        chain = []
+        for i, cell in enumerate(cells):
+            cell_content = "\n".join([line for line in cell.split("\n") if not line.startswith("#%%")])
+            node_id = self.graphmodel.addNode(name="<node>", posx=0, posy=i*100, script=cell_content)
+            chain.append(node_id)
+
+        # create the ports
+        for source_id, target_id in zip(chain, chain[1:]):
+            print("connect nodes", source_id, target_id)
+            outlet_id = self.graphmodel.addOutlet(source_id, "out")
+            inlet_id = self.graphmodel.addInlet(target_id, "in")
+            print("-", outlet_id, inlet_id)
+            self.graphmodel.addEdge(outlet_id, inlet_id)
+
+        # ### CREATE NODES ###
+        # ticknode_id =      self.graphmodel.addNode(name="ticknode",    posx=0, posy=0, script="#%%\n")
+        # preview_id =       self.graphmodel.addNode(name="previewnode", posx=260, posy=0, script="#%%\n")
+        # tick_outlet_id =   self.graphmodel.addOutlet(owner_id=ticknode_id, name="tick")
+        # display_inlet_id = self.graphmodel.addInlet(owner_id=preview_id, name="display")
+        # self.graphmodel.addEdge(tick_outlet_id, display_inlet_id)
+
+    def write(self, script:str, path: Path):
+        path = Path(path)
+        path.write_text(script, encoding="utf-8")
 
 
 if __name__ == "__main__":
