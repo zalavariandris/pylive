@@ -1,5 +1,5 @@
 import unique
-
+import numpy
 import sys
 from PySide6.QtGui import *
 from PySide6.QtCore import *
@@ -19,6 +19,7 @@ class NodeFilterProxyModel(QSortFilterProxyModel):
 	def filterAcceptsRow(self, source_row, source_parent):
 		index = self.sourceModel().index(source_row, self.node_column, source_parent)
 		return self.sourceModel().data(index) == self.node_name
+
 
 class GraphModel(QObject):
 	nodesInserted = Signal(QModelIndex, int, int)
@@ -47,7 +48,7 @@ class GraphModel(QObject):
 
 		### Nodes Model ###
 		self.nodes = QStandardItemModel()
-		self.nodes.setHorizontalHeaderLabels(['id', 'name', 'posx', 'posy'])
+		self.nodes.setHorizontalHeaderLabels(['id', 'name', 'posx', 'posy', 'script'])
 		self.nodes.rowsInserted.connect(self.nodesInserted.emit)
 		self.nodes.rowsRemoved.connect(self.nodesRemoved.emit)
 		self.nodes.rowsAboutToBeRemoved.connect(self.nodesAboutToBeRemoved.emit)
@@ -89,13 +90,14 @@ class GraphModel(QObject):
 	def readEdgeData(self, row:int):
 		return [self.edges.indexFromItem(self.edges.item(row, i)).data() for i in range(self.edges.columnCount())]
 
-	def addNode(self, name:str, posx:int, posy:int)->str:
+	def addNode(self, name:str, posx:int, posy:int, script:str)->str:
 		unique_id = unique.make_unique_id()
 		id_item =   QStandardItem(unique_id)
 		name_item = QStandardItem(name)
 		posx_item = QStandardItem(str(posx))
 		posy_item = QStandardItem(str(posy))
-		self.nodes.appendRow([id_item, name_item, posx_item, posy_item])
+		script_item = QStandardItem(str(script))
+		self.nodes.appendRow([id_item, name_item, posx_item, posy_item, script_item])
 
 		return unique_id
 
@@ -264,7 +266,6 @@ class GraphModel(QObject):
 			yield edge.index().siblingAtColumn(0)
 
 	def findSources(self, node:QModelIndex())->Iterable[QModelIndex]:
-		print("nodeid:", node.siblingAtColumn(0).data())
 		inlets = self.findInlets(node.siblingAtColumn(0))
 		for inlet in inlets:
 			# find edges to inlet
@@ -278,7 +279,6 @@ class GraphModel(QObject):
 						yield source_node_item.index()
 
 	def findConnectedNodes(self, node:QModelIndex(), direction:str)->Iterable[QModelIndex]:
-		print("nodeid:", node.siblingAtColumn(0).data())
 		if direction == "SOURCE":
 			findPorts = self.findInlets
 			column = 2

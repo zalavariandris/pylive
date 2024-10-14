@@ -257,9 +257,10 @@ class GraphView(QWidget):
 
             @updatedSignal.connect
             def itemChanged(item:QModelIndex):
-                unique_id = submodel.item(item.row(), 0).text()
-                editor = editor_by_id[unique_id]
-                updateEditor(parent=getParent(index_id), editor=editor, item=item)
+                pass
+                # unique_id = submodel.item(item.row(), 0).text()
+                # editor = editor_by_id[unique_id]
+                # updateEditor(parent=getParent(index_id), editor=editor, item=item)
 
         bindCRUD(self._model.nodes,
             self.node_editor_by_id,

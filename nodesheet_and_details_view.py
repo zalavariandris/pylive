@@ -34,9 +34,12 @@ from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 from typing import List, Tuple
 
+from Panel import Panel
+
 from GraphModel import GraphModel
 from GraphView import GraphView
 from GraphDetailsView import GraphDetailsView
+
 
 class GraphRunner(QWidget):
     def __init__(self, parent=None):
@@ -131,26 +134,6 @@ class GraphRunner(QWidget):
             for node in reversed(list(self.model.dfs())):
                 self.log(node.data())
 
-
-
-        
-        # print("root nodes:")
-        # for node in self.model.root_nodes():
-        #     print(f" -{node}")
-        # dfs = self.model.dfs()
-        # print(list(dfs))
-
-class Panel(QWidget):
-    def __init__(self, direction=QBoxLayout.LeftToRight, children=[], menuBar=None, parent=None):
-        super().__init__(parent)
-        self.setLayout(QBoxLayout(direction))
-        self.layout().setContentsMargins(0,0,0,0)
-        if menuBar:
-            self.layout().setMenuBar(menuBar)
-
-        for child in children:
-            self.layout().addWidget(child)
-
 class AppEditor(QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -160,18 +143,15 @@ class AppEditor(QMainWindow):
         ### SETUP MODEL ###
         self.graphmodel = GraphModel()
         model = self.graphmodel.nodes
-        new_column_index = model.columnCount()  # This will be 2 (0-indexed)
-        model.setColumnCount(new_column_index + 1)  # Add an extra column (making it 3 total columns)
-        model.setHeaderData(new_column_index, Qt.Horizontal, "Script")  # Set header name
 
-        self.nodes_selectionmodel = QItemSelectionModel(self.graphmodel.nodes)
-        self.inlets_selectionmodel = QItemSelectionModel(self.graphmodel.inlets)
+        self.nodes_selectionmodel =   QItemSelectionModel(self.graphmodel.nodes)
+        self.inlets_selectionmodel =  QItemSelectionModel(self.graphmodel.inlets)
         self.outlets_selectionmodel = QItemSelectionModel(self.graphmodel.outlets)
-        self.edges_selectionmodel = QItemSelectionModel(self.graphmodel.edges)
+        self.edges_selectionmodel =   QItemSelectionModel(self.graphmodel.edges)
 
         ### CREATE NODES ###
-        ticknode_id =      self.graphmodel.addNode(name="ticknode",    posx=0, posy=0)
-        preview_id =       self.graphmodel.addNode(name="previewnode", posx=260, posy=0)
+        ticknode_id =      self.graphmodel.addNode(name="ticknode",    posx=0, posy=0, script="#%%\n")
+        preview_id =       self.graphmodel.addNode(name="previewnode", posx=260, posy=0, script="#%%\n")
         tick_outlet_id =   self.graphmodel.addOutlet(owner_id=ticknode_id, name="tick")
         display_inlet_id = self.graphmodel.addInlet(owner_id=preview_id, name="display")
         self.graphmodel.addEdge(tick_outlet_id, display_inlet_id)
@@ -273,10 +253,11 @@ class AppEditor(QMainWindow):
         self.graph_runner = GraphRunner()
         self.graph_runner.setModel(self.graphmodel)
         self.graph_runner.setSelectionModel(self.nodes_selectionmodel)
+        
         self.centralWidget().layout().addWidget(sheets_widget, 1)
         self.centralWidget().layout().addWidget(self.graphview, 1)
         self.centralWidget().layout().addWidget(self.details_view, 1)
-        self.centralWidget().layout().addWidget(self.graph_runner, 1)
+        # self.centralWidget().layout().addWidget(self.graph_runner, 1)
 
     def setupActions(self):
         ### Setup Action ###
@@ -357,8 +338,6 @@ class AppEditor(QMainWindow):
                 return  # No node is selected, exit the function
             self.graphmodel.removeEdges(index.row() for index in selected_indexes) # remove the nodes from the graphmodel
             self.edges_selectionmodel.clearSelection() # Clear any remaining selection in the nodes view
-
-
 
 
 if __name__ == "__main__":
