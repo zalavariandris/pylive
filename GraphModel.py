@@ -4,6 +4,7 @@ import sys
 from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
+
 from typing import List, Tuple, Iterable
 
 class NodeFilterProxyModel(QSortFilterProxyModel):
@@ -20,6 +21,28 @@ class NodeFilterProxyModel(QSortFilterProxyModel):
 		index = self.sourceModel().index(source_row, self.node_column, source_parent)
 		return self.sourceModel().data(index) == self.node_name
 
+
+class NodesItemModel(QStandardItemModel):
+	def validate(self, index, value)->bool:
+		if index.column() == 0:
+			if value!= index.data():
+				msg = f"WARNING: changing the ID is not allowed, currentid: {index.data()}"
+				# print(msg)
+			return False
+		if index.column() == 0:
+			pass
+		if index.column() == 0:
+			pass
+		return True
+
+	def setData(self, index: QModelIndex, value, role: int = Qt.EditRole) -> bool:
+		if role == Qt.EditRole:
+			isValid = self.validate(index, value)
+			if not isValid:
+				return False
+
+		# Call the base class's setData to actually set the data
+		return super().setData(index, value, role)
 
 class GraphModel(QObject):
 	nodesInserted = Signal(QModelIndex, int, int)
@@ -47,7 +70,7 @@ class GraphModel(QObject):
 		### CREATE QT MODELS ###
 
 		### Nodes Model ###
-		self.nodes = QStandardItemModel()
+		self.nodes = NodesItemModel()
 		self.nodes.setHorizontalHeaderLabels(['id', 'name', 'posx', 'posy', 'script'])
 		self.nodes.rowsInserted.connect(self.nodesInserted.emit)
 		self.nodes.rowsRemoved.connect(self.nodesRemoved.emit)

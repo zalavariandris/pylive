@@ -257,7 +257,7 @@ class AppEditor(QMainWindow):
         self.centralWidget().layout().addWidget(sheets_widget, 1)
         self.centralWidget().layout().addWidget(self.graphview, 1)
         self.centralWidget().layout().addWidget(self.details_view, 1)
-        # self.centralWidget().layout().addWidget(self.graph_runner, 1)
+        self.centralWidget().layout().addWidget(self.graph_runner, 1)
 
     def setupActions(self):
         ### Setup Action ###
