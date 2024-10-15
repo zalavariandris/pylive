@@ -1,6 +1,20 @@
-from typing import Iterable
+from typing import *
 
-from unique import unique_name
+def make_unique_name(name, names):
+	# Regex to extract the name part (without trailing digits)
+	match = re.search(r'(.*?)(\d*)$', name)
+	if match:
+		# Name part without digits
+		name_part = match.group(1)
+	
+		# Loop to find a unique name
+		digit = 1
+		while name in names:
+			# Append the current digit to the name part
+			name = f"{name_part}{digit}"
+			digit += 1
+	
+	return name
 
 import weakref
 class TriggerInPort:
@@ -211,7 +225,7 @@ class Graph:
 
 	def unique_name(self, name):
 		names = [n.name for n in self.nodes]
-		return unique_name(name, names)
+		return make_unique_name(name, names)
 
 	def __hash__(self):
 		return hash( (self.__class__, self._name) )

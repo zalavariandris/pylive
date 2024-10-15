@@ -1,21 +1,23 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["pylive"]
+
+
 [project]
 name = "pylive"
 version = "0.1.0"
 description = "Live coding expreiments"
 authors = [
-    { name="András Zalavári", email="zalavariandris@gmail.com" }
+    {name = "Andras Zalavari", email = "zalavariandris@gmail.com.com"}
 ]
-license = { file = "LICENSE" }
 readme = "README.md"
-keywords = ["python", "example", "livecoding"]
-homepage = "https://github.com/zalavariandris/pylive"
-repository = "https://github.com/zalavariandris/pylive"
+keywords = ["python", "livecode", "livecoding"]
 requires-python = ">=3.8"
 
-[project.dependencies]
-"watchfiles == 0.24.0"
-"PySide6 == 6.7.2"
-
-[build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta"
+dependencies = [
+    "watchfiles ~= 0.24.0",
+    "PySide6 ~= 6.7.0"
+]
