@@ -1,3 +1,9 @@
+# TODO
+# optionally open a file, and update if file changes
+# if script has been modified, and file has changed, ask, to update
+# on save, if file has changed ask to override the changed file
+# check sublime for policies.
+
 from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
