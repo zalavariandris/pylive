@@ -187,13 +187,36 @@ class PythonSyntaxHighlighter(QSyntaxHighlighter):
 		else:
 			return False
 
-class QCodeEditor(QPlainTextEdit):
+class QCodeEditor(QWidget):
+	textChanged = Signal()
 	def __init__(self, parent=None):
 		super().__init__(parent=parent)
+		self.setLayout(QVBoxLayout())
+		self.layout().setContentsMargins(0,0,0,0)
 		self.setWindowTitle("CodeEditor")
-		self.setTabStopDistance(QFontMetricsF(self.font()).horizontalAdvance(' ') * 4)
+		
+		self.textEdit = QPlainTextEdit()
+		self.textEdit.setTabStopDistance(QFontMetricsF(self.font()).horizontalAdvance(' ') * 4)
+		self.highlighter = PythonSyntaxHighlighter(self.textEdit.document())
+		self.textEdit.textChanged.connect(self.textChanged)
 
-		self.highlighter = PythonSyntaxHighlighter(self.document())
+		# openAction = QAction("open", self)
+		# self._menuBar = QMenuBar(parent=self)
+		# filemenu = self._menuBar.addMenu("file")
+		# filemenu.addAction(openAction)
+		# options
+		
+		# self.layout().setMenuBar(self._menuBar)
+
+		# layout widgets
+		self.layout().addWidget(self.textEdit)
+
+
+	def setPlainText(self, text:str):
+		self.textEdit.setPlainText(text)
+
+	def toPlainText(self):
+		return self.textEdit.toPlainText()
 		
 
 if __name__ == "__main__":
