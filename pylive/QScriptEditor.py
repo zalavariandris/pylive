@@ -1,11 +1,9 @@
 from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
-from PythonSyntaxHighlighter import PythonSyntaxHighlighter
+from PythonSyntaxHighlighterVSCode import PythonSyntaxHighlighter
 
 keywords = ["def", "class", "print", "Japan", "Indonesia", "China", "UAE", "America"]
-
-keywords
 
 class QScriptEditor(QPlainTextEdit):
 	textChanged = Signal()
@@ -18,6 +16,7 @@ class QScriptEditor(QPlainTextEdit):
 		option = QTextOption()
 		# option.setFlags(QTextOption.ShowTabsAndSpaces | QTextOption.ShowLineAndParagraphSeparators)
 		self.document().setDefaultTextOption(option)
+		self.setFont(QFont("Operator Mono", 10))
 		self.setTabStopDistance(QFontMetricsF(self.font()).horizontalAdvance(' ') * 4)
 
 		# setup highlighter
