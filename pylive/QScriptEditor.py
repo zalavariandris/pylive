@@ -187,7 +187,7 @@ class PythonSyntaxHighlighter(QSyntaxHighlighter):
 		else:
 			return False
 
-class QCodeEditor(QWidget):
+class QScriptEditor(QWidget):
 	textChanged = Signal()
 	def __init__(self, parent=None):
 		super().__init__(parent=parent)
@@ -223,7 +223,7 @@ if __name__ == "__main__":
 	import sys
 	import textwrap
 	app = QApplication(sys.argv)
-	editor = QCodeEditor()
+	editor = QScriptEditor()
 
 	editor.setPlainText(textwrap.dedent("""\
 	def main(name: str):

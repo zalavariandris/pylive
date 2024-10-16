@@ -1,0 +1,641 @@
+{
+	"auto_complete":
+	{
+		"selected_items":
+		[
+			[
+				"sib",
+				"siblingAtColumn"
+			],
+			[
+				"ev",
+				"evaluate_chain"
+			],
+			[
+				"item",
+				"itemChanged"
+			],
+			[
+				"chain",
+				"chainmodel"
+			],
+			[
+				"sele",
+				"selectionmodel"
+			],
+			[
+				"insert",
+				"insertRow"
+			],
+			[
+				"ch",
+				"chainview"
+			],
+			[
+				"cha",
+				"chainmodel"
+			],
+			[
+				"setHe",
+				"setHorizontalHeaderLabels"
+			],
+			[
+				"QStandardItem",
+				"QStandardItemModel"
+			],
+			[
+				"loca",
+				"local_vars"
+			],
+			[
+				"loc",
+				"local_vars"
+			],
+			[
+				"glo",
+				"global_vars"
+			],
+			[
+				"typ",
+				"typing"
+			],
+			[
+				"eva",
+				"evaulate_blocks"
+			],
+			[
+				"glob",
+				"global_vars"
+			],
+			[
+				"add",
+				"addOutlet"
+			],
+			[
+				"gr",
+				"graphmodel"
+			],
+			[
+				"line",
+				"line_number"
+			],
+			[
+				"lin",
+				"line_number"
+			],
+			[
+				"read_",
+				"read_text"
+			],
+			[
+				"sibl",
+				"siblingAtColumn"
+			],
+			[
+				"node",
+				"node_script"
+			],
+			[
+				"si",
+				"siblingAtColumn"
+			],
+			[
+				"write",
+				"write_text"
+			],
+			[
+				"Gra",
+				"GraphModel"
+			],
+			[
+				"pos",
+				"posx_edit"
+			],
+			[
+				"connec",
+				"connect_to"
+			],
+			[
+				"outlet",
+				"outlet_by_name"
+			],
+			[
+				"ou",
+				"outlets"
+			],
+			[
+				"setSelec",
+				"setSelectionModel"
+			],
+			[
+				"__",
+				"__init__"
+			],
+			[
+				"sel",
+				"selection"
+			],
+			[
+				"root",
+				"root_nodes"
+			],
+			[
+				"Trigger",
+				"TriggerInPort"
+			],
+			[
+				"co",
+				"connect"
+			],
+			[
+				"le",
+				"lefttabwidget"
+			],
+			[
+				"lis",
+				"listener"
+			],
+			[
+				"dis",
+				"display"
+			],
+			[
+				"on_",
+				"on_destroy"
+			],
+			[
+				"de",
+				"destroy"
+			],
+			[
+				"main",
+				"main_node"
+			],
+			[
+				"Trigg",
+				"TriggerOutPort"
+			],
+			[
+				"ma",
+				"main_node_class"
+			],
+			[
+				"code",
+				"codeeditor"
+			],
+			[
+				"app",
+				"AppWidget"
+			],
+			[
+				"te",
+				"textChanged"
+			],
+			[
+				"ur",
+				"urllib"
+			],
+			[
+				"max",
+				"max-height"
+			],
+			[
+				"image",
+				"image_path"
+			],
+			[
+				"p",
+				"pandoc"
+			],
+			[
+				"is",
+				"isinstance"
+			],
+			[
+				"res",
+				"resource_path"
+			],
+			[
+				"dir",
+				"dirname"
+			],
+			[
+				"border-",
+				"border-left"
+			],
+			[
+				"with_s",
+				"with_suffix"
+			],
+			[
+				"html_",
+				"html_path"
+			],
+			[
+				"all",
+				"all_paths"
+			],
+			[
+				"html",
+				"html_file_path"
+			],
+			[
+				"QU",
+				"QUrl"
+			],
+			[
+				"Py",
+				"PySide6"
+			],
+			[
+				"bas",
+				"base_url"
+			],
+			[
+				"in",
+				"int"
+			],
+			[
+				"pa",
+				"pathlib"
+			]
+		]
+	},
+	"buffers":
+	[
+	],
+	"build_system": "",
+	"build_system_choices":
+	[
+		[
+			[
+				[
+					"Packages/Python/Python.sublime-build",
+					""
+				],
+				[
+					"Packages/Python/Python.sublime-build",
+					"Syntax Check"
+				]
+			],
+			[
+				"Packages/Python/Python.sublime-build",
+				""
+			]
+		]
+	],
+	"build_varint": "",
+	"command_palette":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+			[
+				"terminus",
+				"Terminus: Toggle Panel"
+			],
+			[
+				"termi",
+				"Terminus: Toggle Panel"
+			],
+			[
+				"terminu",
+				"Terminus: Close All"
+			],
+			[
+				"insta",
+				"Package Control: Install Package"
+			],
+			[
+				"instl",
+				"Package Control: Install Package"
+			],
+			[
+				"REMOE",
+				"Package Control: Remove Package"
+			],
+			[
+				"remove",
+				"Package Control: Remove Package"
+			],
+			[
+				"reinde",
+				"Indentation: Reindent Lines"
+			],
+			[
+				"reind",
+				"Indentation: Reindent Lines"
+			],
+			[
+				"install",
+				"Package Control: Install Package"
+			],
+			[
+				"enable",
+				"Package Control: Enable Package"
+			],
+			[
+				"package",
+				"Package Control: Disable Package"
+			],
+			[
+				"packa",
+				"View Package File"
+			]
+		],
+		"width": 0.0
+	},
+	"console":
+	{
+		"height": 0.0,
+		"history":
+		[
+		]
+	},
+	"distraction_free":
+	{
+		"menu_visible": true,
+		"show_minimap": false,
+		"show_open_files": false,
+		"show_tabs": false,
+		"side_bar_visible": false,
+		"status_bar_visible": false
+	},
+	"file_history":
+	[
+		"/C/dev/src/pylive/pylive/QtWatchCode.py",
+		"/C/dev/src/pylive/pylive/__init__.py",
+		"/C/Users/and/AppData/Roaming/Sublime Text/Packages/User/python(myenv).sublime-build",
+		"/C/dev/src/pylive/pylive.sublime-project",
+		"/C/dev/src/pylive/pylive/utils.py",
+		"/C/Users/and/AppData/Roaming/Sublime Text/Packages/User/LSP-pyright.sublime-settings",
+		"/C/Users/and/AppData/Roaming/Sublime Text/Packages/LSP-pyright/LSP-pyright.sublime-settings",
+		"/C/dev/src/pylive/pylive/QScriptEditor.py",
+		"/C/dev/src/pylive/.gitignore",
+		"/C/dev/src/pylive/live_coding/livecoding_with_qtgui/QtExpressionChain.py",
+		"/C/dev/src/pylive/QtGraphEditor/nodesheet_and_details_view.py",
+		"/C/dev/src/pylive/live_coding/livecoding_with_qtgui/evaluate_a_chain_of_expressions.py",
+		"/C/dev/src/pylive/gitignore",
+		"/C/dev/src/pylive/ScriptEditor.py",
+		"/C/dev/src/pylive/live_coding/livecoding_with_qtgui/evaluate_a_block_of_statements.py",
+		"/C/dev/src/pylive/QtGraphEditor/highlighters.py",
+		"/C/dev/src/pylive/ReadMe.md",
+		"/C/dev/src/pylive/main.py",
+		"/C/dev/src/pylive/pyproject.toml",
+		"/C/dev/src/pylive/docs/2024_10_15_using_venv.md",
+		"/C/dev/src/pylive/__init__",
+		"/C/dev/src/pylive/project.toml",
+		"/C/dev/src/pylive/docs/using_venv.md",
+		"/C/dev/src/pynodes/GraphModel.py",
+		"/C/dev/src/pynodes/ReadMe.md",
+		"/C/dev/src/pynodes/script_cache_test.py",
+		"/C/dev/src/pynodes/nodesheet_and_details_view.py",
+		"/C/dev/src/pynodes/pylive.py",
+		"/C/dev/src/pynodes/GraphRunner.py",
+		"/C/dev/src/pynodes/GraphDetailsView.py",
+		"/P/!!INSTALL!!/____Install 2024/Autodesk MotionBuilder 2023/crach.txt",
+		"/C/dev/src/pynodes/GraphView.py",
+		"/C/dev/src/pynodes/ui.py",
+		"/C/dev/src/pynodes/signals.py",
+		"/C/dev/src/pynodes/core.py",
+		"/C/dev/src/pynodes/animate_signal_test.py",
+		"/C/dev/src/pynodes/signals_with_batch.py",
+		"/C/dev/src/pynodes/signals_batched.py",
+		"/C/Users/and/Desktop/signals.py",
+		"/C/dev/src/musiclib/pynodes/ui.py",
+		"/C/dev/src/musiclib/pynodes/core.py",
+		"/C/dev/src/musiclib/pynodes/ticknode.py",
+		"/C/dev/src/musiclib/pynodes/signals.py",
+		"/C/dev/src/musiclib/pynodes/main.py",
+		"/C/dev/src/musiclib/pynodes/examples/definitions.py",
+		"/C/dev/src/musiclib/pynodes/code_editor.py",
+		"/C/dev/src/musiclib/pynodes/app_widget.py",
+		"/C/dev/src/musiclib/pynodes/app_editor.py",
+		"/C/dev/src/musiclib/pynodes/example.py",
+		"/C/Users/and/Documents/Nodes/three-js-basic/nodes/Time.js",
+		"/C/Users/and/Documents/Nodes/three-js-basic/nodes/Three.Renderer.js",
+		"/C/Users/and/Documents/Nodes/three-js-basic/nodes/Texture Loader.js",
+		"/C/Users/and/Documents/Nodes/three-js-basic/nodes/Orbit Controls.js",
+		"/C/Users/and/Documents/Nodes/three-js-basic/nodes/MeshStandardMaterial.js",
+		"/C/Users/and/Documents/Nodes/three-js-basic/nodes/Mesh.js",
+		"/C/dev/src/my_interactive-python/utils.py",
+		"/C/dev/src/my_interactive-python/main.py",
+		"/C/Users/and/Documents/Nodes/three-js-basic/nodes/GLTF Scene.js",
+		"/C/Users/and/Documents/Nodes/three-js-basic/nodes/EnvMap.js",
+		"/C/Users/and/Documents/Nodes/three-js-basic/nodes/DirectionalLight.js",
+		"/C/Users/and/AppData/Local/Packages/PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0/LocalCache/local-packages/Python312/Scripts/python_qt_live_coding",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/make_html_with_pandoc.py",
+		"/C/Users/and/Documents/Nodes/three-js-basic/nodes/TorusKnotBufferGeometry.js",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/make_html_with_seperate_chapters.py",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/src/index-multipage.md",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/dist(from_index)/index-paginated.html",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB edition/scripts/signal_graph.py",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB edition/src/index-paginated.md",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB edition/make_single_html.py",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB edition/make_html_with_seperate_chapters.py",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/image_path_filter.py",
+		"/C/dev/src/my-md-editor/src/main.tsx",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/markdown/4.7 A tér ökológiai modellje.md",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/style.css",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/template.html",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/markdown/4.6 A tárgyak térbeli formája.md",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/markdown/4.5 A 2 és ½ dimenziós vázlat.md",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/markdown/4.4 Az első vázlat.md",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/markdown/4.3 A látvány formái.md",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/markdown/4.2 David Marr, a látás három szintű leírása.md",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/markdown/4. Az elme mentális ábrázolásai.md",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/markdown/4.1 Vizuális nyomok.md",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/markdown/3.2 Képek az elmében.md",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/markdown/3.1 Képek az agyban.md",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/markdown/2.2 A fény.md",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/markdown/1.1 előszó-mi-a-latvany.md",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/markdown/2.6 A színterek geometriája.md",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/markdown/2.5 Ellenszínelmélet.md",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/markdown/2.4 A fény és az anyag szabályai.md",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/markdown/2.3 A retina.md",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/ReadMe.md",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/markdown/3. A világ fejjel lefelé.md",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/html/1.1 előszó-mi-a-latvany.html",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/markdown/test_markdown.md",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/html/test_markdown.html",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/html/test_html.html",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/1.1 előszó-mi-a-latvany.md",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/2.2 A fény.md",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/4.1 Vizuális nyomok.md",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/Csehov Epigraph.md",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/7. A látvány formája és szabályai.md",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/6.5 A perceptuális tanulás.md",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/6.4 Oliver Sacks és a felnőttkori tanulás.md",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/6.3 A világ újra fejjel lefelé.md",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/6.2 Az észlelés és a tapasztalat.md",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/6.1 A látás fejlődése.md",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/6. A látvány mint tanulás, tapasztalat és megfigyelés.md",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/html/5.2 A tudás hatása a látványra.html",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/5.2 A tudás hatása a látványra.md",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/5.3 A szándék hatása a látványra.md",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/5.1 A velünk született vizuális rendszer prekoncepciói.md",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/html/5.1 A velünk született vizuális rendszer prekoncepciói.html",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/4.7 A tér ökológiai modellje.md",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/5. A látvány mint hipotézis.md",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/4.6 A tárgyak térbeli formája.md",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/4.4 Az első vázlat.md",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/4.5 A 2 és ½ dimenziós vázlat.md",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/4.3 A látvány formái.md",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/4.2 David Marr, a látás három szintű leírása.md",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/3.2 Képek az elmében.md",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/4. Az elme mentális ábrázolásai.md",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/default.html",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/3.1 Képek az agyban.md",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/3. A világ fejjel lefelé.md",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/2.6 A színterek geometriája.md",
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/html/2.6 A színterek geometriája.html",
+		"/C/dev/src/pandoc-preview/web_preview_widget.py",
+		"/C/dev/src/pandoc-preview/pandoc_preview.py"
+	],
+	"find":
+	{
+		"height": 23.0
+	},
+	"find_in_files":
+	{
+		"height": 101.0,
+		"where_history":
+		[
+			""
+		]
+	},
+	"find_state":
+	{
+		"case_sensitive": false,
+		"find_history":
+		[
+			"WatchCode",
+			"getWidgetByName"
+		],
+		"highlight": true,
+		"in_selection": false,
+		"preserve_case": false,
+		"regex": false,
+		"replace_history":
+		[
+		],
+		"reverse": false,
+		"scrollbar_highlights": true,
+		"show_context": true,
+		"use_buffer2": true,
+		"use_gitignore": true,
+		"whole_word": false,
+		"wrap": false
+	},
+	"groups":
+	[
+		{
+			"sheets":
+			[
+			]
+		}
+	],
+	"incremental_find":
+	{
+		"height": 23.0
+	},
+	"input":
+	{
+		"height": 40.0
+	},
+	"layout":
+	{
+		"cells":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			]
+		],
+		"cols":
+		[
+			0.0,
+			1.0
+		],
+		"rows":
+		[
+			0.0,
+			1.0
+		]
+	},
+	"menu_visible": true,
+	"output.LSP Log Panel":
+	{
+		"height": 0.0
+	},
+	"output.Terminus":
+	{
+		"height": 392.0
+	},
+	"output.diagnostics":
+	{
+		"height": 0.0
+	},
+	"output.exec":
+	{
+		"height": 276.0
+	},
+	"output.find_results":
+	{
+		"height": 0.0
+	},
+	"output.mdpopups":
+	{
+		"height": 0.0
+	},
+	"pinned_build_system": "Packages/Python/Python.sublime-build",
+	"project": ".sublime-project",
+	"replace":
+	{
+		"height": 42.0
+	},
+	"save_all_on_build": true,
+	"select_file":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_project":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_symbol":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"selected_group": 0,
+	"settings":
+	{
+	},
+	"show_minimap": true,
+	"show_open_files": false,
+	"show_tabs": true,
+	"side_bar_visible": true,
+	"side_bar_width": 289.0,
+	"status_bar_visible": true,
+	"template_settings":
+	{
+	}
+}

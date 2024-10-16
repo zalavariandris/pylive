@@ -1,0 +1,22 @@
+{
+    "folders":
+    [
+        {
+            "path": "."
+        }
+    ],
+    "settings": {
+        "python_interpreter": "./venv/Scripts/python.exe",
+        "env": {
+            "PYTHONPATH": "${folder}/"
+        }
+    },
+    "build_systems": [
+        {
+            "name": "Python: Run File",
+            "cmd": ["${project_path}/venv/Scripts/python.exe", "-u", "$file"],
+            "file_regex": "^[ ]*File \"(...*?)\", line ([0-9]*)",
+            "selector": "source.python"
+        }
+    ]
+}
