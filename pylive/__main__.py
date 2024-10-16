@@ -10,7 +10,7 @@ def open_livescript(filepath=None):
 	window.show()
 	sys.exit(app.exec())
 
-if __name__ == "__main__":
+def parse_args():
 	import sys
 	import argparse
 	parser = argparse.ArgumentParser(description="pylive command-line tool.")
@@ -22,7 +22,12 @@ if __name__ == "__main__":
 
 	# Parse the arguments
 	args = parser.parse_args()
-	
+
+	return args
+
+if __name__ == "__main__":
+	args = parse_args()
+
 	# Route to the correct app
 	if args.command == 'livescript':
 		open_livescript(args.filepath)

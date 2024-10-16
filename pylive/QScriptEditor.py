@@ -1,227 +1,59 @@
 from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
+from PythonSyntaxHighlighter import PythonSyntaxHighlighter
 
-def format(color, style=''):
-	"""
-	Return a QTextCharFormat with the given attributes.
-	"""
-	_format = QTextCharFormat()
-	_format.setForeground(color)
-	if 'bold' in style:
-		_format.setFontWeight(QFont.Bold)
-	if 'italic' in style:
-		_format.setFontItalic(True)
+keywords = ["def", "class", "print", "Japan", "Indonesia", "China", "UAE", "America"]
 
-	return _format
+keywords
 
-
-# Syntax styles that can be shared by all languages
-import re
-def hsl_to_qcolor(hsl_string):
-	# Extract values from HSL string
-	match = re.match(r'hsla?\((\d+),\s*(\d+)%,\s*(\d+)%(?:,\s*([\d.]+))?\)', hsl_string)
-	if match:
-		h, s, l, a = match.groups()
-		h, s, l = int(h), int(s), int(l)
-		a = float(a) if a else 1.0
-		return QColor.fromHslF(h / 360, s / 100, l / 100, a)
-	else:
-		raise ValueError(f"Invalid HSL string: {hsl_string}")
-colors = {
-	"black":        hsl_to_qcolor("hsl(0, 0%, 0%)"),
-	"blue":         hsl_to_qcolor("hsl(210, 50%, 60%)"),
-	"blue-vibrant": hsl_to_qcolor("hsl(210, 60%, 60%)"),
-	"blue2":        hsl_to_qcolor("hsla(210, 13%, 40%, 0.7)"),
-	"blue3":        hsl_to_qcolor("hsl(210, 15%, 22%)"),
-	"blue4":        hsl_to_qcolor("hsl(210, 13%, 45%)"),
-	"blue5":        hsl_to_qcolor("hsl(180, 36%, 54%)"),
-	"blue6":        hsl_to_qcolor("hsl(221, 12%, 69%)"),
-	"green":        hsl_to_qcolor("hsl(114, 31%, 68%)"),
-	"grey":         hsl_to_qcolor("hsl(0, 0%, 20%)"),
-	"orange":       hsl_to_qcolor("hsl(32, 93%, 66%)"),
-	"orange2":      hsl_to_qcolor("hsl(32, 85%, 55%)"),
-	"orange3":      hsl_to_qcolor("hsl(40, 94%, 68%)"),
-	"pink":         hsl_to_qcolor("hsl(300, 30%, 68%)"),
-	"red":          hsl_to_qcolor("hsl(357, 79%, 65%)"),
-	"red2":         hsl_to_qcolor("hsl(13, 93%, 66%)"),
-	"white":        hsl_to_qcolor("hsl(0, 0%, 100%)"),
-	"white2":       hsl_to_qcolor("hsl(0, 0%, 97%)"),
-	"white3":       hsl_to_qcolor("hsl(219, 28%, 88%)")
-}
-
-STYLES = {
-	'keyword':  format(colors['orange2']),
-	'operator': format(colors['red2']),
-	'brace':    format(colors['pink']),
-	'defclass': format(colors['orange'], 'bold'),
-	'string':   format(colors['green']),
-	'string2':  format(colors['green']),
-	'comment':  format(colors['blue6'], 'italic'),
-	'self':     format(colors['red'], 'italic'),
-	'numbers':  format(colors['red2'])
-}
-
-a = """sasdsssss"""
-
-class PythonSyntaxHighlighter(QSyntaxHighlighter):
-	"""Syntax highlighter for the Python language.
-	"""
-	# Python keywords
-	keywords = [
-		'and', 'assert', 'break', 'class', 'continue', 'def',
-		'del', 'elif', 'else', 'except', 'exec', 'finally',
-		'for', 'from', 'global', 'if', 'import', 'in',
-		'is', 'lambda', 'not', 'or', 'pass', 'print',
-		'raise', 'return', 'try', 'while', 'yield',
-		'None', 'True', 'False'
-	]
-
-	def __init__(self, parent: QTextDocument) -> None:
-		super().__init__(parent)
-
-		# Multi-line strings (expression, flag, style)
-		self.tri_single = (QRegularExpression("'''"), 1, STYLES['string2'])
-		self.tri_double = (QRegularExpression('"""'), 2, STYLES['string2'])
-
-		rules = []
-
-		# Keyword, operator, and brace rules
-		rules += [(r'\b%s\b' % w, 0, STYLES['keyword'])
-			for w in PythonSyntaxHighlighter.keywords]
-		# rules += [(r'%s' % o, 0, STYLES['operator'])
-		# 	for o in PythonSyntaxHighlighter.operators]
-		# rules += [(r'%s' % b, 0, STYLES['brace'])
-		# 	for b in PythonSyntaxHighlighter.braces]
-
-		# All other rules
-		rules += [
-			# 'self'
-			(r'\bself\b', 0, STYLES['self']),
-
-			# 'def' followed by an identifier
-			(r'\bdef\b\s*(\w+)', 1, STYLES['defclass']),
-
-			# 'class' followed by an identifier
-			(r'\bclass\b\s*(\w+)', 1, STYLES['defclass']),
-
-			# Numeric literals
-			(r'\b[+-]?[0-9]+[lL]?\b', 0, STYLES['numbers']),
-			(r'\b[+-]?0[xX][0-9A-Fa-f]+[lL]?\b', 0, STYLES['numbers']),
-			(r'\b[+-]?[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?\b', 0, STYLES['numbers']),
-
-			# Double-quoted string, possibly containing escape sequences
-			(r'"[^"\\]*(\\.[^"\\]*)*"', 0, STYLES['string']),
-			# Single-quoted string, possibly containing escape sequences
-			(r"'[^'\\]*(\\.[^'\\]*)*'", 0, STYLES['string']),
-
-			# From '#' until a newline
-			(r'#[^\n]*', 0, STYLES['comment']),
-		]
-
-		# Build a QRegularExpression for each pattern
-		self.rules = [(QRegularExpression(pat), index, fmt)
-			for (pat, index, fmt) in rules]
-
-	def highlightBlock(self, text):
-		"""Apply syntax highlighting to the given block of text.
-		"""
-		self.tripleQuotesWithinStrings = []
-		# Do other syntax formatting
-		for expression, nth, format in self.rules:
-			iterator = expression.globalMatch(text)
-			while iterator.hasNext():
-				match = iterator.next()
-				index = match.capturedStart(nth)
-				length = match.capturedLength(nth)
-				if index >= 0 and length > 0:
-					self.setFormat(index, length, format)
-
-		self.setCurrentBlockState(0)
-
-		# Do multi-line strings
-		in_multiline = self.match_multiline(text, *self.tri_single)
-		if not in_multiline:
-			in_multiline = self.match_multiline(text, *self.tri_double)
-
-	def match_multiline(self, text, delimiter, in_state, style):
-		"""Do highlighting of multi-line strings. ``delimiter`` should be a
-		``QRegularExpression`` for triple-single-quotes or triple-double-quotes, and
-		``in_state`` should be a unique integer to represent the corresponding
-		state changes when inside those strings. Returns True if we're still
-		inside a multi-line string when this function is finished.
-		"""
-		# If inside triple-single quotes, start at 0
-		if self.previousBlockState() == in_state:
-			start = 0
-			add = 0
-		# Otherwise, look for the delimiter on this line
-		else:
-			match = delimiter.match(text)
-			start = match.capturedStart()
-			# Move past this match
-			add = match.capturedLength()
-
-		# As long as there's a delimiter match on this line...
-		while start >= 0:
-			# Look for the ending delimiter
-			match = delimiter.match(text, start + add)
-			end = match.capturedStart()
-			# Ending delimiter on this line?
-			if end >= add:
-				length = end - start + add + match.capturedLength()
-				self.setCurrentBlockState(0)
-			# No; multi-line string
-			else:
-				self.setCurrentBlockState(in_state)
-				length = len(text) - start + add
-			# Apply formatting
-			self.setFormat(start, length, style)
-			# Look for the next match
-			match = delimiter.match(text, start + length)
-			start = match.capturedStart()
-
-		# Return True if still inside a multi-line string, False otherwise
-		if self.currentBlockState() == in_state:
-			return True
-		else:
-			return False
-
-class QScriptEditor(QWidget):
+class QScriptEditor(QPlainTextEdit):
 	textChanged = Signal()
 	def __init__(self, parent=None):
 		super().__init__(parent=parent)
-		self.setLayout(QVBoxLayout())
-		self.layout().setContentsMargins(0,0,0,0)
+		# setup window
 		self.setWindowTitle("CodeEditor")
-		
-		self.textEdit = QPlainTextEdit()
-		self.textEdit.setTabStopDistance(QFontMetricsF(self.font()).horizontalAdvance(' ') * 4)
-		self.highlighter = PythonSyntaxHighlighter(self.textEdit.document())
-		self.textEdit.textChanged.connect(self.textChanged)
 
-		# openAction = QAction("open", self)
-		# self._menuBar = QMenuBar(parent=self)
-		# filemenu = self._menuBar.addMenu("file")
-		# filemenu.addAction(openAction)
-		# options
-		
-		# self.layout().setMenuBar(self._menuBar)
+		# setup textedit
+		option = QTextOption()
+		# option.setFlags(QTextOption.ShowTabsAndSpaces | QTextOption.ShowLineAndParagraphSeparators)
+		self.document().setDefaultTextOption(option)
+		self.setTabStopDistance(QFontMetricsF(self.font()).horizontalAdvance(' ') * 4)
 
-		# layout widgets
-		self.layout().addWidget(self.textEdit)
+		# setup highlighter
+		self.highlighter = PythonSyntaxHighlighter(self.document())
 
+	def autoindent(self, e: QKeyEvent):
+		if e.key() == Qt.Key_Return:
+			# get the current line
+			lineno = self.textCursor().blockNumber()
+			line_text = self.document().findBlockByNumber(lineno).text()
 
-	def setPlainText(self, text:str):
-		self.textEdit.setPlainText(text)
+			# calc current indentations
+			indendation = len(line_text) - len(line_text.lstrip(' \t'))
 
-	def toPlainText(self):
-		return self.textEdit.toPlainText()
+			# run original event
+			self.blockSignals(True)
+			result = super().keyPressEvent(e)
+			self.blockSignals(False)
+			# and indent as the previous line
+			if line_text.endswith(":"):
+				self.insertPlainText("\t"*(indendation+1))
+			else:
+				self.insertPlainText("\t"*indendation)
+			return result
+		else:
+			return super().keyPressEvent(e)
+
+	def keyPressEvent(self, e: QKeyEvent) -> None:
+		return self.autoindent(e)
+
 		
 
 if __name__ == "__main__":
 	import sys
 	import textwrap
+	from datetime import datetime
 	app = QApplication(sys.argv)
 	editor = QScriptEditor()
 
@@ -229,6 +61,9 @@ if __name__ == "__main__":
 	def main(name: str):
 		print(f"hello, {name}")
 	"""))
-
+	@editor.textChanged.connect
+	def textChanged():
+		print("text changed", datetime.now())
 	editor.show()
+	print(f"{editor.toPlainText()}")
 	sys.exit(app.exec())
