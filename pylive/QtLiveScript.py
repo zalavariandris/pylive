@@ -9,7 +9,7 @@ from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 from pathlib import Path
 
-from pylive.QScriptEditor import QScriptEditor
+from pylive.QScriptEditor import QScriptEditor, TracebackFrameWidget, TracebackStackWidget
 from pylive.utils import getWidgetByName
 from typing import *
 
@@ -19,6 +19,8 @@ from datetime import datetime
 from pylive.QtLiveScript import display
 
 display(f"hello{datetime.now()}")
+
+a
 """
 
 def display(msg:Any):
@@ -34,16 +36,21 @@ class QLiveScript(QWidget):
 	
 		# setup panel
 		self.setWindowTitle("QLiveScript")
-		self.resize(800,400)
-		self.setLayout(QHBoxLayout())
+		self.resize(500,900)
+		self.setLayout(QVBoxLayout())
 		self.layout().setContentsMargins(0,0,0,0)
 
 		# setup UI
 		self.scripteditor = QScriptEditor()
 		self.scripteditor.setPlainText(initial_script)
+
 		self.filepath:str|None = None # keep track of the actual file exist on disk
+
 		self.preview_label = QLabel()
 		self.preview_label.setObjectName("PREVIEW_WINDOW_ID")
+
+		self.exception_panel = QWidget()
+		self.exception_panel.setLayout(QVBoxLayout())
 
 		# setup menubar
 		self.setupMenuBar()
@@ -62,6 +69,7 @@ class QLiveScript(QWidget):
 		# layout widgets
 		self.layout().addWidget(self.scripteditor, 1)
 		self.layout().addWidget(self.preview_label, 1)
+		self.layout().addWidget(self.exception_panel, 1)
 
 		# evaluate on start
 		self.evaluate()
@@ -176,23 +184,61 @@ class QLiveScript(QWidget):
 			if filename != '':
 				self.saveFile(filename)
 
-
-
 	def evaluate(self):
+		print("evaluate")
 		import textwrap
 		source = self.scripteditor.toPlainText()
 		global_vars = globals()
 		local_vars = locals()
+
+		while self.exception_panel.layout().count():
+			item = self.exception_panel.layout().takeAt(0)  # Remove the widget from the layout
+			widget = item.widget()
+			if widget is not None:
+				widget.deleteLater()  # Schedule widget for deletion
+
+		error_labels_data = []
 		try:
 			exec(source, global_vars, local_vars)
 		except Exception as err:
-			tr = traceback.TracebackException.from_exception(err) # TracebackException docs: <https://docs.python.org/3/library/traceback.html#traceback.TracebackException>
-			# print(tr.exc_type, tr.lineno, tr.text, tr.offset, tr.end_offset)
-			# print(tr.lineno)
+			print()
+			print("Error while executing:", err)
+			# parse_exception(err)
+			traceback_text = "".join(traceback.format_exception(err))
+			exception_widget = TracebackStackWidget()
+			exception_widget.setTextFromException(err)
+			self.exception_panel.layout().addWidget(exception_widget)
+
+			tb = err.__traceback__
+			for idx, entry in enumerate(traceback.extract_tb(tb)):
+				exception_label = TracebackFrameWidget()
+				exception_label.setText(f"""{err.__class__.__name__}: {err}.\nFile "{entry.filename}"" line {entry.lineno}, in: {entry.name}; line:{entry.line}""")
+				self.exception_panel.layout().addWidget(exception_label)
+
+			
+			for idx, entry in enumerate(traceback.extract_tb(tb)):
+				if entry.filename == "<string>":
+					error_labels_data.append( (entry.lineno, f"{err}") )
 		finally:
 			pass
+		self.scripteditor.update_error_labels(error_labels_data)
+			
 
 
+
+
+def parse_exception(err:Exception):
+	tb = err.__traceback__
+	print("# Parse Exception:", err)
+	print("traceback object:", tb)
+	for idx, entry in enumerate(traceback.extract_tb(tb)):
+		print("- entry:", idx)
+		print("- filename:", entry.filename)
+		print("- lineno:", entry.lineno)
+		print("- name:", entry.name)
+		print("- line:", entry.line)
+	print("###################")
+	print()
 
 if __name__ == "__main__":
 	import sys

@@ -11,8 +11,46 @@ from pylive.PythonSyntaxHighlighter import PythonSyntaxHighlighter
 
 import rope.base.project
 from rope.contrib import codeassist
-
+from typing import *
 keywords = ["def", "class", "print", "Japan", "Indonesia", "China", "UAE", "America"]
+import traceback
+class TracebackStackWidget(QLabel):
+	def __init__(self, parent=None):
+		super().__init__(parent=parent)
+		self.setStyleSheet("""QLabel{
+			padding: 4px;
+			margin-left: 10px;
+			border-radius: 3px;
+			background: darkred;
+			color: white;
+		}""")
+		# self.setStyleSheet("background: darkgray; color: red;")
+		# self.set
+
+		self.setAutoFillBackground(True);
+		# self.setPalette(sample_palette);
+		# self.setStyleSheet("background: rgba(255,0,0,160); color: red;")
+		self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+
+	def setTextFromTracebackStackSummary(self, summary: traceback.StackSummary):
+		raise NotImplementedError
+
+	def setTextFromException(self, exception):
+		traceback_text = "".join(traceback.format_exception(exception))
+		self.setText(traceback_text)
+
+class TracebackFrameWidget(QLabel):
+	def __init__(self, parent=None):
+		super().__init__(parent=parent)
+		self.setStyleSheet("""QLabel{
+			padding: 0px;
+			margin-left: 10px;
+			border-radius: 3px;
+			background: rgba(255,0,0,52);
+			color: white;
+		}""")
+		self.setAutoFillBackground(True);
+		self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
 class QScriptEditor(QPlainTextEdit):
 	textChanged = Signal()
@@ -46,7 +84,7 @@ class QScriptEditor(QPlainTextEdit):
 
 		self.error_labels = []
 
-	def update_error_labels(self, errors=[]):
+	def update_error_labels(self, errors:List[Tuple[int, str]]=[]):
 		print("update error labels")
 		for lbl in self.error_labels:
 			try:
@@ -62,9 +100,9 @@ class QScriptEditor(QPlainTextEdit):
 			tabs_count = len(block.text()) - len(text_without_tabs)
 			block_text_width = QFontMetrics(self.font()).horizontalAdvance(text_without_tabs)
 			block_text_width+=tabs_count*self.tabStopDistance()
-			error_label = QLabel(parent=self)
-			error_label.setGeometry(int(block_text_width), int(rect.top()), 100,30)
-			error_label.setStyleSheet("QLabel { color: red; }")  # Style for visibility
+			error_label = TracebackFrameWidget(parent=self)
+			# error_label.setGeometry(), 500,30)
+			error_label.move(int(block_text_width), int(rect.top()))
 			error_label.setText(msg)
 			error_label.show()
 			self.error_labels.append(error_label)
