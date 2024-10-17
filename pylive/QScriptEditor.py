@@ -92,8 +92,12 @@ class QScriptEditor(QPlainTextEdit):
 
 		### Insert autocomplete ###
 		print("text:", e.text())
-		TypeIsACharacter = True if e.text().strip() else False
-		if self.document().characterCount() != old_len:
+		# get line text under cursor
+		textCursor = self.textCursor()
+		textCursor.select(QTextCursor.LineUnderCursor)
+		lineUnderCursor = textCursor.selectedText()
+		
+		if  lineUnderCursor.strip() and self.document().characterCount() != old_len:
 			proposals = codeassist.code_assist(self.rope_project, self.document().toPlainText(), self.textCursor().position())
 			proposals = codeassist.sorted_proposals(proposals) # Sorting proposals; for changing the order see pydoc
 			# print(proposals)
