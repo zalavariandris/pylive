@@ -33,15 +33,17 @@ class QLiveScript(QWidget):
 		self.setWindowTitle("QLiveScript")
 		self.resize(800,400)
 		self.setLayout(QHBoxLayout())
+		self.layout().setContentsMargins(0,0,0,0)
 
 		# setup UI
-		self.setupMenuBar()
-
 		self.scripteditor = QScriptEditor()
 		self.scripteditor.setPlainText(initial_script)
 		self.filepath:str|None = None # keep track of the actual file exist on disk
 		self.preview_label = QLabel()
 		self.preview_label.setObjectName("PREVIEW_WINDOW_ID")
+
+		# setup menubar
+		self.setupMenuBar()
 
 		# bind ui
 		self.scripteditor.textChanged.connect(self.evaluate)
@@ -105,16 +107,43 @@ class QLiveScript(QWidget):
 
 	def setupMenuBar(self):
 		self.menu_bar = QMenuBar()
+		self.menu_bar.setStyleSheet("""
+			QMenuBar::item {
+				padding: 0px 8px;  /* Adjust padding for the normal state */
+			}
+			QMenuBar::item:selected {  /* Hover state */
+				padding: 0px 0px;  /* Ensure the same padding applies to the hover state */
+			}
+		""")
+
 		file_menu  = self.menu_bar.addMenu("File")
 		# Add actions to the File menu
 		open_action = QAction("Open", self)
 		open_action.triggered.connect(self.open)
+		open_action.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_O))
 		save_action = QAction("Save", self)
 		save_action.triggered.connect(self.save)
+		save_action.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_S))
 
 		# Add actions to File menu
 		file_menu.addAction(open_action)
 		file_menu.addAction(save_action)
+
+		edit_menu  = self.menu_bar.addMenu("Edit")
+		# Add actions to the File menu
+		copy_action = QAction("Copy", self)
+		copy_action.triggered.connect(self.scripteditor.copy)
+		copy_action.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_C))
+		cut_action = QAction("Cut", self)
+		cut_action.triggered.connect(self.scripteditor.cut)
+		cut_action.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_X))
+		paste_action = QAction("Paste", self)
+		paste_action.triggered.connect(self.scripteditor.paste)
+		paste_action.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_V))
+
+		# Add actions to File menu
+		edit_menu.addAction(cut_action)
+		edit_menu.addAction(paste_action)
 
 		self.layout().setMenuBar(self.menu_bar)
 

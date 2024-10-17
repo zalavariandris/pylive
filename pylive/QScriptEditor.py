@@ -7,7 +7,7 @@
 from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
-from PythonSyntaxHighlighter import PythonSyntaxHighlighter
+from pylive.PythonSyntaxHighlighter import PythonSyntaxHighlighter
 
 import rope.base.project
 from rope.contrib import codeassist
