@@ -16,7 +16,7 @@ def format(color: str, style: str = '') -> QTextCharFormat:
 
 # Updated color scheme for all Python components (based on VSCode's default theme)
 STYLES = {
-    'keyword': format('#569CD6', 'bold'),         # Blue for Python keywords
+    'keyword': format('#569CD6', "italic bold"),         # Blue for Python keywords
     'builtin': format('#4FC1FF'),                 # Light blue for built-in functions
     'self': format('#9CDCFE'),                    # Cyan for 'self'
     'defclass': format('#4EC9B0', 'bold'),        # Light blue for class and def
@@ -52,8 +52,8 @@ class PythonSyntaxHighlighter(QSyntaxHighlighter):
     ]
 
     operators = [
-        '=', '==', '!=', '<', '<=', '>', '>=', '\+', '-', '\*', '/', '//', '%', '\*\*',
-        '\+=', '-=', '\*=', '/=', '%=', '\^', '\|', '\&', '\~', '>>', '<<'
+        '=', '==', '!=', '<', '<=', '>', '>=', r'\+', '-', r'\*', '/', '//', '%', r'\*\*',
+        r'\+=', '-=', r'\*=', '/=', '%=', r'\^', r'\|', r'\&', r'\~', '>>', '<<'
     ]
 
     braces = [
