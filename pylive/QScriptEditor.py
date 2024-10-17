@@ -4,11 +4,12 @@
 ######################
 
 
+from datetime import date
 from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 from pylive.PythonSyntaxHighlighter import PythonSyntaxHighlighter
-
+from datetime import datetime
 import rope.base.project
 from rope.contrib import codeassist
 from typing import *
@@ -84,8 +85,9 @@ class QScriptEditor(QPlainTextEdit):
 
 		self.error_labels = []
 
+
 	def update_error_labels(self, errors:List[Tuple[int, str]]=[]):
-		print("update error labels")
+		print("update error labels", datetime.now())
 		for lbl in self.error_labels:
 			try:
 				self.error_labels.remove(lbl)
@@ -94,6 +96,9 @@ class QScriptEditor(QPlainTextEdit):
 				print(err)
 
 		for lineno, msg in errors:
+			cursor_line = self.textCursor().blockNumber()+1
+			if cursor_line == lineno:
+				break
 			block = self.document().findBlockByLineNumber(lineno-1)
 			rect = self.blockBoundingGeometry(block)
 			text_without_tabs = block.text().replace("\t", "")
@@ -101,7 +106,6 @@ class QScriptEditor(QPlainTextEdit):
 			block_text_width = QFontMetrics(self.font()).horizontalAdvance(text_without_tabs)
 			block_text_width+=tabs_count*self.tabStopDistance()
 			error_label = TracebackFrameWidget(parent=self)
-			# error_label.setGeometry(), 500,30)
 			error_label.move(int(block_text_width), int(rect.top()))
 			error_label.setText(msg)
 			error_label.show()
@@ -148,8 +152,11 @@ class QScriptEditor(QPlainTextEdit):
 			# and indent as the previous line
 			if line_text.endswith(":"):
 				self.insertPlainText("\t"*(indendation+1))
-			else:
+			elif indendation>0: # if indentation is 0, isnertinh no characters will not emit textChanged signal.
 				self.insertPlainText("\t"*indendation)
+			else:
+				self.textChanged.emit()
+
 		else:
 			super().keyPressEvent(e)
 
@@ -159,6 +166,8 @@ class QScriptEditor(QPlainTextEdit):
 		textCursor = self.textCursor()
 		textCursor.select(QTextCursor.LineUnderCursor)
 		lineUnderCursor = textCursor.selectedText()
+
+		textCursor.position()
 
 		if lineUnderCursor.strip() and self.document().characterCount() != old_len:
 			try:
