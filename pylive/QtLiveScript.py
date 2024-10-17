@@ -25,6 +25,9 @@ def display(msg:Any):
 	if preview_widget := cast(QLabel, getWidgetByName("PREVIEW_WINDOW_ID")):
 		preview_widget.setText(f"{msg}")
 
+import traceback
+import sys
+import os
 class QLiveScript(QWidget):
 	def __init__(self, parent=None):
 		super().__init__(parent=parent)
@@ -120,10 +123,10 @@ class QLiveScript(QWidget):
 		# Add actions to the File menu
 		open_action = QAction("Open", self)
 		open_action.triggered.connect(self.open)
-		open_action.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_O))
+		open_action.setShortcut(QKeySequence(Qt.CTRL | Qt.Key_O))
 		save_action = QAction("Save", self)
 		save_action.triggered.connect(self.save)
-		save_action.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_S))
+		save_action.setShortcut(QKeySequence(Qt.CTRL | Qt.Key_S))
 
 		# Add actions to File menu
 		file_menu.addAction(open_action)
@@ -133,13 +136,13 @@ class QLiveScript(QWidget):
 		# Add actions to the File menu
 		copy_action = QAction("Copy", self)
 		copy_action.triggered.connect(self.scripteditor.copy)
-		copy_action.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_C))
+		copy_action.setShortcut(QKeySequence(Qt.CTRL | Qt.Key_C))
 		cut_action = QAction("Cut", self)
 		cut_action.triggered.connect(self.scripteditor.cut)
-		cut_action.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_X))
+		cut_action.setShortcut(QKeySequence(Qt.CTRL | Qt.Key_X))
 		paste_action = QAction("Paste", self)
 		paste_action.triggered.connect(self.scripteditor.paste)
-		paste_action.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_V))
+		paste_action.setShortcut(QKeySequence(Qt.CTRL | Qt.Key_V))
 
 		# Add actions to File menu
 		edit_menu.addAction(cut_action)
@@ -176,15 +179,20 @@ class QLiveScript(QWidget):
 
 
 	def evaluate(self):
+		import textwrap
 		source = self.scripteditor.toPlainText()
 		global_vars = globals()
 		local_vars = locals()
 		try:
 			exec(source, global_vars, local_vars)
 		except Exception as err:
-			print("err")
+			tr = traceback.TracebackException.from_exception(err) # TracebackException docs: <https://docs.python.org/3/library/traceback.html#traceback.TracebackException>
+			# print(tr.exc_type, tr.lineno, tr.text, tr.offset, tr.end_offset)
+			# print(tr.lineno)
 		finally:
 			pass
+
+
 
 if __name__ == "__main__":
 	import sys

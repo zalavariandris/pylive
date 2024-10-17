@@ -44,6 +44,31 @@ class QScriptEditor(QPlainTextEdit):
 		self.completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
 		self.completer.activated.connect(self.insert_completion)
 
+		self.error_labels = []
+
+	def update_error_labels(self, errors=[]):
+		print("update error labels")
+		for lbl in self.error_labels:
+			try:
+				self.error_labels.remove(lbl)
+				lbl.deleteLater()
+			except Exception as err:
+				print(err)
+
+		for lineno, msg in errors:
+			block = self.document().findBlockByLineNumber(lineno-1)
+			rect = self.blockBoundingGeometry(block)
+			text_without_tabs = block.text().replace("\t", "")
+			tabs_count = len(block.text()) - len(text_without_tabs)
+			block_text_width = QFontMetrics(self.font()).horizontalAdvance(text_without_tabs)
+			block_text_width+=tabs_count*self.tabStopDistance()
+			error_label = QLabel(parent=self)
+			error_label.setGeometry(int(block_text_width), int(rect.top()), 100,30)
+			error_label.setStyleSheet("QLabel { color: red; }")  # Style for visibility
+			error_label.setText(msg)
+			error_label.show()
+			self.error_labels.append(error_label)
+
 	def keyPressEvent(self, e: QKeyEvent) -> None:
 		# If completer popup is open. Give it exclusive use of specific keys
 		if self.completer.popup().isVisible() and e.key() in [
@@ -73,7 +98,7 @@ class QScriptEditor(QPlainTextEdit):
 		if e.key() == Qt.Key_Return:
 			# get the current line
 			lineno = self.textCursor().blockNumber()
-			line_text = self.document().findBlockByNumber(lineno).text()
+			line_text = self.document().findBlockByLineNumber(lineno).text()
 
 			# calc current indentations
 			indendation = len(line_text) - len(line_text.lstrip(' \t'))
@@ -91,28 +116,32 @@ class QScriptEditor(QPlainTextEdit):
 			super().keyPressEvent(e)
 
 		### Insert autocomplete ###
-		print("text:", e.text())
+		# print("text:", e.text())
 		# get line text under cursor
 		textCursor = self.textCursor()
 		textCursor.select(QTextCursor.LineUnderCursor)
 		lineUnderCursor = textCursor.selectedText()
 
 		if lineUnderCursor.strip() and self.document().characterCount() != old_len:
-			proposals = codeassist.code_assist(self.rope_project, self.document().toPlainText(), self.textCursor().position())
-			proposals = codeassist.sorted_proposals(proposals) # Sorting proposals; for changing the order see pydoc
-			# print(proposals)
-			self.completions.setStringList([proposal.name for proposal in proposals])
-			# Where to insert the completions
-			self.starting_offset = codeassist.starting_offset(self.document().toPlainText(), self.textCursor().position())
+			try:
+				proposals = codeassist.code_assist(self.rope_project, self.document().toPlainText(), self.textCursor().position())
+				proposals = codeassist.sorted_proposals(proposals) # Sorting proposals; for changing the order see pydoc
+				# print(proposals)
+				self.completions.setStringList([proposal.name for proposal in proposals])
+				# Where to insert the completions
+				self.starting_offset = codeassist.starting_offset(self.document().toPlainText(), self.textCursor().position())
 
-			if proposals:
-				popup = self.completer.popup()
-				popup.setCurrentIndex(self.completer.completionModel().index(0, 0))
-				cr = self.cursorRect()
-				cr.setWidth(popup.sizeHintForColumn(0) +
-							popup.verticalScrollBar().sizeHint().width())
-				self.completer.complete(cr)
-			else:
+				if proposals:
+					popup = self.completer.popup()
+					popup.setCurrentIndex(self.completer.completionModel().index(0, 0))
+					cr = self.cursorRect()
+					cr.setWidth(popup.sizeHintForColumn(0) +
+								popup.verticalScrollBar().sizeHint().width())
+					self.completer.complete(cr)
+				else:
+					self.completer.popup().hide()
+			except Exception as err:
+				print(err)
 				self.completer.popup().hide()
 		elif self.completer.popup().isVisible():
 			self.completer.popup().hide()  # Fix "popup hangs around" bug
@@ -131,6 +160,7 @@ if __name__ == "__main__":
 	import sys
 	import textwrap
 	from datetime import datetime
+	import random
 	app = QApplication(sys.argv)
 	editor = QScriptEditor()
 
@@ -145,9 +175,13 @@ if __name__ == "__main__":
 	peti = Person()
 
 	"""))
-	@editor.textChanged.connect
-	def textChanged():
-		print("text changed", datetime.now())
+	# @editor.textChanged.connect
+	# def textChanged():
+	# 	print("text changed", datetime.now())
 	editor.show()
-	print(f"{editor.toPlainText()}")
+	@editor.textChanged.connect
+	def update_error_labels():
+		lineno = random.randint(1,len(editor.toPlainText().split("\n")))
+		editor.update_error_labels([(lineno, f"bad line {lineno}")])
+	# print(f"{editor.toPlainText()}")
 	sys.exit(app.exec())
