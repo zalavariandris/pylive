@@ -96,8 +96,8 @@ class QScriptEditor(QPlainTextEdit):
 		textCursor = self.textCursor()
 		textCursor.select(QTextCursor.LineUnderCursor)
 		lineUnderCursor = textCursor.selectedText()
-		
-		if  lineUnderCursor.strip() and self.document().characterCount() != old_len:
+
+		if lineUnderCursor.strip() and self.document().characterCount() != old_len:
 			proposals = codeassist.code_assist(self.rope_project, self.document().toPlainText(), self.textCursor().position())
 			proposals = codeassist.sorted_proposals(proposals) # Sorting proposals; for changing the order see pydoc
 			# print(proposals)
