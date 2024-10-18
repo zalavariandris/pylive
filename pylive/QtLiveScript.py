@@ -24,21 +24,21 @@ import traceback
 import sys
 import os
 class QLiveScript(QWidget):
-	def __init__(self, parent=None):
-		super().__init__(parent=parent)
+	# def __init__(self, parent=None):
+	# 	super().__init__(parent=parent)
 	
-		# setup panel
-		self.setWindowTitle("QLiveScript")
-		self.resize(1240,600)
-		self.setLayout(QHBoxLayout())
-		self.layout().setContentsMargins(0,0,0,0)
+	#	# setup panel
+	# 	self.setWindowTitle("QLiveScript")
+	#	self.resize(1240,600)
+	#	self.setLayout(QHBoxLayout())
+	#	self.layout().setContentsMargins(0,0,0,0)
 
 		# setup UI
-		self.scripteditor = QScriptEditor()
+		# self.scripteditor = QScriptEditor()
 
-		self.filepath:str|None = None # keep track of the actual file exist on disk
+		# self.filepath:str|None = None # keep track of the actual file exist on disk
 
-		self.right_pane = QWidget()
+		# self.right_pane = QWidget()
 		self.right_pane.setLayout(QGridLayout())
 
 		self.preview_label = QLabel()
