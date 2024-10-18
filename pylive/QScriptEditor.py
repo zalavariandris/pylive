@@ -3,17 +3,17 @@
 # sytax highlighter and an autocomplete for python.
 ######################
 
+from typing import *
 
 from datetime import date
 from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 from pylive.PythonSyntaxHighlighter import PythonSyntaxHighlighter
-from datetime import datetime
+
 import rope.base.project
 from rope.contrib import codeassist
-from typing import *
-keywords = ["def", "class", "print", "Japan", "Indonesia", "China", "UAE", "America"]
+
 import traceback
 class TracebackStackWidget(QLabel):
 	def __init__(self, parent=None):
@@ -40,6 +40,7 @@ class TracebackStackWidget(QLabel):
 		traceback_text = "".join(traceback.format_exception(exception))
 		self.setText(traceback_text)
 
+
 class TracebackFrameWidget(QLabel):
 	def __init__(self, parent=None):
 		super().__init__(parent=parent)
@@ -53,8 +54,24 @@ class TracebackFrameWidget(QLabel):
 		self.setAutoFillBackground(True);
 		self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
+class InlineWidget(QLabel):
+	def __init__(self, parent=None):
+		super().__init__(parent=parent)
+		self.setStyleSheet("""QLabel{
+			padding: 0px;
+			margin-left: 10px;
+			border-radius: 3px;
+			background: rgba(255,0,0,52);
+			color: white;
+		}""")
+		self.setAutoFillBackground(True);
+		self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+
+	def setTextPosition(self, pos:int):
+		pass
+
+
 class QScriptEditor(QPlainTextEdit):
-	textChanged = Signal()
 	def __init__(self, parent=None):
 		super().__init__(parent=parent)
 		# setup window
@@ -78,7 +95,7 @@ class QScriptEditor(QPlainTextEdit):
 		self.completions = QStringListModel(self)
 		self.completions.setStringList([])
 
-		self.completer = QCompleter(self.completions, self)
+		self.completer = QCompleter(self.completions)
 		self.completer.setWidget(self)
 		self.completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
 		self.completer.activated.connect(self.insert_completion)
@@ -105,7 +122,8 @@ class QScriptEditor(QPlainTextEdit):
 			tabs_count = len(block.text()) - len(text_without_tabs)
 			block_text_width = QFontMetrics(self.font()).horizontalAdvance(text_without_tabs)
 			block_text_width+=tabs_count*self.tabStopDistance()
-			error_label = TracebackFrameWidget(parent=self)
+			error_label = Inline(parent=self)
+			error_label.setTextPosition()
 			error_label.move(int(block_text_width), int(rect.top()))
 			error_label.setText(msg)
 			error_label.show()
