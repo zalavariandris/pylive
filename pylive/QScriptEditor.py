@@ -40,7 +40,6 @@ class TracebackStackWidget(QLabel):
 		traceback_text = "".join(traceback.format_exception(exception))
 		self.setText(traceback_text)
 
-
 class TracebackFrameWidget(QLabel):
 	def __init__(self, parent=None):
 		super().__init__(parent=parent)
@@ -154,7 +153,7 @@ class QScriptEditor(QPlainTextEdit):
 
 		old_len = self.document().characterCount()
 
-		### Audtindent ###
+		### Autoindent ###
 		if e.key() == Qt.Key_Return:
 			# get the current line
 			lineno = self.textCursor().blockNumber()

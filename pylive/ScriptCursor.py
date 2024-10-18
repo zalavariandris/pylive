@@ -1,8 +1,8 @@
 from PySide6.QtWidgets import *
 from PySide6.QtGui import *
 from PySide6.QtCore import *
-
-def indent_text(text, indent="    "):
+from typing import *
+def indent_text(text, indent="\t"):
 	lines = text.split("\n")
 	indented_lines = []
 	for i, line in enumerate(lines):
@@ -10,8 +10,7 @@ def indent_text(text, indent="    "):
 
 	return "\n".join(indented_lines)
 
-
-def unindent_text(text, indent="    "):
+def unindent_text(text, indent="\t"):
 	lines = text.split("\n")
 	unindented_lines = []
 	for i, line in enumerate(lines):
@@ -22,22 +21,45 @@ def unindent_text(text, indent="    "):
 	return "\n".join(unindented_lines)
 
 from textwrap import dedent
-def toggle_comment(text, comment="# "):
-	lines = dedent(text).split("\n")
-	common_indent = text.split("\n")[0][:-len(lines[0])]
 
-	#
+def find_common_indent(text: str) -> str:
+	lines = [line for line in text.splitlines() if line.strip()]  # Get non-empty lines
+	if not lines:
+		return ""
 	
-	if all(line.startswith(comment) for line in lines):
-		uncommented_lines = []
-		for i, line in enumerate(lines):
-			uncommented_lines.append(common_indent + line[len(comment):])
-		return "\n".join(uncommented_lines)
+	# Find minimum indent across all non-empty lines
+	common_indent = min((len(line) - len(line.lstrip())) for line in lines)
+	return lines[0][:common_indent]
+
+def toggle_comment(text, comment="# "):
+	lines = text.splitlines()
+	lines_mask = [len(line.strip()) > 0 for line in lines]
+	non_empty_lines = [line for line, mask in zip(lines, lines_mask) if mask]
+	
+	if not non_empty_lines:
+		return text  # Return as-is if no non-empty lines
+	
+	common_indent = find_common_indent("\n".join(non_empty_lines))
+	print(f"common indent: '{common_indent}'")
+
+	all_non_empty_lines_has_comment = all(line.lstrip().startswith(comment) for line in non_empty_lines)
+	
+	if all_non_empty_lines_has_comment:
+		# Uncomment all non-empty lines
+		print("uncomment lines")
+		for i, (line, mask) in enumerate(zip(lines, lines_mask)):
+			if mask and line.lstrip().startswith(comment):
+				# Remove comment prefix while maintaining indentation
+				lines[i] = line[:len(common_indent)] + line[len(common_indent) + len(comment):]
 	else:
-		commented_lines = []
-		for i, line in enumerate(lines):
-			commented_lines.append(common_indent + comment + line)
-		return "\n".join(commented_lines)
+		# Comment all non-empty lines
+		print("comment lines")
+		for i, (line, mask) in enumerate(zip(lines, lines_mask)):
+			if mask:
+				# Add comment prefix while maintaining indentation
+				lines[i] = line[:len(common_indent)] + comment + line[len(common_indent):]
+
+	return "\n".join(lines)
 
 
 class ScriptCursor(QTextCursor):
@@ -71,7 +93,6 @@ class ScriptCursor(QTextCursor):
 			# Replace the selected text with the indented text
 			text = self.selection().toPlainText()
 			
-
 			commented_text = toggle_comment(text, comment="# ")
 			self.insertText(commented_text)
 
@@ -171,39 +192,59 @@ class ScriptCursor(QTextCursor):
 			self.endEditBlock()
 			# self.setTextCursor(cursor)  # Set the cursor to the modified one
 
-class IndentablePlainTextEdit(QPlainTextEdit):
+	def insertNewLine(self):
+		# print("inser")
+		original = QTextCursor(self)
+		# select from line start adn retrive indentation
+		self.movePosition(QTextCursor.MoveOperation.StartOfLine, QTextCursor.MoveMode.KeepAnchor)
+		print(self.anchor(), self.position())
+		line = self.selection().toPlainText()
+		print(f"'{line}' '{line.lstrip()}'")
+		print(f"'{len(line)}' '{len(line.lstrip())}'")
+
+		indentation = line[:-len(line.lstrip())] if line.lstrip() else line
+		print(indentation, len(indentation))
+		# reset selection
+		self.setPosition(original.anchor(), QTextCursor.MoveMode.MoveAnchor)
+		self.setPosition(original.position(), QTextCursor.MoveMode.KeepAnchor)
+		# insert new line with indentation
+		self.insertText("\n"+indentation)
+
+
+class ScriptTextEdit(QPlainTextEdit):
 	def __init__(self, parent=None):
 		super().__init__(parent)
-		self.setWindowTitle("IndentablePlainTextEdit")
-		self.setTabChangesFocus(False)
+		self.setWindowTitle("ScriptTextEdit")
 		self.setWordWrapMode(QTextOption.WrapMode.NoWrap)
-		self.resize(850, 850)
-
-		self.setFont(QFont("Operator Mono", 10))
+		self.setTabChangesFocus(False)
 		self.setTabStopDistance(QFontMetricsF(self.font()).horizontalAdvance(' ') * 4)
-
-		self.indent_spaces = '    '  # Set indent spaces here
 
 	def scriptCursor(self) -> ScriptCursor:
 		return ScriptCursor(super().textCursor())
 
+	def setFont(self, font):
+		super().setFont(font)
+		self.setTabStopDistance(QFontMetricsF(self.font()).horizontalAdvance(' ') * 4)
+
 	def keyPressEvent(self, e: QKeyEvent) -> None:
 		cursor = self.textCursor()
-		if e.key() == Qt.Key_Tab:
+		if e.key() == Qt.Key.Key_Tab:
 			if cursor.hasSelection() and len(cursor.selection().toPlainText().split("\n")) > 1:
 				self.indentSelection()
 			else:
 				cursor.insertText('\t')
-		elif e.key() == Qt.Key_Backtab:  # Shift + Tab
+		elif e.key() == Qt.Key.Key_Backtab:  # Shift + Tab
 			if cursor.hasSelection() and len(cursor.selection().toPlainText().split("\n")) > 1:
 				self.unindentSelection()
-		elif e.key() == Qt.Key_Slash and e.modifiers() & Qt.ControlModifier:
+		elif e.key() == Qt.Key.Key_Slash and e.modifiers() & Qt.KeyboardModifier.ControlModifier:
 			self.toggleCommentSelection()
+		elif e.key() == Qt.Key.Key_Return:
+			self.scriptCursor().insertNewLine()
 		else:
 			super().keyPressEvent(e)
 
 	def textCursor(self) -> QTextCursor:
-		 return QTextCursor(super().textCursor())
+		return QTextCursor(super().textCursor())
 
 	def toggleCommentSelection(self):
 		cursor = self.scriptCursor()
@@ -222,21 +263,37 @@ class IndentablePlainTextEdit(QPlainTextEdit):
 
 if __name__ == "__main__":
 	import sys
-	import textwrap
-	from datetime import datetime
-	import random
+	from textwrap import dedent
+	from WhitespaceHighlighter import WhitespaceHighlighter
+
 	app = QApplication(sys.argv)
-	window = IndentablePlainTextEdit()
+	window = ScriptTextEdit()
 
-	window.setPlainText(textwrap.dedent("""\
+	font = QFont("Operator Mono", 10)
+	window.setFont(font)
+	width = QFontMetrics(font).horizontalAdvance('O') * 70
+	window.resize(width, int(width*4/3))
+
+	# show whitespace characters
+	option = QTextOption(window.document().defaultTextOption())
+	option.setFlags(QTextOption.Flag.ShowTabsAndSpaces)
+	window.document().setDefaultTextOption(option)
+
+	# Dim whitespace characters
+	WhitespaceHighlighter(window.document())
+
+	
+	window.setPlainText(dedent("""\
 	class Person:
-	def __init__(self, name:str):
-		self.name = name
+		def __init__(self, name:str):
+			self.name = name
 
-	def say(self):
-		print(self.name)
+		def say(self):
+			print(self.name)
 
 	peti = Person()
 	"""))
+
+	# show app
 	window.show()
 	sys.exit(app.exec())
