@@ -192,23 +192,26 @@ class ScriptCursor(QTextCursor):
 			self.endEditBlock()
 			# self.setTextCursor(cursor)  # Set the cursor to the modified one
 
-	def insertNewLine(self):
+	def insertNewLine(self, indentation="\t"):
 		# print("inser")
 		original = QTextCursor(self)
 		# select from line start adn retrive indentation
-		self.movePosition(QTextCursor.MoveOperation.StartOfLine, QTextCursor.MoveMode.KeepAnchor)
+		self.movePosition(QTextCursor.MoveOperation.StartOfLine, QTextCursor.MoveMode.MoveAnchor)
+		self.movePosition(QTextCursor.MoveOperation.EndOfLine, QTextCursor.MoveMode.KeepAnchor)
 		print(self.anchor(), self.position())
 		line = self.selection().toPlainText()
-		print(f"'{line}' '{line.lstrip()}'")
-		print(f"'{len(line)}' '{len(line.lstrip())}'")
 
-		indentation = line[:-len(line.lstrip())] if line.lstrip() else line
-		print(indentation, len(indentation))
+		current_line_indentation = line[:-len(line.lstrip())] if line.lstrip() else line
+
 		# reset selection
 		self.setPosition(original.anchor(), QTextCursor.MoveMode.MoveAnchor)
 		self.setPosition(original.position(), QTextCursor.MoveMode.KeepAnchor)
+
 		# insert new line with indentation
-		self.insertText("\n"+indentation)
+		new_line_indentation = current_line_indentation
+		if line[-1] in ":({[":
+			new_line_indentation+=indentation
+		self.insertText("\n"+new_line_indentation)
 
 
 class ScriptTextEdit(QPlainTextEdit):
