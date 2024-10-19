@@ -37,6 +37,11 @@ On Windows
 venv\Scripts\activate
 ```
 
+## install project.toml dependencies
+```bash
+pip install .
+```
+
 ## deactivate your evironment
 
 ```bash

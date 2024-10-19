@@ -17,6 +17,12 @@
             "cmd": ["${project_path}/venv/Scripts/python.exe", "-u", "$file"],
             "file_regex": "^[ ]*File \"(...*?)\", line ([0-9]*)",
             "selector": "source.python"
+        },
+        {
+            "name": "OSX Python: Run File",
+            "cmd": ["${project_path}/venv/bin/python3", "-u", "$file"],
+            "file_regex": "^[ ]*File \"(...*?)\", line ([0-9]*)",
+            "selector": "source.python"
         }
     ]
 }
