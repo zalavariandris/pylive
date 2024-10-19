@@ -9,7 +9,7 @@ from datetime import date
 from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
-from pylive.PythonSyntaxHighlighter import PythonSyntaxHighlighter
+from SimplePythonHighlighter import SimplePythonHighlighter
 
 import rope.base.project
 from rope.contrib import codeassist
@@ -87,7 +87,7 @@ class QScriptEditor(QPlainTextEdit):
 		self.setTabStopDistance(QFontMetricsF(self.font()).horizontalAdvance(' ') * 4)
 
 		# setup highlighter
-		self.highlighter = PythonSyntaxHighlighter(self.document())
+		self.highlighter = SimplePythonHighlighter(self.document())
 
 		# setup completer
 		self.rope_project = rope.base.project.Project('.')
