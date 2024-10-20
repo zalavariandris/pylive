@@ -19,7 +19,7 @@ def dim(color:QColor, a=128):
     return QColor.fromRgb( r,g,b,a )
 
 
-class PygmentsHighlighter(QSyntaxHighlighter):
+class PygmentsSyntaxHighlighter(QSyntaxHighlighter):
     def __init__(self, document):
         super().__init__(document)
         self.lexer = PythonLexer()  # Use the lexer for the language you want to highlight
@@ -34,7 +34,6 @@ class PygmentsHighlighter(QSyntaxHighlighter):
         # Apply the formats calculated by the formatter
         for start, length, format in formatter.formats:
             self.setFormat(start, length, format)
-
 
 class QtFormatter(Formatter):
     """ Formatter that applies Pygments tokens to QTextCharFormat
@@ -89,7 +88,7 @@ if __name__ == "__main__":
 
     # Create a QTextEdit and apply the highlighter
     editor = QTextEdit()
-    highlighter = PygmentsHighlighter(editor.document())
+    highlighter = PygmentsSyntaxHighlighter(editor.document())
 
     # Set some Python code to highlight
     sample_code = """def hello_world():

@@ -62,7 +62,7 @@ def toggle_comment(text, comment="# "):
 	return "\n".join(lines)
 
 
-class ScriptCursor(QTextCursor):
+class QScriptCursor(QTextCursor):
 	def __init__(self, source:None|QTextDocument|QTextFrame|QTextBlock|QTextCursor=None):
 		if source:
 			super().__init__(source)
@@ -209,62 +209,62 @@ class ScriptCursor(QTextCursor):
 
 		# insert new line with indentation
 		new_line_indentation = current_line_indentation
-		if line[-1] in ":({[":
+		if line and line[-1] in ":({[":
 			new_line_indentation+=indentation
 		self.insertText("\n"+new_line_indentation)
 
-
-class ScriptTextEdit(QPlainTextEdit):
-	def __init__(self, parent=None):
-		super().__init__(parent)
-		self.setWindowTitle("ScriptTextEdit")
-		self.setWordWrapMode(QTextOption.WrapMode.NoWrap)
-		self.setTabChangesFocus(False)
-		self.setTabStopDistance(QFontMetricsF(self.font()).horizontalAdvance(' ') * 4)
-
-	def scriptCursor(self) -> ScriptCursor:
-		return ScriptCursor(super().textCursor())
-
-	def setFont(self, font):
-		super().setFont(font)
-		self.setTabStopDistance(QFontMetricsF(self.font()).horizontalAdvance(' ') * 4)
-
-	def keyPressEvent(self, e: QKeyEvent) -> None:
-		cursor = self.textCursor()
-		if e.key() == Qt.Key.Key_Tab:
-			if cursor.hasSelection() and len(cursor.selection().toPlainText().split("\n")) > 1:
-				self.indentSelection()
-			else:
-				cursor.insertText('\t')
-		elif e.key() == Qt.Key.Key_Backtab:  # Shift + Tab
-			if cursor.hasSelection() and len(cursor.selection().toPlainText().split("\n")) > 1:
-				self.unindentSelection()
-		elif e.key() == Qt.Key.Key_Slash and e.modifiers() & Qt.KeyboardModifier.ControlModifier:
-			self.toggleCommentSelection()
-		elif e.key() == Qt.Key.Key_Return:
-			self.scriptCursor().insertNewLine()
-		else:
-			super().keyPressEvent(e)
-
-	def textCursor(self) -> QTextCursor:
-		return QTextCursor(super().textCursor())
-
-	def toggleCommentSelection(self):
-		cursor = self.scriptCursor()
-		cursor.toggleCommentSelection(comment="# ")
-		self.setTextCursor(cursor)
-
-	def indentSelection(self):
-		cursor = self.scriptCursor()
-		cursor.indentSelection()
-		self.setTextCursor(cursor)
-
-	def unindentSelection(self):
-		cursor = self.scriptCursor()
-		cursor.unindentSelection()
-		self.setTextCursor(cursor)
-
 if __name__ == "__main__":
+	class ScriptTextEdit(QPlainTextEdit):
+		def __init__(self, parent=None):
+			super().__init__(parent)
+			self.setWindowTitle("ScriptTextEdit")
+			self.setWordWrapMode(QTextOption.WrapMode.NoWrap)
+			self.setTabChangesFocus(False)
+			self.setTabStopDistance(QFontMetricsF(self.font()).horizontalAdvance(' ') * 4)
+
+		def scriptCursor(self) -> QScriptCursor:
+			return QScriptCursor(super().textCursor())
+
+		def setFont(self, font):
+			super().setFont(font)
+			self.setTabStopDistance(QFontMetricsF(self.font()).horizontalAdvance(' ') * 4)
+
+		def keyPressEvent(self, e: QKeyEvent) -> None:
+			cursor = self.textCursor()
+			if e.key() == Qt.Key.Key_Tab:
+				if cursor.hasSelection() and len(cursor.selection().toPlainText().split("\n")) > 1:
+					self.indentSelection()
+				else:
+					cursor.insertText('\t')
+			elif e.key() == Qt.Key.Key_Backtab:  # Shift + Tab
+				if cursor.hasSelection() and len(cursor.selection().toPlainText().split("\n")) > 1:
+					self.unindentSelection()
+			elif e.key() == Qt.Key.Key_Slash and e.modifiers() & Qt.KeyboardModifier.ControlModifier:
+				self.toggleCommentSelection()
+			elif e.key() == Qt.Key.Key_Return:
+				self.scriptCursor().insertNewLine()
+			else:
+				super().keyPressEvent(e)
+
+		def textCursor(self) -> QTextCursor:
+			return QTextCursor(super().textCursor())
+
+		def toggleCommentSelection(self):
+			cursor = self.scriptCursor()
+			cursor.toggleCommentSelection(comment="# ")
+			self.setTextCursor(cursor)
+
+		def indentSelection(self):
+			cursor = self.scriptCursor()
+			cursor.indentSelection()
+			self.setTextCursor(cursor)
+
+		def unindentSelection(self):
+			cursor = self.scriptCursor()
+			cursor.unindentSelection()
+			self.setTextCursor(cursor)
+
+
 	import sys
 	from textwrap import dedent
 	from WhitespaceHighlighter import WhitespaceHighlighter
@@ -272,7 +272,7 @@ if __name__ == "__main__":
 	app = QApplication(sys.argv)
 	window = ScriptTextEdit()
 
-	font = QFont("Operator Mono", 10)
+	font = QFont("Operator Mono", 14)
 	window.setFont(font)
 	width = QFontMetrics(font).horizontalAdvance('O') * 70
 	window.resize(width, int(width*4/3))

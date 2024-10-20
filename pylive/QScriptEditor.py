@@ -99,6 +99,7 @@ class QScriptEditor(QPlainTextEdit):
 		self.completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
 		self.completer.activated.connect(self.insert_completion)
 
+		# setup error widgets
 		self.error_labels = []
 
 
