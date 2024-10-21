@@ -1,7 +1,8 @@
-qimport sys
+import sys
 from PySide6.QtWidgets import *
 from PySide6.QtGui import *
 from PySide6.QtCore import *
+
 from pygments import highlight
 from pygments.lexers import PythonLexer
 from pygments.formatter import Formatter
@@ -88,6 +89,7 @@ if __name__ == "__main__":
 
     # Create a QTextEdit and apply the highlighter
     editor = QTextEdit()
+    editor.setWindowTitle("PygmentsSyntaxHighlighter component example")
     highlighter = PygmentsSyntaxHighlighter(editor.document())
 
     # Set some Python code to highlight

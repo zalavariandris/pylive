@@ -62,7 +62,7 @@ def toggle_comment(text, comment="# "):
 	return "\n".join(lines)
 
 
-class QScriptCursor(QTextCursor):
+class ScriptCursor(QTextCursor):
 	def __init__(self, source:None|QTextDocument|QTextFrame|QTextBlock|QTextCursor=None):
 		if source:
 			super().__init__(source)
@@ -222,8 +222,8 @@ if __name__ == "__main__":
 			self.setTabChangesFocus(False)
 			self.setTabStopDistance(QFontMetricsF(self.font()).horizontalAdvance(' ') * 4)
 
-		def scriptCursor(self) -> QScriptCursor:
-			return QScriptCursor(super().textCursor())
+		def scriptCursor(self) -> ScriptCursor:
+			return ScriptCursor(super().textCursor())
 
 		def setFont(self, font):
 			super().setFont(font)

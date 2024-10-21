@@ -6,7 +6,7 @@ from PySide6.QtCore import *
 from PySide6.QtGui import *
 
 import rope
-from QRopeAssistStringModel import QRopeAssistStringModel
+from components.RopeAssistStringModel import RopeAssistStringModel
 
 
 class CodeAssistingPlainTextEdit(QPlainTextEdit):
@@ -28,7 +28,7 @@ class CodeAssistingPlainTextEdit(QPlainTextEdit):
 
 		# setup completer
 		self.rope_project = rope.base.project.Project('.')
-		self.proposals_model = QRopeAssistStringModel(self.rope_project)
+		self.proposals_model = RopeAssistStringModel(self.rope_project)
 
 		self.completer = QCompleter()
 		self.completer.setWidget(self)
@@ -87,7 +87,5 @@ if __name__ == "__main__":
 
 	# Create the editor and completer
 	editor = CodeAssistingPlainTextEdit()
-	editor.setWindowTitle("Python Code Editor with Rope Completion (PySide6)")
-
 	editor.show()
 	sys.exit(app.exec())

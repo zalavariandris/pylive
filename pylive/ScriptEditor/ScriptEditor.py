@@ -9,7 +9,8 @@ from datetime import date
 from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
-from SimplePythonHighlighter import SimplePythonHighlighter
+from components.ScriptCursor import ScriptCursor
+from components.SimplePythonHighlighter import SimplePythonHighlighter
 
 import rope.base.project
 from rope.contrib import codeassist
@@ -31,7 +32,7 @@ class TracebackStackWidget(QLabel):
 		self.setAutoFillBackground(True);
 		# self.setPalette(sample_palette);
 		# self.setStyleSheet("background: rgba(255,0,0,160); color: red;")
-		self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+		self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
 
 	def setTextFromTracebackStackSummary(self, summary: traceback.StackSummary):
 		raise NotImplementedError
@@ -51,7 +52,7 @@ class TracebackFrameWidget(QLabel):
 			color: white;
 		}""")
 		self.setAutoFillBackground(True);
-		self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+		self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
 
 class InlineWidget(QLabel):
 	def __init__(self, parent=None):
@@ -64,7 +65,7 @@ class InlineWidget(QLabel):
 			color: white;
 		}""")
 		self.setAutoFillBackground(True);
-		self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+		self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
 
 	def setTextPosition(self, pos:int):
 		pass
@@ -122,8 +123,7 @@ class QScriptEditor(QPlainTextEdit):
 			tabs_count = len(block.text()) - len(text_without_tabs)
 			block_text_width = QFontMetrics(self.font()).horizontalAdvance(text_without_tabs)
 			block_text_width+=tabs_count*self.tabStopDistance()
-			error_label = Inline(parent=self)
-			error_label.setTextPosition()
+			error_label = InlineWidget(parent=self)
 			error_label.move(int(block_text_width), int(rect.top()))
 			error_label.setText(msg)
 			error_label.show()
@@ -155,7 +155,7 @@ class QScriptEditor(QPlainTextEdit):
 		old_len = self.document().characterCount()
 
 		### Autoindent ###
-		if e.key() == Qt.Key_Return:
+		if e.key() == Qt.Key.Key_Return:
 			# get the current line
 			lineno = self.textCursor().blockNumber()
 			line_text = self.document().findBlockByLineNumber(lineno).text()
@@ -182,7 +182,7 @@ class QScriptEditor(QPlainTextEdit):
 		# print("text:", e.text())
 		# get line text under cursor
 		textCursor = self.textCursor()
-		textCursor.select(QTextCursor.LineUnderCursor)
+		textCursor.select(QTextCursor.SelectionType.LineUnderCursor)
 		lineUnderCursor = textCursor.selectedText()
 
 		textCursor.position()
@@ -217,7 +217,7 @@ class QScriptEditor(QPlainTextEdit):
 		tail: The text that will be inserted after the selected completion.
 		"""
 		textCursor = self.textCursor()
-		textCursor.setPosition(self.starting_offset, QTextCursor.KeepAnchor)
+		textCursor.setPosition(self.starting_offset, QTextCursor.MoveMode.KeepAnchor)
 		textCursor.insertText(completion + completion_tail) 
 		
 
@@ -247,6 +247,6 @@ if __name__ == "__main__":
 	@editor.textChanged.connect
 	def update_error_labels():
 		lineno = random.randint(1,len(editor.toPlainText().split("\n")))
-		editor.update_error_labels([(lineno, f"bad line {lineno}")])
+		editor.update_error_labels([(lineno, f"example error widget {lineno}")])
 	# print(f"{editor.toPlainText()}")
 	sys.exit(app.exec())

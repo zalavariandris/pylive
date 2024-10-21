@@ -15,37 +15,38 @@ class PaletteViewer(QWidget):
 
 		# List of QPalette color roles and their names
 		color_roles = [
-			(QPalette.Window, "Window"),
-			(QPalette.WindowText, "WindowText"),
-			(QPalette.Base, "Base"),
-			(QPalette.AlternateBase, "AlternateBase"),
-			(QPalette.ToolTipBase, "ToolTipBase"),
-			(QPalette.ToolTipText, "ToolTipText"),
-			(QPalette.Text, "Text"),
-			(QPalette.Button, "Button"),
-			(QPalette.ButtonText, "ButtonText"),
-			(QPalette.BrightText, "BrightText"),
-			(QPalette.Highlight, "Highlight"),
-			(QPalette.HighlightedText, "HighlightedText"),
+			(QPalette.ColorRole.Window, "Window"),
+			(QPalette.ColorRole.WindowText, "WindowText"),
+			(QPalette.ColorRole.Base, "Base"),
+			(QPalette.ColorRole.AlternateBase, "AlternateBase"),
+			(QPalette.ColorRole.ToolTipBase, "ToolTipBase"),
+			(QPalette.ColorRole.ToolTipText, "ToolTipText"),
+			(QPalette.ColorRole.Text, "Text"),
+			(QPalette.ColorRole.Button, "Button"),
+			(QPalette.ColorRole.ButtonText, "ButtonText"),
+			(QPalette.ColorRole.BrightText, "BrightText"),
+			(QPalette.ColorRole.Highlight, "Highlight"),
+			(QPalette.ColorRole.HighlightedText, "HighlightedText"),
 		]
 
 		# Iterate over active, inactive, and disabled states
 		states = [
-			(QPalette.Active, "Active"),
-			(QPalette.Inactive, "Inactive"),
-			(QPalette.Disabled, "Disabled")
+			(QPalette.ColorGroup.Active, "Active"),
+			(QPalette.ColorGroup.Inactive, "Inactive"),
+			(QPalette.ColorGroup.Disabled, "Disabled")
 		]
 
 		# Create a section for each state
 		for state, state_name in states:
 			column = QWidget()
-			column.setLayout(QVBoxLayout())
+			layout = QVBoxLayout()
+			column.setLayout(layout)
 			state_label = QLabel(f"{state_name} State")
 			column.layout().addWidget(state_label)
 
 			for role, role_name in color_roles:
 				color = palette.color(state, role)
-				column.layout().addLayout(self.create_color_display(role_name, color))
+				layout.addLayout(self.create_color_display(role_name, color))
 			self.layout().addWidget(column)
 
 	def create_color_display(self, role_name, color):
