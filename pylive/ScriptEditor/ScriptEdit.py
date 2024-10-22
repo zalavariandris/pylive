@@ -7,6 +7,59 @@ from PySide6.QtCore import *
 from components.ScriptCursor import ScriptCursor
 from components.PygmentsSyntaxHighlighter import PygmentsSyntaxHighlighter
 
+class KeywordsCompleter(QCompleter):
+	def __init__(self):
+
+		# completion model
+		keywords = [
+			'and', 'as', 'assert', 'async', 'await', 'break', 'class', 'continue',
+			'def', 'del', 'elif', 'else', 'except', 'False', 'finally', 'for',
+			'from', 'global', 'if', 'import', 'in', 'is', 'lambda', 'None', 'nonlocal',
+			'not', 'or', 'pass', 'raise', 'return', 'True', 'try', 'while', 'with', 'yield'
+		]
+		self.completions_model = QStringListModel(keywords)
+		super().__init__(self.completions_model)
+
+		# completion view
+		self.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+
+
+		# update completer based on text and cursor position
+
+from rope.contrib import codeassist
+import rope.base.project
+class RopeCompleter(QCompleter):
+    def __init__(self, rope_project, document: QTextDocument, parent=None):
+        super().__init__(parent=parent)
+        self.rope_project = rope_project
+        self.document = document
+        self.proposals_model = QStringListModel([], parent=self)  # Model for proposals
+        self.setModel(self.proposals_model)
+
+    def setCompletionPrefix(self, prefix: str) -> None:
+        # Retrieve the entire source code from the document
+        source_code = self.document.toPlainText()
+        
+
+        # Ensure the prefix is valid
+        # if not source_code[offset-len(prefix):offset] == prefix:
+        #     raise IndexError("Document does not match the provided prefix")
+        offset = len(prefix)
+        print("offset", offset)
+
+        # Get proposals from Rope
+        proposals = codeassist.code_assist(self.rope_project, source_code=source_code, offset=offset)
+        proposals = codeassist.sorted_proposals(proposals)  # Sorting proposals
+
+        # Debugging: Show proposals in the console
+        # print("Proposals:")
+        # for proposal in proposals:
+        #     print("-", proposal)
+
+        # Update the model of the QCompleter
+        self.proposals_model.setStringList([str(proposal.name) for proposal in proposals])
+        super().setCompletionPrefix("")
+		
 class ScriptEdit(QPlainTextEdit):
 	def __init__(self, parent=None):
 		super().__init__(parent)
@@ -43,26 +96,18 @@ class ScriptEdit(QPlainTextEdit):
 
 	def setupAutocomplete(self):
 		""" Setup autocomplete """
-		# completion model
-		keywords = [
-			'and', 'as', 'assert', 'async', 'await', 'break', 'class', 'continue',
-			'def', 'del', 'elif', 'else', 'except', 'False', 'finally', 'for',
-			'from', 'global', 'if', 'import', 'in', 'is', 'lambda', 'None', 'nonlocal',
-			'not', 'or', 'pass', 'raise', 'return', 'True', 'try', 'while', 'with', 'yield'
-		]
-		self.completions_model = QStringListModel(keywords)
-
-		# completion view
-		self.completer = QCompleter(self.completions_model)
-		self.completer.setWidget(self)
-		self.completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
-		self.completer.activated.connect(self.insertCompletion)
-
-		# update completer based on text and cursor position
+		# completer = KeywordsCompleter()
+		self.rope_project = rope.base.project.Project('.')
+		completer = RopeCompleter(self.rope_project, self.document())
+		self.setCompleter(completer)
+		
+	def setCompleter(self, completer:QCompleter):
+		completer.setWidget(self)
+		completer.activated.connect(self.insertCompletion)
 		self.cursorPositionChanged.connect(self.refreshCompleterPrefix)
 		self.textChanged.connect(self.refreshCompleterPrefix)
-
-		self.completer.completionModel().modelReset.connect(self.toggleCompleterVisibility)
+		completer.completionModel().modelReset.connect(self.toggleCompleterVisibility)
+		self.completer = completer
 
 	@Slot()
 	def insertCompletion(self, completion:str):
@@ -72,12 +117,18 @@ class ScriptEdit(QPlainTextEdit):
 
 	@Slot()
 	def refreshCompleterPrefix(self):
-		tc = self.textCursor()
-		tc.select(QTextCursor.SelectionType.WordUnderCursor)
-		selected_text = tc.selectedText()
+		text_cursor = self.textCursor()
+		# # Get word under cursor
+		# # when using a simple QCompleter it needs a word instead of the whole text
+		# text_cursor.select(QTextCursor.SelectionType.WordUnderCursor)
+		# word_under_cursor = text_cursor.selection().toPlainText()
 
-		self.completer.setCompletionPrefix(selected_text)
-		# self.updateCompleterWidget()
+		# Get text until position
+		# when using a code completion it actually needs the cursor offset. So this is too much.
+		text_cursor.setPosition(0, QTextCursor.MoveMode.KeepAnchor)
+		text_until_position = text_cursor.selection().toPlainText()
+
+		self.completer.setCompletionPrefix(text_until_position)
 
 	@Slot()
 	def toggleCompleterVisibility(self):
