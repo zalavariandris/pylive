@@ -7,58 +7,9 @@ from PySide6.QtCore import *
 from components.ScriptCursor import ScriptCursor
 from components.PygmentsSyntaxHighlighter import PygmentsSyntaxHighlighter
 
-class KeywordsCompleter(QCompleter):
-	def __init__(self):
-
-		# completion model
-		keywords = [
-			'and', 'as', 'assert', 'async', 'await', 'break', 'class', 'continue',
-			'def', 'del', 'elif', 'else', 'except', 'False', 'finally', 'for',
-			'from', 'global', 'if', 'import', 'in', 'is', 'lambda', 'None', 'nonlocal',
-			'not', 'or', 'pass', 'raise', 'return', 'True', 'try', 'while', 'with', 'yield'
-		]
-		self.completions_model = QStringListModel(keywords)
-		super().__init__(self.completions_model)
-
-		# completion view
-		self.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
-
-
-		# update completer based on text and cursor position
-
-from rope.contrib import codeassist
+from components.KeywordsCompleter import KeywordsCompleter
+from components.RopeCompleter import RopeCompleter
 import rope.base.project
-class RopeCompleter(QCompleter):
-    def __init__(self, rope_project, document: QTextDocument, parent=None):
-        super().__init__(parent=parent)
-        self.rope_project = rope_project
-        self.document = document
-        self.proposals_model = QStringListModel([], parent=self)  # Model for proposals
-        self.setModel(self.proposals_model)
-
-    def setCompletionPrefix(self, prefix: str) -> None:
-        # Retrieve the entire source code from the document
-        source_code = self.document.toPlainText()
-        
-
-        # Ensure the prefix is valid
-        # if not source_code[offset-len(prefix):offset] == prefix:
-        #     raise IndexError("Document does not match the provided prefix")
-        offset = len(prefix)
-        print("offset", offset)
-
-        # Get proposals from Rope
-        proposals = codeassist.code_assist(self.rope_project, source_code=source_code, offset=offset)
-        proposals = codeassist.sorted_proposals(proposals)  # Sorting proposals
-
-        # Debugging: Show proposals in the console
-        # print("Proposals:")
-        # for proposal in proposals:
-        #     print("-", proposal)
-
-        # Update the model of the QCompleter
-        self.proposals_model.setStringList([str(proposal.name) for proposal in proposals])
-        super().setCompletionPrefix("")
 		
 class ScriptEdit(QPlainTextEdit):
 	def __init__(self, parent=None):
@@ -79,7 +30,12 @@ class ScriptEdit(QPlainTextEdit):
 		# set a monospace font
 		font = QFont("Operator Mono", 11)
 		self.setFont(font)
-		self.font().setStyleHint(QFont.StyleHint.TypeWriter);
+		self.font().setStyleHint(QFont.StyleHint.TypeWriter)
+
+		# show whitespace
+		options = QTextOption()
+		options.setFlags(QTextOption.ShowTabsAndSpaces)
+		self.document().setDefaultTextOption(options)
 
 		# resize window
 		width = QFontMetrics(font).horizontalAdvance('O') * 70
@@ -87,7 +43,7 @@ class ScriptEdit(QPlainTextEdit):
 
 	def setupSyntaxHighlighting(self):
 		""" Setup Syntax Highlighting """
-		# # Show whitespace characters
+		# # Show whitespace characterstext_color
 		# option = QTextOption(self.document().defaultTextOption())
 		# option.setFlags(QTextOption.Flag.ShowTabsAndSpaces)
 		# self.document().setDefaultTextOption(option)

@@ -35,7 +35,7 @@ class PygmentsSyntaxHighlighter(QSyntaxHighlighter):
         # Apply the formats calculated by the formatter
         for start, length, format in formatter.formats:
             self.setFormat(start, length, format)
-
+import re
 class QtFormatter(Formatter):
     """ Formatter that applies Pygments tokens to QTextCharFormat
     for QSyntaxHighlighter """
@@ -72,6 +72,18 @@ class QtFormatter(Formatter):
                 elif 'Number' in str(ttype):
                     # Red for numbers
                     format.setForeground(QColor("darkGreen"))
+                elif re.match(r'[ \t]+', value):
+                    print("whitespace", value)
+                    text_color = palette.color(QPalette.ColorRole.Text)
+                    text_color.setAlpha(30)
+                    format.setForeground(text_color)
+                elif "Text.Whitespace" in str(ttype):
+                    print("whitespace", len(value), value.replace(" ", "space"))
+                    print("whitespace", len(value), value.replace("\t", "tab"))
+                    print("whitespace", len(value), value.replace("\n", "return"))
+                    text_color = palette.color(QPalette.ColorRole.Text)
+                    text_color.setAlpha(100)
+                    format.setForeground(QColor("darkcyan"))
                 else:
                     # Default to black for others
                     format.setForeground(palette.color(QPalette.ColorRole.Text))

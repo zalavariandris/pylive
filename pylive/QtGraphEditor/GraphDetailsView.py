@@ -3,7 +3,6 @@ from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 from typing import List, Tuple
-from ScriptEditor import ScriptEditor
 
 class MiniTableView(QTableView):
     def __init__(self, parent=None):
@@ -19,7 +18,7 @@ class MiniTableView(QTableView):
         return QSize(134,height)
 
 from Panel import Panel
-
+from GraphModel import GraphModel
 class GraphDetailsView(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -34,7 +33,6 @@ class GraphDetailsView(QWidget):
         self.posx_edit.setRange(-9999, 9999)
         self.posy_edit = QSpinBox()
         self.posy_edit.setRange(-9999, 9999)
-        self.script_editor = ScriptEditor()
 
         ### Inlets Table ###
         self.inlets_sheet_editor = MiniTableView()
@@ -54,14 +52,6 @@ class GraphDetailsView(QWidget):
         self.mapper = QDataWidgetMapper()
         self.mapper.setSubmitPolicy(QDataWidgetMapper.AutoSubmit)
 
-        @self.script_editor.textChanged.connect
-        def update_model():
-            print(self.mapper.currentIndex())
-
-            cursor = self.script_editor.textCursor()
-            self.mapper.submit()
-            self.script_editor.setTextCursor(cursor)
-
         self.panel = Panel(
             direction=QBoxLayout.TopToBottom,
             children=[
@@ -69,7 +59,6 @@ class GraphDetailsView(QWidget):
                 self.name_edit,
                 self.posx_edit,
                 self.posy_edit,
-                self.script_editor,
                 self.inlets_sheet_editor,
                 self.outlets_sheet_editor,
             ]
@@ -83,7 +72,7 @@ class GraphDetailsView(QWidget):
     def model(self):
         return self._model
 
-    def setModel(self, graphmodel):
+    def setModel(self, graphmodel:GraphModel):
         self._model = graphmodel
 
         # mapper
@@ -93,7 +82,6 @@ class GraphDetailsView(QWidget):
         self.mapper.addMapping(self.name_edit, 1)
         self.mapper.addMapping(self.posx_edit, 2)
         self.mapper.addMapping(self.posy_edit, 3)
-        self.mapper.addMapping(self.script_editor, 4)
 
         # inlets list
         self.selected_node_inlets = QSortFilterProxyModel()  # Node column is 1 (for node name)
@@ -109,6 +97,10 @@ class GraphDetailsView(QWidget):
 
         # set no rows
         self.setCurrentModelIndex(QModelIndex())
+
+    def setNodesSelectionModel(self, nodes_selectionmodel:QItemSelectionModel):
+        self.nodes_selectionmodel = nodes_selectionmodel
+        self.nodes_selectionmodel.currentRowChanged.connect(self.setCurrentModelIndex)
         
     def setCurrentModelIndex(self, index):
         if index.isValid():
@@ -122,7 +114,45 @@ class GraphDetailsView(QWidget):
             self.panel.hide()
             # clear widgets
             self.name_edit.setText("")
-            self.selected_node_inlets.setFilterFixedString("SOMETHING CMPLICATED ENOUGHT NOT TO MATC ANY NODE NAMES") # update inlet filters
-            self.selected_node_outlets.setFilterFixedString("SOMETHING CMPLICATED ENOUGHT NOT TO MATC ANY NODE NAMES") # update outlet filters
+            self.selected_node_inlets.setFilterFixedString("SOMETHING COMPLICATED ENOUGHT NOT TO MATC ANY NODE NAMES") # update inlet filters
+            self.selected_node_outlets.setFilterFixedString("SOMETHING COMPLICATED ENOUGHT NOT TO MATC ANY NODE NAMES") # update outlet filters
 
         self.layout().invalidate()
+
+if __name__ == "__main__":
+    from GraphTableView import GraphTableView
+    class MainWindow(QWidget):
+        def __init__(self):
+            super().__init__()
+
+            self.setWindowTitle("Graph Details View Example")
+
+            # Initialize the GraphModel
+            self.graph_model = GraphModel()
+            self.nodes_selectionmodel = QItemSelectionModel(self.graph_model.nodes)
+
+            # Add some example nodes and edges
+            node1_id = self.graph_model.addNode("Node 1", 100, 100, "Script 1")
+            node2_id = self.graph_model.addNode("Node 2", 300, 150, "Script 2")
+            outlet_id = self.graph_model.addOutlet(node1_id, "Out1")
+            inlet_id = self.graph_model.addInlet(node2_id, "In1")
+            self.graph_model.addEdge(outlet_id, inlet_id)
+
+            # Set up the node editor view
+            self.graph_table_view = GraphTableView()
+            self.graph_table_view.setModel(self.graph_model)
+            self.graph_table_view.setNodesSelectionModel(self.nodes_selectionmodel)
+            self.graph_details_view = GraphDetailsView()
+            self.graph_details_view.setModel(self.graph_model)
+            self.graph_details_view.setNodesSelectionModel(self.nodes_selectionmodel)
+            
+            self.setLayout(QHBoxLayout())
+            self.layout().addWidget(self.graph_table_view, 1)
+            self.layout().addWidget(self.graph_details_view, 1)
+
+
+
+    app = QApplication(sys.argv)
+    window = MainWindow()
+    window.show()
+    sys.exit(app.exec())
