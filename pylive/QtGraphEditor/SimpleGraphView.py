@@ -6,6 +6,7 @@ from PySide6.QtWidgets import *
 
 from GraphModel import GraphModel
 
+
 class InletItem(QGraphicsItem):
     """Graphics item representing a pin (either inlet or outlet)."""
     def __init__(self, parent_node):
@@ -13,6 +14,7 @@ class InletItem(QGraphicsItem):
         self.parent_node = parent_node
         self.name = "<inlet name>"
         self.persistent_inlet_index:Optional[QModelIndex]=None
+        self.edges = []
 
         # Size of the pin and space for the name text
         self.pin_radius = 5
@@ -48,6 +50,14 @@ class InletItem(QGraphicsItem):
         # Inlets have text on the right of the pin
         text_x = -QFontMetrics(self.font).horizontalAdvance(self.name) - self.text_margin
         painter.drawText(text_x, 5, self.name)
+
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges)
+
+    def itemChange(self, change, value):
+        if self.persistent_inlet_index and change == QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
+            for edge_item in self.edges:
+                edge_item.updatePosition()
+        return super().itemChange(change, value)
 
 
 class OutletItem(QGraphicsItem):
@@ -57,6 +67,7 @@ class OutletItem(QGraphicsItem):
         self.parent_node = parent_node
         self.name = "<outlet name>"
         self.persistent_outlet_index:Optional[QModelIndex]=None
+        self.edges = []
 
         # Size of the pin and space for the name text
         self.pin_radius = 5
@@ -64,6 +75,7 @@ class OutletItem(QGraphicsItem):
 
         # Font for drawing the name
         self.font = QFont("Arial", 10)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges)
 
     def boundingRect(self) -> QRectF:
         """Calculate bounding rect to include both pin and name text."""
@@ -92,6 +104,12 @@ class OutletItem(QGraphicsItem):
         # Inlets have text on the right of the pin
         text_x = -QFontMetrics(self.font).horizontalAdvance(self.name) - self.text_margin
         painter.drawText(text_x, 5, self.name)
+
+    def itemChange(self, change, value):
+        if self.persistent_outlet_index and change == QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
+            for edge_item in self.edges:
+                edge_item.updatePosition()
+        return super().itemChange(change, value)
 
 
 class NodeItem(QGraphicsItem):
@@ -156,14 +174,19 @@ class NodeItem(QGraphicsItem):
 
 class EdgeItem(QGraphicsLineItem):
     """Graphics item representing an edge (connection)."""
-    def __init__(self, start_pin, end_pin, parent=None):
-        super().__init__(parent)
-        self.start_pin = start_pin
-        self.end_pin = end_pin
-        self.setPen(QPen(Qt.GlobalColor.white, 2))
+    def __init__(self, source_pin_item, target_pin_item):
+        super().__init__(parent=None)
+        self.source_pin_item = source_pin_item
+        self.target_pin_item = target_pin_item
+        source_pin_item.edges.append(self)
+        target_pin_item.edges.append(self)
+        self.persistent_edge_index:Optional[QPersistentModelIndex] = None
+
+        self.setPen(QPen(Qt.GlobalColor.black, 2))
+        self.updatePosition()
 
     def updatePosition(self):
-        line = QLineF(self.start_pin.scenePos(), self.end_pin.scenePos())
+        line = QLineF(self.source_pin_item.scenePos(), self.target_pin_item.scenePos())
         self.setLine(line)
 
 
@@ -176,15 +199,15 @@ class GraphView(QGraphicsView):
         # Create a scene to hold the node and edge graphics
         self.setScene(QGraphicsScene(self))
         self.nodes = []
+        self.edges = []
         self.index_to_item_map = dict()
 
     def setModel(self, graph_model:GraphModel):
         self.graph_model = graph_model
-        """Load nodes"""
-        self.handleNodesInserted(QModelIndex(), 0, self.graph_model.nodes.rowCount()-1)
-        self.handleInletsInserted(QModelIndex(), 0, self.graph_model.inlets.rowCount()-1)
+        self.handleNodesInserted(  QModelIndex(), 0, self.graph_model.nodes.rowCount()-1)
+        self.handleInletsInserted( QModelIndex(), 0, self.graph_model.inlets.rowCount()-1)
         self.handleOutletsInserted(QModelIndex(), 0, self.graph_model.outlets.rowCount()-1)
-        self.handleEdgesInserted(QModelIndex(), 0, self.graph_model.edges.rowCount()-1)
+        self.handleEdgesInserted(  QModelIndex(), 0, self.graph_model.edges.rowCount()-1)
         self.graph_model.nodes.rowsInserted.connect(self.handleNodesInserted)
         self.graph_model.nodes.dataChanged.connect(self.handleNodesDataChanged)
         self.graph_model.inlets.rowsInserted.connect(self.handleInletsInserted)
@@ -197,6 +220,12 @@ class GraphView(QGraphicsView):
         self.nodes.append(node_item)
         self.scene().addItem(node_item)
         return node_item
+
+    def addEdge(self, source_pin_item, target_pin_item):
+        edge_item = EdgeItem(source_pin_item, target_pin_item)
+        self.edges.append(edge_item)
+        self.scene().addItem(edge_item)
+        return edge_item
 
     def handleNodesInserted(self, parent:QModelIndex, first:int, last:int):
         if parent.isValid():
@@ -254,7 +283,28 @@ class GraphView(QGraphicsView):
             self.handleOutletsDataChanged(outlet, outlet.siblingAtColumn(2))
 
     def handleEdgesInserted(self, parent:QModelIndex, first:int, last:int):
-        pass
+        if parent.isValid():
+            raise NotImplementedError("Subgraphs are not implemented yet!")
+
+        for row in range(first, last+1):
+            # get node and create the gaphics item
+            edge = self.graph_model.edges.index(row, 0)
+
+        
+            
+            target_inlet = self.graph_model.getEdge(edge)["target"]
+            target_inlet_item = self.index_to_item_map[QPersistentModelIndex(target_inlet)]
+            source_outlet = self.graph_model.getEdge(edge)["source"]
+            source_outlet_item = self.index_to_item_map[QPersistentModelIndex(source_outlet)]
+            edge_item = self.addEdge(source_outlet_item, target_inlet_item)
+
+            # map node to graphics item
+            persistent_edge_index = QPersistentModelIndex(edge)
+            edge_item.persistent_edge_index = persistent_edge_index
+            self.index_to_item_map[persistent_edge_index] = edge_item
+
+            # update gaphics item
+            self.handleEdgesDataChanged(edge, edge.siblingAtColumn(2))
 
     def handleNodesDataChanged(self, topLeft:QModelIndex, bottomRight:QModelIndex, roles=[]):
         for row in range(topLeft.row(), bottomRight.row()+1):
@@ -313,7 +363,22 @@ class GraphView(QGraphicsView):
                         graphics_item.update()
 
     def handleEdgesDataChanged(self, topLeft:QModelIndex, bottomRight:QModelIndex, roles=[]):
-        pass
+        for row in range(topLeft.row(), bottomRight.row()+1):
+            edge = self.graph_model.edges.index(row, 0)
+            persistent_index = QPersistentModelIndex(edge)
+            graphics_item = self.index_to_item_map[persistent_index]
+            for col in range(topLeft.column(), bottomRight.column()+1):
+                match col:
+                    case 0:
+                        """unique id changed"""
+                        pass
+                    case 1:
+                        """source outlet changed"""
+                        pass
+                    case 2:
+                        """target inlet changed"""
+                        pass
+
 
 from GraphTableView import GraphTableView
 from GraphDetailsView import GraphDetailsView
@@ -346,10 +411,11 @@ class MainWindow(QWidget):
         self.graph_details_view.setModel(self.graph_model)
         self.graph_details_view.setNodesSelectionModel(self.nodes_selectionmodel)
         
-        self.setLayout(QHBoxLayout())
-        self.layout().addWidget(self.graph_table_view, 1)
-        self.layout().addWidget(self.graph_view, 1)
-        self.layout().addWidget(self.graph_details_view, 1)
+        layout = QHBoxLayout()
+        layout.addWidget(self.graph_table_view, 1)
+        layout.addWidget(self.graph_view, 1)
+        layout.addWidget(self.graph_details_view, 1)
+        self.setLayout(layout)
 
 
 if __name__ == "__main__":
