@@ -23,33 +23,33 @@ class InletItem(QGraphicsItem):
 		# Font for drawing the name
 		self.font = QFont("Arial", 10)
 
+		self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges)
+
 	def boundingRect(self) -> QRectF:
 		"""Calculate bounding rect to include both pin and name text."""
-		text_width = QFontMetrics(self.font).horizontalAdvance(self.name)
+		font = QApplication.font()
+		text_width = QFontMetrics(font).horizontalAdvance(self.name)
 		pin_diameter = self.pin_radius * 2
-		height = max(pin_diameter, QFontMetrics(self.font).height())
+		fm = QFontMetrics(font)
+		height = max(pin_diameter, fm.height()+fm.descent()+5)
 
 		# Bounding rect includes the pin (left side) and text (right side)
-		return QRectF(-text_width - self.text_margin - pin_diameter, -height / 2, text_width + self.text_margin + pin_diameter, height).adjusted(-2,-2,4,4)
+		return QRectF(-self.text_margin - pin_diameter, 
+					  -height / 2, 
+					   10 + text_width + self.text_margin + pin_diameter, 
+					   height)
 
 	def paint(self, painter, option, widget=None):
 		"""Draw the pin and the name."""
-		# get application color palette
-		palette = QApplication.palette()
-
 		# Draw pin (ellipse)
-		painter.setBrush(Qt.gray)
-		painter.setPen(QPen(Qt.white, 3))
+		painter.setBrush(Qt.NoBrush)
+		painter.setPen(option.palette.light().color())
 		painter.drawEllipse(-self.pin_radius, -self.pin_radius, self.pin_radius * 2, self.pin_radius * 2)
 
 		# Draw the name
-		painter.setFont(self.font)
-		text_color = palette.color(QPalette.ColorGroup.Active, QPalette.ColorRole.WindowText)
-		painter.setPen(text_color)
-
-		# Inlets have text on the right of the pin
-		text_x = -QFontMetrics(self.font).horizontalAdvance(self.name) - self.text_margin
-		painter.drawText(text_x, 5, self.name)
+		painter.setPen(option.palette.light().color())
+		font = QApplication.font()
+		painter.drawText(5, -QFontMetrics(font).descent(), self.name)
 
 		self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges)
 
@@ -73,37 +73,34 @@ class OutletItem(QGraphicsItem):
 		self.pin_radius = 5
 		self.text_margin = 10
 
-		# Font for drawing the name
-		self.font = QFont("Arial", 10)
 		self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges)
 
 	def boundingRect(self) -> QRectF:
 		"""Calculate bounding rect to include both pin and name text."""
-		text_width = QFontMetrics(self.font).horizontalAdvance(self.name)
+		font = QApplication.font()
+		text_width = QFontMetrics(font).horizontalAdvance(self.name)
 		pin_diameter = self.pin_radius * 2
-		height = max(pin_diameter, QFontMetrics(self.font).height())
+		fm = QFontMetrics(font)
+		height = max(pin_diameter, fm.height()+fm.descent()+5)
 
 		# Bounding rect includes the pin (left side) and text (right side)
-		return QRectF(-text_width - self.text_margin - pin_diameter, -height / 2, text_width + self.text_margin + pin_diameter, height).adjusted(-2,-2,4,4)
+		return QRectF(-self.text_margin - pin_diameter, 
+					  -pin_diameter, 
+					   5 + text_width + self.text_margin + pin_diameter, 
+					   height)
 
-	def paint(self, painter, option, widget=None):
+	def paint(self, painter, options, widget=None):
 		"""Draw the pin and the name."""
-		# get application color palette
-		palette = QApplication.palette()
-
 		# Draw pin (ellipse)
-		painter.setBrush(Qt.gray)
-		painter.setPen(QPen(Qt.white, 3))
+		painter.setBrush(Qt.NoBrush)
+		painter.setPen(options.palette.light().color())
 		painter.drawEllipse(-self.pin_radius, -self.pin_radius, self.pin_radius * 2, self.pin_radius * 2)
 
 		# Draw the name
-		painter.setFont(self.font)
-		text_color = palette.color(QPalette.ColorGroup.Active, QPalette.ColorRole.WindowText)
-		painter.setPen(text_color)
-
-		# Inlets have text on the right of the pin
-		text_x = -QFontMetrics(self.font).horizontalAdvance(self.name) - self.text_margin
-		painter.drawText(text_x, 5, self.name)
+		painter.setPen(options.palette.light().color())
+		font = QApplication.font()
+		text_x = -QFontMetrics(font).horizontalAdvance(self.name) - self.text_margin
+		painter.drawText(10, 10, self.name)
 
 	def itemChange(self, change, value):
 		if self.persistent_outlet_index and change == QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
@@ -183,17 +180,25 @@ class NodeItem(QGraphicsItem):
 				outlet_x_pos = self.rect.left() + (i + 1) * outlet_spacing  # Distribute horizontally
 				outlet.setPos(outlet_x_pos, self.rect.bottom() + offset)  # Position on bottom edge
 
-
 	def boundingRect(self) -> QRectF:
 		return self.rect
 
-	def paint(self, painter, option, widget=None):
+	def paint(self, painter:QPainter, option:QStyleOptionGraphicsItem, widget=None):
+		# option.direction
+		# option.fontMetrics
+		# option.palette
+		# option.rect
+		# option.state
+		# option.styleObject
+		# option.levelOfDetailFromTransform
 		# Draw the node rectangle
-		painter.setBrush(Qt.white)
+
+		painter.setBrush(option.palette.window())
+		painter.setPen(option.palette.midlight().color())
 		painter.drawRoundedRect(self.rect, 3,3)
 
 		# Draw the node name text
-		painter.setPen(Qt.black)
+		painter.setPen(option.palette.text().color())
 		painter.drawText(self.rect, Qt.AlignCenter, self.name)
 
 	def itemChange(self, change, value):
@@ -201,8 +206,13 @@ class NodeItem(QGraphicsItem):
 			graph = self.parent_graph.graph_model
 			node_index = graph.nodes.index(self.persistent_node_index.row(), 0)
 			new_pos = self.pos()
-			graph.nodes.setData(node_index.siblingAtColumn(2), int(new_pos.x()))
-			graph.nodes.setData(node_index.siblingAtColumn(3), int(new_pos.y()))
+			posx = int(new_pos.x())
+			posy = int(new_pos.y())
+			graph.nodes.blockSignals(True)
+			graph.nodes.setData(node_index.siblingAtColumn(2), posx, Qt.ItemDataRole.DisplayRole)
+			graph.nodes.setData(node_index.siblingAtColumn(3), posy, Qt.ItemDataRole.DisplayRole)
+			graph.nodes.blockSignals(False)
+			graph.nodes.dataChanged.emit(node_index.siblingAtColumn(2), node_index.siblingAtColumn(3))
 		return super().itemChange(change, value)
 
 
@@ -223,15 +233,88 @@ class EdgeItem(QGraphicsLineItem):
 		line = QLineF(self.source_pin_item.scenePos(), self.target_pin_item.scenePos())
 		self.setLine(line)
 
+	def paint(self, painter:QPainter, options:QStyleOptionGraphicsItem, widget=None):
+		p1 = self.line().p1()
+		p2 = self.line().p2()
 
-class GraphView(QGraphicsView):
+		painter.setPen(options.palette.light().color())
+		painter.drawLine(self.line())
+
+		# draw plugs
+		painter.setBrush(options.palette.text().color())
+		painter.setPen(Qt.NoPen)
+		r = 3
+		painter.drawEllipse(-r+p1.x(), -r+p1.y(), r * 2, r * 2)
+		painter.drawEllipse(-r+p2.x(), -r+p2.y(), r * 2, r * 2)
+
+
+class InfiniteGraphicsView(QGraphicsView):
+	def __init__(self, parent=None):
+		super().__init__(parent=parent)
+
+		self._scene = QGraphicsScene()
+		self._click_pos = None
+
+		self.setDragMode(QGraphicsView.ScrollHandDrag)
+		self.setRenderHint(QPainter.Antialiasing)
+
+		# setViewportUpdateMode(QGraphicsView.FullViewportUpdate)
+		# setViewportUpdateMode(QGraphicsView.MinimalViewportUpdate)
+		self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+		self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
+		self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
+
+		self.setCacheMode(QGraphicsView.CacheBackground)
+
+	def scale_up(self):
+		step = 1.2
+		factor = step ** 1.0
+		t = self.transform()
+		if t.m11() <= 2.0:
+			self.scale(factor, factor)
+
+	def scale_down(self):
+		step = 1.2
+		factor = step ** -1.0
+		self.scale(factor, factor)
+
+	def mousePressEvent(self, event: QMouseEvent):
+		super().mousePressEvent(event)
+		if event.button() == Qt.MouseButton.LeftButton:
+			self._click_pos = self.mapToScene(event.pos())
+
+	def mouseMoveEvent(self, event: QMouseEvent):
+		super().mouseMoveEvent(event)
+		if self._scene.mouseGrabberItem() is None and event.buttons() == Qt.MouseButton.LeftButton:
+			# Make sure shift is not being pressed
+			if not (event.modifiers() & Qt.ShiftModifier):
+				difference = self._click_pos - self.mapToScene(event.position().toPoint())
+				self.setSceneRect(self.sceneRect().translated(difference.x(), difference.y()))
+
+	def wheelEvent(self, event: QWheelEvent):
+		delta = event.angleDelta()
+		if delta.y() == 0:
+			event.ignore()
+			return
+
+		d = delta.y() / abs(delta.y())
+		if d > 0.0:
+			self.scale_up()
+		else:
+			self.scale_down()
+
+
+class GraphView(InfiniteGraphicsView):
 	"""A view that displays the node editor."""
 	def __init__(self, parent=None):
 		super().__init__(parent)
 		self.setRenderHint(QPainter.RenderHint.Antialiasing)
 
 		# Create a scene to hold the node and edge graphics
-		self.setScene(QGraphicsScene(self))
+		scene = QGraphicsScene(self)
+		scene.setSceneRect(QRect(-9999/2,-9999/2, 9999, 9999))
+		self.setScene(scene)
 		self.nodes = []
 		self.edges = []
 		self.index_to_item_map = dict()
@@ -344,7 +427,8 @@ class GraphView(QGraphicsView):
 		for row in range(topLeft.row(), bottomRight.row()+1):
 			node_index = self.graph_model.nodes.index(row, 0)
 			persistent_node_index = QPersistentModelIndex(node_index)
-			node_item = self.index_to_item_map[persistent_node_index]
+			node_item:NodeItem = self.index_to_item_map[persistent_node_index]
+			new_pos = node_item.pos()
 			for col in range(topLeft.column(), bottomRight.column()+1):
 				match col:
 					case 0:
@@ -353,15 +437,17 @@ class GraphView(QGraphicsView):
 						node_item.name = str(node_index.siblingAtColumn(1).data())
 						node_item.update()
 					case 2:
+						"""posx changed"""
 						data = node_index.siblingAtColumn(2).data()
-						print("posx was set", data)
-						node_item.setX(int(data))
+						new_pos.setX(int(data))
 					case 3:
+						"""posy changed"""
 						data = node_index.siblingAtColumn(3).data()
-						print("posy was set", data)
-						node_item.setY(int(data))
+						new_pos.setY(int(data))
 					case 4:
 						"set script"
+			if new_pos!=node_item.pos():
+				node_item.setPos(new_pos)
 
 	def handleInletsDataChanged(self, topLeft:QModelIndex, bottomRight:QModelIndex, roles=[]):
 		for row in range(topLeft.row(), bottomRight.row()+1):
@@ -432,19 +518,21 @@ class MainWindow(QWidget):
 		self.nodes_selectionmodel = QItemSelectionModel(self.graph_model.nodes)
 
 		# Add some example nodes and edges
-		node1_id = self.graph_model.addNode("Node 1", 0, 0, "Script 1")
-		node2_id = self.graph_model.addNode("Node 2", 10, 100, "Script 2")
+		node1_id = self.graph_model.addNode("Node 1", 10, 100, "Script 1")
+		node2_id = self.graph_model.addNode("Node 2", 20, 200, "Script 2")
 		outlet_id = self.graph_model.addOutlet(node1_id, "Out1")
 		inlet_id = self.graph_model.addInlet(node2_id, "In1")
 		self.graph_model.addEdge(outlet_id, inlet_id)
 
-		# Set up the node editor view
+		# Set up the node editor views
 		self.graph_table_view = GraphTableView()
 		self.graph_table_view.setModel(self.graph_model)
 		self.graph_table_view.setNodesSelectionModel(self.nodes_selectionmodel)
+
 		self.graph_view = GraphView()
 		self.graph_view.setModel(self.graph_model)
 		# self.graph_view.setNodesSelectionModel(self.nodes_selectionmodel)
+
 		self.graph_details_view = GraphDetailsView()
 		self.graph_details_view.setModel(self.graph_model)
 		self.graph_details_view.setNodesSelectionModel(self.nodes_selectionmodel)
@@ -454,7 +542,6 @@ class MainWindow(QWidget):
 		layout.addWidget(self.graph_view, 1)
 		layout.addWidget(self.graph_details_view, 1)
 		self.setLayout(layout)
-
 
 if __name__ == "__main__":
 	app = QApplication(sys.argv)
