@@ -97,11 +97,16 @@ class GraphModel(QObject):
         self.edges.itemChanged.connect(self.edgeChanged.emit)
 
     def addNode(self, name:str, posx:int, posy:int, script:str)->QModelIndex:
+        assert isinstance(name, str)
+        assert isinstance(posx, int)
+        assert isinstance(posy, int)
         id_item =   QStandardItem(unique.make_unique_id())
         name_item = QStandardItem(name)
-        posx_item = QStandardItem(str(posx))
-        posy_item = QStandardItem(str(posy))
-        script_item = QStandardItem(str(script))
+        posx_item = QStandardItem()
+        posx_item.setData(int(posx))
+        posy_item = QStandardItem()
+        posy_item.setData(int(posy))
+        script_item = QStandardItem(script)
         self.nodes.appendRow([id_item, name_item, posx_item, posy_item, script_item])
 
         return self.nodes.indexFromItem(id_item)
