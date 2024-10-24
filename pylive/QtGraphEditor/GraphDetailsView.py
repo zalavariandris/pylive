@@ -62,7 +62,7 @@ class GraphDetailsView(QWidget):
                 self.inlets_sheet_editor,
                 self.outlets_sheet_editor,
             ]
-            )
+        )
 
         self.setLayout(QVBoxLayout())
         self.layout().addWidget(self.panel)

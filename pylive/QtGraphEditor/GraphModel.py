@@ -200,85 +200,88 @@ class GraphModel(QObject):
         for row in sorted(rows_to_remove, reverse=True):
             self.edges.removeRow(row)
 
-    # def getNodeForInlet(self, inlet:QModelIndex)->QModelIndex:
-    #     inlet.siblingAtColumn()
+    def getNode(self, node:QModelIndex, relations=True):
+        properties = {
+            'id': node.data(),
+            'name': node.siblingAtColumn(1).data(),
+            'posx': int(node.siblingAtColumn(2).data()),
+            'posy': int(node.siblingAtColumn(3).data()),
+        }
+        if relations:
+            inlets = [item.index().siblingAtColumn(0) for item in self.inlets.findItems(node.data(), Qt.MatchFlag.MatchExactly, 1)]
+            outlets = [item.index().siblingAtColumn(0) for item in self.outlets.findItems(node.data(), Qt.MatchFlag.MatchExactly, 1)]
+            properties.update({
+                'outlets': outlets,
+                'inlets': inlets
+            })
+        return properties
 
-    # def getNodeForOutlet(self, outlet:QModelIndex)->QModelIndex:
+    def getInlet(self, inlet:QModelIndex, relations=True):
+        properties = {
+            'id': inlet.data(),
+            "name": inlet.siblingAtColumn(2).data(),
+        }
+        if relations:
+            node_id = inlet.siblingAtColumn(1).data()
+            owner_nodes = [item.index() for item in self.nodes.findItems(node_id, Qt.MatchFlag.MatchExactly, 0)]
+            assert len(owner_nodes)==1, f"Outlet {inlet} supposed to have exacly one owner node!"
+            edges = [item.index().siblingAtColumn(0) for item in self.edges.findItems(inlet.data(), Qt.MatchFlag.MatchExactly, 2)]
+            properties.update({
+                'node': owner_nodes[0],
+                "edges": edges
+            })
+        return properties
 
+    def getOutlet(self, outlet:QModelIndex, relations=True):
+        properties = {
+            'id': outlet.data(),
+            'name': outlet.siblingAtColumn(2).data(),
+        }
+        if relations:
+            node_id = outlet.siblingAtColumn(1).data()
+            owner_nodes = [item.index() for item in self.nodes.findItems(node_id, Qt.MatchFlag.MatchExactly, 0)]
+            assert len(owner_nodes)==1, f"Outlet {outlet} supposed to have exacly one owner node!"
+            edges = [item.index().siblingAtColumn(0) for item in self.edges.findItems(outlet.data(), Qt.MatchFlag.MatchExactly, 1)]
+            properties.update({
+                'node': owner_nodes[0],
+                "edges": edges
+            })
+        return properties
 
-    def findInlets(self, node:QModelIndex)->Iterable[QModelIndex]:
-        items = self.inlets.findItems(node.data(), Qt.MatchFlag.MatchExactly, 1)
-        for item in items:
-            yield item.index().siblingAtColumn(0) # return the ndex at the id column
+    def getEdge(self, edge:QModelIndex, relations=True):
+        properties = {
+            'id': edge.data(),
+        }
+        if relations:
+            source_outlets = [item.index() for item in self.outlets.findItems(edge.siblingAtColumn(1).data(), Qt.MatchFlag.MatchExactly, 0)]
+            target_inlets = [item.index() for item in self.inlets.findItems(edge.siblingAtColumn(2).data(), Qt.MatchFlag.MatchExactly, 0)]
+            assert len(source_outlets)==1, f"Edges {edge} supposed to have exacly one source, got {len(source_outlets)}!"
+            assert len(target_inlets)==1, f"Edges {edge} supposed to have exacly one target, got {len(source_outlets)}!"
+            properties.update({
+                'source': source_outlets[0],
+                "target": target_inlets[0]
+            })
+        return properties
 
-    def findOutlets(self, node)->Iterable[QModelIndex]:
-        items = self.outlets.findItems(node.data(), Qt.MatchFlag.MatchExactly, 1)
-        for item in items:
-            yield item.index().siblingAtColumn(0) # return the ndex at the id column
-
-    def findEdges(self, source_outlet:QModelIndex=None, target_inlet:QModelIndex=None)->Iterable[QModelIndex]:
-        # find edges from source outlet
-        edges_from_source = self.edges.findItems(source_outlet.data(), Qt.MatchFlag.MatchExactly, 1)
-
-        # find edges to target inlet
-        edges_to_target = self.edges.findItems(target_inlet.data(), Qt.MatchFlag.MatchExactly, 2)
-
-        # return edges matching source and target:
-        for edge in edges_from_source:
-            if edge in edges_to_target:
-                yield edge.index().siblingAtColumn(0) # return the ndex at the id column
-
-    def findEdgesToInlet(self, target_inlet:QModelIndex)->Iterable[QModelIndex]:
-        edges_to_target = self.edges.findItems(target_inlet.data(), Qt.MatchFlag.MatchExactly, 2)
-        for edge in edges_to_target:
-            yield edge.index().siblingAtColumn(0)
-
-    def findSources(self, node:QModelIndex)->Iterable[QModelIndex]:
-        inlets = self.findInlets(node.siblingAtColumn(0))
+    def getSourceNodes(self, node:QModelIndex):
+        inlets = self.getNode(node)["inlets"]
         for inlet in inlets:
-            # find edges to inlet
-            edges_to_target = self.edges.findItems(inlet.data(), Qt.MatchFlag.MatchExactly, 2)
-            for edge in edges_to_target:
-                source_outlet_id = edge.index().siblingAtColumn(1).data() # get the index of the source outlet
-                outlet_items = self.outlets.findItems(source_outlet_id)
-                for outlet_item in outlet_items:    
-                    owner_node_id = outlet_item.index().siblingAtColumn(1).data()
-                    for source_node_item in self.nodes.findItems(owner_node_id):
-                        yield source_node_item.index()
+            yield self.getInlet(inlet)["node"]
 
-    def findConnectedNodes(self, node:QModelIndex, direction:str)->Iterable[QModelIndex]:
-        if direction == "SOURCE":
-            findPorts = self.findInlets
-            column = 2
-        elif direction == "TARGET":
-            findPorts = self.findOutlets
-            column = 1
-        else:
-            raise ValueError("direction must be either SOURCE or TARGET!")
-        
-        ports = findPorts(node.siblingAtColumn(0))
-        for port in ports:
-            # find edges to inlet
-            edges_to_target = self.edges.findItems(port.data(), Qt.MatchFlag.MatchExactly, column)
-            for edge in edges_to_target:
-                connected_id = edge.index().siblingAtColumn(1).data() # get the index of the source outlet
-                connected_items = self.outlets.findItems(connected_id)
-                for connected_item in connected_items:
-                    owner_node_id = connected_item.index().siblingAtColumn(1).data()
-                    for connected_node_item in self.nodes.findItems(owner_node_id):
-                        yield connected_node_item.index()
+    def getTargetNodes(self, node:QModelIndex):
+        outlets = self.getNode(node)["outlets"]
+        for outlet in outlets:
+            yield self.getOutlet(outlet)["node"]
 
 
     def rootRodes(self)->Iterable[QModelIndex]:
         """Yield all root nodes (nodes without outlets) in the graph."""
         for i in range(self.nodes.rowCount()):
             node = self.nodes.item(i, 0).index()
-            target_nodes = list(self.findConnectedNodes(node, direction="TARGET"))
+            self.getNode(node)[""]
+            target_nodes = list(self.getTargetNodes(node))
             if not target_nodes:
                 yield node
-            # print(list(sources))
-            # if not sources:  # Check if the node has no outlets
-            #   yield node  # Yield the root node
 
     def dfs(self)->Iterable[QModelIndex]:
         """Perform DFS starting from the root notes and yield each node."""
@@ -292,7 +295,7 @@ class GraphModel(QObject):
             yield node  # Yield the current node
 
             # Iterate through all adjacent edges from the current node
-            for target_node in self.findSources(node):
+            for target_node in self.getSourceNodes(node):
                 if target_node not in visited:  # Check if the target node has been visited
                     yield from dfs_visit(target_node)  # Recursive call
 

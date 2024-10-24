@@ -1,20 +1,108 @@
 import sys
+from typing import Optional
 from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
 from GraphModel import GraphModel
 
+class InletItem(QGraphicsItem):
+    """Graphics item representing a pin (either inlet or outlet)."""
+    def __init__(self, parent_node):
+        super().__init__(parent=parent_node)
+        self.parent_node = parent_node
+        self.name = "<inlet name>"
+        self.persistent_inlet_index:Optional[QModelIndex]=None
+
+        # Size of the pin and space for the name text
+        self.pin_radius = 5
+        self.text_margin = 10
+
+        # Font for drawing the name
+        self.font = QFont("Arial", 10)
+
+    def boundingRect(self) -> QRectF:
+        """Calculate bounding rect to include both pin and name text."""
+        text_width = QFontMetrics(self.font).horizontalAdvance(self.name)
+        pin_diameter = self.pin_radius * 2
+        height = max(pin_diameter, QFontMetrics(self.font).height())
+
+        # Bounding rect includes the pin (left side) and text (right side)
+        return QRectF(-text_width - self.text_margin - pin_diameter, -height / 2, text_width + self.text_margin + pin_diameter, height).adjusted(-2,-2,4,4)
+
+    def paint(self, painter, option, widget=None):
+        """Draw the pin and the name."""
+        # get application color palette
+        palette = QApplication.palette()
+
+        # Draw pin (ellipse)
+        painter.setBrush(QColor(200, 100, 100))
+        painter.setPen(Qt.NoPen)
+        painter.drawEllipse(-self.pin_radius, -self.pin_radius, self.pin_radius * 2, self.pin_radius * 2)
+
+        # Draw the name
+        painter.setFont(self.font)
+        text_color = palette.color(QPalette.ColorGroup.Active, QPalette.ColorRole.WindowText)
+        painter.setPen(text_color)
+
+        # Inlets have text on the right of the pin
+        text_x = -QFontMetrics(self.font).horizontalAdvance(self.name) - self.text_margin
+        painter.drawText(text_x, 5, self.name)
+
+
+class OutletItem(QGraphicsItem):
+    """Graphics item representing a pin (either inlet or outlet)."""
+    def __init__(self, parent_node):
+        super().__init__(parent=parent_node)
+        self.parent_node = parent_node
+        self.name = "<outlet name>"
+        self.persistent_outlet_index:Optional[QModelIndex]=None
+
+        # Size of the pin and space for the name text
+        self.pin_radius = 5
+        self.text_margin = 10
+
+        # Font for drawing the name
+        self.font = QFont("Arial", 10)
+
+    def boundingRect(self) -> QRectF:
+        """Calculate bounding rect to include both pin and name text."""
+        text_width = QFontMetrics(self.font).horizontalAdvance(self.name)
+        pin_diameter = self.pin_radius * 2
+        height = max(pin_diameter, QFontMetrics(self.font).height())
+
+        # Bounding rect includes the pin (left side) and text (right side)
+        return QRectF(-text_width - self.text_margin - pin_diameter, -height / 2, text_width + self.text_margin + pin_diameter, height).adjusted(-2,-2,4,4)
+
+    def paint(self, painter, option, widget=None):
+        """Draw the pin and the name."""
+        # get application color palette
+        palette = QApplication.palette()
+
+        # Draw pin (ellipse)
+        painter.setBrush(QColor(200, 100, 100))
+        painter.setPen(Qt.NoPen)
+        painter.drawEllipse(-self.pin_radius, -self.pin_radius, self.pin_radius * 2, self.pin_radius * 2)
+
+        # Draw the name
+        painter.setFont(self.font)
+        text_color = palette.color(QPalette.ColorGroup.Active, QPalette.ColorRole.WindowText)
+        painter.setPen(text_color)
+
+        # Inlets have text on the right of the pin
+        text_x = -QFontMetrics(self.font).horizontalAdvance(self.name) - self.text_margin
+        painter.drawText(text_x, 5, self.name)
+
+
 class NodeItem(QGraphicsItem):
     """Graphics item representing a node."""
-    def __init__(self, persistent_node_index, graph_model:GraphModel, parent=None):
-        super().__init__(parent)
-        self.persistent_node_index = persistent_node_index
+    def __init__(self, parent_graph:"GraphView"):
+        super().__init__(parent=None)
+        self.parent_graph = parent_graph
         self.name = "<node>"
         self.script = "<script>"
-        self.graph_model = graph_model
         self.rect = QRectF(-50, -30, 100, 60)  # Set size of the node box
-
+        self.persistent_node_index:Optional[QPersistentModelIndex] = None
         # Store pins (inlets and outlets)
         self.inlets = []
         self.outlets = []
@@ -24,15 +112,17 @@ class NodeItem(QGraphicsItem):
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges)
 
-    def addInlet(self, name):
-        inlet = PinItem(self, 'inlet', name, self)
+    def addInlet(self):
+        inlet = InletItem(parent_node=self,)
         self.inlets.append(inlet)
         self.updatePinPositions()
+        return inlet
 
-    def addOutlet(self, name):
-        outlet = PinItem(self, 'outlet', name, self)
+    def addOutlet(self):
+        outlet = OutletItem(parent_node=self)
         self.outlets.append(outlet)
         self.updatePinPositions()
+        return outlet
 
     def updatePinPositions(self):
         # Position the inlets and outlets around the node's rectangle
@@ -55,62 +145,13 @@ class NodeItem(QGraphicsItem):
         painter.drawText(self.rect, Qt.AlignCenter, self.name)
 
     def itemChange(self, change, value):
-        if change == QGraphicsItem.ItemPositionHasChanged:   
-            node_index = self.graph_model.nodes.index(self.persistent_node_index.row(), 0)
+        if self.persistent_node_index and change == QGraphicsItem.ItemPositionHasChanged:
+            graph = self.parent_graph.graph_model
+            node_index = graph.nodes.index(self.persistent_node_index.row(), 0)
             new_pos = self.pos()
-            self.graph_model.nodes.setData(node_index.siblingAtColumn(2), str(new_pos.x()))
-            self.graph_model.nodes.setData(node_index.siblingAtColumn(3), str(new_pos.y()))
+            graph.nodes.setData(node_index.siblingAtColumn(2), str(new_pos.x()))
+            graph.nodes.setData(node_index.siblingAtColumn(3), str(new_pos.y()))
         return super().itemChange(change, value)
-
-
-class PinItem(QGraphicsItem):
-    """Graphics item representing a pin (either inlet or outlet)."""
-    def __init__(self, owner_node, pin_type, name, parent=None):
-        super().__init__(parent)
-        self.owner_node = owner_node
-        self.pin_type = pin_type  # 'inlet' or 'outlet'
-        self.name = name
-
-        # Size of the pin and space for the name text
-        self.pin_radius = 5
-        self.text_margin = 10
-
-        # Font for drawing the name
-        self.font = QFont("Arial", 10)
-
-    def boundingRect(self) -> QRectF:
-        """Calculate bounding rect to include both pin and name text."""
-        text_width = QFontMetrics(self.font).horizontalAdvance(self.name)
-        pin_diameter = self.pin_radius * 2
-        height = max(pin_diameter, QFontMetrics(self.font).height())
-
-        if self.pin_type == 'inlet':
-            # Bounding rect includes the pin (left side) and text (right side)
-            return QRectF(-text_width - self.text_margin - pin_diameter, -height / 2, text_width + self.text_margin + pin_diameter, height)
-        else:
-            # Bounding rect includes the pin (right side) and text (left side)
-            return QRectF(-pin_diameter, -height / 2, text_width + self.text_margin + pin_diameter, height)
-
-    def paint(self, painter, option, widget=None):
-        """Draw the pin and the name."""
-        # Draw pin (ellipse)
-        painter.setBrush(QColor(200, 100, 100) if self.pin_type == 'inlet' else QColor(100, 200, 100))
-        painter.setPen(Qt.NoPen)
-        painter.drawEllipse(-self.pin_radius, -self.pin_radius, self.pin_radius * 2, self.pin_radius * 2)
-
-        # Draw the name
-        painter.setFont(self.font)
-        painter.setPen(Qt.white)
-
-        if self.pin_type == 'inlet':
-            # Inlets have text on the right of the pin
-            text_x = -QFontMetrics(self.font).horizontalAdvance(self.name) - self.text_margin
-            painter.drawText(text_x, 5, self.name)
-        else:
-            # Outlets have text on the left of the pin
-            text_x = self.pin_radius + self.text_margin
-            painter.drawText(text_x, 5, self.name)
-
 
 
 class EdgeItem(QGraphicsLineItem):
@@ -134,6 +175,7 @@ class GraphView(QGraphicsView):
 
         # Create a scene to hold the node and edge graphics
         self.setScene(QGraphicsScene(self))
+        self.nodes = []
         self.index_to_item_map = dict()
 
     def setModel(self, graph_model:GraphModel):
@@ -141,25 +183,80 @@ class GraphView(QGraphicsView):
         """Load nodes"""
         self.handleNodesInserted(QModelIndex(), 0, self.graph_model.nodes.rowCount()-1)
         self.handleInletsInserted(QModelIndex(), 0, self.graph_model.inlets.rowCount()-1)
+        self.handleOutletsInserted(QModelIndex(), 0, self.graph_model.outlets.rowCount()-1)
+        self.handleEdgesInserted(QModelIndex(), 0, self.graph_model.edges.rowCount()-1)
         self.graph_model.nodes.rowsInserted.connect(self.handleNodesInserted)
-        self.graph_model.nodes.dataChanged.connect(self.handleNodeDataChanged)
+        self.graph_model.nodes.dataChanged.connect(self.handleNodesDataChanged)
         self.graph_model.inlets.rowsInserted.connect(self.handleInletsInserted)
+        self.graph_model.inlets.dataChanged.connect(self.handleInletsDataChanged)
+        self.graph_model.outlets.rowsInserted.connect(self.handleOutletsInserted)
+        self.graph_model.outlets.dataChanged.connect(self.handleOutletsDataChanged)
+
+    def addNode(self):
+        node_item = NodeItem(parent_graph=self)
+        self.nodes.append(node_item)
+        self.scene().addItem(node_item)
+        return node_item
 
     def handleNodesInserted(self, parent:QModelIndex, first:int, last:int):
         if parent.isValid():
             raise NotImplementedError("Subgraphs are not implemented yet!")
 
-        for row in range(first, last+1):        
-            node_index = self.graph_model.nodes.index(row, 0)
-            persistent_node_index = QPersistentModelIndex(node_index)
-            node_item = NodeItem(persistent_node_index=persistent_node_index, 
-                                 graph_model=self.graph_model)
+        for row in range(first, last+1):
+            # get node and create the gaphics item
+            node = self.graph_model.nodes.index(row, 0)
+            node_item = self.addNode()
 
+            # map node to graphics item
+            persistent_node_index = QPersistentModelIndex(node)
+            node_item.persistent_node_index = persistent_node_index
             self.index_to_item_map[persistent_node_index] = node_item
-            self.handleNodeDataChanged(node_index, node_index.siblingAtColumn(4))
-            self.scene().addItem(node_item)
 
-    def handleNodeDataChanged(self, topLeft:QModelIndex, bottomRight:QModelIndex, roles=[]):
+            # update gaphics item
+            self.handleNodesDataChanged(node, node.siblingAtColumn(4))
+            
+    def handleInletsInserted(self, parent:QModelIndex, first:int, last:int):
+        if parent.isValid():
+            raise ValueError("inlets are flat table, not a tree model")
+
+        for row in range(first, last+1):
+            # get inlet and create the gaphics item
+            inlet = self.graph_model.inlets.index(row, 0) # get the inlet reference
+            inlet_node = self.graph_model.getInlet(inlet)["node"] # get the node reference
+            parent_node_item = self.index_to_item_map[QPersistentModelIndex(inlet_node)] # get the node graphics item
+            inlet_item = parent_node_item.addInlet()
+
+            # map inlet to graphics item
+            persistent_inlet_index = QPersistentModelIndex(inlet)
+            inlet_item.persistent_inlet_index = persistent_inlet_index
+            self.index_to_item_map[persistent_inlet_index] = inlet_item
+
+            # update graphics item and add to scene
+            self.handleInletsDataChanged(inlet, inlet.siblingAtColumn(2))
+
+    def handleOutletsInserted(self, parent:QModelIndex, first:int, last:int):
+        if parent.isValid():
+            raise ValueError("inlets are flat table, not a tree model")
+
+        for row in range(first, last+1):
+            # get inlet and create the gaphics item
+            outlet = self.graph_model.outlets.index(row, 0) # get the inlet reference
+            outlet_node = self.graph_model.getInlet(outlet)["node"] # get the node reference
+            parent_node_item = self.index_to_item_map[QPersistentModelIndex(outlet_node)] # get the node graphics item
+            outlet_item = parent_node_item.addOutlet()
+
+            # map inlet to graphics item
+            persistent_outlet_index = QPersistentModelIndex(outlet)
+            outlet_item.persistent_outlet_index = persistent_outlet_index
+            self.index_to_item_map[persistent_outlet_index] = outlet_item
+
+            # update graphics item and add to scene
+            self.handleOutletsDataChanged(outlet, outlet.siblingAtColumn(2))
+
+    def handleEdgesInserted(self, parent:QModelIndex, first:int, last:int):
+        pass
+
+    def handleNodesDataChanged(self, topLeft:QModelIndex, bottomRight:QModelIndex, roles=[]):
         for row in range(topLeft.row(), bottomRight.row()+1):
             node_index = self.graph_model.nodes.index(row, 0)
             persistent_node_index = QPersistentModelIndex(node_index)
@@ -178,37 +275,45 @@ class GraphView(QGraphicsView):
                     case 4:
                         "set script"
 
-    def handleInletsInserted(self, parent:QModelIndex, first:int, last:int):
-        if parent.isValid():
-            raise ValueError("inlets are flat table, not a tree model")
-
-        # for row in range(first, last+1):        
-        #     inlet_index = self.graph_model.nodes.index(row, 0)
-        #     persistent_inlet_index = QPersistentModelIndex(inlet_index)
-        #     self.graph_model.nodes.findItems()
-        #     inlet_item = PinItem(
-        #     inlet_item = NodeItem(persistent_node_index=persistent_inlet_index, 
-        #                          graph_model=self.graph_model)
-
-        #     self.index_to_item_map[persistent_inlet_index] = inlet_item
-        #     self.handleInletDataChanged(inlet_index, inlet_index.siblingAtColumn(3))
-        #     self.scene().addItem(inlet_item)
-
-    def handleInletDataChanged(self, topLeft:QModelIndex, bottomRight:QModelIndex, roles=[]):
+    def handleInletsDataChanged(self, topLeft:QModelIndex, bottomRight:QModelIndex, roles=[]):
         for row in range(topLeft.row(), bottomRight.row()+1):
-            inlet_index = self.graph_model.nodes.index(row, 0)
-            persistent_inlet_index = QPersistentModelIndex(inlet_index)
-            inlet_item = self.index_to_item_map[persistent_inlet_index]
+            inlet = self.graph_model.inlets.index(row, 0)
+            persistent_index = QPersistentModelIndex(inlet)
+            graphics_item = self.index_to_item_map[persistent_index]
             for col in range(topLeft.column(), bottomRight.column()+1):
                 match col:
                     case 0:
-                        "unique id changed"
+                        """unique id changed"""
+                        pass
                     case 1:
-                        "owner node changed"
+                        pass
                     case 2:
-                        "name changed"
-                        inlet_item.name = str(inlet_index.siblingAtColumn(2).data())
-                        inlet_item.update()
+                        """name changed"""
+                        graphics_item.name = str(inlet.siblingAtColumn(2).data())
+                        graphics_item.update()
+
+    def handleOutletsDataChanged(self, topLeft:QModelIndex, bottomRight:QModelIndex, roles=[]):
+        for row in range(topLeft.row(), bottomRight.row()+1):
+            outlet = self.graph_model.outlets.index(row, 0)
+            persistent_index = QPersistentModelIndex(outlet)
+            graphics_item = self.index_to_item_map[persistent_index]
+            for col in range(topLeft.column(), bottomRight.column()+1):
+                match col:
+                    case 0:
+                        """unique id changed"""
+                        # raise NotImplementedError("Setting the inlet's unique id is not supported!")
+                        pass
+                    case 1:
+                        """parent node changed"""
+                        # raise NotImplementedError("Setting the inlet's parent node is not supported!")
+                        pass
+                    case 2:
+                        """name changed"""
+                        graphics_item.name = str(outlet.siblingAtColumn(2).data())
+                        graphics_item.update()
+
+    def handleEdgesDataChanged(self, topLeft:QModelIndex, bottomRight:QModelIndex, roles=[]):
+        pass
 
 from GraphTableView import GraphTableView
 from GraphDetailsView import GraphDetailsView
