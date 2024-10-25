@@ -3,18 +3,18 @@ from typing import Optional
 from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
-
+from InfiniteGraphicsView import InfiniteGraphicsView
 from GraphModel import GraphModel
 
-
-class InletItem(QGraphicsItem):
+class PinItem(QGraphicsItem):
 	"""Graphics item representing a pin (either inlet or outlet)."""
 	def __init__(self, parent_node):
 		super().__init__(parent=parent_node)
 		self.parent_node = parent_node
-		self.name = "<inlet name>"
-		self.persistent_inlet_index:Optional[QModelIndex]=None
+		self.persistent_index:Optional[QModelIndex]=None
 		self.edges = []
+
+		self.label = QGraphicsSimpleTextItem(parent=self)
 
 		# Size of the pin and space for the name text
 		self.pin_radius = 5
@@ -26,18 +26,11 @@ class InletItem(QGraphicsItem):
 		self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges)
 
 	def boundingRect(self) -> QRectF:
-		"""Calculate bounding rect to include both pin and name text."""
-		font = QApplication.font()
-		text_width = QFontMetrics(font).horizontalAdvance(self.name)
-		pin_diameter = self.pin_radius * 2
-		fm = QFontMetrics(font)
-		height = max(pin_diameter, fm.height()+fm.descent()+5)
-
 		# Bounding rect includes the pin (left side) and text (right side)
-		return QRectF(-self.text_margin - pin_diameter, 
-					  -height / 2, 
-					   10 + text_width + self.text_margin + pin_diameter, 
-					   height)
+		return QRectF(-self.pin_radius, 
+					  -self.pin_radius, 
+					   self.pin_radius*2, 
+					   self.pin_radius*2)
 
 	def paint(self, painter, option, widget=None):
 		"""Draw the pin and the name."""
@@ -46,64 +39,15 @@ class InletItem(QGraphicsItem):
 		painter.setPen(option.palette.light().color())
 		painter.drawEllipse(-self.pin_radius, -self.pin_radius, self.pin_radius * 2, self.pin_radius * 2)
 
-		# Draw the name
-		painter.setPen(option.palette.light().color())
-		font = QApplication.font()
-		painter.drawText(5, -QFontMetrics(font).descent(), self.name)
+		# # Draw the name
+		# painter.setPen(option.palette.light().color())
+		# font = QApplication.font()
+		# painter.drawText(5, -QFontMetrics(font).descent(), self.name)
 
 		self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges)
 
 	def itemChange(self, change, value):
-		if self.persistent_inlet_index and change == QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
-			for edge_item in self.edges:
-				edge_item.updatePosition()
-		return super().itemChange(change, value)
-
-
-class OutletItem(QGraphicsItem):
-	"""Graphics item representing a pin (either inlet or outlet)."""
-	def __init__(self, parent_node):
-		super().__init__(parent=parent_node)
-		self.parent_node = parent_node
-		self.name = "<outlet name>"
-		self.persistent_outlet_index:Optional[QModelIndex]=None
-		self.edges = []
-
-		# Size of the pin and space for the name text
-		self.pin_radius = 5
-		self.text_margin = 10
-
-		self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges)
-
-	def boundingRect(self) -> QRectF:
-		"""Calculate bounding rect to include both pin and name text."""
-		font = QApplication.font()
-		text_width = QFontMetrics(font).horizontalAdvance(self.name)
-		pin_diameter = self.pin_radius * 2
-		fm = QFontMetrics(font)
-		height = max(pin_diameter, fm.height()+fm.descent()+5)
-
-		# Bounding rect includes the pin (left side) and text (right side)
-		return QRectF(-self.text_margin - pin_diameter, 
-					  -pin_diameter, 
-					   5 + text_width + self.text_margin + pin_diameter, 
-					   height)
-
-	def paint(self, painter, options, widget=None):
-		"""Draw the pin and the name."""
-		# Draw pin (ellipse)
-		painter.setBrush(Qt.NoBrush)
-		painter.setPen(options.palette.light().color())
-		painter.drawEllipse(-self.pin_radius, -self.pin_radius, self.pin_radius * 2, self.pin_radius * 2)
-
-		# Draw the name
-		painter.setPen(options.palette.light().color())
-		font = QApplication.font()
-		text_x = -QFontMetrics(font).horizontalAdvance(self.name) - self.text_margin
-		painter.drawText(10, 10, self.name)
-
-	def itemChange(self, change, value):
-		if self.persistent_outlet_index and change == QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
+		if self.persistent_index and change == QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
 			for edge_item in self.edges:
 				edge_item.updatePosition()
 		return super().itemChange(change, value)
@@ -128,13 +72,13 @@ class NodeItem(QGraphicsItem):
 		self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges)
 
 	def addInlet(self):
-		inlet = InletItem(parent_node=self,)
+		inlet = PinItem(parent_node=self,)
 		self.inlets.append(inlet)
 		self.updatePinPositions()
 		return inlet
 
 	def addOutlet(self):
-		outlet = OutletItem(parent_node=self)
+		outlet = PinItem(parent_node=self)
 		self.outlets.append(outlet)
 		self.updatePinPositions()
 		return outlet
@@ -193,8 +137,14 @@ class NodeItem(QGraphicsItem):
 		# option.levelOfDetailFromTransform
 		# Draw the node rectangle
 
+		if option.state & QStyle.State_Selected:
+			# Use a highlight color for the border when selected
+			painter.setPen(option.palette.highlight().color())
+		else:
+			# Use the midlight color for the border when not selected
+			painter.setPen(option.palette.midlight().color())
+
 		painter.setBrush(option.palette.window())
-		painter.setPen(option.palette.midlight().color())
 		painter.drawRoundedRect(self.rect, 3,3)
 
 		# Draw the node name text
@@ -202,26 +152,42 @@ class NodeItem(QGraphicsItem):
 		painter.drawText(self.rect, Qt.AlignCenter, self.name)
 
 	def itemChange(self, change, value):
-		if self.persistent_node_index and change == QGraphicsItem.ItemPositionHasChanged:
-			graph = self.parent_graph.graph_model
-			node_index = graph.nodes.index(self.persistent_node_index.row(), 0)
-			new_pos = self.pos()
-			posx = int(new_pos.x())
-			posy = int(new_pos.y())
-			graph.nodes.blockSignals(True)
-			graph.nodes.setData(node_index.siblingAtColumn(2), posx, Qt.ItemDataRole.DisplayRole)
-			graph.nodes.setData(node_index.siblingAtColumn(3), posy, Qt.ItemDataRole.DisplayRole)
-			graph.nodes.blockSignals(False)
-			graph.nodes.dataChanged.emit(node_index.siblingAtColumn(2), node_index.siblingAtColumn(3))
+		if self.persistent_node_index and self.persistent_node_index.isValid():
+			if change == QGraphicsItem.ItemPositionHasChanged:
+				graph = self.parent_graph.graph_model
+				node_index = graph.nodes.index(self.persistent_node_index.row(), 0)
+				new_pos = self.pos()
+				posx = int(new_pos.x())
+				posy = int(new_pos.y())
+				graph.nodes.blockSignals(True)
+				graph.nodes.setData(node_index.siblingAtColumn(2), posx, Qt.ItemDataRole.DisplayRole)
+				graph.nodes.setData(node_index.siblingAtColumn(3), posy, Qt.ItemDataRole.DisplayRole)
+				graph.nodes.blockSignals(False)
+				graph.nodes.dataChanged.emit(node_index.siblingAtColumn(2), node_index.siblingAtColumn(3))
+			elif QGraphicsItem.GraphicsItemChange.ItemSelectedHasChanged:
+				
+				if self.parent_graph.nodes_selectionmodel:
+					nodes_selectionmodel = self.parent_graph.nodes_selectionmodel
+					graph = self.parent_graph.graph_model
+					node_index = graph.nodes.index(self.persistent_node_index.row(), 0)
+					if value == 1:
+						nodes_selectionmodel.select(node_index, QItemSelectionModel.Select)
+					elif value == 0:
+						nodes_selectionmodel.select(node_index, QItemSelectionModel.Deselect)
+				else:
+					pass
+
 		return super().itemChange(change, value)
 
 
 class EdgeItem(QGraphicsLineItem):
 	"""Graphics item representing an edge (connection)."""
-	def __init__(self, source_pin_item, target_pin_item):
+	def __init__(self, source_pin_item, target_pin_item, parent_graph:"GraphView"):
 		super().__init__(parent=None)
 		self.source_pin_item = source_pin_item
 		self.target_pin_item = target_pin_item
+		self.parent_graph = parent_graph
+
 		source_pin_item.edges.append(self)
 		target_pin_item.edges.append(self)
 		self.persistent_edge_index:Optional[QPersistentModelIndex] = None
@@ -229,83 +195,51 @@ class EdgeItem(QGraphicsLineItem):
 		self.setPen(QPen(Qt.GlobalColor.black, 2))
 		self.updatePosition()
 
+		# Enable selecting
+		self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
+
 	def updatePosition(self):
 		line = QLineF(self.source_pin_item.scenePos(), self.target_pin_item.scenePos())
 		self.setLine(line)
 
-	def paint(self, painter:QPainter, options:QStyleOptionGraphicsItem, widget=None):
+	def paint(self, painter:QPainter, option:QStyleOptionGraphicsItem, widget=None):
 		p1 = self.line().p1()
 		p2 = self.line().p2()
 
-		painter.setPen(options.palette.light().color())
+		if option.state & QStyle.State_Selected:
+			# Use a highlight color for the border when selected
+			painter.setPen(option.palette.highlight().color())
+		else:
+			# Use the midlight color for the border when not selected
+			painter.setPen(option.palette.midlight().color())
+		# painter.setPen(options.palette.light().color())
 		painter.drawLine(self.line())
 
 		# draw plugs
-		painter.setBrush(options.palette.text().color())
+		painter.setBrush(option.palette.text().color())
 		painter.setPen(Qt.NoPen)
 		r = 3
 		painter.drawEllipse(-r+p1.x(), -r+p1.y(), r * 2, r * 2)
 		painter.drawEllipse(-r+p2.x(), -r+p2.y(), r * 2, r * 2)
 
+	def itemChange(self, change, value):
+		if self.persistent_edge_index and self.persistent_edge_index.isValid():
+			if QGraphicsItem.GraphicsItemChange.ItemSelectedHasChanged:
+				if self.parent_graph.edges_selectionmodel:
+					edges_selectionmodel = self.parent_graph.edges_selectionmodel
+					graph = self.parent_graph.graph_model
+					edge_index = graph.edges.index(self.persistent_edge_index.row(), 0)
+					if value == 1:
+						edges_selectionmodel.select(edge_index, QItemSelectionModel.Select)
+					elif value == 0:
+						edges_selectionmodel.select(edge_index, QItemSelectionModel.Deselect)
+				else:
+					pass
 
-class InfiniteGraphicsView(QGraphicsView):
-	def __init__(self, parent=None):
-		super().__init__(parent=parent)
-
-		self._scene = QGraphicsScene()
-		self._click_pos = None
-
-		self.setDragMode(QGraphicsView.ScrollHandDrag)
-		self.setRenderHint(QPainter.Antialiasing)
-
-		# setViewportUpdateMode(QGraphicsView.FullViewportUpdate)
-		# setViewportUpdateMode(QGraphicsView.MinimalViewportUpdate)
-		self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-		self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-
-		self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
-
-		self.setCacheMode(QGraphicsView.CacheBackground)
-
-	def scale_up(self):
-		step = 1.2
-		factor = step ** 1.0
-		t = self.transform()
-		if t.m11() <= 2.0:
-			self.scale(factor, factor)
-
-	def scale_down(self):
-		step = 1.2
-		factor = step ** -1.0
-		self.scale(factor, factor)
-
-	def mousePressEvent(self, event: QMouseEvent):
-		super().mousePressEvent(event)
-		if event.button() == Qt.MouseButton.LeftButton:
-			self._click_pos = self.mapToScene(event.pos())
-
-	def mouseMoveEvent(self, event: QMouseEvent):
-		super().mouseMoveEvent(event)
-		if self._scene.mouseGrabberItem() is None and event.buttons() == Qt.MouseButton.LeftButton:
-			# Make sure shift is not being pressed
-			if not (event.modifiers() & Qt.ShiftModifier):
-				difference = self._click_pos - self.mapToScene(event.position().toPoint())
-				self.setSceneRect(self.sceneRect().translated(difference.x(), difference.y()))
-
-	def wheelEvent(self, event: QWheelEvent):
-		delta = event.angleDelta()
-		if delta.y() == 0:
-			event.ignore()
-			return
-
-		d = delta.y() / abs(delta.y())
-		if d > 0.0:
-			self.scale_up()
-		else:
-			self.scale_down()
+		return super().itemChange(change, value)
 
 
-class GraphView(InfiniteGraphicsView):
+class GraphView(QGraphicsView):
 	"""A view that displays the node editor."""
 	def __init__(self, parent=None):
 		super().__init__(parent)
@@ -318,6 +252,10 @@ class GraphView(InfiniteGraphicsView):
 		self.nodes = []
 		self.edges = []
 		self.index_to_item_map = dict()
+
+		self.graph_model = None
+		self.nodes_selectionmodel = None
+		self.edges_selectionmodel = None
 
 	def setModel(self, graph_model:GraphModel):
 		self.graph_model = graph_model
@@ -332,6 +270,36 @@ class GraphView(InfiniteGraphicsView):
 		self.graph_model.outlets.rowsInserted.connect(self.handleOutletsInserted)
 		self.graph_model.outlets.dataChanged.connect(self.handleOutletsDataChanged)
 
+	def setNodesSelectionModel(self, nodes_selectionmodel:QItemSelectionModel):
+		self.nodes_selectionmodel = nodes_selectionmodel
+		self.nodes_selectionmodel.selectionChanged.connect(self.handleNodesSelectionChanged)
+
+	def setEdgesSelectionModel(self, edges_selectionmodel:QItemSelectionModel):
+		self.edges_selectionmodel = edges_selectionmodel
+		self.edges_selectionmodel.selectionChanged.connect(self.handleEdgesSelectionChanged)
+
+	def handleNodesSelectionChanged(self, selected:QItemSelection, deselected:QItemSelection):
+		for node in [index for index in selected.indexes() if index.column()==0]:
+			persistent_node_index = QPersistentModelIndex(node)
+			node_item = self.index_to_item_map[persistent_node_index]
+			node_item.setSelected(True)
+
+		for node in [index for index in deselected.indexes() if index.column()==0]:
+			persistent_node_index = QPersistentModelIndex(node)
+			node_item = self.index_to_item_map[persistent_node_index]
+			node_item.setSelected(False)
+
+	def handleEdgesSelectionChanged(self, selected:QItemSelection, deselected:QItemSelection):
+		for index in [index for index in selected.indexes() if index.column()==0]:
+			persistent_index = QPersistentModelIndex(index)
+			item = self.index_to_item_map[persistent_index]
+			item.setSelected(True)
+
+		for index in [index for index in deselected.indexes() if index.column()==0]:
+			persistent_index = QPersistentModelIndex(index)
+			item = self.index_to_item_map[persistent_index]
+			item.setSelected(False)
+
 	def addNode(self):
 		node_item = NodeItem(parent_graph=self)
 		self.nodes.append(node_item)
@@ -339,7 +307,7 @@ class GraphView(InfiniteGraphicsView):
 		return node_item
 
 	def addEdge(self, source_pin_item, target_pin_item):
-		edge_item = EdgeItem(source_pin_item, target_pin_item)
+		edge_item = EdgeItem(source_pin_item, target_pin_item, parent_graph=self)
 		self.edges.append(edge_item)
 		self.scene().addItem(edge_item)
 		return edge_item
@@ -373,9 +341,9 @@ class GraphView(InfiniteGraphicsView):
 			inlet_item = parent_node_item.addInlet()
 
 			# map inlet to graphics item
-			persistent_inlet_index = QPersistentModelIndex(inlet)
-			inlet_item.persistent_inlet_index = persistent_inlet_index
-			self.index_to_item_map[persistent_inlet_index] = inlet_item
+			persistent_index = QPersistentModelIndex(inlet)
+			inlet_item.persistent_index = persistent_index
+			self.index_to_item_map[persistent_index] = inlet_item
 
 			# update graphics item and add to scene
 			self.handleInletsDataChanged(inlet, inlet.siblingAtColumn(2))
@@ -392,9 +360,9 @@ class GraphView(InfiniteGraphicsView):
 			outlet_item = parent_node_item.addOutlet()
 
 			# map inlet to graphics item
-			persistent_outlet_index = QPersistentModelIndex(outlet)
-			outlet_item.persistent_outlet_index = persistent_outlet_index
-			self.index_to_item_map[persistent_outlet_index] = outlet_item
+			persistent_index = QPersistentModelIndex(outlet)
+			outlet_item.persistent_index = persistent_index
+			self.index_to_item_map[persistent_index] = outlet_item
 
 			# update graphics item and add to scene
 			self.handleOutletsDataChanged(outlet, outlet.siblingAtColumn(2))
@@ -453,7 +421,7 @@ class GraphView(InfiniteGraphicsView):
 		for row in range(topLeft.row(), bottomRight.row()+1):
 			inlet = self.graph_model.inlets.index(row, 0)
 			persistent_index = QPersistentModelIndex(inlet)
-			graphics_item = self.index_to_item_map[persistent_index]
+			graphics_item:PinItem = self.index_to_item_map[persistent_index]
 			for col in range(topLeft.column(), bottomRight.column()+1):
 				match col:
 					case 0:
@@ -463,8 +431,7 @@ class GraphView(InfiniteGraphicsView):
 						pass
 					case 2:
 						"""name changed"""
-						graphics_item.name = str(inlet.siblingAtColumn(2).data())
-						graphics_item.update()
+						graphics_item.label.setText( str(inlet.siblingAtColumn(2).data()) )
 
 	def handleOutletsDataChanged(self, topLeft:QModelIndex, bottomRight:QModelIndex, roles=[]):
 		for row in range(topLeft.row(), bottomRight.row()+1):
@@ -483,8 +450,7 @@ class GraphView(InfiniteGraphicsView):
 						pass
 					case 2:
 						"""name changed"""
-						graphics_item.name = str(outlet.siblingAtColumn(2).data())
-						graphics_item.update()
+						graphics_item.label.setText(str(outlet.siblingAtColumn(2).data()))
 
 	def handleEdgesDataChanged(self, topLeft:QModelIndex, bottomRight:QModelIndex, roles=[]):
 		for row in range(topLeft.row(), bottomRight.row()+1):
@@ -516,6 +482,7 @@ class MainWindow(QWidget):
 		# Initialize the GraphModel
 		self.graph_model = GraphModel()
 		self.nodes_selectionmodel = QItemSelectionModel(self.graph_model.nodes)
+		self.edges_selectionmodel = QItemSelectionModel(self.graph_model.edges)
 
 		# Add some example nodes and edges
 		node1_id = self.graph_model.addNode("Node 1", 10, 100, "Script 1")
@@ -528,20 +495,57 @@ class MainWindow(QWidget):
 		self.graph_table_view = GraphTableView()
 		self.graph_table_view.setModel(self.graph_model)
 		self.graph_table_view.setNodesSelectionModel(self.nodes_selectionmodel)
+		self.graph_table_view.setEdgesSelectionModel(self.edges_selectionmodel)
 
 		self.graph_view = GraphView()
 		self.graph_view.setModel(self.graph_model)
-		# self.graph_view.setNodesSelectionModel(self.nodes_selectionmodel)
+		self.graph_view.setNodesSelectionModel(self.nodes_selectionmodel)
+		self.graph_view.setEdgesSelectionModel(self.edges_selectionmodel)
 
 		self.graph_details_view = GraphDetailsView()
 		self.graph_details_view.setModel(self.graph_model)
 		self.graph_details_view.setNodesSelectionModel(self.nodes_selectionmodel)
+
 		
 		layout = QHBoxLayout()
 		layout.addWidget(self.graph_table_view, 1)
 		layout.addWidget(self.graph_view, 1)
 		layout.addWidget(self.graph_details_view, 1)
 		self.setLayout(layout)
+
+		self.menubar = QMenuBar()
+		self.color_mode_action = QAction("switch color mode")
+		self.color_mode_action.setCheckable(True)
+		self.color_mode_action.triggered.connect(self.toggleColorMode)
+		self.menubar.addAction(self.color_mode_action)
+		self.layout().setMenuBar(self.menubar)
+
+	def toggleColorMode(self):
+		from pylive.ColorModeSwitcher import light_color_scheme, dark_color_scheme, QPaletteFromJson
+		if self.color_mode_action.isChecked():
+			dark_palette = QPaletteFromJson(light_color_scheme)
+			QApplication.setPalette(dark_palette)
+			self.graph_view.setPalette(dark_palette)
+			items = self.graph_view.scene().items()
+			self.graph_view.update()
+			for item in items:
+				item.update(self.graph_view.sceneRect())
+			self.graph_view.viewport().update()
+			self.graph_view.scene().update(self.graph_view.sceneRect())
+			self.graph_view.update()
+
+		else:
+			light_palette = QPaletteFromJson(dark_color_scheme)
+			QApplication.setPalette(light_palette)
+			self.graph_view.setPalette(light_palette)
+			items = self.graph_view.scene().items()
+			for item in items:
+				item.update(self.graph_view.sceneRect())
+			self.graph_view.viewport().update()
+			self.graph_view.scene().update(self.graph_view.sceneRect())
+			self.graph_view.update()
+
+
 
 if __name__ == "__main__":
 	app = QApplication(sys.argv)
