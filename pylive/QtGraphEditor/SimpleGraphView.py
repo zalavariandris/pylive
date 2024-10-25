@@ -17,26 +17,31 @@ class PinItem(QGraphicsItem):
 		self.label = QGraphicsSimpleTextItem(parent=self)
 
 		# Size of the pin and space for the name text
-		self.pin_radius = 5
+		self.pin_radius = 4
 		self.text_margin = 10
 
 		# Font for drawing the name
 		self.font = QFont("Arial", 10)
 
 		self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges)
+		self.setAcceptHoverEvents(True)
 
 	def boundingRect(self) -> QRectF:
 		# Bounding rect includes the pin (left side) and text (right side)
 		return QRectF(-self.pin_radius, 
 					  -self.pin_radius, 
 					   self.pin_radius*2, 
-					   self.pin_radius*2)
+					   self.pin_radius*2).adjusted(-4,-4,8,8)
 
 	def paint(self, painter, option, widget=None):
 		"""Draw the pin and the name."""
 		# Draw pin (ellipse)
-		painter.setBrush(Qt.NoBrush)
-		painter.setPen(option.palette.light().color())
+		# painter.setBrush(Qt.NoBrush)
+		painter.setPen(QPen(option.palette.base().color(), 3))
+		if option.state & QStyle.StateFlag.State_MouseOver:
+			painter.setBrush(option.palette.accent().color())
+		else:
+			painter.setBrush(option.palette.windowText().color())
 		painter.drawEllipse(-self.pin_radius, -self.pin_radius, self.pin_radius * 2, self.pin_radius * 2)
 
 		# # Draw the name
@@ -44,7 +49,13 @@ class PinItem(QGraphicsItem):
 		# font = QApplication.font()
 		# painter.drawText(5, -QFontMetrics(font).descent(), self.name)
 
-		self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges)
+	def hoverEnterEvent(self, event):
+		print("enter")
+		self.update()
+
+	def hoverExitEvent(self, event):
+		print("exit")
+		self.update()
 
 	def itemChange(self, change, value):
 		if self.persistent_index and change == QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
@@ -53,7 +64,6 @@ class PinItem(QGraphicsItem):
 		return super().itemChange(change, value)
 
 	def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
-		print("mouse press", event)
 		graphview = self.parent_node.parent_graph
 		graphview.initiateConnect(pin=self)
 		# return super().mousePressEvent(event)
@@ -63,15 +73,13 @@ class PinItem(QGraphicsItem):
 	# 	# return super().hoverMoveEvent(event)
 
 	def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent) -> None:
-		print("mouse move")
 		graphview = self.parent_node.parent_graph
 		graphview.moveConnection(event.scenePos())
 		# return super().mouseMoveEvent(event)
 
 	def mouseReleaseEvent(self, event: QGraphicsSceneMouseEvent) -> None:
-		print("mouse release", event)
 		graphview = self.parent_node.parent_graph
-		graphview.finisConnection(pin=None)
+		graphview.establishConnection()
 		# return super().mouseReleaseEvent(event)
 
 	
@@ -94,6 +102,8 @@ class NodeItem(QGraphicsItem):
 		self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges)
 		self.setAcceptHoverEvents(True)
 
+		self.setZValue(2)
+
 	def addInlet(self):
 		inlet = PinItem(parent_node=self,)
 		self.inlets.append(inlet)
@@ -112,7 +122,7 @@ class NodeItem(QGraphicsItem):
 		:param vertical_mode: If True, place inlets on the left and outlets on the right (default).
 							  If False, place inlets on the top and outlets on the bottom.
 		"""
-		offset = 8
+		offset = 0
 		rect_width = self.rect.width()
 		rect_height = self.rect.height()
 
@@ -159,21 +169,26 @@ class NodeItem(QGraphicsItem):
 		# option.styleObject
 		# option.levelOfDetailFromTransform
 
+
 		# Draw the node rectangle
 		palette:QPalette = option.palette
 		state:QStyle.StateFlag = option.state
+
+		painter.setBrush(palette.base())
+		# painter.setBrush(Qt.NoBrush)
+
 		if state & QStyle.StateFlag.State_Selected:
 			# Use a highlight color for the border when selected
-			painter.setPen(palette.highlight().color())
+			painter.setPen(palette.accent().color())
 		else:
 			# Use the midlight color for the border when not selected
-			painter.setPen(palette.midlight().color())
+			painter.setPen(palette.text().color())
 
-		painter.setBrush(palette.window())
+		# painter.setPen(palette.window().color())
 		painter.drawRoundedRect(self.rect, 3,3)
 
 		# Draw the node name text
-		painter.setPen(palette.text().color())
+		# painter.setPen(palette.text().color())
 		painter.drawText(self.rect, Qt.AlignmentFlag.AlignCenter, self.name)
 
 	def itemChange(self, change, value):
@@ -226,6 +241,9 @@ class EdgeItem(QGraphicsLineItem):
 
 		# Enable selecting
 		self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
+		self.setAcceptHoverEvents(True)
+
+		self.setZValue(-1)
 
 	def updatePosition(self):
 		line = self.line()
@@ -244,20 +262,20 @@ class EdgeItem(QGraphicsLineItem):
 		state:QStyle.StateFlag = option.state
 		if state & QStyle.StateFlag.State_Selected:
 			# Use a highlight color for the border when selected
-			painter.setPen(palette.highlight().color())
+			painter.setPen(QPen(palette.highlight().color(), 3))
 		else:
 			# Use the midlight color for the border when not selected
-			painter.setPen(palette.midlight().color())
+			painter.setPen(QPen(palette.midlight().color(), 2))
 		# painter.setPen(options.palette.light().color())
 		painter.drawLine(self.line())
 
-		# draw plugs
-		painter.setBrush(palette.text().color())
-		painter.setPen(Qt.PenStyle.NoPen)
-		r = 3
+		# # draw plugs
+		# painter.setBrush(palette.text().color())
+		# painter.setPen(Qt.PenStyle.NoPen)
+		# r = 1
 
-		painter.drawEllipse(p1, r * 2, r * 2)
-		painter.drawEllipse(p2, r * 2, r * 2)
+		# painter.drawEllipse(p1, r * 2, r * 2)
+		# painter.drawEllipse(p2, r * 2, r * 2)
 
 	def itemChange(self, change, value):
 		if self.persistent_edge_index and self.persistent_edge_index.isValid():
@@ -301,16 +319,47 @@ class GraphView(QGraphicsView):
 
 	def initiateConnect(self, pin):
 		self.potential_edge = EdgeItem(source_pin_item=pin, target_pin_item=None, parent_graph=self)
+		line = self.potential_edge.line()
+		line.setP2(pin.pos())
+		self.potential_edge.setLine(line)
 		self.scene().addItem(self.potential_edge)
 		print("initiateConnect")
 
-	def moveConnection(self, pos):
+	def moveConnection(self, scene_pos):
 		line = self.potential_edge.line()
-		line.setP2(pos)
+		line.setP2(scene_pos)
 		self.potential_edge.setLine(line)
 
-	def finisConnection(self, pin:PinItem|None):
+		items = self.items(self.mapFromScene(scene_pos))
+		for item in items:
+			if isinstance(item, PinItem) and item!=self.potential_edge.source_pin_item:
+				self.potential_edge.target_pin_item = item
+				self.potential_edge.updatePosition()
+				break
+		# item = self.scene().itemAt(scene_pos.toPoint())
+		# print("item under mouse:", items)
+
+	def establishConnection(self):
+		# remove the dummy edge
 		self.scene().removeItem(self.potential_edge)
+		if not (self.potential_edge.source_pin_item and self.potential_edge.target_pin_item):
+			return
+		# get connected pins
+		inlet = self.potential_edge.source_pin_item.persistent_index
+		outlet = self.potential_edge.target_pin_item.persistent_index
+
+		# connect model
+		if inlet.model() == outlet.model():
+			# bad pins were selected
+			return
+
+		if inlet.model() == self.graph_model.outlets: 
+			# pins are swapped
+			inlet, outlet = outlet, inlet
+
+		outlet = self.graph_model.outlets.index(outlet.row(), 0)
+		inlet = self.graph_model.inlets.index(inlet.row(), 0)
+		self.graph_model.addEdge(outlet, inlet)
 
 	def setModel(self, graph_model:GraphModel):
 		self.graph_model = graph_model
@@ -318,12 +367,22 @@ class GraphView(QGraphicsView):
 		self.handleInletsInserted( QModelIndex(), 0, self.graph_model.inlets.rowCount()-1)
 		self.handleOutletsInserted(QModelIndex(), 0, self.graph_model.outlets.rowCount()-1)
 		self.handleEdgesInserted(  QModelIndex(), 0, self.graph_model.edges.rowCount()-1)
+
 		self.graph_model.nodes.rowsInserted.connect(self.handleNodesInserted)
 		self.graph_model.nodes.dataChanged.connect(self.handleNodesDataChanged)
+		self.graph_model.nodes.rowsAboutToBeRemoved.connect(self.handleNodesRemoved)
+
 		self.graph_model.inlets.rowsInserted.connect(self.handleInletsInserted)
 		self.graph_model.inlets.dataChanged.connect(self.handleInletsDataChanged)
+		self.graph_model.inlets.rowsAboutToBeRemoved.connect(self.handleInletsRemoved)
+
 		self.graph_model.outlets.rowsInserted.connect(self.handleOutletsInserted)
 		self.graph_model.outlets.dataChanged.connect(self.handleOutletsDataChanged)
+		self.graph_model.outlets.rowsAboutToBeRemoved.connect(self.handleOutletsRemoved)
+
+		self.graph_model.edges.rowsInserted.connect(self.handleEdgesInserted)
+		self.graph_model.edges.dataChanged.connect(self.handleEdgesDataChanged)
+		self.graph_model.edges.rowsAboutToBeRemoved.connect(self.handleEdgesRemoved)
 
 	def setNodesSelectionModel(self, nodes_selectionmodel:QItemSelectionModel):
 		self.nodes_selectionmodel = nodes_selectionmodel
@@ -384,7 +443,50 @@ class GraphView(QGraphicsView):
 
 			# update gaphics item
 			self.handleNodesDataChanged(node, node.siblingAtColumn(4))
-			
+	
+	def handleOutletsRemoved(self, parent:QModelIndex, first:int, last:int):
+		if parent.isValid():
+			raise NotImplementedError("Subgraphs are not implemented yet!")
+
+		for row in range(last, first-1, -1):
+			outlet = self.graph_model.outlets.index(row, 0)
+			persistent_index = QPersistentModelIndex(outlet)
+			outlet_item = self.index_to_item_map[persistent_index]
+			self.scene().removeItem(outlet_item)
+			del self.index_to_item_map[persistent_index]
+
+	def handleInletsRemoved(self, parent:QModelIndex, first:int, last:int):
+		if parent.isValid():
+			raise NotImplementedError("Subgraphs are not implemented yet!")
+
+		for row in range(last, first-1, -1):
+			inlet = self.graph_model.inlets.index(row, 0)
+			persistent_index = QPersistentModelIndex(inlet)
+			inlet_item = self.index_to_item_map[persistent_index]
+			self.scene().removeItem(inlet_item)
+			del self.index_to_item_map[persistent_index]
+
+	def handleNodesRemoved(self, parent:QModelIndex, first:int, last:int):
+		if parent.isValid():
+			raise NotImplementedError("Subgraphs are not implemented yet!")
+
+		for row in range(last, first-1, -1):
+			node = self.graph_model.nodes.index(row, 0)
+			node_item = self.index_to_item_map[QPersistentModelIndex(node)]
+			self.scene().removeItem(node_item)
+			del self.index_to_item_map[QPersistentModelIndex(node)]
+
+	def handleEdgesRemoved(self, parent:QModelIndex, first:int, last:int):
+		if parent.isValid():
+			raise NotImplementedError("Subgraphs are not implemented yet!")
+
+		for row in range(last, first-1, -1):
+			edge = self.graph_model.edges.index(row, 0)
+			persistent_index = QPersistentModelIndex(edge)
+			edge_item = self.index_to_item_map[persistent_index]
+			self.scene().removeItem(edge_item)
+			del self.index_to_item_map[persistent_index]
+
 	def handleInletsInserted(self, parent:QModelIndex, first:int, last:int):
 		if parent.isValid():
 			raise ValueError("inlets are flat table, not a tree model")
@@ -560,7 +662,7 @@ class MainWindow(QWidget):
 		super().__init__()
 
 		self.setWindowTitle("Graph Viewer Example")
-		self.resize(1500, 700)
+		self.resize(700, 500)
 
 		# Initialize the GraphModel
 		self.graph_model = GraphModel()
@@ -568,10 +670,16 @@ class MainWindow(QWidget):
 		self.edges_selectionmodel = QItemSelectionModel(self.graph_model.edges)
 
 		# Add some example nodes and edges
-		node1_id = self.graph_model.addNode("Node 1", 10, 100, "Script 1")
-		node2_id = self.graph_model.addNode("Node 2", 20, 200, "Script 2")
-		outlet_id = self.graph_model.addOutlet(node1_id, "Out1")
-		inlet_id = self.graph_model.addInlet(node2_id, "In1")
+		read_node = self.graph_model.addNode("Read", 10, -100, "Script 1")
+		outlet_id = self.graph_model.addOutlet(read_node, "image")
+		write_node = self.graph_model.addNode("Write", 20, 100, "Script 2")
+		inlet_id = self.graph_model.addInlet(write_node, "image")
+
+		node3_id = self.graph_model.addNode("Preview", -50, 10, "Script 2")
+		self.graph_model.addInlet(node3_id, "in")
+		self.graph_model.addOutlet(node3_id, "out")
+		
+		
 		self.graph_model.addEdge(outlet_id, inlet_id)
 
 		# Set up the node editor views

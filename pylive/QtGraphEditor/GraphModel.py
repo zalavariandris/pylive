@@ -120,22 +120,22 @@ class GraphModel(QObject):
 		rows_to_remove = sorted(set(index.row() for index in nodes), reverse=True)
 
 		# collect inlets to be removed
-		inlet_rows_to_remove = []
+		inlets_to_remove = []
 		for row in rows_to_remove:
 			owner_id = self.nodes.item(row, 0).text()
 			inlet_items = self.inlets.findItems(owner_id, Qt.MatchFlag.MatchExactly, 1)
 			for inlet_item in inlet_items:
-				inlet_rows_to_remove.append( inlet_item.index().row() )
-		self.removeInlets(inlet_rows_to_remove)
+				inlets_to_remove.append( inlet_item.index().siblingAtColumn(0) )
+		self.removeInlets(inlets_to_remove)
 
 		# collect outlets to be removed
-		outlet_rows_to_remove = []
+		outlets_to_remove = []
 		for row in rows_to_remove:
 			owner_id = self.nodes.item(row, 0).text()
 			outlet_items = self.outlets.findItems(owner_id, Qt.MatchFlag.MatchExactly, 1)
 			for outlet_item in outlet_items:
-				outlet_rows_to_remove.append( outlet_item.index().row() )
-		self.removeOutlets(outlet_rows_to_remove)
+				outlets_to_remove.append( outlet_item.index().siblingAtColumn(0) )
+		self.removeOutlets(outlets_to_remove)
 
 		# Remove the node rows from the GraphModel (starting from the last one, to avoid shifting indices)
 		for row in reversed(rows_to_remove):
@@ -145,7 +145,7 @@ class GraphModel(QObject):
 		# collect edges to be removed
 		edges_to_remove = []
 		for outlet in outlets_to_remove:
-			edge_items = self.edges.findItems(outlet.data(), Qt.MatchFlag.MatchExactly, 2)
+			edge_items = self.edges.findItems(outlet.data(), Qt.MatchFlag.MatchExactly, 1)
 			for edge_item in edge_items:
 				edges_to_remove.append( edge_item.index() )
 		self.removeEdges(edges_to_remove)
@@ -156,7 +156,6 @@ class GraphModel(QObject):
 			self.outlets.removeRow(row)
 
 	def removeInlets(self, inlets_to_remove:List[QModelIndex]):
-
 		# collect edges to be removed
 		edges_to_remove = []
 		for inlet in inlets_to_remove:
