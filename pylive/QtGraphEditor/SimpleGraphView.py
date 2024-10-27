@@ -8,14 +8,17 @@ from GraphModel import GraphModel
 
 class PinItem(QGraphicsItem):
 	"""Graphics item representing a pin (either inlet or outlet)."""
-	def __init__(self, parent_node):
+	def __init__(self, parent_node, type):
 		super().__init__(parent=parent_node)
 		self.parent_node = parent_node
+		self.type = type
 		self.persistent_index:Optional[QModelIndex]=None
 		self.edges = []
 
 		self.label = QGraphicsSimpleTextItem(parent=self)
-
+		self.label.setBrush(QApplication.palette().text().color())
+		self.label.setY(-QFontMetrics(self.label.font()).height())
+		self.label.hide()
 		# Size of the pin and space for the name text
 		self.pin_radius = 4
 		self.text_margin = 10
@@ -38,7 +41,7 @@ class PinItem(QGraphicsItem):
 		# Draw pin (ellipse)
 		# painter.setBrush(Qt.NoBrush)
 		painter.setPen(QPen(option.palette.base().color(), 3))
-		if option.state & QStyle.StateFlag.State_MouseOver:
+		if self.parent_node.isSelected() or option.state & QStyle.StateFlag.State_MouseOver:
 			painter.setBrush(option.palette.accent().color())
 		else:
 			painter.setBrush(option.palette.windowText().color())
@@ -50,12 +53,12 @@ class PinItem(QGraphicsItem):
 		# painter.drawText(5, -QFontMetrics(font).descent(), self.name)
 
 	def hoverEnterEvent(self, event):
-		print("enter")
 		self.update()
+		self.label.show()
 
-	def hoverExitEvent(self, event):
-		print("exit")
+	def hoverLeaveEvent(self, event):
 		self.update()
+		self.label.hide()
 
 	def itemChange(self, change, value):
 		if self.persistent_index and change == QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
@@ -105,13 +108,13 @@ class NodeItem(QGraphicsItem):
 		self.setZValue(2)
 
 	def addInlet(self):
-		inlet = PinItem(parent_node=self,)
+		inlet = PinItem(parent_node=self, type="Inlet")
 		self.inlets.append(inlet)
 		self.updatePinPositions()
 		return inlet
 
 	def addOutlet(self):
-		outlet = PinItem(parent_node=self)
+		outlet = PinItem(parent_node=self, type="Outlet")
 		self.outlets.append(outlet)
 		self.updatePinPositions()
 		return outlet
@@ -177,15 +180,15 @@ class NodeItem(QGraphicsItem):
 		painter.setBrush(palette.base())
 		# painter.setBrush(Qt.NoBrush)
 
+		pen = QPen(palette.text().color(), 1)
+		pen.setCosmetic(True)
+		pen.setWidthF(1)
 		if state & QStyle.StateFlag.State_Selected:
-			# Use a highlight color for the border when selected
-			painter.setPen(palette.accent().color())
-		else:
-			# Use the midlight color for the border when not selected
-			painter.setPen(palette.text().color())
+			pen.setColor(palette.accent().color())
+		painter.setPen(pen)
 
 		# painter.setPen(palette.window().color())
-		painter.drawRoundedRect(self.rect, 3,3)
+		painter.drawRoundedRect(self.rect.adjusted(-0.5, -0.5, 0, 0), 3, 3)
 
 		# Draw the node name text
 		# painter.setPen(palette.text().color())
@@ -247,12 +250,20 @@ class EdgeItem(QGraphicsLineItem):
 
 	def updatePosition(self):
 		line = self.line()
-		if self.source_pin_item:
+		if self.source_pin_item and self.target_pin_item:
 			line.setP1(self.source_pin_item.scenePos())
-		if self.target_pin_item:
 			line.setP2(self.target_pin_item.scenePos())
-		if self.source_pin_item or self.target_pin_item:
 			self.setLine(line)
+		elif self.source_pin_item:
+			line.setP1(self.source_pin_item.scenePos())
+			line.setP2(self.source_pin_item.scenePos())
+			self.setLine(line)
+		elif self.target_pin_item:
+			line.setP1(self.target_pin_item.scenePos())
+			line.setP2(self.target_pin_item.scenePos())
+			self.setLine(line)
+		else:
+			pass
 
 	def paint(self, painter:QPainter, option:QStyleOptionGraphicsItem, widget=None):
 		p1 = self.line().p1()
@@ -260,22 +271,15 @@ class EdgeItem(QGraphicsLineItem):
 
 		palette:QPalette = option.palette
 		state:QStyle.StateFlag = option.state
-		if state & QStyle.StateFlag.State_Selected:
-			# Use a highlight color for the border when selected
-			painter.setPen(QPen(palette.highlight().color(), 3))
-		else:
-			# Use the midlight color for the border when not selected
-			painter.setPen(QPen(palette.midlight().color(), 2))
+		pen = QPen(palette.text().color(), 2)
+		pen.setCosmetic(True)
+		pen.setWidthF(1)
+		if state & (QStyle.StateFlag.State_Selected | QStyle.StateFlag.State_MouseOver):
+			pen.setColor(palette.accent().color())
+		painter.setPen(pen)
+
 		# painter.setPen(options.palette.light().color())
 		painter.drawLine(self.line())
-
-		# # draw plugs
-		# painter.setBrush(palette.text().color())
-		# painter.setPen(Qt.PenStyle.NoPen)
-		# r = 1
-
-		# painter.drawEllipse(p1, r * 2, r * 2)
-		# painter.drawEllipse(p2, r * 2, r * 2)
 
 	def itemChange(self, change, value):
 		if self.persistent_edge_index and self.persistent_edge_index.isValid():
@@ -292,6 +296,27 @@ class EdgeItem(QGraphicsLineItem):
 					pass
 
 		return super().itemChange(change, value)
+
+	def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+		graphview = self.parent_graph
+		delta1 = self.line().p1() - event.scenePos()
+		d1 = delta1.manhattanLength()
+		delta2 = self.line().p2() - event.scenePos()
+		d2 = delta2.manhattanLength()
+
+		graphview = self.parent_graph
+		graphview.interactive_edge = self
+		graphview.interactive_endpoint = "Outlet" if d1<d2 else "Inlet"
+		
+	def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+		graphview = self.parent_graph
+		graphview.moveConnection(event.scenePos())
+		# return super().mouseMoveEvent(event)
+
+	def mouseReleaseEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+		graphview = self.parent_graph
+		# graphview.establishConnection()
+		# return super().mouseReleaseEvent(event)
 
 
 class GraphView(QGraphicsView):
@@ -318,35 +343,43 @@ class GraphView(QGraphicsView):
 		self.setBackgroundBrush(polkaBrush)
 
 	def initiateConnect(self, pin):
-		self.potential_edge = EdgeItem(source_pin_item=pin, target_pin_item=None, parent_graph=self)
-		line = self.potential_edge.line()
-		line.setP2(pin.pos())
-		self.potential_edge.setLine(line)
-		self.scene().addItem(self.potential_edge)
+		if pin.type=="Outlet":
+			self.interactive_edge = EdgeItem(source_pin_item=pin, target_pin_item=None, parent_graph=self)
+			self.interactive_endpoint = "Outlet"
+		else:
+			self.interactive_edge = EdgeItem(source_pin_item=None, target_pin_item=pin, parent_graph=self)
+			self.interactive_endpoint = "Inlet"
+		self.interactive_edge.updatePosition()
+		self.scene().addItem(self.interactive_edge)
 		print("initiateConnect")
 
 	def moveConnection(self, scene_pos):
-		line = self.potential_edge.line()
+		line = self.interactive_edge.line()
 		line.setP2(scene_pos)
-		self.potential_edge.setLine(line)
+		self.interactive_edge.setLine(line)
 
 		items = self.items(self.mapFromScene(scene_pos))
 		for item in items:
-			if isinstance(item, PinItem) and item!=self.potential_edge.source_pin_item:
-				self.potential_edge.target_pin_item = item
-				self.potential_edge.updatePosition()
+			if isinstance(item, PinItem):
+				if self.interactive_endpoint == "Outlet":
+					self.interactive_edge.target_pin_item = item
+				else:
+					self.interactive_edge.source_pin_item = item
+
+				self.interactive_edge.updatePosition()
 				break
 		# item = self.scene().itemAt(scene_pos.toPoint())
 		# print("item under mouse:", items)
 
-	def establishConnection(self):
+	def establishConnection(self, pin):
 		# remove the dummy edge
-		self.scene().removeItem(self.potential_edge)
-		if not (self.potential_edge.source_pin_item and self.potential_edge.target_pin_item):
+		self.scene().removeItem(self.interactive_edge)
+		if not (self.interactive_edge.source_pin_item and self.interactive_edge.target_pin_item):
 			return
+
 		# get connected pins
-		inlet = self.potential_edge.source_pin_item.persistent_index
-		outlet = self.potential_edge.target_pin_item.persistent_index
+		inlet = self.interactive_edge.source_pin_item.persistent_index
+		outlet = self.interactive_edge.target_pin_item.persistent_index
 
 		# connect model
 		if inlet.model() == outlet.model():
@@ -662,7 +695,7 @@ class MainWindow(QWidget):
 		super().__init__()
 
 		self.setWindowTitle("Graph Viewer Example")
-		self.resize(700, 500)
+		self.resize(900, 500)
 
 		# Initialize the GraphModel
 		self.graph_model = GraphModel()
