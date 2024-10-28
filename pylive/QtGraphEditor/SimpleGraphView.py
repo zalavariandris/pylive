@@ -1,6 +1,6 @@
 import sys
 import math
-from typing import Optional
+from typing import *
 from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
@@ -212,15 +212,14 @@ class NodeItem(QGraphicsItem):
 			match change:
 				case QGraphicsItem.GraphicsItemChange.ItemPositionHasChanged:
 					graph:GraphModel = self.parent_graph.graph_model
-					node_index = graph.nodes.index(self.persistent_node_index.row(), 0)
+					node_index = self.persistent_node_index.model().index(self.persistent_node_index.row(), 0)
+					
 					new_pos = self.pos()
 					posx = int(new_pos.x())
 					posy = int(new_pos.y())
-					graph.nodes.blockSignals(True)
-					graph.nodes.setData(node_index.siblingAtColumn(2), posx, Qt.ItemDataRole.DisplayRole)
-					graph.nodes.setData(node_index.siblingAtColumn(3), posy, Qt.ItemDataRole.DisplayRole)
-					graph.nodes.blockSignals(False)
-					graph.nodes.dataChanged.emit(node_index.siblingAtColumn(2), node_index.siblingAtColumn(3))
+
+					graph.setNode(node_index, {"posx": posx, "posy":posy})
+
 				case QGraphicsItem.GraphicsItemChange.ItemSelectedHasChanged:
 					if nodes_selectionmodel:=self.parent_graph.nodes_selectionmodel:
 						graph = self.parent_graph.graph_model
@@ -237,6 +236,7 @@ class NodeItem(QGraphicsItem):
 
 class EdgeItem(QGraphicsLineItem):
 	"""Graphics item representing an edge (connection)."""
+	GrabThreshold = 15
 	def __init__(self, source_pin_item:OutletItem|None, target_pin_item:InletItem|None, parent_graph:"GraphView"):
 		super().__init__(parent=None)
 		assert source_pin_item is None or isinstance(source_pin_item, OutletItem)
@@ -259,6 +259,9 @@ class EdgeItem(QGraphicsLineItem):
 		self.setAcceptHoverEvents(True)
 
 		self.setZValue(-1)
+
+		#
+		self.is_moving_endpoint = False
 
 	def sourcePin(self)->OutletItem|None:
 		return self._source_pin_item
@@ -341,26 +344,40 @@ class EdgeItem(QGraphicsLineItem):
 		return super().itemChange(change, value)
 
 	def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
-		graphview = self.parent_graph
-		delta1 = self.line().p1() - event.scenePos()
-		d1 = delta1.manhattanLength()
-		delta2 = self.line().p2() - event.scenePos()
-		d2 = delta2.manhattanLength()
-
-		graphview = self.parent_graph
-		if d1<d2:
-			graphview.modifyConnection(edge=self, endpoint=PinType.OUTLET)
-		else:
-			graphview.modifyConnection(edge=self, endpoint=PinType.INLET)
+		self.mousePressScenePos = event.scenePos()
+		self.is_moving_endpoint = False
+		return super().mousePressEvent(event)
 
 	def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent) -> None:
 		graphview = self.parent_graph
-		graphview.moveConnection(graphview.mapFromScene(event.scenePos()))
+		mousePressScenePos:QPointF = cast(QPointF, self.mousePressScenePos)
+		mouseDelta = event.scenePos() - mousePressScenePos
+		IsThresholdSurpassed = mouseDelta.manhattanLength()>self.GrabThreshold
+		if not self.is_moving_endpoint and IsThresholdSurpassed:
+			self.is_moving_endpoint = True
+			delta1 = self.line().p1() - event.scenePos()
+			d1 = delta1.manhattanLength()
+			delta2 = self.line().p2() - event.scenePos()
+			d2 = delta2.manhattanLength()
+			if d1<d2:
+				graphview.modifyConnection(edge=self, endpoint=PinType.OUTLET)
+			else:
+				graphview.modifyConnection(edge=self, endpoint=PinType.INLET)
+
+		if self.is_moving_endpoint:
+			graphview.moveConnection(graphview.mapFromScene(event.scenePos()))
+		else:
+			return super().mouseMoveEvent(event)
 
 	def mouseReleaseEvent(self, event: QGraphicsSceneMouseEvent) -> None:
-		graphview = self.parent_graph
-		pin = graphview.pinAt(graphview.mapFromScene(event.scenePos()))
-		graphview.finishConnection(pin)
+		if self.is_moving_endpoint:
+			self.is_moving_endpoint = False
+			self.mousePressScenePos = None
+			graphview = self.parent_graph
+			pin = graphview.pinAt(graphview.mapFromScene(event.scenePos()))
+			graphview.finishConnection(pin)
+		else:
+			return super().mouseReleaseEvent(event)
 
 
 class GraphView(QGraphicsView):
@@ -382,7 +399,8 @@ class GraphView(QGraphicsView):
 
 		self.setCacheMode(QGraphicsView.CacheModeFlag.CacheNone)
 		self.setInteractive(True)
-		self.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
+		self.setRenderHint(QPainter.RenderHint.TextAntialiasing, False)
+		self.setRenderHint(QPainter.RenderHint.Antialiasing, False)
 		self.setViewportUpdateMode(QGraphicsView.ViewportUpdateMode.FullViewportUpdate)
 
 		# polkaBrush = QBrush()
@@ -511,6 +529,9 @@ class GraphView(QGraphicsView):
 		self.edges_selectionmodel = edges_selectionmodel
 		self.edges_selectionmodel.selectionChanged.connect(self.handleEdgesSelectionChanged)
 
+		self.zoom_factor=1.2
+
+	@Slot(QItemSelection, QItemSelection)
 	def handleNodesSelectionChanged(self, selected:QItemSelection, deselected:QItemSelection):
 		for node in [index for index in selected.indexes() if index.column()==0]:
 			persistent_node_index = QPersistentModelIndex(node)
@@ -550,6 +571,7 @@ class GraphView(QGraphicsView):
 		edge.setTargetPin(None)
 		self.scene().removeItem(edge)
 
+	@Slot(QModelIndex, int, int)
 	def handleNodesInserted(self, parent:QModelIndex, first:int, last:int):
 		if parent.isValid():
 			raise NotImplementedError("Subgraphs are not implemented yet!")
@@ -568,6 +590,7 @@ class GraphView(QGraphicsView):
 				# update gaphics item
 				self.handleNodesDataChanged(node, node.siblingAtColumn(4))
 	
+	@Slot(QModelIndex, int, int)
 	def handleOutletsRemoved(self, parent:QModelIndex, first:int, last:int):
 		if parent.isValid():
 			raise NotImplementedError("Subgraphs are not implemented yet!")
@@ -580,6 +603,7 @@ class GraphView(QGraphicsView):
 				self.scene().removeItem(outlet_item)
 				del self.index_to_item_map[persistent_index]
 
+	@Slot(QModelIndex, int, int)
 	def handleInletsRemoved(self, parent:QModelIndex, first:int, last:int):
 		if parent.isValid():
 			raise NotImplementedError("Subgraphs are not implemented yet!")
@@ -592,6 +616,7 @@ class GraphView(QGraphicsView):
 				self.scene().removeItem(inlet_item)
 				del self.index_to_item_map[persistent_index]
 
+	@Slot(QModelIndex, int, int)
 	def handleNodesRemoved(self, parent:QModelIndex, first:int, last:int):
 		if parent.isValid():
 			raise NotImplementedError("Subgraphs are not implemented yet!")
@@ -603,6 +628,7 @@ class GraphView(QGraphicsView):
 				self.scene().removeItem(node_item)
 				del self.index_to_item_map[QPersistentModelIndex(node)]
 
+	@Slot(QModelIndex, int, int)
 	def handleEdgesRemoved(self, parent:QModelIndex, first:int, last:int):
 		if parent.isValid():
 			raise NotImplementedError("Subgraphs are not implemented yet!")
@@ -616,7 +642,7 @@ class GraphView(QGraphicsView):
 				self.removeEdge(edge_item)
 				del self.index_to_item_map[persistent_index]
 				
-
+	@Slot(QModelIndex, int, int)
 	def handleInletsInserted(self, parent:QModelIndex, first:int, last:int):
 		if parent.isValid():
 			raise ValueError("inlets are flat table, not a tree model")
@@ -638,6 +664,7 @@ class GraphView(QGraphicsView):
 				# update graphics item and add to scene
 				self.handleInletsDataChanged(inlet, inlet.siblingAtColumn(2))
 
+	@Slot(QModelIndex, int, int)
 	def handleOutletsInserted(self, parent:QModelIndex, first:int, last:int):
 		if parent.isValid():
 			raise ValueError("inlets are flat table, not a tree model")
@@ -659,6 +686,7 @@ class GraphView(QGraphicsView):
 				# update graphics item and add to scene
 				self.handleOutletsDataChanged(outlet, outlet.siblingAtColumn(2))
 
+	@Slot(QModelIndex, int, int)
 	def handleEdgesInserted(self, parent:QModelIndex, first:int, last:int):
 		if parent.isValid():
 			raise NotImplementedError("Subgraphs are not implemented yet!")
@@ -779,29 +807,6 @@ class GraphView(QGraphicsView):
 							inlet = graph.getEdge(edge_index, relations=True)["target"]
 							target_pin_item = self.index_to_item_map[QPersistentModelIndex(inlet)]
 							edge_item.setTargetPin( target_pin_item )
-
-	# def drawBackground(self, painter, rect):
-	# 	print("draw background", rect)
-	# 	# Create a QPainter to draw the background
-	# 	painter.setRenderHint(QPainter.Antialiasing)
-
-	# 	# Set the color for the polka dots
-	# 	dot_color = QColor(255, 0, 0)  # Red dots
-
-	# 	# Calculate the bounds for drawing dots
-	# 	left = int(rect.left())
-	# 	right = int(rect.right())
-	# 	top = int(rect.top())
-	# 	bottom = int(rect.bottom())
-
-	# 	spacing = 100
-	# 	radius = 1
-
-	# 	# Draw polka dots
-	# 	painter.setBrush(dot_color)
-	# 	for x in range(left, right, spacing):
-	# 		for y in range(top, bottom, spacing):
-	# 			painter.drawEllipse(x, y, radius, radius)
 
 	def drawBackground(self, painter: QPainter, rect:QRectF | QRect):
 		super().drawBackground(painter, rect);
@@ -937,7 +942,6 @@ class MainWindow(QWidget):
 			self.graph_view.viewport().update()
 			self.graph_view.scene().update(self.graph_view.sceneRect())
 			self.graph_view.update()
-
 
 
 if __name__ == "__main__":

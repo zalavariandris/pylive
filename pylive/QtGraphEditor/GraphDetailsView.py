@@ -102,7 +102,8 @@ class GraphDetailsView(QWidget):
 		self.nodes_selectionmodel = nodes_selectionmodel
 		self.nodes_selectionmodel.currentRowChanged.connect(self.setCurrentModelIndex)
 		
-	def setCurrentModelIndex(self, index):
+	def setCurrentModelIndex(self, index:QModelIndex):
+		index = index.siblingAtColumn(0)
 		if index.isValid():
 			self.id_label.setText(index.data())
 			self.mapper.setCurrentModelIndex(index)  # Update the mapper's current index

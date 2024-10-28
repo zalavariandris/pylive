@@ -6,27 +6,39 @@ from PySide6.QtWidgets import *
 
 from typing import *
 
+def group_consecutive_numbers(data):
+	from itertools import groupby
+	from operator import itemgetter
+
+	ranges =[]
+
+	for k,g in groupby(enumerate(data),lambda x:x[0]-x[1]):
+		group = (map(itemgetter(1),g))
+		group = list(map(int,group))
+		ranges.append((group[0],group[-1]))
+	return ranges
+
 
 class GraphModel(QObject):
-	nodesInserted = Signal(QModelIndex, int, int)
-	nodesRemoved = Signal(QModelIndex, int, int)
-	nodesAboutToBeRemoved = Signal(QModelIndex, int, int)
-	nodeChanged = Signal(QModelIndex)
+	# nodesInserted = Signal(QModelIndex, int, int)
+	# nodesRemoved = Signal(QModelIndex, int, int)
+	# nodesAboutToBeRemoved = Signal(QModelIndex, int, int)
+	# nodesChanged = Signal(QModelIndex, QModelIndex, List[int])
 
-	outletsInserted = Signal(QModelIndex, int, int)
-	outletsRemoved = Signal(QModelIndex, int, int)
-	outletsAboutToBeRemoved = Signal(QModelIndex, int, int)
-	outletChanged = Signal(QModelIndex)
+	# outletsInserted = Signal(QModelIndex, int, int)
+	# outletsRemoved = Signal(QModelIndex, int, int)
+	# outletsAboutToBeRemoved = Signal(QModelIndex, int, int)
+	# outletsChanged = Signal(QModelIndex, QModelIndex, List[int])
 
-	inletsInserted = Signal(QModelIndex, int, int)
-	inletsRemoved = Signal(QModelIndex, int, int)
-	inletsAboutToBeRemoved = Signal(QModelIndex, int, int)
-	inletChanged = Signal(QModelIndex)
+	# inletsInserted = Signal(QModelIndex, int, int)
+	# inletsRemoved = Signal(QModelIndex, int, int)
+	# inletsAboutToBeRemoved = Signal(QModelIndex, int, int)
+	# inletsChanged = Signal(QModelIndex, QModelIndex, List[int])
 
-	edgesInserted = Signal(QModelIndex, int, int)
-	edgesRemoved = Signal(QModelIndex, int, int)
-	edgesAboutToBeRemoved = Signal(QModelIndex, int, int)
-	edgeChanged = Signal(QModelIndex)
+	# edgesInserted = Signal(QModelIndex, int, int)
+	# edgesRemoved = Signal(QModelIndex, int, int)
+	# edgesAboutToBeRemoved = Signal(QModelIndex, int, int)
+	# edgesChanged = Signal(QModelIndex, QModelIndex, List[int])
 
 	def __init__(self, parent=None):
 		super().__init__(parent)
@@ -35,34 +47,34 @@ class GraphModel(QObject):
 		### Nodes Model ###
 		self.nodes = QStandardItemModel()
 		self.nodes.setHorizontalHeaderLabels(['id', 'name', 'posx', 'posy', 'script'])
-		self.nodes.rowsInserted.connect(self.nodesInserted.emit)
-		self.nodes.rowsRemoved.connect(self.nodesRemoved.emit)
-		self.nodes.rowsAboutToBeRemoved.connect(self.nodesAboutToBeRemoved.emit)
-		self.nodes.itemChanged.connect(self.nodeChanged.emit)
+		# self.nodes.rowsInserted.connect(self.nodesInserted.emit)
+		# self.nodes.rowsRemoved.connect(self.nodesRemoved.emit)
+		# self.nodes.rowsAboutToBeRemoved.connect(self.nodesAboutToBeRemoved.emit)
+		# self.nodes.dataChanged.connect(self.nodesChanged.emit)
 
 		### Inlets Model ###
 		self.inlets = QStandardItemModel()
 		self.inlets.setHorizontalHeaderLabels(['id', 'owner', "name"])
-		self.inlets.rowsInserted.connect(self.inletsInserted.emit)
-		self.inlets.rowsRemoved.connect(self.inletsRemoved.emit)
-		self.inlets.rowsAboutToBeRemoved.connect(self.inletsAboutToBeRemoved.emit)
-		self.inlets.itemChanged.connect(self.inletChanged.emit)
+		# self.inlets.rowsInserted.connect(self.inletsInserted.emit)
+		# self.inlets.rowsRemoved.connect(self.inletsRemoved.emit)
+		# self.inlets.rowsAboutToBeRemoved.connect(self.inletsAboutToBeRemoved.emit)
+		# self.inlets.dataChanged.connect(self.inletsChanged.emit)
 
 		### Outlets Model ###
 		self.outlets = QStandardItemModel()
 		self.outlets.setHorizontalHeaderLabels(['id', 'owner', "name"])
-		self.outlets.rowsInserted.connect(self.outletsInserted.emit)
-		self.outlets.rowsRemoved.connect(self.outletsRemoved.emit)
-		self.outlets.rowsAboutToBeRemoved.connect(self.outletsAboutToBeRemoved.emit)
-		self.outlets.itemChanged.connect(self.outletChanged.emit)
+		# self.outlets.rowsInserted.connect(self.outletsInserted.emit)
+		# self.outlets.rowsRemoved.connect(self.outletsRemoved.emit)
+		# self.outlets.rowsAboutToBeRemoved.connect(self.outletsAboutToBeRemoved.emit)
+		# self.outlets.dataChanged.connect(self.outletsChanged.emit)
 
 		### Edges Model ###
 		self.edges = QStandardItemModel()
 		self.edges.setHorizontalHeaderLabels(["id", "outlet_id", "inlet_id"])
-		self.edges.rowsInserted.connect(self.edgesInserted.emit)
-		self.edges.rowsRemoved.connect(self.edgesRemoved.emit)
-		self.edges.rowsAboutToBeRemoved.connect(self.edgesAboutToBeRemoved.emit)
-		self.edges.itemChanged.connect(self.edgeChanged.emit)
+		# self.edges.rowsInserted.connect(self.edgesInserted.emit)
+		# self.edges.rowsRemoved.connect(self.edgesRemoved.emit)
+		# self.edges.rowsAboutToBeRemoved.connect(self.edgesAboutToBeRemoved.emit)
+		# self.edges.dataChanged.connect(self.edgesChanged.emit)
 
 	def addNode(self, name:str, posx:int, posy:int, script:str)->QModelIndex:
 		print(f"add node: '{name}' {posx},{posy}")
@@ -190,6 +202,32 @@ class GraphModel(QObject):
 				'inlets': inlets
 			})
 		return properties
+
+	def setNode(self, node:QModelIndex, properties:dict):
+		self.nodes.blockSignals(True)
+		columnsChanged = []
+		for key, value in properties.items():
+			match key:
+				case "id":
+					assert isinstance(value, str)
+					columnsChanged.append(0)
+					self.nodes.setData(node.siblingAtColumn(0), value)
+				case "name":
+					assert isinstance(value, str)
+					columnsChanged.append(1)
+					self.nodes.setData(node.siblingAtColumn(1), value)
+				case "posx":
+					assert isinstance(value, int)
+					columnsChanged.append(2)
+					self.nodes.setData(node.siblingAtColumn(2), value)
+				case "posy":
+					assert isinstance(value, int)
+					columnsChanged.append(3)
+					self.nodes.setData(node.siblingAtColumn(3), value)
+			
+		self.nodes.blockSignals(False)
+		for start, end in group_consecutive_numbers(columnsChanged):
+			self.nodes.dataChanged.emit(node.siblingAtColumn(start), node.siblingAtColumn(end))
 
 	def getInlet(self, inlet:QModelIndex, relations=True):
 		assert isinstance(inlet, QModelIndex)
