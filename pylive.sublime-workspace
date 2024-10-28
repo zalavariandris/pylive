@@ -4,256 +4,300 @@
 		"selected_items":
 		[
 			[
-				"fit",
-				"fitInView"
+				"QGraphicsSc",
+				"QGraphicsScene"
 			],
 			[
-				"center",
-				"centerOn"
+				"setP",
+				"setPos"
 			],
 			[
-				"tran",
-				"transform"
+				"node_",
+				"node_item"
 			],
 			[
-				"tra",
-				"translate"
+				"QPo",
+				"QPointF"
 			],
 			[
-				"po",
-				"position"
+				"QPoin",
+				"QPointF"
 			],
 			[
-				"mod",
-				"modifiers"
+				"pos",
+				"posy"
 			],
 			[
-				"transfo",
-				"setTransform"
+				"script",
+				"script_item"
 			],
 			[
-				"interactive",
-				"interactive_endpoint"
+				"cu",
+				"current_index"
 			],
 			[
-				"int",
-				"interactive_endpoint"
-			],
-			[
-				"target",
-				"target_pin_item"
-			],
-			[
-				"sourc",
-				"source_pin_item"
-			],
-			[
-				"sou",
-				"source_pin_item"
-			],
-			[
-				"tar",
-				"target_pin_item"
-			],
-			[
-				"sour",
-				"source_pin_item"
-			],
-			[
-				"upda",
-				"updatePosition"
+				"add",
+				"addOutlet"
 			],
 			[
 				"gra",
-				"grabbed_endpoint"
+				"graphmodel"
 			],
 			[
-				"inde",
-				"index_to_item_map"
+				"sib",
+				"siblingAtColumn"
 			],
 			[
-				"mouse",
-				"mousePressEvent"
+				"fin",
+				"findItems"
 			],
 			[
-				"State",
-				"State_MouseOver"
+				"inlet_",
+				"inlet_item"
 			],
 			[
-				"QSty",
-				"QStyle"
+				"handleInlet",
+				"handleInletDataChanged"
 			],
 			[
-				"setC",
-				"setColor"
+				"QGrap",
+				"QGraphicsItem"
 			],
 			[
-				"pare",
-				"parent_node"
+				"sibli",
+				"siblingAtColumn"
 			],
 			[
-				"fon",
-				"fontMetrics"
+				"handle",
+				"handleNodeDataChanged"
 			],
 			[
-				"pa",
-				"palette"
+				"node",
+				"node_item"
 			],
 			[
-				"la",
-				"label"
+				"sibl",
+				"siblingAtColumn"
 			],
 			[
-				"wi",
-				"window"
-			],
-			[
-				"index",
-				"index_to_item_map"
-			],
-			[
-				"grap",
-				"graph_model"
+				"data",
+				"dataChanged"
 			],
 			[
 				"gr",
 				"graph_model"
 			],
 			[
-				"add",
-				"addEdge"
-			],
-			[
-				"upd",
-				"updatePosition"
-			],
-			[
-				"date",
-				"datetime"
-			],
-			[
-				"com",
-				"completions"
-			],
-			[
-				"compl",
-				"completionModel"
-			],
-			[
-				"ty",
-				"typing"
-			],
-			[
-				"Ma",
-				"MatchFlag"
-			],
-			[
-				"QKey",
-				"QKeyEvent"
-			],
-			[
-				"prop",
-				"proposals_model"
-			],
-			[
-				"source",
-				"source_code"
-			],
-			[
-				"line",
-				"lineUnderCursor"
-			],
-			[
-				"pro",
-				"proposals_model"
-			],
-			[
-				"comm",
-				"commented_text"
-			],
-			[
-				"sc",
-				"scriptCursor"
-			],
-			[
-				"to",
-				"toPlainText"
-			],
-			[
-				"se",
-				"selection"
-			],
-			[
-				"lineS",
-				"lines_start"
-			],
-			[
-				"end",
-				"endOffset"
-			],
-			[
-				"lines",
-				"lines_start"
-			],
-			[
-				"unin",
-				"unindented_lines"
-			],
-			[
-				"lines_",
-				"lines_end"
-			],
-			[
-				"start",
-				"startOffset"
-			],
-			[
-				"sele",
-				"selectionEnd"
+				"graph",
+				"graph_view1"
 			],
 			[
 				"ind",
-				"indent_spaces"
+				"indexFromItem"
 			],
 			[
-				"Start",
-				"StartOfLine"
+				"index",
+				"indexFromItem"
 			],
 			[
-				"selection",
-				"selectionStart"
+				"colo",
+				"GlobalColor"
 			],
 			[
-				"Star",
-				"StartOfLine"
+				"Gr",
+				"GraphTableView"
 			],
 			[
-				"End",
-				"EndOfLine"
+				"QItemS",
+				"QItemSelectionModel"
 			],
 			[
-				"pos",
-				"position"
+				"sele",
+				"selectRow"
 			],
 			[
-				"new",
-				"new_end"
+				"setSel",
+				"setSelectionBehavior"
 			],
 			[
-				"prn",
-				"print"
+				"nodes_",
+				"nodes_sheet_view"
 			],
 			[
-				"insertT",
-				"insertText"
+				"setSele",
+				"setSelectionModel"
+			],
+			[
+				"inlets",
+				"inlets_sheet_view"
+			],
+			[
+				"nodes",
+				"nodes_sheet_view"
+			],
+			[
+				"setM",
+				"setModel"
+			],
+			[
+				"ou",
+				"outlet_id"
+			],
+			[
+				"findOutlet",
+				"findOutletRowById"
+			],
+			[
+				"inlet",
+				"inlet_id"
+			],
+			[
+				"Gra",
+				"GraphModel"
+			],
+			[
+				"insert",
+				"insertErrorMessage"
+			],
+			[
+				"update",
+				"updateCompleterWidget"
+			],
+			[
+				"select",
+				"selection"
 			],
 			[
 				"text",
 				"textCursor"
 			],
 			[
-				"__",
-				"__init__"
+				"compl",
+				"completions"
+			],
+			[
+				"QFo",
+				"QFont"
+			],
+			[
+				"ty",
+				"typing"
+			],
+			[
+				"Sim",
+				"SimplePythonHighlighter"
+			],
+			[
+				"End",
+				"EndOfLine"
+			],
+			[
+				"wei",
+				"Weight"
+			],
+			[
+				"fr",
+				"fromHsl"
+			],
+			[
+				"get",
+				"getHsl"
+			],
+			[
+				"hig",
+				"highlightColor"
+			],
+			[
+				"C",
+				"ColorRole"
+			],
+			[
+				"c",
+				"color"
+			],
+			[
+				"mo",
+				"MoveMode"
+			],
+			[
+				"in",
+				"indentation"
+			],
+			[
+				"Mov",
+				"MoveOperation"
+			],
+			[
+				"QText",
+				"QTextCursor"
+			],
+			[
+				"split",
+				"splitlines"
+			],
+			[
+				"tex",
+				"textwrap"
+			],
+			[
+				"typ",
+				"typing"
+			],
+			[
+				"non",
+				"non_empty_lines"
+			],
+			[
+				"comm",
+				"common_indent"
+			],
+			[
+				"pr",
+				"preview_label"
+			],
+			[
+				"rs",
+				"rstrip"
+			],
+			[
+				"enum",
+				"enumerate"
+			],
+			[
+				"Traceb",
+				"TracebackFrameWidget"
+			],
+			[
+				"trace",
+				"traceback"
+			],
+			[
+				"pol",
+				"setSizePolicy"
+			],
+			[
+				"exception",
+				"exception_widget"
+			],
+			[
+				"Except",
+				"ExceptionTracebackWidget"
+			],
+			[
+				"format_",
+				"format_exception"
+			],
+			[
+				"exc",
+				"except"
+			],
+			[
+				"global",
+				"global_vars"
+			],
+			[
+				"lin",
+				"lineno"
 			],
 			[
 				"err",
@@ -288,6 +332,10 @@
 				"QKeyEvent"
 			],
 			[
+				"prop",
+				"proposals"
+			],
+			[
 				"it",
 				"italic"
 			],
@@ -316,12 +364,12 @@
 				"strip"
 			],
 			[
-				"Py",
-				"PythonSyntaxHighlighter"
+				"com",
+				"completionPrefix"
 			],
 			[
-				"tex",
-				"textCursor"
+				"Py",
+				"PythonSyntaxHighlighter"
 			],
 			[
 				"file",
@@ -352,10 +400,6 @@
 				"triggered"
 			],
 			[
-				"script",
-				"script_modified_since_open"
-			],
-			[
 				"scr",
 				"script_modified_since_open"
 			],
@@ -368,10 +412,6 @@
 				"setup_ui"
 			],
 			[
-				"sib",
-				"siblingAtColumn"
-			],
-			[
 				"ev",
 				"evaluate_chain"
 			],
@@ -382,10 +422,6 @@
 			[
 				"chain",
 				"chainmodel"
-			],
-			[
-				"insert",
-				"insertRow"
 			],
 			[
 				"ch",
@@ -416,10 +452,6 @@
 				"global_vars"
 			],
 			[
-				"typ",
-				"typing"
-			],
-			[
 				"eva",
 				"evaulate_blocks"
 			],
@@ -428,20 +460,12 @@
 				"global_vars"
 			],
 			[
-				"lin",
+				"line",
 				"line_number"
 			],
 			[
 				"read_",
 				"read_text"
-			],
-			[
-				"sibl",
-				"siblingAtColumn"
-			],
-			[
-				"node",
-				"node_script"
 			],
 			[
 				"si",
@@ -452,10 +476,6 @@
 				"write_text"
 			],
 			[
-				"Gra",
-				"GraphModel"
-			],
-			[
 				"connec",
 				"connect_to"
 			],
@@ -464,12 +484,12 @@
 				"outlet_by_name"
 			],
 			[
-				"ou",
-				"outlets"
-			],
-			[
 				"setSelec",
 				"setSelectionModel"
+			],
+			[
+				"__",
+				"__init__"
 			],
 			[
 				"sel",
@@ -494,31 +514,30 @@
 			[
 				"lis",
 				"listener"
-			],
-			[
-				"dis",
-				"display"
-			],
-			[
-				"on_",
-				"on_destroy"
-			],
-			[
-				"de",
-				"destroy"
-			],
-			[
-				"main",
-				"main_node"
-			],
-			[
-				"Trigg",
-				"TriggerOutPort"
 			]
 		]
 	},
 	"buffers":
 	[
+		{
+			"file": "pylive/QtGraphEditor/InfiniteGraphicsView2.py",
+			"settings":
+			{
+				"buffer_size": 3859,
+				"line_ending": "Windows"
+			},
+			"undo_stack":
+			[
+			]
+		},
+		{
+			"file": "pylive.sublime-project",
+			"settings":
+			{
+				"buffer_size": 1106,
+				"line_ending": "Windows"
+			}
+		}
 	],
 	"build_system": "Packages/Python/Python.sublime-build",
 	"build_system_choices":
@@ -548,6 +567,26 @@
 		"selected_items":
 		[
 			[
+				"install",
+				"Package Control: Install Package"
+			],
+			[
+				"remove",
+				"Package Control: Remove Package"
+			],
+			[
+				"remov",
+				"Package Control: Remove Package"
+			],
+			[
+				"insta",
+				"Package Control: Install Package"
+			],
+			[
+				"termin",
+				"Terminus: Toggle Panel"
+			],
+			[
 				"terminus",
 				"Terminus: Toggle Panel"
 			],
@@ -560,19 +599,11 @@
 				"Terminus: Close All"
 			],
 			[
-				"insta",
-				"Package Control: Install Package"
-			],
-			[
 				"instl",
 				"Package Control: Install Package"
 			],
 			[
 				"REMOE",
-				"Package Control: Remove Package"
-			],
-			[
-				"remove",
 				"Package Control: Remove Package"
 			],
 			[
@@ -582,10 +613,6 @@
 			[
 				"reind",
 				"Indentation: Reindent Lines"
-			],
-			[
-				"install",
-				"Package Control: Install Package"
 			],
 			[
 				"enable",
@@ -620,34 +647,56 @@
 	},
 	"expanded_folders":
 	[
-		"/Users/Andris/Documents/GitHub/pylive",
-		"/Users/Andris/Documents/GitHub/pylive/pylive",
-		"/Users/Andris/Documents/GitHub/pylive/pylive/observable_nodesio",
-		"/Users/Andris/Documents/GitHub/pylive/pylive/QtGraphEditor",
-		"/Users/Andris/Documents/GitHub/pylive/pylive/QtGraphEditor/__pycache__",
-		"/Users/Andris/Documents/GitHub/pylive/pylive/signals"
+		"/C/dev/src/pylive",
+		"/C/dev/src/pylive/docs",
+		"/C/dev/src/pylive/expreiments",
+		"/C/dev/src/pylive/pylive",
+		"/C/dev/src/pylive/pylive/__pycache__",
+		"/C/dev/src/pylive/pylive/QtGraphEditor"
 	],
 	"file_history":
 	[
-		"/Users/Andris/Documents/GitHub/pylive/pylive/QtGraphEditor/SimpleGraphView.py",
-		"/Users/Andris/Documents/GitHub/pylive/pylive/QtGraphEditor/InfiniteGraphicsView2.py",
-		"/Users/Andris/Documents/GitHub/pylive/pylive/QtGraphEditor/GraphModel.py",
-		"/Users/Andris/Documents/GitHub/pylive/pylive/CodeAssistinPlainTextEdit.py",
-		"/Users/Andris/Documents/GitHub/pylive/pylive/QTextEditCompleter.py",
-		"/C/dev/src/pylive/pylive/PygmentsSyntaxHighlighter.py",
-		"/C/dev/src/pylive/pylive/QTextEditCompleter.py",
-		"/C/dev/src/pylive/pylive/QRopeAssistStringModel.py",
-		"/C/dev/src/pylive/pylive/CompletingPlainTextEdit.py",
-		"/C/dev/src/pylive/pylive/QScriptEditor.py",
-		"/C/dev/src/pylive/pylive/RopeAssistStringModel.py",
-		"/C/dev/src/pylive/pylive/SimpleKeywordsCompleter.py",
-		"/C/dev/src/pylive/pylive/QtLiveScript.py",
-		"/C/dev/src/pylive/pylive/RopeCompleter.py",
-		"/C/dev/src/pylive/pylive/PythonSyntaxHighlighter.py",
-		"/C/dev/src/pylive/pylive/IndentablePlainTextEdit.py",
-		"/C/dev/src/pylive/pylive/CommentablePlainTextEdit.py",
-		"/C/dev/src/pylive/pylive/inline_widget_test.py",
+		"/C/dev/src/pylive/pylive/QtGraphEditor/GraphModel.py",
+		"/C/dev/src/pylive/pylive/QtGraphEditor/GraphTableView.py",
+		"/C/dev/src/pylive/pylive/QtGraphEditor/GraphDetailsView.py",
+		"/C/dev/src/pylive/pylive/QtGraphEditor/FlowView.py",
+		"/C/dev/src/pylive/pylive/QtGraphEditor/SimpleGraphView.py",
+		"/C/dev/src/pylive/pylive/QtGraphEditor/PanAndZoom.py",
 		"/C/dev/src/pylive/pyproject.toml",
+		"/C/dev/src/pylive/pylive/QtGraphEditor/nodesheet_and_details_view.py",
+		"/C/dev/src/pylive/pylive/QtGraphEditor/GraphViewForNodeGraphQt.py",
+		"/C/dev/src/pylive/pylive/QtGraphEditor/GraphDetails.py",
+		"/C/dev/src/pylive/venv/Lib/site-packages/NodeGraphQt/base/menu.py",
+		"/C/dev/src/pylive/pylive/ScriptEditor/ScriptEdit.py",
+		"/C/dev/src/pylive/pylive/ScriptEditor/components/PygmentsSyntaxHighlighter.py",
+		"/C/dev/src/pylive/pylive/ScriptEditor/components/RopeCompleter.py",
+		"/C/dev/src/pylive/pylive/ScriptEditor/CompletingPlainTextEdit.py",
+		"/C/dev/src/pylive/pylive/ScriptEditor/components/WhitespaceHighlighter.py",
+		"/C/dev/src/pylive/pylive/ScriptEditor/components/RopeAssistStringModel.py",
+		"/C/dev/src/pylive/pylive/ScriptEditor/components/KeywordsCompleter.py",
+		"/C/dev/src/pylive/pylive/ScriptEditor/components/ScriptEditBase.py",
+		"/C/dev/src/pylive/pylive/ScriptEditor/components/ScriptEdit.py",
+		"/C/dev/src/pylive/pylive/ScriptEditor/ScriptEditor.py",
+		"/C/dev/src/pylive/pylive/ScriptEditor/utils.py",
+		"/C/dev/src/pylive/pylive/ScriptEditor/CodeAssistinPlainTextEdit.py",
+		"/C/dev/src/pylive/pylive/ScriptEditor/components/TextEditCompleter.py",
+		"/C/dev/src/pylive/pylive/ScriptEditor/PygmentsSyntaxHighlighter.py",
+		"/C/dev/src/pylive/pylive/ScriptEditor/components/ScriptCursor.py",
+		"/C/dev/src/pylive/pylive.sublime-project",
+		"/C/dev/src/pylive/expreiments/display_colorpalette.py",
+		"/C/dev/src/pylive/pylive/ScriptCursor.py",
+		"/C/dev/src/pylive/pylive/SimplePythonHighlighter.py",
+		"/C/Users/andris/AppData/Local/Temp/Rar$DIa8284.3407/s3-zldww.nfo",
+		"/C/dev/src/pylive/pylive/QScriptEditor.py",
+		"/C/dev/src/pylive/pylive/WhitespaceHighlighter.py",
+		"/C/dev/src/find_and_play_movie_torrents/mian.py",
+		"/C/dev/src/pylive/pylive/QtLiveScript.py",
+		"/C/dev/src/pylive/pylive/test_script.py",
+		"/C/Users/andris/AppData/Roaming/Sublime Text/Packages/SublimePythonIDE/SublimePython.sublime-settings",
+		"/C/Users/andris/AppData/Roaming/Sublime Text/Packages/User/SublimePython.sublime-settings",
+		"/C/dev/src/pylive/pylive/error_overlay_test.py",
+		"/C/Users/andris/Desktop/whatever.py",
+		"/C/dev/src/pylive/pylive/PythonSyntaxHighlighter.py",
 		"/C/dev/src/pylive/pylive/QCompletingPlainTextEdit.py",
 		"/C/dev/src/pylive/pylive/InvisiblesHighlighter.py",
 		"/C/dev/src/pylive/pylive/SyntaxHighlighterWithColorScheme.py",
@@ -660,7 +709,6 @@
 		"/C/dev/src/pylive/pylive/script_test_file.py",
 		"/C/dev/src/pylive/pylive/QtWatchCode.py",
 		"/C/dev/src/pylive/expreiments/QCustomWindow.py",
-		"/C/dev/src/pylive/pylive.sublime-project",
 		"/C/Users/and/AppData/Roaming/Sublime Text/Packages/User/python(myenv).sublime-build",
 		"/C/dev/src/pylive/pylive/utils.py",
 		"/C/Users/and/AppData/Roaming/Sublime Text/Packages/User/LSP-pyright.sublime-settings",
@@ -735,32 +783,11 @@
 		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/markdown/4.5 A 2 és ½ dimenziós vázlat.md",
 		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/markdown/4.4 Az első vázlat.md",
 		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/markdown/4.3 A látvány formái.md",
-		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/markdown/4.2 David Marr, a látás három szintű leírása.md",
-		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/markdown/4. Az elme mentális ábrázolásai.md",
-		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/markdown/4.1 Vizuális nyomok.md",
-		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/markdown/3.2 Képek az elmében.md",
-		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/markdown/3.1 Képek az agyban.md",
-		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/markdown/2.2 A fény.md",
-		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/markdown/1.1 előszó-mi-a-latvany.md",
-		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/markdown/2.6 A színterek geometriája.md",
-		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/markdown/2.5 Ellenszínelmélet.md",
-		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/markdown/2.4 A fény és az anyag szabályai.md",
-		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/markdown/2.3 A retina.md",
-		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/ReadMe.md",
-		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/markdown/3. A világ fejjel lefelé.md",
-		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/html/1.1 előszó-mi-a-latvany.html",
-		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/markdown/test_markdown.md",
-		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/html/test_markdown.html",
-		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/html/test_html.html",
-		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/1.1 előszó-mi-a-latvany.md",
-		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/2.2 A fény.md",
-		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/4.1 Vizuális nyomok.md",
-		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/Csehov Epigraph.md",
-		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/7. A látvány formája és szabályai.md"
+		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/markdown/4.2 David Marr, a látás három szintű leírása.md"
 	],
 	"find":
 	{
-		"height": 38.0
+		"height": 22.0
 	},
 	"find_in_files":
 	{
@@ -775,17 +802,29 @@
 		"case_sensitive": false,
 		"find_history":
 		[
-			"center",
-			"moveConnection",
-			"updatePos",
-			"moveConnection",
-			"finish",
-			"print(",
-			"Fall back",
-			"complete(",
-			"()\n",
-			"TracebackFrameWidget",
-			"completer",
+			"int(",
+			"str(",
+			"NodeFilter",
+			"setModel",
+			"setNodeData",
+			"assert",
+			"findEdges",
+			"resiz",
+			"graphView",
+			"setNodeData",
+			"unique",
+			"return",
+			"QTextOption option;\n    option.setFlags(QTextOption::ShowLineAndParagraphSeparators | QTextOption::ShowTabsAndSpaces);\n    doc->setDefaultTextOption(option);",
+			"offset",
+			"self.scriptCursor()",
+			"Typewriter",
+			"wrap",
+			"exec",
+			"dedent",
+			"strip",
+			"self.eval",
+			"evaluate(",
+			"block",
 			"exec",
 			"error_label",
 			"print",
@@ -818,17 +857,112 @@
 		{
 			"sheets":
 			[
-			]
-		},
-		{
-			"sheets":
-			[
+				{
+					"buffer": 0,
+					"file": "pylive/QtGraphEditor/InfiniteGraphicsView2.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 3859,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								2193,
+								2193
+							]
+						],
+						"settings":
+						{
+							"auto_complete_triggers":
+							[
+								{
+									"characters": "<",
+									"selector": "text.html, text.xml"
+								},
+								{
+									"rhs_empty": true,
+									"selector": "punctuation.accessor"
+								},
+								{
+									"characters": ".[\"'",
+									"selector": "meta.tag, source - comment - string.quoted.double.block - string.quoted.single.block - string.unquoted.heredoc",
+									"server": "LSP-pyright"
+								}
+							],
+							"lsp_active": true,
+							"lsp_uri": "file:///C:/dev/src/pylive/pylive/QtGraphEditor/InfiniteGraphicsView2.py",
+							"show_definitions": false,
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 1,
+					"stack_multiselect": false,
+					"type": "text"
+				},
+				{
+					"buffer": 1,
+					"file": "pylive.sublime-project",
+					"selected": true,
+					"semi_transient": true,
+					"settings":
+					{
+						"buffer_size": 1106,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"auto_complete_triggers":
+							[
+								{
+									"characters": "<",
+									"selector": "text.html, text.xml"
+								},
+								{
+									"rhs_empty": true,
+									"selector": "punctuation.accessor"
+								},
+								{
+									"selector": "- comment - punctuation.separator - punctuation.definition.string.end - constant.character.escape - invalid.illegal - punctuation.section.mapping - punctuation.section.sequence",
+									"server": "LSP-json"
+								}
+							],
+							"lsp_active": true,
+							"lsp_uri": "file:///C:/dev/src/pylive/pylive.sublime-project",
+							"show_definitions": false,
+							"syntax": "Packages/JSON/JSON.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 0,
+					"stack_multiselect": false,
+					"type": "text"
+				}
 			]
 		}
 	],
 	"incremental_find":
 	{
-		"height": 24.0
+		"height": 22.0
 	},
 	"input":
 	{
@@ -843,18 +977,11 @@
 				0,
 				1,
 				1
-			],
-			[
-				1,
-				0,
-				2,
-				1
 			]
 		],
 		"cols":
 		[
 			0.0,
-			0.71626426626,
 			1.0
 		],
 		"rows":
@@ -868,13 +995,21 @@
 	{
 		"height": 0.0
 	},
+	"output.SublimeLinter":
+	{
+		"height": 0.0
+	},
+	"output.Terminus":
+	{
+		"height": 412.0
+	},
 	"output.diagnostics":
 	{
 		"height": 0.0
 	},
 	"output.exec":
 	{
-		"height": 156.0
+		"height": 247.0
 	},
 	"output.find_results":
 	{
@@ -884,11 +1019,11 @@
 	{
 		"height": 0.0
 	},
-	"pinned_build_system": "Python: Run File (CrossPlatform)",
+	"pinned_build_system": "Python: Run File (Windows)",
 	"project": "pylive.sublime-project",
 	"replace":
 	{
-		"height": 44.0
+		"height": 40.0
 	},
 	"save_all_on_build": true,
 	"select_file":
@@ -926,7 +1061,7 @@
 	"show_open_files": false,
 	"show_tabs": true,
 	"side_bar_visible": true,
-	"side_bar_width": 263.0,
+	"side_bar_width": 289.0,
 	"status_bar_visible": true,
 	"template_settings":
 	{

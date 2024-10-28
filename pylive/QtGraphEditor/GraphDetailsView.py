@@ -7,15 +7,11 @@ from typing import List, Tuple
 class MiniTableView(QTableView):
 	def __init__(self, parent=None):
 		super().__init__(parent)
+		self.setSelectionBehavior(QTableView.SelectRows)
 		self.verticalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
 		self.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
-		self.setSelectionBehavior(QTableView.SelectRows)
-		self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
-
-	def sizeHint(self):
-		width = self.verticalHeader().size().width()
-		height = self.horizontalHeader().size().height()
-		return QSize(134,height)
+		
+		# self.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
 
 from Panel import Panel
 from GraphModel import GraphModel
@@ -37,37 +33,89 @@ class GraphDetailsView(QWidget):
 		### Inlets Table ###
 		self.inlets_sheet_editor = MiniTableView()
 
+		self.inlets_menubar = QMenuBar()
+		addInletAction = QAction("＋", self)
+		addInletAction.triggered.connect(self.addInletToCurrentNode)
+		removeInletAction = QAction("－", self)
+		removeInletAction.triggered.connect(self.removeSelectedInlets)
+		self.inlets_menubar.addAction(addInletAction)
+		self.inlets_menubar.addAction(removeInletAction)
+
 		
 		### Outlets Table ###
 		self.outlets_sheet_editor = MiniTableView()
 
-		# self.setLayout(QFormLayout())
-		# # self.layout().setFieldGrowthPolicy(QFormLayout.FieldsStayAtSizeHint)
-		# self.layout().addRow("Name:", self.name_edit)
-		# self.layout().addRow("Pos X:", self.posx_edit)
-		# self.layout().addRow("Pos Y:", self.posy_edit)
-		# self.layout().addRow("Inlets:", self.inlets_sheet_editor)
-		# self.layout().addRow("Script:", self.script_editor)
+		self.outlets_menubar = QMenuBar()
+		addOutletAction = QAction("＋", self)
+		addOutletAction.triggered.connect(self.addOutletToCurrentNode)
+		addOutletAction.triggered.connect(self.removeSelectedOutlets)
+		removeOutletAction = QAction("－", self)
+		self.outlets_menubar.addAction(addOutletAction)
+		self.outlets_menubar.addAction(removeOutletAction)
+		
+
+		formLayout = QFormLayout()
+		# self.layout().setFieldGrowthPolicy(QFormLayout.FieldsStayAtSizeHint)
+		formLayout.addRow("Name:", self.name_edit)
+		formLayout.addRow("Pos X:", self.posx_edit)
+		formLayout.addRow("Pos Y:", self.posy_edit)
+		formLayout.addRow("Inlets:", Panel(direction=QBoxLayout.TopToBottom,
+			children=[
+				self.inlets_sheet_editor
+			],
+			menuBar=self.inlets_menubar
+		))
+		formLayout.addRow("Outlets:", Panel(direction=QBoxLayout.TopToBottom,
+			children=[
+				self.outlets_sheet_editor
+			],
+			menuBar=self.outlets_menubar
+		))
+		self.panel = QWidget()
+		self.panel.setLayout(formLayout)
 
 		self.mapper = QDataWidgetMapper()
 		self.mapper.setSubmitPolicy(QDataWidgetMapper.AutoSubmit)
 
-		self.panel = Panel(
-			direction=QBoxLayout.TopToBottom,
-			children=[
-				self.id_label,
-				self.name_edit,
-				self.posx_edit,
-				self.posy_edit,
-				self.inlets_sheet_editor,
-				self.outlets_sheet_editor,
-			]
-		)
+		# self.panel = Panel(
+		# 	direction=QBoxLayout.TopToBottom,
+		# 	children=[
+		# 		self.id_label,
+		# 		self.name_edit,
+		# 		self.posx_edit,
+		# 		self.posy_edit,
+		# 		self.inlets_sheet_editor,
+		# 		self.outlets_sheet_editor,
+		# 	]
+		# )
 
 		self.setLayout(QVBoxLayout())
 		self.layout().addWidget(self.panel)
 		self.layout().addStretch()
 
+	def addOutletToCurrentNode(self):
+		if self._model and self.nodes_selectionmodel:
+			node = self.nodes_selectionmodel.currentIndex()
+			outlet = self._model.addOutlet(node, "<out>")
+			self.outlets_sheet_editor.selectRow(outlet.row())
+			self.outlets_sheet_editor.setCurrentIndex(outlet)
+
+	def addInletToCurrentNode(self):
+		if self._model and self.nodes_selectionmodel:
+			node = self.nodes_selectionmodel.currentIndex()
+			inlet = self._model.addInlet(node, "<in>")
+			self.inlets_sheet_editor.selectRow(inlet.row())
+			self.inlets_sheet_editor.setCurrentIndex(inlet)
+
+	def removeSelectedInlets(self):
+		if self.model:
+			inlets = [index for index in self.inlets_sheet_editor.selectedIndexes() if index.column()==0]
+			self._model.removeInlets(inlets)
+
+	def removeSelectedOutlets(self):
+		if self._model:
+			outlets = [index for index in self.outlets_sheet_editor.selectedIndexes() if index.column()==0]
+			self._model.removeOutlets(outlets)
 
 	def model(self):
 		return self._model
@@ -86,14 +134,15 @@ class GraphDetailsView(QWidget):
 		# inlets list
 		self.selected_node_inlets = QSortFilterProxyModel()  # Node column is 1 (for node name)
 		self.selected_node_inlets.setSourceModel(graphmodel.inlets)
-		self.inlets_sheet_editor.setModel(self.selected_node_inlets)
 		self.selected_node_inlets.setFilterKeyColumn(1)
+		self.inlets_sheet_editor.setModel(self.selected_node_inlets)
+		
 
 		# outlets list
 		self.selected_node_outlets = QSortFilterProxyModel()  # Node column is 1 (for node name)
 		self.selected_node_outlets.setSourceModel(graphmodel.outlets)
-		self.outlets_sheet_editor.setModel(self.selected_node_outlets)
 		self.selected_node_outlets.setFilterKeyColumn(1)
+		self.outlets_sheet_editor.setModel(self.selected_node_outlets)
 
 		# set no rows
 		self.setCurrentModelIndex(QModelIndex())
@@ -101,7 +150,7 @@ class GraphDetailsView(QWidget):
 	def setNodesSelectionModel(self, nodes_selectionmodel:QItemSelectionModel):
 		self.nodes_selectionmodel = nodes_selectionmodel
 		self.nodes_selectionmodel.currentRowChanged.connect(self.setCurrentModelIndex)
-		
+
 	def setCurrentModelIndex(self, index:QModelIndex):
 		index = index.siblingAtColumn(0)
 		if index.isValid():

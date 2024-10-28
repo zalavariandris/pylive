@@ -4,7 +4,7 @@ from typing import *
 from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
-from InfiniteGraphicsView import InfiniteGraphicsView
+from PanAndZoomGraphicsView import PanAndZoomGraphicsView
 from GraphModel import GraphModel
 
 from enum import Enum
@@ -380,7 +380,7 @@ class EdgeItem(QGraphicsLineItem):
 			return super().mouseReleaseEvent(event)
 
 
-class GraphView(QGraphicsView):
+class GraphView(PanAndZoomGraphicsView):
 	"""A view that displays the node editor."""
 	def __init__(self, parent=None):
 		super().__init__(parent)
