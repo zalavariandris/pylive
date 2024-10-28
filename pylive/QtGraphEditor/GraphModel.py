@@ -192,6 +192,8 @@ class GraphModel(QObject):
 		return properties
 
 	def getInlet(self, inlet:QModelIndex, relations=True):
+		assert isinstance(inlet, QModelIndex)
+		assert inlet.model() == self.inlets, f"got: {inlet}"
 		properties = {
 			'id': inlet.data(),
 			"name": inlet.siblingAtColumn(2).data(),
@@ -208,6 +210,7 @@ class GraphModel(QObject):
 		return properties
 
 	def getOutlet(self, outlet:QModelIndex, relations=True):
+		assert isinstance(outlet, QModelIndex) and outlet.model() == self.outlets
 		properties = {
 			'id': outlet.data(),
 			'name': outlet.siblingAtColumn(2).data(),
@@ -224,12 +227,17 @@ class GraphModel(QObject):
 		return properties
 
 	def getEdge(self, edge:QModelIndex, relations=True):
+		assert isinstance(edge, QModelIndex)
+		assert edge.model() == self.edges
 		properties = {
 			'id': edge.data(),
 		}
 		if relations:
-			source_outlets = [item.index() for item in self.outlets.findItems(edge.siblingAtColumn(1).data(), Qt.MatchFlag.MatchExactly, 0)]
-			target_inlets = [item.index() for item in self.inlets.findItems(edge.siblingAtColumn(2).data(), Qt.MatchFlag.MatchExactly, 0)]
+			outlet_id:str = edge.siblingAtColumn(1).data()
+			inlet_id:str = edge.siblingAtColumn(2).data()
+			print("get edge", outlet_id, inlet_id)
+			source_outlets = [item.index() for item in self.outlets.findItems(outlet_id, Qt.MatchFlag.MatchExactly, 0)]
+			target_inlets =  [item.index() for item in self.inlets.findItems(inlet_id, Qt.MatchFlag.MatchExactly, 0)]
 			assert len(source_outlets)==1, f"Edges {edge} supposed to have exacly one source, got {len(source_outlets)}!"
 			assert len(target_inlets)==1, f"Edges {edge} supposed to have exacly one target, got {len(source_outlets)}!"
 			properties.update({
@@ -237,6 +245,27 @@ class GraphModel(QObject):
 				"target": target_inlets[0]
 			})
 		return properties
+
+	def setEdge(self, edge:QModelIndex, properties:dict):
+		for key, value in properties.items():
+			match key:
+				case "source":
+					IsValidSource = (isinstance(value, QModelIndex)
+									and value.model() == self.outlets
+									and value.isValid())
+					if not IsValidSource:
+						raise ValueError(f"source is not an outlet, got: {value}")
+
+					source_id:str = value.data()
+					self.edges.setData(edge.siblingAtColumn(1), source_id)
+				case "target":
+					IsValidTarget = (isinstance(value, QModelIndex)
+									and value.model() == self.inlets
+									and value.isValid())
+					if not IsValidTarget:
+						raise ValueError(f"source is not an inlet, got: {value}")
+					target_id:str = value.data()
+					self.edges.setData(edge.siblingAtColumn(2), target_id)
 
 	def getSourceNodes(self, node:QModelIndex):
 		inlets = self.getNode(node)["inlets"]
@@ -247,7 +276,6 @@ class GraphModel(QObject):
 		outlets = self.getNode(node)["outlets"]
 		for outlet in outlets:
 			yield self.getOutlet(outlet)["node"]
-
 
 	def rootRodes(self)->Iterable[QModelIndex]:
 		"""Yield all root nodes (nodes without outlets) in the graph."""

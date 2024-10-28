@@ -7,7 +7,7 @@
     ],
 
     "settings": {
-        "python_interpreter": "./venv/Scripts/python.exe",
+        "python_interpreter": "./.venv/Scripts/python.exe",
         "env": {
             "PYTHONPATH": "${folder}/"
         }
@@ -17,13 +17,13 @@
         {
             "name": "Python: Run File (CrossPlatform)",
             "windows": {
-                "cmd": ["${project_path}/venv/Scripts/python.exe", "-u", "$file"]
+                "cmd": ["${project_path}/.venv/Scripts/python.exe", "-u", "$file"]
             },
             "osx": {
-                "cmd": ["${project_path}/venv/bin/python", "-u", "$file"]
+                "cmd": ["${project_path}/.venv/bin/python", "-u", "$file"]
             },
             "linux": {
-                "cmd": ["${project_path}/venv/bin/python", "-u", "$file"]
+                "cmd": ["${project_path}/.venv/bin/python", "-u", "$file"]
             },
             "file_regex": "^[ ]*File \"(...*?)\", line ([0-9]*)",
             "selector": "source.python"
@@ -31,7 +31,7 @@
         {
             "name": "Python: Run File (Windows)",
             "cmd": [
-                "${project_path}/venv/Scripts/python.exe",
+                "${project_path}/.venv/Scripts/python.exe",
                 "-u",
                 "$file"
             ],

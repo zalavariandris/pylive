@@ -57,5 +57,13 @@ class TestGraphModel(unittest.TestCase):
 		self.assertEqual(properties["source"], self.image_out)
 		self.assertEqual(properties["target"], self.image_in)
 
+"""Test to implement
+- test edge modifications on the view
+- edge was moved, but moved back
+- interactive edge was dropped on a new pon
+- interactive edge was released on an invalid pin
+- interactive edge was released on a node, or empty space
+"""
+
 if __name__ == "__main__":
 	unittest.main()
