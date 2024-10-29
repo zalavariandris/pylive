@@ -30,4 +30,3 @@ class RopeAssistStringModel(QStringListModel):
 			self.setStringList([proposal.name for proposal in proposals])
 		except Exception as err:
 			self.setStringList([])
-			print("codeassist:", err)

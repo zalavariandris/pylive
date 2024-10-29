@@ -40,20 +40,17 @@ def toggle_comment(text, comment="# "):
 		return text  # Return as-is if no non-empty lines
 	
 	common_indent = find_common_indent("\n".join(non_empty_lines))
-	print(f"common indent: '{common_indent}'")
 
 	all_non_empty_lines_has_comment = all(line.lstrip().startswith(comment) for line in non_empty_lines)
 	
 	if all_non_empty_lines_has_comment:
 		# Uncomment all non-empty lines
-		print("uncomment lines")
 		for i, (line, mask) in enumerate(zip(lines, lines_mask)):
 			if mask and line.lstrip().startswith(comment):
 				# Remove comment prefix while maintaining indentation
 				lines[i] = line[:len(common_indent)] + line[len(common_indent) + len(comment):]
 	else:
 		# Comment all non-empty lines
-		print("comment lines")
 		for i, (line, mask) in enumerate(zip(lines, lines_mask)):
 			if mask:
 				# Add comment prefix while maintaining indentation
@@ -70,7 +67,6 @@ class ScriptCursor(QTextCursor):
 			super().__init__()
 
 	def toggleCommentSelection(self, comment="# "):
-		print("toggle comment selection")
 		atBlockStart = self.atBlockStart()
 		anchor = self.anchor()
 		position = self.position()

@@ -1,6 +1,8 @@
 from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
+import re
+
 
 class InvisiblesHighlighter(QSyntaxHighlighter):
 	def __init__(self, parent: QTextDocument) -> None:

@@ -8,8 +8,8 @@ from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 from pathlib import Path
-
-from pylive.QScriptEditor import QScriptEditor, TracebackFrameWidget, TracebackStackWidget
+from datetime import datetime
+from pylive.QtScriptEditor.ScriptEdit import ScriptEdit
 from pylive.utils import getWidgetByName
 from typing import *
 
@@ -24,21 +24,21 @@ import traceback
 import sys
 import os
 class QLiveScript(QWidget):
-	# def __init__(self, parent=None):
-	# 	super().__init__(parent=parent)
+	def __init__(self, parent=None):
+		super().__init__(parent=parent)
 	
-	#	# setup panel
-	# 	self.setWindowTitle("QLiveScript")
-	#	self.resize(1240,600)
-	#	self.setLayout(QHBoxLayout())
-	#	self.layout().setContentsMargins(0,0,0,0)
+		# setup panel
+		self.setWindowTitle("QLiveScript")
+		self.resize(1240,600)
+		self.setLayout(QHBoxLayout())
+		self.layout().setContentsMargins(0,0,0,0)
 
-		# setup UI
-		# self.scripteditor = QScriptEditor()
+		"""setup UI"""
+		self.scripteditor = ScriptEdit()
 
-		# self.filepath:str|None = None # keep track of the actual file exist on disk
+		self.filepath:str|None = None # keep track of the actual file exist on disk
 
-		# self.right_pane = QWidget()
+		self.right_pane = QWidget()
 		self.right_pane.setLayout(QGridLayout())
 
 		self.preview_label = QLabel()
@@ -49,7 +49,6 @@ class QLiveScript(QWidget):
 		self.exception_panel.setLayout(QVBoxLayout())
 		
 		self.right_pane.layout().addWidget(self.preview_label, 0, 0)
-		self.right_pane.layout().addWidget(self.exception_panel, 0, 0)
 
 		# setup menubar
 		self.setupMenuBar()
@@ -60,7 +59,6 @@ class QLiveScript(QWidget):
 		def on_text_changed():
 			print("text changed")
 			self.evaluate()
-			self.scripteditor.update_error_labels(self.error_labels_data)
 
 		@self.scripteditor.textChanged.connect
 		def set_script_modified():
@@ -77,7 +75,6 @@ class QLiveScript(QWidget):
 
 		# evaluate on start
 		self.evaluate()
-		self.scripteditor.update_error_labels(self.error_labels_data)
 
 	def prompt_disk_change(self):
 		msg_box = QMessageBox(self)
@@ -105,6 +102,7 @@ class QLiveScript(QWidget):
 			self.script_modified_in_memory = False
 
 	def openFile(self, filepath:str):
+		print("opening file", filepath)
 		self.watcher.removePaths(self.watcher.files())
 		self.watcher.addPath(filepath)
 		with open(filepath, 'r') as file:
@@ -210,37 +208,20 @@ class QLiveScript(QWidget):
 			filename, filter_used = QFileDialog.getSaveFileName(self, "Save", ".py", "Python Script (*.py);;Any File (*)")
 			if filename != '':
 				self.saveFile(filename)
-
-	def overlayException(self, exception:Exception):
-		# overlay exception
-		exception_widget = TracebackStackWidget()
-		exception_widget.setTextFromException(exception)
-		self.exception_panel.layout().addWidget(exception_widget)
-
-	def inlineException(self, exception: Exception):
-		if isinstance(exception, SyntaxError):
-			self.error_labels_data.append( (exception.lineno, f"{exception}") )
-		else:	
-			for idx, entry in enumerate(traceback.extract_tb(exception.__traceback__)):
-				if entry.filename == "<string>":
-					self.error_labels_data.append( (entry.lineno, f"{exception}") )
 		
 	def evaluate(self):
 		source = self.scripteditor.toPlainText()
 		global_vars = globals()
 		local_vars = locals()
 
-		while self.exception_panel.layout().count():
-			item = self.exception_panel.layout().takeAt(0)  # Remove the widget from the layout
-			widget = item.widget()
-			if widget is not None:
-				widget.deleteLater()  # Schedule widget for deletion
-
 		self.error_labels_data = []
 		try:
 			old_stdout = sys.stdout
 			sys.stdout = mystdout = StringIO()
-			exec(source, global_vars, local_vars)
+			timebegin = datetime.now()
+			# exec(source, global_vars, local_vars)
+			timeend = datetime.now()
+			print("exec time:", timeend, timebegin)
 			sys.stdout = old_stdout
 			message = mystdout.getvalue()
 
@@ -251,9 +232,7 @@ class QLiveScript(QWidget):
 				self.preview_label.setText(self.preview_label.text()+"\n"+message)
 			
 		except Exception as err:
-			
-			self.overlayException(err)
-			self.inlineException(err)
+			print("update exceptions")
 			
 		finally:
 			pass

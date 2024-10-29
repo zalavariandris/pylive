@@ -4,11 +4,11 @@ from PySide6.QtWidgets import *
 from PySide6.QtGui import *
 from PySide6.QtCore import *
 
-from components.ScriptCursor import ScriptCursor
-from components.PygmentsSyntaxHighlighter import PygmentsSyntaxHighlighter
+from pylive.QtScriptEditor.components.ScriptCursor import ScriptCursor
+from pylive.QtScriptEditor.components.PygmentsSyntaxHighlighter import PygmentsSyntaxHighlighter
 
-from components.KeywordsCompleter import KeywordsCompleter
-from components.RopeCompleter import RopeCompleter
+from pylive.QtScriptEditor.components.KeywordsCompleter import KeywordsCompleter
+from pylive.QtScriptEditor.components.RopeCompleter import RopeCompleter
 import rope.base.project
 		
 class ScriptEdit(QPlainTextEdit):
@@ -32,10 +32,10 @@ class ScriptEdit(QPlainTextEdit):
 		self.setFont(font)
 		self.font().setStyleHint(QFont.StyleHint.TypeWriter)
 
-		# show whitespace
-		options = QTextOption()
-		options.setFlags(QTextOption.ShowTabsAndSpaces)
-		self.document().setDefaultTextOption(options)
+		# # show whitespace
+		# options = QTextOption()
+		# options.setFlags(QTextOption.ShowTabsAndSpaces)
+		# self.document().setDefaultTextOption(options)
 
 		# resize window
 		width = QFontMetrics(font).horizontalAdvance('O') * 70
@@ -52,9 +52,9 @@ class ScriptEdit(QPlainTextEdit):
 
 	def setupAutocomplete(self):
 		""" Setup autocomplete """
-		# completer = KeywordsCompleter()
-		self.rope_project = rope.base.project.Project('.')
-		completer = RopeCompleter(self.rope_project, self.document())
+		completer = KeywordsCompleter()
+		# self.rope_project = rope.base.project.Project('.')
+		# completer = RopeCompleter(self.rope_project, self.document())
 		self.setCompleter(completer)
 		
 	def setCompleter(self, completer:QCompleter):
@@ -142,9 +142,7 @@ class ScriptEdit(QPlainTextEdit):
 	@Slot()
 	def handleNotificationsInserted(self, parent: QModelIndex, first: int, last:int):
 		# Iterate over each row in the range of inserted rows
-		print("rows inserted", first, last)
 		for row in range(first, last + 1):
-			print("row:", row)
 			# Retrieve the notification data
 			index = self.notifications_model.index(row, 0)
 			message = index.siblingAtColumn(0).data()
@@ -202,7 +200,6 @@ class ScriptEdit(QPlainTextEdit):
 		
 		# Iterate over each row in the range of removed rows in reverse order
 		for row in reversed(range(first, last + 1)):  # Go backwards to avoid index shifting		
-			print("notifications removed", row)
 			# Check if the row index is within the bounds of the notifications_labels list
 			if row < len(self.notifications_labels):
 				notification_label = self.notifications_labels[row]

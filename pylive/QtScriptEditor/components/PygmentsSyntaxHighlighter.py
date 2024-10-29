@@ -73,14 +73,10 @@ class QtFormatter(Formatter):
                     # Red for numbers
                     format.setForeground(QColor("darkGreen"))
                 elif re.match(r'[ \t]+', value):
-                    print("whitespace", value)
                     text_color = palette.color(QPalette.ColorRole.Text)
                     text_color.setAlpha(30)
                     format.setForeground(text_color)
                 elif "Text.Whitespace" in str(ttype):
-                    print("whitespace", len(value), value.replace(" ", "space"))
-                    print("whitespace", len(value), value.replace("\t", "tab"))
-                    print("whitespace", len(value), value.replace("\n", "return"))
                     text_color = palette.color(QPalette.ColorRole.Text)
                     text_color.setAlpha(100)
                     format.setForeground(QColor("darkcyan"))
@@ -102,6 +98,7 @@ if __name__ == "__main__":
     # Create a QTextEdit and apply the highlighter
     editor = QTextEdit()
     editor.setWindowTitle("PygmentsSyntaxHighlighter component example")
+    editor.setTabStopDistance(QFontMetricsF(editor.font()).horizontalAdvance(' ') * 4)
     highlighter = PygmentsSyntaxHighlighter(editor.document())
 
     # Set some Python code to highlight
