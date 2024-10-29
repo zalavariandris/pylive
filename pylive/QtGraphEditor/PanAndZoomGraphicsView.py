@@ -15,12 +15,13 @@ class RectItem(QGraphicsRectItem):
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges)
         self._view = view
 
-    def itemChange(self, change, value):
-        if change == QGraphicsItem.GraphicsItemChange.ItemPositionHasChanged:
-            print("pos changed", self._view.fitItems())
-        else:
-            print("item change")
-            return super().itemChange(change, value)
+
+    # def itemChange(self, change, value):
+    #     if change == QGraphicsItem.GraphicsItemChange.ItemPositionHasChanged:
+    #         print("pos changed", self._view.fitItems())
+    #     else:
+    #         print("item change")
+    #         return super().itemChange(change, value)
 
 class PanAndZoomGraphicsView(QGraphicsView):
     def __init__(self, parent=None):
@@ -37,13 +38,20 @@ class PanAndZoomGraphicsView(QGraphicsView):
 
         self.mouseMode = "DEFAULT"
         self.mousePressPos = None
+        self._zoom_with_mousewheel = True
 
+    def setZoomWithMouswheel(self, value):
+        self._zoom_with_mousewheel = value
+
+    def zoomWithMouswheel(self):
+        return self._zoom_with_mousewheel
 
     def getScale(self):
         return self.transform().m11()
 
     def wheelEvent(self, event:QWheelEvent):
-        if event.modifiers() == Qt.KeyboardModifier.MetaModifier or event.modifiers() == Qt.KeyboardModifier.ControlModifier:
+        ModifierDown = event.modifiers() == Qt.KeyboardModifier.MetaModifier or event.modifiers() == Qt.KeyboardModifier.ControlModifier
+        if ModifierDown or self.zoomWithMouswheel()==True:
             delta = event.angleDelta()
             if delta.y() == 0:
                 event.ignore()
@@ -67,7 +75,8 @@ class PanAndZoomGraphicsView(QGraphicsView):
             self.mouseMode = "PAN"
             self.mousePressTransform = self.transform()
             self.mousePressPos = event.position()
-        return super().mousePressEvent(event)
+        else:
+            return super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
         if self.mouseMode == "PAN" and self.mousePressPos is not None:
