@@ -117,17 +117,25 @@ class NodeItem(QGraphicsItem):
 
 		self.setZValue(2)
 
+	def addOutlet(self):
+		outlet = OutletItem(parent_node=self)
+		self.outlets.append(outlet)
+		self.updatePinPositions()
+		return outlet
+
+	def removeOutlet(self, outlet:OutletItem):
+		self.outlets.remove(outlet)
+		self.updatePinPositions()
+
 	def addInlet(self):
 		inlet = InletItem(parent_node=self)
 		self.inlets.append(inlet)
 		self.updatePinPositions()
 		return inlet
 
-	def addOutlet(self):
-		outlet = OutletItem(parent_node=self)
-		self.outlets.append(outlet)
+	def removeInlet(self, inlet:InletItem):
+		self.inlets.remove(inlet)
 		self.updatePinPositions()
-		return outlet
 
 	def updatePinPositions(self, vertical_mode=False):
 		"""
@@ -560,6 +568,10 @@ class GraphView(PanAndZoomGraphicsView):
 		self.scene().addItem(node_item)
 		return node_item
 
+	def removeNode(self, node):
+		self.nodes.remove(node)
+		self.scene().removeItem(node)
+
 	def addEdge(self):
 		edge_item = EdgeItem(source_pin_item=None, target_pin_item=None, parent_graph=self)
 		self.edges.append(edge_item)
@@ -589,32 +601,6 @@ class GraphView(PanAndZoomGraphicsView):
 
 				# update gaphics item
 				self.handleNodesDataChanged(node, node.siblingAtColumn(4))
-	
-	@Slot(QModelIndex, int, int)
-	def handleOutletsRemoved(self, parent:QModelIndex, first:int, last:int):
-		if parent.isValid():
-			raise NotImplementedError("Subgraphs are not implemented yet!")
-
-		if self.graph_model:
-			for row in range(last, first-1, -1):
-				outlet = self.graph_model.outlets.index(row, 0)
-				persistent_index = QPersistentModelIndex(outlet)
-				outlet_item = self.index_to_item_map[persistent_index]
-				self.scene().removeItem(outlet_item)
-				del self.index_to_item_map[persistent_index]
-
-	@Slot(QModelIndex, int, int)
-	def handleInletsRemoved(self, parent:QModelIndex, first:int, last:int):
-		if parent.isValid():
-			raise NotImplementedError("Subgraphs are not implemented yet!")
-
-		if self.graph_model:
-			for row in range(last, first-1, -1):
-				inlet = self.graph_model.inlets.index(row, 0)
-				persistent_index = QPersistentModelIndex(inlet)
-				inlet_item = self.index_to_item_map[persistent_index]
-				self.scene().removeItem(inlet_item)
-				del self.index_to_item_map[persistent_index]
 
 	@Slot(QModelIndex, int, int)
 	def handleNodesRemoved(self, parent:QModelIndex, first:int, last:int):
@@ -627,92 +613,7 @@ class GraphView(PanAndZoomGraphicsView):
 				node_item = self.index_to_item_map[QPersistentModelIndex(node)]
 				self.scene().removeItem(node_item)
 				del self.index_to_item_map[QPersistentModelIndex(node)]
-
-	@Slot(QModelIndex, int, int)
-	def handleEdgesRemoved(self, parent:QModelIndex, first:int, last:int):
-		if parent.isValid():
-			raise NotImplementedError("Subgraphs are not implemented yet!")
-
-		print("handle edges removed")
-		if self.graph_model:
-			for row in range(last, first-1, -1):
-				edge = self.graph_model.edges.index(row, 0)
-				persistent_index = QPersistentModelIndex(edge)
-				edge_item = self.index_to_item_map[persistent_index]
-				self.removeEdge(edge_item)
-				del self.index_to_item_map[persistent_index]
-				
-	@Slot(QModelIndex, int, int)
-	def handleInletsInserted(self, parent:QModelIndex, first:int, last:int):
-		if parent.isValid():
-			raise ValueError("inlets are flat table, not a tree model")
-
-		if self.graph_model:
-			for row in range(first, last+1):
-				# get inlet and create the gaphics item
-				graph:GraphModel = self.graph_model
-				inlet = graph.inlets.index(row, 0) # get the inlet reference
-				inlet_node = graph.getInlet(inlet)["node"] # get the node reference
-				parent_node_item = self.index_to_item_map[QPersistentModelIndex(inlet_node)] # get the node graphics item
-				inlet_item = parent_node_item.addInlet()
-
-				# map inlet to graphics item
-				persistent_index = QPersistentModelIndex(inlet)
-				inlet_item.persistent_index = persistent_index
-				self.index_to_item_map[persistent_index] = inlet_item
-
-				# update graphics item and add to scene
-				self.handleInletsDataChanged(inlet, inlet.siblingAtColumn(2))
-
-	@Slot(QModelIndex, int, int)
-	def handleOutletsInserted(self, parent:QModelIndex, first:int, last:int):
-		if parent.isValid():
-			raise ValueError("inlets are flat table, not a tree model")
-
-		if self.graph_model:
-			for row in range(first, last+1):
-				# get inlet and create the gaphics item
-				graph:GraphModel = self.graph_model
-				outlet = graph.outlets.index(row, 0) # get the inlet reference
-				outlet_node = graph.getOutlet(outlet)["node"] # get the node reference
-				parent_node_item = self.index_to_item_map[QPersistentModelIndex(outlet_node)] # get the node graphics item
-				outlet_item = parent_node_item.addOutlet()
-
-				# map inlet to graphics item
-				persistent_index = QPersistentModelIndex(outlet)
-				outlet_item.persistent_index = persistent_index
-				self.index_to_item_map[persistent_index] = outlet_item
-
-				# update graphics item and add to scene
-				self.handleOutletsDataChanged(outlet, outlet.siblingAtColumn(2))
-
-	@Slot(QModelIndex, int, int)
-	def handleEdgesInserted(self, parent:QModelIndex, first:int, last:int):
-		if parent.isValid():
-			raise NotImplementedError("Subgraphs are not implemented yet!")
-
-		if self.graph_model:
-			for row in range(first, last+1):
-				# get edge and create the gaphics item
-				graph:GraphModel = self.graph_model
-				edge = graph.edges.index(row, 0)
-
-				# target_inlet = graph.getEdge(edge)["target"]
-				# target_inlet_item = self.index_to_item_map[QPersistentModelIndex(target_inlet)]
-				# source_outlet = graph.getEdge(edge)["source"]
-				# source_outlet_item = self.index_to_item_map[QPersistentModelIndex(source_outlet)]
-
-				persistent_edge_index = QPersistentModelIndex(edge)
-				try:
-					edge_item = self.index_to_item_map[persistent_edge_index]
-				except KeyError:
-					edge_item = self.addEdge()
-					edge_item.persistent_edge_index = persistent_edge_index
-					self.index_to_item_map[persistent_edge_index] = edge_item
-
-				# update gaphics item
-				self.handleEdgesDataChanged(edge, edge.siblingAtColumn(2))
-
+	
 	def handleNodesDataChanged(self, topLeft:QModelIndex, bottomRight:QModelIndex, roles=[]):
 		if self.graph_model:
 			for row in range(topLeft.row(), bottomRight.row()+1):
@@ -741,45 +642,47 @@ class GraphView(PanAndZoomGraphicsView):
 				if new_pos!=node_item.pos():
 					node_item.setPos(new_pos)
 
-	def handleInletsDataChanged(self, topLeft:QModelIndex, bottomRight:QModelIndex, roles=[]):
-		if self.graph_model:
-			for row in range(topLeft.row(), bottomRight.row()+1):
-				graph:GraphModel = self.graph_model
-				inlet = graph.inlets.index(row, 0)
-				persistent_index = QPersistentModelIndex(inlet)
-				graphics_item:PinItem = self.index_to_item_map[persistent_index]
-				for col in range(topLeft.column(), bottomRight.column()+1):
-					match col:
-						case 0:
-							"""unique id changed"""
-							pass
-						case 1:
-							pass
-						case 2:
-							"""name changed"""
-							graphics_item.label.setText( str(inlet.siblingAtColumn(2).data()) )
+	@Slot(QModelIndex, int, int)
+	def handleEdgesInserted(self, parent:QModelIndex, first:int, last:int):
+		if parent.isValid():
+			raise NotImplementedError("Subgraphs are not implemented yet!")
 
-	def handleOutletsDataChanged(self, topLeft:QModelIndex, bottomRight:QModelIndex, roles=[]):
 		if self.graph_model:
-			for row in range(topLeft.row(), bottomRight.row()+1):
+			for row in range(first, last+1):
+				# get edge and create the gaphics item
 				graph:GraphModel = self.graph_model
-				outlet = graph.outlets.index(row, 0)
-				persistent_index = QPersistentModelIndex(outlet)
-				graphics_item = self.index_to_item_map[persistent_index]
-				for col in range(topLeft.column(), bottomRight.column()+1):
-					match col:
-						case 0:
-							"""unique id changed"""
-							# raise NotImplementedError("Setting the inlet's unique id is not supported!")
-							pass
-						case 1:
-							"""parent node changed"""
-							# raise NotImplementedError("Setting the inlet's parent node is not supported!")
-							pass
-						case 2:
-							"""name changed"""
-							graphics_item.label.setText(str(outlet.siblingAtColumn(2).data()))
+				edge = graph.edges.index(row, 0)
 
+				# target_inlet = graph.getEdge(edge)["target"]
+				# target_inlet_item = self.index_to_item_map[QPersistentModelIndex(target_inlet)]
+				# source_outlet = graph.getEdge(edge)["source"]
+				# source_outlet_item = self.index_to_item_map[QPersistentModelIndex(source_outlet)]
+
+				persistent_edge_index = QPersistentModelIndex(edge)
+				try:
+					edge_item = self.index_to_item_map[persistent_edge_index]
+				except KeyError:
+					edge_item = self.addEdge()
+					edge_item.persistent_edge_index = persistent_edge_index
+					self.index_to_item_map[persistent_edge_index] = edge_item
+
+				# update gaphics item
+				self.handleEdgesDataChanged(edge, edge.siblingAtColumn(2))
+
+	@Slot(QModelIndex, int, int)
+	def handleEdgesRemoved(self, parent:QModelIndex, first:int, last:int):
+		if parent.isValid():
+			raise NotImplementedError("Subgraphs are not implemented yet!")
+
+		print("handle edges removed")
+		if self.graph_model:
+			for row in range(last, first-1, -1):
+				edge = self.graph_model.edges.index(row, 0)
+				persistent_index = QPersistentModelIndex(edge)
+				edge_item = self.index_to_item_map[persistent_index]
+				self.removeEdge(edge_item)
+				del self.index_to_item_map[persistent_index]
+	
 	def handleEdgesDataChanged(self, topLeft:QModelIndex, bottomRight:QModelIndex, roles=[]):
 		if self.graph_model:
 			for row in range(topLeft.row(), bottomRight.row()+1):
@@ -808,6 +711,124 @@ class GraphView(PanAndZoomGraphicsView):
 							target_pin_item = self.index_to_item_map[QPersistentModelIndex(inlet)]
 							edge_item.setTargetPin( target_pin_item )
 
+	@Slot(QModelIndex, int, int)
+	def handleOutletsInserted(self, parent:QModelIndex, first:int, last:int):
+		if parent.isValid():
+			raise ValueError("inlets are flat table, not a tree model")
+
+		if self.graph_model:
+			for row in range(first, last+1):
+				# get model
+				outlet = self.graph_model.outlets.index(row, 0) # get the inlet reference
+				parent_node = self.graph_model.getOutlet(outlet)["node"] # get the node reference
+
+				# create outlet grtaphics item
+				parent_node_item = self.index_to_item_map[QPersistentModelIndex(parent_node)] # get the node graphics item
+				outlet_item = parent_node_item.addOutlet()
+
+				# map inlet to graphics item
+				persistent_index = QPersistentModelIndex(outlet)
+				outlet_item.persistent_index = persistent_index
+				self.index_to_item_map[persistent_index] = outlet_item
+
+				# update graphics item
+				self.handleOutletsDataChanged(outlet, outlet.siblingAtColumn(2))
+
+	@Slot(QModelIndex, int, int)
+	def handleOutletsRemoved(self, parent:QModelIndex, first:int, last:int):
+		if parent.isValid():
+			raise NotImplementedError("Subgraphs are not implemented yet!")
+
+		if self.graph_model:
+			for row in range(last, first-1, -1):
+				#get model
+				outlet = self.graph_model.outlets.index(row, 0) # get the inlet reference
+				parent_node = self.graph_model.getOutlet(outlet)["node"] # get the node reference
+
+				# remove outlet graphics item
+				persistent_index = QPersistentModelIndex(outlet)
+				outlet_item = self.index_to_item_map[persistent_index]
+				parent_node_item.removeOutlet(outlet_item)
+
+				# remove mapping
+				del self.index_to_item_map[persistent_index]
+	
+	def handleOutletsDataChanged(self, topLeft:QModelIndex, bottomRight:QModelIndex, roles=[]):
+		if self.graph_model:
+			for row in range(topLeft.row(), bottomRight.row()+1):
+				graph:GraphModel = self.graph_model
+				outlet = graph.outlets.index(row, 0)
+				persistent_index = QPersistentModelIndex(outlet)
+				graphics_item = self.index_to_item_map[persistent_index]
+				for col in range(topLeft.column(), bottomRight.column()+1):
+					match col:
+						case 0:
+							"""unique id changed"""
+							# raise NotImplementedError("Setting the inlet's unique id is not supported!")
+							pass
+						case 1:
+							"""parent node changed"""
+							# raise NotImplementedError("Setting the inlet's parent node is not supported!")
+							pass
+						case 2:
+							"""name changed"""
+							graphics_item.label.setText(str(outlet.siblingAtColumn(2).data()))
+
+	@Slot(QModelIndex, int, int)
+	def handleInletsInserted(self, parent:QModelIndex, first:int, last:int):
+		if parent.isValid():
+			raise ValueError("inlets are flat table, not a tree model")
+
+		if self.graph_model:
+			for row in range(first, last+1):
+				# get inlet and create the gaphics item
+				graph:GraphModel = self.graph_model
+				inlet = graph.inlets.index(row, 0) # get the inlet reference
+				inlet_node = graph.getInlet(inlet)["node"] # get the node reference
+				parent_node_item = self.index_to_item_map[QPersistentModelIndex(inlet_node)] # get the node graphics item
+				inlet_item = parent_node_item.addInlet()
+
+				# map inlet to graphics item
+				persistent_index = QPersistentModelIndex(inlet)
+				inlet_item.persistent_index = persistent_index
+				self.index_to_item_map[persistent_index] = inlet_item
+
+				# update graphics item and add to scene
+				self.handleInletsDataChanged(inlet, inlet.siblingAtColumn(2))
+
+	@Slot(QModelIndex, int, int)
+	def handleInletsRemoved(self, parent:QModelIndex, first:int, last:int):
+		if parent.isValid():
+			raise NotImplementedError("Subgraphs are not implemented yet!")
+
+		if self.graph_model:
+			for row in range(last, first-1, -1):
+				inlet = self.graph_model.inlets.index(row, 0)
+				persistent_index = QPersistentModelIndex(inlet)
+				inlet_item = self.index_to_item_map[persistent_index]
+				self.scene().removeItem(inlet_item)
+				del self.index_to_item_map[persistent_index]
+
+	def handleInletsDataChanged(self, topLeft:QModelIndex, bottomRight:QModelIndex, roles=[]):
+		if self.graph_model:
+			for row in range(topLeft.row(), bottomRight.row()+1):
+				graph:GraphModel = self.graph_model
+				inlet = graph.inlets.index(row, 0)
+				persistent_index = QPersistentModelIndex(inlet)
+				graphics_item:PinItem = self.index_to_item_map[persistent_index]
+				for col in range(topLeft.column(), bottomRight.column()+1):
+					match col:
+						case 0:
+							"""unique id changed"""
+							pass
+						case 1:
+							pass
+						case 2:
+							"""name changed"""
+							graphics_item.label.setText( str(inlet.siblingAtColumn(2).data()) )
+
+	
+	
 	def drawBackground(self, painter: QPainter, rect:QRectF | QRect):
 		super().drawBackground(painter, rect);
 

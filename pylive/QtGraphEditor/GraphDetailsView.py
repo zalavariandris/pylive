@@ -110,6 +110,7 @@ class GraphDetailsView(QWidget):
 	def removeSelectedInlets(self):
 		if self.model:
 			inlets = [index for index in self.inlets_sheet_editor.selectedIndexes() if index.column()==0]
+			print("removeSelectedInlets: {selectedIndexes}")
 			self._model.removeInlets(inlets)
 
 	def removeSelectedOutlets(self):
