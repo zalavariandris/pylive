@@ -1,12 +1,13 @@
 from datetime import datetime
-from pylive.QtLiveScript import display
+from pylive.LiveScript import display
+from textwrap import dedent
 
 print("\033c")
 
-str = """\
+str = dedent("""\
 		hello
 		bumbum
-"""
+""")
 
 from textwrap import dedent, indent
 

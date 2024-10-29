@@ -66,7 +66,6 @@ class QLiveScript(QWidget):
 
 		self.watcher = QFileSystemWatcher()
 		self.watcher.fileChanged.connect(self.on_file_change)
-
 		self.script_modified_in_memory = False
 
 		# layout widgets
