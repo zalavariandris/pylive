@@ -191,16 +191,14 @@ main()
 The only issue here is that we also keep populating the globals scope.
 And get_current_time is alsa available outside of the exec script.
 Also locals and globals become the same dictionary, not a copy, therefore
-there will be no differences between the global and the local scopes, at least inside our executed scripts. And that probably can lead to serious issues.
+there will be no differences between the global and the local scopes, at least inside our executed scripts.
 
-for the record as a wrote before copying the global and local scopes
-will throw a NameError:
+That behaviour is quite similar, as the scrpt were running at the top level.
 
-
-
+## a sidenote:
 The thing is, that the `import time` statement happens in the local scope
 of the main function.
-if we define time as a global name that it works again:
+Another approach would be to define time as a global name. Than it works again:
 
 ```python
 script = """
@@ -218,10 +216,12 @@ def main():
 main()
 ```
 
-but that look awkward.
+but that looks awkward.
 
 We could preprocess the script text and replace top-level imports to work on the
 global scope. For example by using the `importlib.import_module`.
 There are a few solutions to import modules globally on stackoverflow
 The one with a context manager feels like a possible solution:
 <https://stackoverflow.com/questions/11990556/how-to-make-global-imports-from-a-function>
+
+# Lets experiment by passing the globals to the locals
