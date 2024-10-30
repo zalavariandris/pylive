@@ -37,7 +37,7 @@ from typing import List, Tuple
 
 from shiboken6 import isValid
 
-from Panel import Panel
+from pylive.Panel import Panel
 
 from GraphModel import GraphModel
 from pathlib import Path

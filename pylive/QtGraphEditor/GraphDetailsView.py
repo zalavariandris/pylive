@@ -13,7 +13,7 @@ class MiniTableView(QTableView):
 		
 		# self.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
 
-from Panel import Panel
+from pylive.Panel import Panel
 from GraphModel import GraphModel
 class GraphDetailsView(QWidget):
 	def __init__(self, parent=None):
