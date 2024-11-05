@@ -4,8 +4,8 @@ from typing import *
 from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
-from PanAndZoomGraphicsView import PanAndZoomGraphicsView
-from GraphModel import GraphModel
+from pylive.QtGraphEditor.PanAndZoomGraphicsView import PanAndZoomGraphicsView
+from pylive.QtGraphEditor.GraphModel import GraphModel
 
 from enum import Enum
 class PinType(Enum):
@@ -945,90 +945,90 @@ class GraphView(PanAndZoomGraphicsView):
 		painter.setBrush(coarseGridColor)
 		drawDots(20, radius=1)
 
-
-from GraphTableView import GraphTableView
-from GraphDetailsView import GraphDetailsView
-class MainWindow(QWidget):
-	def __init__(self):
-		super().__init__()
-
-		self.setWindowTitle("Graph Viewer Example")
-		self.resize(900, 500)
-
-		# Initialize the GraphModel
-		self.graph_model = GraphModel()
-		self.nodes_selectionmodel = QItemSelectionModel(self.graph_model.nodes)
-		self.edges_selectionmodel = QItemSelectionModel(self.graph_model.edges)
-
-		# Add some example nodes and edges
-		read_node = self.graph_model.addNode("Read", 10, -100, "Script 1")
-		outlet_id = self.graph_model.addOutlet(read_node, "image")
-		write_node = self.graph_model.addNode("Write", 20, 100, "Script 2")
-		inlet_id = self.graph_model.addInlet(write_node, "image")
-
-		node3_id = self.graph_model.addNode("Preview", -50, 10, "Script 2")
-		self.graph_model.addInlet(node3_id, "in")
-		self.graph_model.addOutlet(node3_id, "out")
-		
-		
-		self.graph_model.addEdge(outlet_id, inlet_id)
-
-		# Set up the node editor views
-		self.graph_table_view = GraphTableView()
-		self.graph_table_view.setModel(self.graph_model)
-		self.graph_table_view.setNodesSelectionModel(self.nodes_selectionmodel)
-		self.graph_table_view.setEdgesSelectionModel(self.edges_selectionmodel)
-
-		self.graph_view = GraphView()
-		self.graph_view.setModel(self.graph_model)
-		self.graph_view.setNodesSelectionModel(self.nodes_selectionmodel)
-		self.graph_view.setEdgesSelectionModel(self.edges_selectionmodel)
-
-		self.graph_details_view = GraphDetailsView()
-		self.graph_details_view.setModel(self.graph_model)
-		self.graph_details_view.setNodesSelectionModel(self.nodes_selectionmodel)
-
-		
-		layout = QHBoxLayout()
-		layout.addWidget(self.graph_table_view, 1)
-		layout.addWidget(self.graph_view, 1)
-		layout.addWidget(self.graph_details_view, 1)
-		self.setLayout(layout)
-
-		self.menubar = QMenuBar()
-		self.color_mode_action = QAction("switch color mode")
-		self.color_mode_action.setCheckable(True)
-		self.color_mode_action.triggered.connect(self.toggleColorMode)
-		self.menubar.addAction(self.color_mode_action)
-		self.layout().setMenuBar(self.menubar)
-
-	def toggleColorMode(self):
-		from pylive.ColorModeSwitcher import light_color_scheme, dark_color_scheme, QPaletteFromJson
-		if self.color_mode_action.isChecked():
-			dark_palette = QPaletteFromJson(light_color_scheme)
-			QApplication.setPalette(dark_palette)
-			self.graph_view.setPalette(dark_palette)
-			items = self.graph_view.scene().items()
-			self.graph_view.update()
-			for item in items:
-				item.update(self.graph_view.sceneRect())
-			self.graph_view.viewport().update()
-			self.graph_view.scene().update(self.graph_view.sceneRect())
-			self.graph_view.update()
-
-		else:
-			light_palette = QPaletteFromJson(dark_color_scheme)
-			QApplication.setPalette(light_palette)
-			self.graph_view.setPalette(light_palette)
-			items = self.graph_view.scene().items()
-			for item in items:
-				item.update(self.graph_view.sceneRect())
-			self.graph_view.viewport().update()
-			self.graph_view.scene().update(self.graph_view.sceneRect())
-			self.graph_view.update()
-
-
 if __name__ == "__main__":
+	from GraphTableView import GraphTableView
+	from GraphDetailsView import GraphDetailsView
+	class MainWindow(QWidget):
+		def __init__(self):
+			super().__init__()
+
+			self.setWindowTitle("Graph Viewer Example")
+			self.resize(900, 500)
+
+			# Initialize the GraphModel
+			self.graph_model = GraphModel()
+			self.nodes_selectionmodel = QItemSelectionModel(self.graph_model.nodes)
+			self.edges_selectionmodel = QItemSelectionModel(self.graph_model.edges)
+
+			# Add some example nodes and edges
+			read_node = self.graph_model.addNode("Read", 10, -100, "Script 1")
+			outlet_id = self.graph_model.addOutlet(read_node, "image")
+			write_node = self.graph_model.addNode("Write", 20, 100, "Script 2")
+			inlet_id = self.graph_model.addInlet(write_node, "image")
+
+			node3_id = self.graph_model.addNode("Preview", -50, 10, "Script 2")
+			self.graph_model.addInlet(node3_id, "in")
+			self.graph_model.addOutlet(node3_id, "out")
+			
+			
+			self.graph_model.addEdge(outlet_id, inlet_id)
+
+			# Set up the node editor views
+			self.graph_table_view = GraphTableView()
+			self.graph_table_view.setModel(self.graph_model)
+			self.graph_table_view.setNodesSelectionModel(self.nodes_selectionmodel)
+			self.graph_table_view.setEdgesSelectionModel(self.edges_selectionmodel)
+
+			self.graph_view = GraphView()
+			self.graph_view.setModel(self.graph_model)
+			self.graph_view.setNodesSelectionModel(self.nodes_selectionmodel)
+			self.graph_view.setEdgesSelectionModel(self.edges_selectionmodel)
+
+			self.graph_details_view = GraphDetailsView()
+			self.graph_details_view.setModel(self.graph_model)
+			self.graph_details_view.setNodesSelectionModel(self.nodes_selectionmodel)
+
+			
+			layout = QHBoxLayout()
+			layout.addWidget(self.graph_table_view, 1)
+			layout.addWidget(self.graph_view, 1)
+			layout.addWidget(self.graph_details_view, 1)
+			self.setLayout(layout)
+
+			self.menubar = QMenuBar()
+			self.color_mode_action = QAction("switch color mode")
+			self.color_mode_action.setCheckable(True)
+			self.color_mode_action.triggered.connect(self.toggleColorMode)
+			self.menubar.addAction(self.color_mode_action)
+			self.layout().setMenuBar(self.menubar)
+
+		def toggleColorMode(self):
+			from pylive.ColorModeSwitcher import light_color_scheme, dark_color_scheme, QPaletteFromJson
+			if self.color_mode_action.isChecked():
+				dark_palette = QPaletteFromJson(light_color_scheme)
+				QApplication.setPalette(dark_palette)
+				self.graph_view.setPalette(dark_palette)
+				items = self.graph_view.scene().items()
+				self.graph_view.update()
+				for item in items:
+					item.update(self.graph_view.sceneRect())
+				self.graph_view.viewport().update()
+				self.graph_view.scene().update(self.graph_view.sceneRect())
+				self.graph_view.update()
+
+			else:
+				light_palette = QPaletteFromJson(dark_color_scheme)
+				QApplication.setPalette(light_palette)
+				self.graph_view.setPalette(light_palette)
+				items = self.graph_view.scene().items()
+				for item in items:
+					item.update(self.graph_view.sceneRect())
+				self.graph_view.viewport().update()
+				self.graph_view.scene().update(self.graph_view.sceneRect())
+				self.graph_view.update()
+
+
+
 	app = QApplication(sys.argv)
 	window = MainWindow()
 	window.show()

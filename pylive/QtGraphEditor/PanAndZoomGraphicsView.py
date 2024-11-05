@@ -147,7 +147,7 @@ class PanAndZoomGraphicsView(QGraphicsView):
         drawDots(20, radius=1)
 
     def fitItems(self):
-        if self.scene():
+        if self.scene() and self.scene().items():
             self.blockSignals(True)
             brect = QRectF(0,0,1,1)
             for item in self.scene().items():
@@ -166,8 +166,8 @@ class PanAndZoomGraphicsView(QGraphicsView):
             # print("fit items")
             # self.fitInView(brect, Qt.AspectRatioMode.KeepAspectRatio)
             # self.blockSignals(False)
-
-            # 
+        else:
+            self.centerOn(0,0)
 
     def centerItems(self):
         if self.scene():

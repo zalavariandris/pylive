@@ -153,38 +153,34 @@ class LiveScript(QWidget):
 		self.splitter.setSizes([self.width()//2,self.width()//2])
 
 		self.setScript("print('hello')")
-
-	def setAppWidget(self):
-		pass
-
+		
 	def setScript(self, text:str):
 		self.script_edit.setPlainText(text)
 
-from textwrap import dedent
-initial_script = dedent("""\
-from PySide6.QtGui import *
-from PySide6.QtCore import *
-from PySide6.QtWidgets import *
-import numpy as np
-def random_image(width=8, height=8):
-	img = np.random.randint(0, 255, (height, width, 3), dtype=np.uint8)
-	# Convert to QImage
-	return QImage(img.data, width, height, 3 * width, QImage.Format_RGB888)
-
-from pylive.livescript import AppWidget
-app = AppWidget.current()
-
-app.display("HELLO")
-""")
 
 if __name__ == "__main__":
+	from textwrap import dedent
 	import pylive
 	import sys
 	import subprocess
 	app = QApplication(sys.argv)
 	window = pylive.livescript.LiveScript()
 
-	window.setScript(initial_script)
+	window.setScript(dedent("""\
+		from PySide6.QtGui import *
+		from PySide6.QtCore import *
+		from PySide6.QtWidgets import *
+		import numpy as np
+		def random_image(width=8, height=8):
+			img = np.random.randint(0, 255, (height, width, 3), dtype=np.uint8)
+			# Convert to QImage
+			return QImage(img.data, width, height, 3 * width, QImage.Format_RGB888)
+
+		from pylive.livescript import AppWidget
+		app = AppWidget.current()
+
+		app.display("HELLO")
+	"""))
 
 	# with open("./test_script.py", 'r') as file:
 	# 	window.setScript(file.read())

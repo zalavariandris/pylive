@@ -188,6 +188,7 @@ class GraphModel(QObject):
 			self.edges.removeRow(row)
 
 	def getNode(self, node:QModelIndex, relations=True):
+		assert isinstance(node, QModelIndex) and node.isValid(), f"got: {node}"
 		properties = {
 			'id': node.data(),
 			'name': node.siblingAtColumn(1).data(),
@@ -228,6 +229,9 @@ class GraphModel(QObject):
 		self.nodes.blockSignals(False)
 		for start, end in group_consecutive_numbers(columnsChanged):
 			self.nodes.dataChanged.emit(node.siblingAtColumn(start), node.siblingAtColumn(end))
+
+	def setNodeData(self, node:QModelIndex, role):
+		raise NotImplementedError
 
 	def getInlet(self, inlet:QModelIndex, relations=True):
 		assert isinstance(inlet, QModelIndex)
@@ -319,13 +323,12 @@ class GraphModel(QObject):
 		"""Yield all root nodes (nodes without outlets) in the graph."""
 		for i in range(self.nodes.rowCount()):
 			node = self.nodes.item(i, 0).index()
-			self.getNode(node)[""]
 			target_nodes = list(self.getTargetNodes(node))
 			if not target_nodes:
 				yield node
 
 	def dfs(self)->Iterable[QModelIndex]:
-		"""Perform DFS starting from the root notes and yield each node."""
+		"""Perform DFS starting from the root nodes and yield each node."""
 
 		start_nodes = self.rootRodes()
 		visited = set()  # Set to track visited nodes
