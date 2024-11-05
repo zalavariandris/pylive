@@ -2,31 +2,34 @@
     "folders":
     [
         {
-            "path": "."
-        }
+            "path": ".",
+        },
+        {
+			"path": "C:\\dev\\src\\pylive-examples"
+		},
     ],
 
     "settings": {
         "python_interpreter": "./.venv/Scripts/python.exe",
         "env": {
-            "PYTHONPATH": "${folder}/"
-        }
+            "PYTHONPATH": "${folder}/",
+        },
     },
 
     "build_systems": [
         {
             "name": "Python: Run File (CrossPlatform)",
             "windows": {
-                "cmd": ["${project_path}/.venv/Scripts/python.exe", "-u", "$file"]
+                "cmd": ["${project_path}/.venv/Scripts/python.exe", "-u", "$file"],
             },
             "osx": {
-                "cmd": ["${project_path}/.venv/bin/python", "-u", "$file"]
+                "cmd": ["${project_path}/.venv/bin/python", "-u", "$file"],
             },
             "linux": {
-                "cmd": ["${project_path}/.venv/bin/python", "-u", "$file"]
+                "cmd": ["${project_path}/.venv/bin/python", "-u", "$file"],
             },
             "file_regex": "^[ ]*File \"(...*?)\", line ([0-9]*)",
-            "selector": "source.python"
+            "selector": "source.python",
         },
         {
             "name": "Python: Run File (Windows)",
@@ -36,7 +39,7 @@
                 "$file"
             ],
             "file_regex": "^[ ]*File \"(...*?)\", line ([0-9]*)",
-            "selector": "source.python"
+            "selector": "source.python",
         }
-    ]
+    ],
 }
