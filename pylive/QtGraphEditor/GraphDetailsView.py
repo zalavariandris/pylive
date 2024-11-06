@@ -7,14 +7,14 @@ from typing import List, Tuple
 class MiniTableView(QTableView):
 	def __init__(self, parent=None):
 		super().__init__(parent)
-		self.setSelectionBehavior(QTableView.SelectRows)
-		self.verticalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
-		self.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+		self.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
+		self.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+		self.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
 		
 		# self.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
 
 from pylive.Panel import Panel
-from GraphModel import GraphModel
+from GraphModel import GraphModel, NodeIndex, EdgeIndex, InletIndex, OutletIndex
 class GraphDetailsView(QWidget):
 	def __init__(self, parent=None):
 		super().__init__(parent)
@@ -59,13 +59,13 @@ class GraphDetailsView(QWidget):
 		formLayout.addRow("Name:", self.name_edit)
 		formLayout.addRow("Pos X:", self.posx_edit)
 		formLayout.addRow("Pos Y:", self.posy_edit)
-		formLayout.addRow("Inlets:", Panel(direction=QBoxLayout.TopToBottom,
+		formLayout.addRow("Inlets:", Panel(direction=QBoxLayout.Direction.TopToBottom,
 			children=[
 				self.inlets_sheet_editor
 			],
 			menuBar=self.inlets_menubar
 		))
-		formLayout.addRow("Outlets:", Panel(direction=QBoxLayout.TopToBottom,
+		formLayout.addRow("Outlets:", Panel(direction=QBoxLayout.Direction.TopToBottom,
 			children=[
 				self.outlets_sheet_editor
 			],
@@ -75,7 +75,7 @@ class GraphDetailsView(QWidget):
 		self.panel.setLayout(formLayout)
 
 		self.mapper = QDataWidgetMapper()
-		self.mapper.setSubmitPolicy(QDataWidgetMapper.AutoSubmit)
+		self.mapper.setSubmitPolicy(QDataWidgetMapper.SubmitPolicy.AutoSubmit)
 
 		# self.panel = Panel(
 		# 	direction=QBoxLayout.TopToBottom,
@@ -89,33 +89,34 @@ class GraphDetailsView(QWidget):
 		# 	]
 		# )
 
-		self.setLayout(QVBoxLayout())
-		self.layout().addWidget(self.panel)
-		self.layout().addStretch()
+		main_layout = QVBoxLayout()
+		self.setLayout(main_layout)
+		main_layout.addWidget(self.panel)
+		main_layout.addStretch()
 
 	def addOutletToCurrentNode(self):
 		if self._model and self.nodes_selectionmodel:
-			node = self.nodes_selectionmodel.currentIndex()
+			node = NodeIndex(self.nodes_selectionmodel.currentIndex())
 			outlet = self._model.addOutlet(node, "<out>")
 			self.outlets_sheet_editor.selectRow(outlet.row())
 			self.outlets_sheet_editor.setCurrentIndex(outlet)
 
 	def addInletToCurrentNode(self):
 		if self._model and self.nodes_selectionmodel:
-			node = self.nodes_selectionmodel.currentIndex()
+			node = NodeIndex(self.nodes_selectionmodel.currentIndex())
 			inlet = self._model.addInlet(node, "<in>")
 			self.inlets_sheet_editor.selectRow(inlet.row())
 			self.inlets_sheet_editor.setCurrentIndex(inlet)
 
 	def removeSelectedInlets(self):
-		if self.model:
-			inlets = [index for index in self.inlets_sheet_editor.selectedIndexes() if index.column()==0]
+		if self._model:
+			inlets = [InletIndex(idx) for idx in self.inlets_sheet_editor.selectedIndexes() if idx.column()==0]
 			print("removeSelectedInlets: {selectedIndexes}")
 			self._model.removeInlets(inlets)
 
 	def removeSelectedOutlets(self):
 		if self._model:
-			outlets = [index for index in self.outlets_sheet_editor.selectedIndexes() if index.column()==0]
+			outlets = [OutletIndex(idx) for idx in self.outlets_sheet_editor.selectedIndexes() if idx.column()==0]
 			self._model.removeOutlets(outlets)
 
 	def model(self):
@@ -146,14 +147,17 @@ class GraphDetailsView(QWidget):
 		self.outlets_sheet_editor.setModel(self.selected_node_outlets)
 
 		# set no rows
-		self.setCurrentModelIndex(QModelIndex())
+		self.setCurrentModelIndex(NodeIndex())
 
 	def setNodesSelectionModel(self, nodes_selectionmodel:QItemSelectionModel):
 		self.nodes_selectionmodel = nodes_selectionmodel
 		self.nodes_selectionmodel.currentRowChanged.connect(self.setCurrentModelIndex)
 
-	def setCurrentModelIndex(self, index:QModelIndex):
-		index = index.siblingAtColumn(0)
+	def setCurrentModelIndex(self, index:NodeIndex):
+		if not self._model:
+			return
+
+		index = NodeIndex(index.siblingAtColumn(0))
 		if index.isValid():
 			self.id_label.setText(index.data())
 			self.mapper.setCurrentModelIndex(index)  # Update the mapper's current index
@@ -197,11 +201,10 @@ if __name__ == "__main__":
 			self.graph_details_view.setModel(self.graph_model)
 			self.graph_details_view.setNodesSelectionModel(self.nodes_selectionmodel)
 			
-			self.setLayout(QHBoxLayout())
-			self.layout().addWidget(self.graph_table_view, 1)
-			self.layout().addWidget(self.graph_details_view, 1)
-
-
+			main_layout = QHBoxLayout()
+			self.setLayout(main_layout)
+			main_layout.addWidget(self.graph_table_view, 1)
+			main_layout.addWidget(self.graph_details_view, 1)
 
 	app = QApplication(sys.argv)
 	window = MainWindow()

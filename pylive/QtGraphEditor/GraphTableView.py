@@ -39,7 +39,7 @@ from shiboken6 import isValid
 
 from pylive.Panel import Panel
 
-from GraphModel import GraphModel
+from pylive.QtGraphEditor.GraphModel import GraphModel, NodeIndex, InletIndex, OutletIndex, EdgeIndex
 from pathlib import Path
 
 class GraphTableView(QWidget):
@@ -73,7 +73,8 @@ class GraphTableView(QWidget):
 
 
 		# Layout Widgets
-		self.setLayout(QHBoxLayout())
+		main_layout = QHBoxLayout()
+		self.setLayout(main_layout)
 		self.layout().setContentsMargins (0,0,0,0)
 
 		nodes_toolbar = QToolBar()
@@ -131,7 +132,7 @@ class GraphTableView(QWidget):
 
 
 		### layout all panels
-		self.layout().addWidget(sheets_widget, 1)
+		main_layout.addWidget(sheets_widget, 1)
 
 	def setModel(self, graphmodel:GraphModel):
 		self.graphmodel = graphmodel
@@ -168,20 +169,20 @@ class GraphTableView(QWidget):
 		self.remove_node_action = QAction("remove selected nodes", self)
 		@self.remove_node_action.triggered.connect
 		def remove_selected_nodes():
-			selected_indexes = self.nodes_sheet_view.selectedIndexes() # Get the selected indexes from the node selection model
+			selected_indexes = [NodeIndex(idx) for idx in self.nodes_sheet_view.selectedIndexes()] # Get the selected indexes from the node selection model
 			self.graphmodel.removeNodes(selected_indexes) # remove the nodes from the graphmodel
 		self.new_outlet_action = QAction("new outlet", self)
 
 		@self.new_outlet_action.triggered.connect
 		def add_outlet_for_current_node():
-			current_index = self.nodes_sheet_view.currentIndex()
+			current_index = NodeIndex(self.nodes_sheet_view.currentIndex())
 			if current_index.isValid():
 				self.graphmodel.addOutlet(current_index, name="out")
 
 		self.remove_outlet_action = QAction("remove outlet", self)
 		@self.remove_outlet_action.triggered.connect
 		def remove_selected_outlets():
-			selected_indexes = self.outlets_sheet_view.selectedIndexes() # Get the selected indexes from the node selection model
+			selected_indexes = [OutletIndex(idx) for idx in self.outlets_sheet_view.selectedIndexes()] # Get the selected indexes from the node selection model
 			if not selected_indexes:
 				return  # No node is selected, exit the function
 			self.graphmodel.removeOutlets(selected_indexes) # remove the nodes from the graphmodel
@@ -189,14 +190,14 @@ class GraphTableView(QWidget):
 		self.new_inlet_action = QAction("new inlet", self)
 		@self.new_inlet_action.triggered.connect
 		def add_inlet_for_current_node():
-			current_index = self.nodes_sheet_view.currentIndex()
+			current_index = NodeIndex(self.nodes_sheet_view.currentIndex())
 			if current_index.isValid():
 				self.graphmodel.addInlet(node=current_index, name="in")
 
 		self.remove_inlet_action = QAction("remove inlet", self)
 		@self.remove_inlet_action.triggered.connect
 		def remove_selected_inlets():
-			selected_indexes = self.inlets_sheet_view.selectedIndexes() # Get the selected indexes from the node selection model
+			selected_indexes = [InletIndex(idx) for idx in self.inlets_sheet_view.selectedIndexes()] # Get the selected indexes from the node selection model
 			self.graphmodel.removeInlets(selected_indexes) # remove the nodes from the graphmodel
 
 		self.new_edge_action = QAction("new edge", self)
@@ -209,7 +210,7 @@ class GraphTableView(QWidget):
 		self.remove_edge_action = QAction("remove selected edges", self)
 		@self.remove_edge_action.triggered.connect
 		def remove_selected_edges():
-			selected_indexes = self.edges_sheet_view.selectedIndexes() # Get the selected indexes from the node selection model
+			selected_indexes = [EdgeIndex(idx) for idx in self.edges_sheet_view.selectedIndexes()] # Get the selected indexes from the node selection model
 			self.graphmodel.removeEdges(selected_indexes) # remove the nodes from the graphmodel
 
 

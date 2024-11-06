@@ -10,7 +10,7 @@ class RectItem(QGraphicsRectItem):
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
 
-        self.setBrush(Qt.green)
+        self.setBrush(Qt.GlobalColor.green)
 
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges)
         self._view = view
@@ -27,9 +27,9 @@ class PanAndZoomGraphicsView(QGraphicsView):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.setDragMode(QGraphicsView.RubberBandDrag) # optional, default mouse behaviour
-        self.setRenderHint(QPainter.Antialiasing)
-        self.setTransformationAnchor(QGraphicsView.NoAnchor) # important for panning and zooming
+        self.setDragMode(QGraphicsView.DragMode.RubberBandDrag) # optional, default mouse behaviour
+        self.setRenderHint(QPainter.RenderHint.Antialiasing)
+        self.setTransformationAnchor(QGraphicsView.ViewportAnchor.NoAnchor) # important for panning and zooming
         # self.setCacheMode(QGraphicsView.CacheBackground)
         self.setViewportUpdateMode(QGraphicsView.ViewportUpdateMode.FullViewportUpdate)
 
@@ -142,7 +142,7 @@ class PanAndZoomGraphicsView(QGraphicsView):
         # drawGrid(10)
         # painter.setPen(pCoarse)
         # drawGrid(100)
-        painter.setPen(Qt.NoPen)
+        painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(coarseGridColor)
         drawDots(20, radius=1)
 

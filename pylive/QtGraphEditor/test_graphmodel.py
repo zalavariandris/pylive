@@ -57,6 +57,32 @@ class TestGraphModel(unittest.TestCase):
 		self.assertEqual(properties["source"], self.image_out)
 		self.assertEqual(properties["target"], self.image_in)
 
+class TestGraphModelDFS(unittest.TestCase):
+	def setUp(self) -> None:
+		self.graph = GraphModel()
+		self.start_node = self.graph.addNode("Start", 0,0,"")
+		self.graph.addInlet(self.start_node, "in")
+		self.outlet = self.graph.addOutlet(self.start_node, "out")
+
+		self.finish_node = self.graph.addNode("Finish", 0,0,"")
+		self.inlet = self.graph.addInlet(self.finish_node, "in")
+		self.finish_outlet = self.graph.addOutlet(self.finish_node, "out")
+
+		self.graph.addEdge(self.outlet, self.inlet)
+		return super().setUp()
+
+	def test_get_target_nodes(self):
+		attrs = self.graph.getNode(self.finish_node)
+		self.assertEqual(len(attrs["outlets"]), 1)
+		self.assertEqual(attrs["outlets"][0].model(), self.finish_outlet.model())
+		self.assertEqual(attrs["outlets"][0], self.finish_outlet)
+		target_nodes = self.graph.getTargetNodes(self.finish_node)
+		self.assertEqual(len(list(target_nodes)), 0)
+
+	# def test_root_nodes(self):
+	# 	self.assertEqual(set(list(self.graph.rootRodes())), {self.start_node, self.finish_node})
+
+
 """Test to implement
 - test edge modifications on the view
 - edge was moved, but moved back

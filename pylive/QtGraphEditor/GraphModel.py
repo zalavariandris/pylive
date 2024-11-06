@@ -18,6 +18,18 @@ def group_consecutive_numbers(data):
 		ranges.append((group[0],group[-1]))
 	return ranges
 
+class NodeIndex(QModelIndex):
+	pass
+
+class EdgeIndex(QModelIndex):
+	pass
+
+class InletIndex(QModelIndex):
+	pass
+
+class OutletIndex(QModelIndex):
+	pass
+
 
 class GraphModel(QObject):
 	# nodesInserted = Signal(QModelIndex, int, int)
@@ -76,8 +88,7 @@ class GraphModel(QObject):
 		# self.edges.rowsAboutToBeRemoved.connect(self.edgesAboutToBeRemoved.emit)
 		# self.edges.dataChanged.connect(self.edgesChanged.emit)
 
-	def addNode(self, name:str, posx:int, posy:int, script:str)->QModelIndex:
-		print(f"add node: '{name}' {posx},{posy}")
+	def addNode(self, name:str, posx:int, posy:int, script:str)->NodeIndex:
 		assert isinstance(name, str)
 		assert isinstance(posx, int)
 		assert isinstance(posy, int)
@@ -92,9 +103,9 @@ class GraphModel(QObject):
 		script_item.setData(script, Qt.ItemDataRole.DisplayRole)
 		self.nodes.appendRow([id_item, name_item, posx_item, posy_item, script_item])
 
-		return self.nodes.indexFromItem(id_item)
+		return NodeIndex(self.nodes.indexFromItem(id_item))
 
-	def addInlet(self, node:QModelIndex, name:str)->QModelIndex:
+	def addInlet(self, node:NodeIndex, name:str)->InletIndex:
 		if not node.isValid():
 			raise KeyError(f"Node {node.data()}, does not exist!")
 
@@ -103,9 +114,9 @@ class GraphModel(QObject):
 		name_item =  QStandardItem(name)
 		
 		self.inlets.appendRow([id_item, owner_item, name_item])
-		return self.inlets.indexFromItem(id_item)
+		return InletIndex(self.inlets.indexFromItem(id_item))
 
-	def addOutlet(self, node:QModelIndex, name:str)->QModelIndex:
+	def addOutlet(self, node:NodeIndex, name:str)->OutletIndex:
 		if not node.isValid():
 			raise KeyError(f"Node {node.data()}, does not exist!")
 		id_item =    QStandardItem(unique.make_unique_id())
@@ -113,9 +124,9 @@ class GraphModel(QObject):
 		name_item =  QStandardItem(name)
 		
 		self.outlets.appendRow([id_item, owner_item, name_item])
-		return self.outlets.indexFromItem(id_item)
+		return OutletIndex(self.outlets.indexFromItem(id_item))
 
-	def addEdge(self, outlet:QModelIndex, inlet:QModelIndex)->QModelIndex:
+	def addEdge(self, outlet:QModelIndex, inlet:QModelIndex)->EdgeIndex:
 		if not outlet.isValid():
 			raise KeyError(f"outlet '{outlet}'' does not exist")
 		if not inlet.isValid():
@@ -125,9 +136,9 @@ class GraphModel(QObject):
 		outlet_id_item = QStandardItem(outlet.data())
 		inlet_id_item =  QStandardItem(inlet.data())
 		self.edges.appendRow([id_item, outlet_id_item, inlet_id_item])
-		return self.edges.indexFromItem(id_item)
+		return EdgeIndex(self.edges.indexFromItem(id_item))
 
-	def removeNodes(self, nodes:List[QModelIndex]):
+	def removeNodes(self, nodes:List[NodeIndex]):
 		# Collect the rows to be removed
 		rows_to_remove = sorted(set(index.row() for index in nodes), reverse=True)
 
@@ -153,8 +164,9 @@ class GraphModel(QObject):
 		for row in reversed(rows_to_remove):
 			self.nodes.removeRow(row)
 
-	def removeOutlets(self, outlets_to_remove:List[QModelIndex]):
+	def removeOutlets(self, outlets_to_remove:List[OutletIndex]):
 		# collect edges to be removed
+		assert all( isinstance(outlet, OutletIndex) for outlet in outlets_to_remove )
 		edges_to_remove = []
 		for outlet in outlets_to_remove:
 			edge_items = self.edges.findItems(outlet.data(), Qt.MatchFlag.MatchExactly, 1)
@@ -167,8 +179,9 @@ class GraphModel(QObject):
 		for row in sorted(rows_to_remove, reverse=True):
 			self.outlets.removeRow(row)
 
-	def removeInlets(self, inlets_to_remove:List[QModelIndex]):
+	def removeInlets(self, inlets_to_remove:List[InletIndex]):
 		# collect edges to be removed
+		assert all( isinstance(inlet, InletIndex) for inlet in inlets_to_remove )
 		edges_to_remove = []
 		for inlet in inlets_to_remove:
 			edge_items = self.edges.findItems(inlet.data(), Qt.MatchFlag.MatchExactly, 2)
@@ -181,14 +194,16 @@ class GraphModel(QObject):
 		for row in sorted(rows_to_remove, reverse=True):
 			self.inlets.removeRow(row)
 
-	def removeEdges(self, edges_to_remove:List[QModelIndex]):
+	def removeEdges(self, edges_to_remove:List[EdgeIndex]):
 		# Remove the rows from the GraphModel (starting from the last one, to avoid shifting indices)
+		assert all( isinstance(edge, EdgeIndex) for edge in edges_to_remove )
 		rows_to_remove = set([edge.row() for edge in edges_to_remove]) # keep unique rows
 		for row in sorted(rows_to_remove, reverse=True):
 			self.edges.removeRow(row)
 
-	def getNode(self, node:QModelIndex, relations=True):
-		assert isinstance(node, QModelIndex) and node.isValid(), f"got: {node}"
+	def getNode(self, node:NodeIndex, relations=True):
+		assert isinstance(node, NodeIndex) and node.isValid(), f"got: {node}"
+		assert node.column() == 0
 		properties = {
 			'id': node.data(),
 			'name': node.siblingAtColumn(1).data(),
@@ -196,15 +211,17 @@ class GraphModel(QObject):
 			'posy': int(node.siblingAtColumn(3).data()),
 		}
 		if relations:
-			inlets = [item.index().siblingAtColumn(0) for item in self.inlets.findItems(node.data(), Qt.MatchFlag.MatchExactly, 1)]
-			outlets = [item.index().siblingAtColumn(0) for item in self.outlets.findItems(node.data(), Qt.MatchFlag.MatchExactly, 1)]
+			inlets = [InletIndex(item.index().siblingAtColumn(0)) for item in self.inlets.findItems(node.data(), Qt.MatchFlag.MatchExactly, 1)]
+			outlets = [OutletIndex(item.index().siblingAtColumn(0)) for item in self.outlets.findItems(node.data(), Qt.MatchFlag.MatchExactly, 1)]
 			properties.update({
 				'outlets': outlets,
 				'inlets': inlets
 			})
 		return properties
 
-	def setNode(self, node:QModelIndex, properties:dict):
+	def setNode(self, node:NodeIndex, properties:dict):
+		assert isinstance(node, NodeIndex) and node.isValid(), f"got: {node}"
+		assert node.column() == 0
 		self.nodes.blockSignals(True)
 		columnsChanged = []
 		for key, value in properties.items():
@@ -230,56 +247,62 @@ class GraphModel(QObject):
 		for start, end in group_consecutive_numbers(columnsChanged):
 			self.nodes.dataChanged.emit(node.siblingAtColumn(start), node.siblingAtColumn(end))
 
-	def setNodeData(self, node:QModelIndex, role):
+	def setNodeData(self, node:NodeIndex, role):
 		raise NotImplementedError
 
-	def getInlet(self, inlet:QModelIndex, relations=True):
-		assert isinstance(inlet, QModelIndex)
-		assert inlet.model() == self.inlets, f"got: {inlet}"
+	def getInlet(self, inlet:InletIndex, relations=True):
+		assert isinstance(inlet, InletIndex) and inlet.isValid()
+		assert inlet.model() == self.inlets
+		assert inlet.column() == 0
+
 		properties = {
 			'id': inlet.data(),
 			"name": inlet.siblingAtColumn(2).data(),
 		}
 		if relations:
 			node_id = inlet.siblingAtColumn(1).data()
-			owner_nodes = [item.index() for item in self.nodes.findItems(node_id, Qt.MatchFlag.MatchExactly, 0)]
+			owner_nodes = [NodeIndex(item.index()) for item in self.nodes.findItems(node_id, Qt.MatchFlag.MatchExactly, 0)]
 			assert len(owner_nodes)==1, f"Outlet {inlet} supposed to have exacly one owner node!"
-			edges = [item.index().siblingAtColumn(0) for item in self.edges.findItems(inlet.data(), Qt.MatchFlag.MatchExactly, 2)]
+			edges = [EdgeIndex(item.index().siblingAtColumn(0)) for item in self.edges.findItems(inlet.data(), Qt.MatchFlag.MatchExactly, 2)]
 			properties.update({
 				'node': owner_nodes[0],
 				"edges": edges
 			})
 		return properties
 
-	def getOutlet(self, outlet:QModelIndex, relations=True):
-		assert isinstance(outlet, QModelIndex) and outlet.model() == self.outlets
+	def getOutlet(self, outlet:OutletIndex, relations=True):
+		assert isinstance(outlet, OutletIndex)
+		assert outlet.model() == self.outlets
+		assert outlet.column() == 0
+
 		properties = {
 			'id': outlet.data(),
 			'name': outlet.siblingAtColumn(2).data(),
 		}
 		if relations:
 			node_id = outlet.siblingAtColumn(1).data()
-			owner_nodes = [item.index() for item in self.nodes.findItems(node_id, Qt.MatchFlag.MatchExactly, 0)]
+			owner_nodes = [NodeIndex(item.index()) for item in self.nodes.findItems(node_id, Qt.MatchFlag.MatchExactly, 0)]
 			assert len(owner_nodes)==1, f"Outlet {outlet} supposed to have exacly one owner node!"
-			edges = [item.index().siblingAtColumn(0) for item in self.edges.findItems(outlet.data(), Qt.MatchFlag.MatchExactly, 1)]
+			edges = [EdgeIndex(item.index().siblingAtColumn(0)) for item in self.edges.findItems(outlet.data(), Qt.MatchFlag.MatchExactly, 1)]
 			properties.update({
 				'node': owner_nodes[0],
 				"edges": edges
 			})
 		return properties
 
-	def getEdge(self, edge:QModelIndex, relations=True):
-		assert isinstance(edge, QModelIndex)
+	def getEdge(self, edge:EdgeIndex, relations=True):
+		assert isinstance(edge, EdgeIndex)
 		assert edge.model() == self.edges
+		assert edge.column() == 0
+
 		properties = {
 			'id': edge.data(),
 		}
 		if relations:
 			outlet_id:str = edge.siblingAtColumn(1).data()
 			inlet_id:str = edge.siblingAtColumn(2).data()
-			print("get edge", outlet_id, inlet_id)
-			source_outlets = [item.index() for item in self.outlets.findItems(outlet_id, Qt.MatchFlag.MatchExactly, 0)]
-			target_inlets =  [item.index() for item in self.inlets.findItems(inlet_id, Qt.MatchFlag.MatchExactly, 0)]
+			source_outlets = [OutletIndex(item.index()) for item in self.outlets.findItems(outlet_id, Qt.MatchFlag.MatchExactly, 0)]
+			target_inlets =  [InletIndex(item.index()) for item in self.inlets.findItems(inlet_id, Qt.MatchFlag.MatchExactly, 0)]
 			assert len(source_outlets)==1, f"Edges {edge} supposed to have exacly one source, got {len(source_outlets)}!"
 			assert len(target_inlets)==1, f"Edges {edge} supposed to have exacly one target, got {len(source_outlets)}!"
 			properties.update({
@@ -288,7 +311,11 @@ class GraphModel(QObject):
 			})
 		return properties
 
-	def setEdge(self, edge:QModelIndex, properties:dict):
+	def setEdge(self, edge:EdgeIndex, properties:dict):
+		assert isinstance(edge, EdgeIndex)
+		assert edge.model() == self.edges
+		assert edge.column() == 0
+
 		for key, value in properties.items():
 			match key:
 				case "source":
@@ -309,32 +336,50 @@ class GraphModel(QObject):
 					target_id:str = value.data()
 					self.edges.setData(edge.siblingAtColumn(2), target_id)
 
-	def getSourceNodes(self, node:QModelIndex):
+	def getSourceNodes(self, node:NodeIndex):
+		assert isinstance(node, QModelIndex)
+		assert node.model() == self.nodes
+		assert node.column() == 0
+
 		inlets = self.getNode(node)["inlets"]
 		for inlet in inlets:
-			yield self.getInlet(inlet)["node"]
+			for edge in self.getInlet(inlet)["edges"]:
+				outlet = self.getEdge(edge)["source"]
+				yield self.getOutlet(outlet)["node"]
 
-	def getTargetNodes(self, node:QModelIndex):
+	def getTargetNodes(self, node:NodeIndex):
+		assert isinstance(node, NodeIndex)
+		assert node.model() == self.nodes
+		assert node.column() == 0
+
 		outlets = self.getNode(node)["outlets"]
 		for outlet in outlets:
-			yield self.getOutlet(outlet)["node"]
+			for edge in self.getOutlet(outlet)["edges"]:
+				inlet = self.getEdge(edge)["target"]
+				yield self.getInlet(inlet)["node"]
 
-	def rootRodes(self)->Iterable[QModelIndex]:
+	def rootRodes(self)->Iterable[NodeIndex]:
 		"""Yield all root nodes (nodes without outlets) in the graph."""
-		for i in range(self.nodes.rowCount()):
-			node = self.nodes.item(i, 0).index()
-			target_nodes = list(self.getTargetNodes(node))
-			if not target_nodes:
+		def hasTargets(node:NodeIndex):
+			assert isinstance(node, QModelIndex)
+			assert node.model() == self.nodes
+			assert node.column() == 0
+			return len(list(self.getTargetNodes(node)))>0
+		
+		for row in range(self.nodes.rowCount()):
+			node = NodeIndex(self.nodes.index(row, 0))
+			if not hasTargets(node):
 				yield node
 
-	def dfs(self)->Iterable[QModelIndex]:
+	def dfs(self)->Iterable[NodeIndex]:
 		"""Perform DFS starting from the root nodes and yield each node."""
-
-		start_nodes = self.rootRodes()
 		visited = set()  # Set to track visited nodes
-
-		def dfs_visit(node:QModelIndex):
+		def dfs_visit(node:NodeIndex):
 			"""Recursive helper function to perform DFS."""
+			assert isinstance(node, QModelIndex)
+			assert node.model() == self.nodes
+			assert node.column() == 0
+
 			visited.add(node)
 			yield node  # Yield the current node
 
@@ -343,6 +388,6 @@ class GraphModel(QObject):
 				if target_node not in visited:  # Check if the target node has been visited
 					yield from dfs_visit(target_node)  # Recursive call
 
-		for start_node in start_nodes:
+		for start_node in self.rootRodes():
 			if start_node not in visited:  # Check if the start node has been visited
 				yield from dfs_visit(start_node)  # Start DFS from the start node
