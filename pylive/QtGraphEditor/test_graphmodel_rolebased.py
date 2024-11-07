@@ -150,7 +150,10 @@ class TestGraphModelSignals(unittest.TestCase):
 		self.assertEqual(spy.count(), 1, "'nodesAdded' Signal was not emitted exactly once.")
 
 	def test_nodes_removed(self):
-		pass
+		spy = QSignalSpy(self.graph.nodesAdded)
+		self.graph.addNode("a new node", 0, 0)
+		self.assertEqual(spy.count(), 1, "'nodesAdded' Signal was not emitted exactly once.")
+
 
 	def test_nodes_changed(self):
 		pass

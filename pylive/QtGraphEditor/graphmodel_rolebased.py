@@ -80,21 +80,21 @@ class OutletIndex(QPersistentModelIndex):
 	pass
 
 class GraphModel(QObject):
-	nodesAdded = Signal(List[NodeIndex])
-	nodesRemoved = Signal(List[NodeIndex])
-	nodesDataChanged = Signal(List[NodeIndex], List[NodeDataRole])
+	nodesAdded = Signal(list)
+	nodesRemoved = Signal(list)
+	nodesDataChanged = Signal(list, list)
 
-	inletsAdded = Signal(List[InletIndex])
-	inletsRemoved = Signal(List[InletIndex])
-	inletsDataChanged = Signal(List[InletIndex], List[InletDataRole])
+	inletsAdded = Signal(list)
+	inletsRemoved = Signal(list)
+	inletsDataChanged = Signal(list, list)
 
-	outletsAdded = Signal(List[OutletIndex])
-	outletsRemoved = Signal(List[OutletIndex])
-	outletsDataChanged = Signal(List[OutletIndex], List[OutletDataRole])
+	outletsAdded = Signal(list)
+	outletsRemoved = Signal(list)
+	outletsDataChanged = Signal(list, list)
 
-	edgesAdded = Signal(List[EdgeIndex])
-	edgesRemoved = Signal(List[EdgeIndex])
-	edgesDataChanged = Signal(List[EdgeIndex], List[EdgeDataRole])
+	edgesAdded = Signal(list)
+	edgesRemoved = Signal(list)
+	edgesDataChanged = Signal(list, list)
 
 
 	def __init__(self, parent=None):
@@ -105,61 +105,72 @@ class GraphModel(QObject):
 		self.nodeList = QStandardItemModel()
 		self.nodeList.setHorizontalHeaderLabels(['name'])
 		self.nodeList.rowsInserted.connect(lambda parent, first, last:
-			[NodeIndex(self.nodeList.index(row, 0) for row in range(first, last)]
-			self.nodesAdded.emit([])
+			self.nodesAdded.emit([NodeIndex(self.nodeList.index(row, 0)) for row in range(first, last+1)])
 		)
 
-		self.nodeList.rowsRemoved.connect(lambda parent, first, last:
-			# print("nodes removed")
+		self.nodeList.rowsAboutToBeRemoved.connect(lambda parent, first, last:
+			self.nodesRemoved.emit([NodeIndex(self.nodeList.index(row, 0)) for row in range(first, last+1)])
 		)
 
 		self.nodeList.dataChanged.connect(lambda topLeft, bottomRight, roles:
-			# print("nodes data changed")
+			self.nodesDataChanged.emit(
+				[NodeIndex(self.nodeList.index(row, 0)) for row in range(topLeft.row(), bottomRight.row()+1)],
+				roles
+			)
 		)
 
 		### Inlets Model ###
 		self.inletList = QStandardItemModel()
 		self.inletList.setHorizontalHeaderLabels(["name"])
 		self.inletList.rowsInserted.connect(lambda parent, first, last:
-			# print("inlets inserted")
+			self.inletsAdded.emit([InletIndex(self.inletList.index(row, 0)) for row in range(first, last+1)])
 		)
 
-		self.inletList.rowsRemoved.connect(lambda parent, first, last:
-			# print("inlets removed")
+		self.inletList.rowsAboutToBeRemoved.connect(lambda parent, first, last:
+			self.inletsRemoved.emit([InletIndex(self.inletList.index(row, 0)) for row in range(first, last+1)])
 		)
 
 		self.inletList.dataChanged.connect(lambda topLeft, bottomRight, roles:
-			# print("inlets data changed")
+			self.inletsDataChanged.emit(
+				[InletIndex(self.inletList.index(row, 0)) for row in range(topLeft.row(), bottomRight.row()+1)],
+				roles
+			)
 		)
 
 		### Outlets Model ###
 		self.outletList = QStandardItemModel()
 		self.outletList.setHorizontalHeaderLabels(["name"])
 		self.outletList.rowsInserted.connect(lambda parent, first, last:
-			# print("outlets inserted")
+			self.outletsAdded.emit([OutletIndex(self.outletList.index(row, 0)) for row in range(first, last+1)])
 		)
 
-		self.outletList.rowsRemoved.connect(lambda parent, first, last:
-			# print("outlets removed")
+		self.outletList.rowsAboutToBeRemoved.connect(lambda parent, first, last:
+			self.outletsRemoved.emit([OutletIndex(self.outletList.index(row, 0)) for row in range(first, last+1)])
 		)
 
 		self.outletList.dataChanged.connect(lambda topLeft, bottomRight, roles:
-			# print("outlets data changed")
+			self.outletsDataChanged.emit(
+				[OutletIndex(self.outletList.index(row, 0)) for row in range(topLeft.row(), bottomRight.row()+1)],
+				roles
+			)
 		)
 
 		### Edges Model ###
 		self.edgeList = QStandardItemModel()
 		self.edgeList.setHorizontalHeaderLabels(["edge"])
 		self.edgeList.rowsInserted.connect(lambda parent, first, last:
-			# print("edges inserted")
+			self.edgesAdded.emit([EdgeIndex(self.edgeList.index(row, 0)) for row in range(first, last+1)])
 		)
 
-		self.edgeList.rowsRemoved.connect(lambda parent, first, last:
-			# print("edges removed")
+		self.edgeList.rowsAboutToBeRemoved.connect(lambda parent, first, last:
+			self.edgesRemoved.emit([EdgeIndex(self.edgeList.index(row, 0)) for row in range(first, last+1)])
 		)
 
 		self.edgeList.dataChanged.connect(lambda topLeft, bottomRight, roles:
-			# print("edges data changed")
+			self.edgesDataChanged.emit(
+				[EdgeIndex(self.edgeList.index(row, 0)) for row in range(topLeft.row(), bottomRight.row()+1)],
+				roles
+			)
 		)
 
 	def addNode(self, name:str, posx:int, posy:int)->NodeIndex:
