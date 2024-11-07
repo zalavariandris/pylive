@@ -222,7 +222,7 @@ class GraphModel(QObject):
 	def setNode(self, node:NodeIndex, properties:dict):
 		assert isinstance(node, NodeIndex) and node.isValid(), f"got: {node}"
 		assert node.column() == 0
-		self.nodes.blockSignals(True)
+		# self.nodes.blockSignals(True)
 		columnsChanged = []
 		for key, value in properties.items():
 			match key:
@@ -233,7 +233,9 @@ class GraphModel(QObject):
 				case "name":
 					assert isinstance(value, str)
 					columnsChanged.append(1)
-					self.nodes.setData(node.siblingAtColumn(1), value)
+					prevValue = self.nodes.data(node.siblingAtColumn(1))
+					res = self.nodes.setData(node.siblingAtColumn(1), value)
+					print(res, value, prevValue)
 				case "posx":
 					assert isinstance(value, int)
 					columnsChanged.append(2)
@@ -243,9 +245,9 @@ class GraphModel(QObject):
 					columnsChanged.append(3)
 					self.nodes.setData(node.siblingAtColumn(3), value)
 			
-		self.nodes.blockSignals(False)
-		for start, end in group_consecutive_numbers(columnsChanged):
-			self.nodes.dataChanged.emit(node.siblingAtColumn(start), node.siblingAtColumn(end))
+		# self.nodes.blockSignals(False)
+		# for start, end in group_consecutive_numbers(columnsChanged):
+		# 	self.nodes.dataChanged.emit(node.siblingAtColumn(start), node.siblingAtColumn(end))
 
 	def setNodeData(self, node:NodeIndex, role):
 		raise NotImplementedError

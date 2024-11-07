@@ -121,8 +121,9 @@ class LiveGraph(QWidget):
 	def joinScripts(self):
 		joined = ""
 		for node in reversed(list(self.scriptgraph.dfs())):
+			node_name = self.scriptgraph.getNode(node)["name"]
 			node_script = self.scriptgraph.nodes.data(node, Qt.ItemDataRole.UserRole+1)
-			joined += "\n" + str(node_script) + "\n"
+			joined += f"\n#%% {node_name}\n" + str(node_script) + "\n"
 		self.composed_script_widget.setPlainText(joined)
 
 	@Slot()

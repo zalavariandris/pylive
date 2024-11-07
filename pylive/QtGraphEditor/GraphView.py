@@ -101,6 +101,7 @@ class OutletItem(PinItem):
 		self.scene().removeItem(self)
 		self.parent_node.updatePinPositions()
 
+
 class InletItem(PinItem):
 	def destroy(self):
 		for edge in self.edges:
@@ -111,10 +112,13 @@ class InletItem(PinItem):
 		self.scene().removeItem(self)
 		self.parent_node.updatePinPositions()
 
-class TextItem(QGraphicsTextItem):
-	def __init__(self, text):
-		super().__init__(text)
-		self.setTextInteractionFlags(Qt.NoTextInteraction)  # Disable interaction by default
+
+class EditableTextItem(QGraphicsTextItem):
+	def __init__(self, text, parent=None):
+		super().__init__(text, parent)
+		self.setFlag(QGraphicsItem.ItemIsFocusable)  # Allow focus events
+		self.setTextInteractionFlags(Qt.NoTextInteraction)  # Initially non-editable
+		# self.setFlag(QGraphicsItem.ItemIsSelectable, True)
 
 		# Center-align the text within the item
 		text_option = QTextOption()
@@ -124,25 +128,22 @@ class TextItem(QGraphicsTextItem):
 		# Remove the default margins
 		self.document().setDocumentMargin(0)
 
-	def sceneEvent(self, event:QEvent)->bool:
-		print("event type:", event.type())
-		print(QEvent.GraphicsSceneMouseDoubleClick)
-		print()
-		if event.type() == QEvent.GraphicsSceneMouseDoubleClick:
-			self.setTextInteractionFlags(Qt.TextEditorInteraction)
+	def mouseDoubleClickEvent(self, event):
+		# Enable editing on double-click
+		"""parent node must manually cal the double click event,
+		because an item nor slectable nor movable will not receive press events"""
+		self.setTextInteractionFlags(Qt.TextEditorInteraction)
+		self.setFocus(Qt.MouseFocusReason)
 
-			ret = super().sceneEvent(event)
-			# QGraphicsTextItem::sceneevent needs to be processed before
-			# the focus
-			self.setFocus(Qt.MouseFocusReason)
-			return ret
+		click = QGraphicsSceneMouseEvent(QEvent.GraphicsSceneMousePress)
+		click.setButton(event.button())
+		click.setPos(event.pos())
+		self.mousePressEvent(click)
+		# super().mouseDoubleClickEvent(event)
 
-		return super().sceneEvent(event)
-
-	def focusOutEvent(self, event):
-		# Disable text editing when focus is lost
+	def focusOutEvent(self, event: QFocusEvent):
+		# When the item loses focus, disable editing
 		self.setTextInteractionFlags(Qt.NoTextInteraction)
-		# Call the base implementation to handle the focus-out event
 		super().focusOutEvent(event)
 
 	
@@ -166,10 +167,24 @@ class NodeItem(QGraphicsItem):
 		self.setAcceptHoverEvents(True)
 		self.setZValue(2)
 
-		self.nameedit = TextItem(self)
+		self.nameedit = EditableTextItem(self)
 		self.nameedit.setPos(0,0)
 		self.nameedit.setTextWidth(self.rect.width()-10)
 
+		self.nameedit.document().contentsChanged.connect(self.onNameContentsChanged)
+
+	def mouseDoubleClickEvent(self, event: QMouseEvent):
+		# Enable editing subitems on double-click
+		"""parent node must manually cal the double click event,
+		because an item nor slectable nor movable will not receive press events"""
+
+		# Check if double-click is within the text item’s bounding box
+		if self.nameedit.contains(self.mapFromScene(event.scenePos())):
+			# Forward the event to nameedit if clicked inside it
+			self.nameedit.mouseDoubleClickEvent(event)
+		else:
+			print("NodeItem->mouseDoubleClickEvent")
+			super().mouseDoubleClickEvent(event)
 
 	def destroy(self):
 		for inlet in self.inlets:
@@ -306,6 +321,18 @@ class NodeItem(QGraphicsItem):
 				# 		pass
 
 		return super().itemChange(change, value)
+
+	def onNameContentsChanged(self):
+		if (self.parent_graph.graph_model and
+			self.persistent_node_index and
+			self.persistent_node_index.isValid()
+		):
+			self.nameedit.blockSignals(True)
+			graph:GraphModel = self.parent_graph.graph_model
+			node_index = NodeIndex(self.persistent_node_index.model().index(self.persistent_node_index.row(), 0))
+			new_name = self.nameedit.toPlainText()
+			graph.setNode(node_index, {"name": new_name})
+			self.nameedit.blockSignals(False)
 
 
 class EdgeItem(QGraphicsLineItem):
@@ -747,8 +774,9 @@ class GraphView(PanAndZoomGraphicsView):
 							pass
 						case 1:
 							new_name = str(node_index.siblingAtColumn(1).data())
+							if node_item.nameedit.toPlainText() != new_name:
+								node_item.nameedit.setPlainText(new_name)
 							node_item.name = new_name
-							node_item.nameedit.setPlainText(new_name)
 							node_item.update()
 						case 2:
 							"""posx changed"""
@@ -760,6 +788,7 @@ class GraphView(PanAndZoomGraphicsView):
 							new_pos.setY(int(data))
 						case 4:
 							"set script"
+
 				if new_pos!=node_item.pos():
 					node_item.setPos(new_pos)
 
