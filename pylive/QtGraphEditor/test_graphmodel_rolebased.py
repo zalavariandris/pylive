@@ -129,6 +129,59 @@ class TestGraphRelations(unittest.TestCase):
 		"""edge target"""
 		self.assertEqual(self.graph.getEdgeTarget(self.edge), self.image_in)
 
+from PySide6.QtTest import QSignalSpy
+class TestGraphModelSignals(unittest.TestCase):
+	def setUp(self) -> None:
+		self.graph = GraphModel()
+		self.start_node = self.graph.addNode("Start", 0,0)
+		self.graph.addInlet(self.start_node, "in")
+		self.outlet = self.graph.addOutlet(self.start_node, "out")
+
+		self.finish_node = self.graph.addNode("Finish", 0,0)
+		self.inlet = self.graph.addInlet(self.finish_node, "in")
+		self.finish_outlet = self.graph.addOutlet(self.finish_node, "out")
+
+		self.graph.addEdge(self.outlet, self.inlet)
+		return super().setUp()
+
+	def test_nodes_added(self):
+		spy = QSignalSpy(self.graph.nodesAdded)
+		self.graph.addNode("a new node", 0, 0)
+		self.assertEqual(spy.count(), 1, "'nodesAdded' Signal was not emitted exactly once.")
+
+	def test_nodes_removed(self):
+		pass
+
+	def test_nodes_changed(self):
+		pass
+
+	def test_inlets_added(self):
+		pass
+
+	def test_inlets_removed(self):
+		pass
+
+	def test_inlets_changed(self):
+		pass
+
+	def test_outlets_added(self):
+		pass
+
+	def test_outlets_removed(self):
+		pass
+
+	def test_outlets_changed(self):
+		pass
+
+	def test_edges_added(self):
+		pass
+
+	def test_edges_removed(self):
+		pass
+
+	def test_edges_changed(self):
+		pass
+
 
 class TestGraphModelDFS(unittest.TestCase):
 	def setUp(self) -> None:
