@@ -1,5 +1,5 @@
 import unittest
-from GraphModel import GraphModel
+from graphmodel_columnbased import GraphModel
 
 from PySide6.QtGui import *
 from PySide6.QtCore import *

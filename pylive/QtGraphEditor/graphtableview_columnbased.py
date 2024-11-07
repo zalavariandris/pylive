@@ -39,7 +39,7 @@ from shiboken6 import isValid
 
 from pylive.Panel import Panel
 
-from pylive.QtGraphEditor.GraphModel import GraphModel, NodeIndex, InletIndex, OutletIndex, EdgeIndex
+from pylive.QtGraphEditor.graphmodel_columnbased import GraphModel, NodeIndex, InletIndex, OutletIndex, EdgeIndex
 from pathlib import Path
 
 class GraphTableView(QWidget):
@@ -138,10 +138,10 @@ class GraphTableView(QWidget):
 		self.graphmodel = graphmodel
 
 		# bind table views
-		self.nodes_sheet_view.setModel(self.graphmodel.nodes)
-		self.inlets_sheet_view.setModel(self.graphmodel.inlets)
-		self.outlets_sheet_view.setModel(self.graphmodel.outlets)
-		self.edges_sheet_view.setModel(self.graphmodel.edges)
+		self.nodes_sheet_view.setModel(self.graphmodel.nodeTable)
+		self.inlets_sheet_view.setModel(self.graphmodel.inletTable)
+		self.outlets_sheet_view.setModel(self.graphmodel.outletTable)
+		self.edges_sheet_view.setModel(self.graphmodel.edgeTable)
 
 	def setNodesSelectionModel(self, nodes_selectionmodel:QItemSelectionModel):
 		self.nodes_sheet_view.setSelectionModel(nodes_selectionmodel)
@@ -223,10 +223,10 @@ if __name__ == "__main__":
 	inlet_id = graph_model.addInlet(node2_id, "In1")
 	edge = graph_model.addEdge(outlet_id, inlet_id)
 
-	nodes_selectionmodel =   QItemSelectionModel(graph_model.nodes)
-	inlets_selectionmodel =  QItemSelectionModel(graph_model.inlets)
-	outlets_selectionmodel = QItemSelectionModel(graph_model.outlets)
-	edges_selectionmodel =   QItemSelectionModel(graph_model.edges)
+	nodes_selectionmodel =   QItemSelectionModel(graph_model.nodeTable)
+	inlets_selectionmodel =  QItemSelectionModel(graph_model.inletTable)
+	outlets_selectionmodel = QItemSelectionModel(graph_model.outletTable)
+	edges_selectionmodel =   QItemSelectionModel(graph_model.edgeTable)
 
 	graph_view1 = GraphTableView()
 	graph_view1.setModel(graph_model)

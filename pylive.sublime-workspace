@@ -4,829 +4,4003 @@
 		"selected_items":
 		[
 			[
-				"scr",
-				"scriptgraph"
+				"Fou",
+				"FocusReason"
 			],
 			[
-				"node_",
-				"node_item"
+				"gr",
+				"graphmodel_rolebased"
 			],
 			[
-				"to",
-				"toPlainText"
+				"graphmodel_",
+				"graphmodel_columnbased"
+			],
+			[
+				"selectionMo",
+				"selectionModel"
+			],
+			[
+				"graph",
+				"graphmodel_columnbased"
+			],
+			[
+				"mapSe",
+				"mapSelectionToSource"
+			],
+			[
+				"QPer",
+				"QPersistentModelIndex"
+			],
+			[
+				"qPer",
+				"QPersistentModelIndex"
+			],
+			[
+				"getOutlet",
+				"getOutletEdges"
+			],
+			[
+				"getIn",
+				"getInletEdges"
+			],
+			[
+				"getNode",
+				"getNodeOutlets"
+			],
+			[
+				"Inlet",
+				"InletDataRole"
+			],
+			[
+				"getInle",
+				"getInletEdges"
+			],
+			[
+				"outl",
+				"OutletIndex"
+			],
+			[
+				"Outlet",
+				"OutletDataRole"
+			],
+			[
+				"Node",
+				"NodeIndex"
+			],
+			[
+				"NotImpl",
+				"NotImplementedError"
+			],
+			[
+				"Edg",
+				"EdgeDataRole"
+			],
+			[
+				"Inle",
+				"InletIndex"
+			],
+			[
+				"Ed",
+				"EdgeIndex"
+			],
+			[
+				"Edge",
+				"EdgeDataRole"
+			],
+			[
+				"L",
+				"LocationRole"
+			],
+			[
+				"col",
+				"column"
+			],
+			[
+				"out",
+				"outlets"
+			],
+			[
+				"outlet",
+				"outlet_edges"
+			],
+			[
+				"Ite",
+				"ItemDataRole"
+			],
+			[
+				"Data",
+				"ItemDataRole"
 			],
 			[
 				"name",
 				"nameedit"
 			],
 			[
-				"contents",
-				"contentsChanged"
+				"mode",
+				"DragMode"
 			],
 			[
-				"global",
-				"global_vars"
+				"Key_s",
+				"Key_S"
 			],
 			[
-				"local",
-				"local_vars"
-			],
-			[
-				"zoo",
-				"zoomWithMouswheel"
-			],
-			[
-				"sta",
-				"start_pin"
-			],
-			[
-				"pre",
-				"persistent_index"
-			],
-			[
-				"gr",
-				"graph_model"
-			],
-			[
-				"item",
-				"item_selection"
-			],
-			[
-				"QItem",
-				"QItemSelection"
-			],
-			[
-				"Inde",
-				"IndexError"
-			],
-			[
-				"per",
-				"persistent_node_index"
-			],
-			[
-				"Node",
-				"NodeItem"
-			],
-			[
-				"sel",
-				"selectedItems"
-			],
-			[
-				"se",
-				"selectionChanged"
-			],
-			[
-				"selection",
-				"selectionChanged"
-			],
-			[
-				"out",
-				"outlet_item"
+				"Outl",
+				"OutletItem"
 			],
 			[
 				"inlet",
 				"inlet_item"
 			],
 			[
-				"des",
-				"destroy"
-			],
-			[
-				"remove",
-				"removeOutlet"
-			],
-			[
-				"upda",
-				"updatePinPositions"
-			],
-			[
-				"outlet",
-				"outlet_item"
-			],
-			[
-				"pare",
-				"parent_node"
-			],
-			[
-				"inle",
-				"inlet_item"
-			],
-			[
-				"update",
-				"updatePinPositions"
-			],
-			[
-				"removesel",
-				"removeSelectedOutlets"
-			],
-			[
-				"in",
-				"indexes"
-			],
-			[
-				"inlets_",
-				"inlets_sheet_editor"
-			],
-			[
-				"select",
-				"selectRow"
-			],
-			[
-				"inl",
-				"inlets_sheet_editor"
-			],
-			[
-				"QItemSele",
-				"QItemSelectionModel"
-			],
-			[
-				"add",
-				"addNode"
-			],
-			[
-				"cu",
-				"currentIndex"
-			],
-			[
-				"inlets",
-				"inlets_sheet_editor"
-			],
-			[
-				"QMen",
-				"QMenuBar"
-			],
-			[
-				"form",
-				"formLayout"
-			],
-			[
-				"center",
-				"centerOn"
-			],
-			[
-				"ItemPs",
-				"ItemPositionHasChanged"
-			],
-			[
-				"cent",
-				"centerItems"
-			],
-			[
-				"fitI",
-				"fitInView"
-			],
-			[
-				"mouseP",
-				"mousePressPos"
-			],
-			[
-				"Key",
-				"KeyboardModifiers"
-			],
-			[
-				"mousePre",
-				"mousePressPos"
-			],
-			[
-				"pos",
-				"position"
-			],
-			[
-				"mousP",
-				"mousePressTransform"
-			],
-			[
-				"mouse",
-				"mouseMode"
-			],
-			[
-				"QGraphicsSc",
-				"QGraphicsScene"
-			],
-			[
-				"setP",
-				"setPos"
-			],
-			[
-				"QPo",
-				"QPointF"
-			],
-			[
-				"QPoin",
-				"QPointF"
-			],
-			[
-				"script",
-				"script_item"
-			],
-			[
-				"gra",
-				"graphmodel"
-			],
-			[
-				"sib",
-				"siblingAtColumn"
-			],
-			[
-				"fin",
-				"findItems"
-			],
-			[
-				"inlet_",
-				"inlet_item"
-			],
-			[
-				"handleInlet",
-				"handleInletDataChanged"
-			],
-			[
-				"QGrap",
-				"QGraphicsItem"
-			],
-			[
-				"sibli",
-				"siblingAtColumn"
-			],
-			[
-				"handle",
-				"handleNodeDataChanged"
-			],
-			[
-				"node",
-				"node_item"
-			],
-			[
-				"sibl",
-				"siblingAtColumn"
-			],
-			[
-				"data",
-				"dataChanged"
-			],
-			[
-				"graph",
-				"graph_view1"
-			],
-			[
-				"ind",
-				"indexFromItem"
-			],
-			[
-				"index",
-				"indexFromItem"
-			],
-			[
-				"colo",
-				"GlobalColor"
+				"parent",
+				"parent_graph"
 			],
 			[
 				"Gr",
 				"GraphTableView"
 			],
 			[
-				"QItemS",
+				"G",
+				"GraphTableView"
+			],
+			[
+				"join",
+				"joinScripts"
+			],
+			[
+				"setPl",
+				"setPlainText"
+			],
+			[
+				"cu",
+				"currentIndex"
+			],
+			[
+				"scri",
+				"script_edit"
+			],
+			[
+				"sc",
+				"script_edit"
+			],
+			[
+				"scrip",
+				"script_edit"
+			],
+			[
+				"NotIm",
+				"NotImplementedError"
+			],
+			[
+				"selection",
+				"selectionChanged"
+			],
+			[
+				"Qselection",
 				"QItemSelectionModel"
 			],
 			[
-				"sele",
-				"selectRow"
+				"add",
+				"addInlet"
 			],
 			[
-				"setSel",
-				"setSelectionBehavior"
-			],
-			[
-				"nodes_",
-				"nodes_sheet_view"
-			],
-			[
-				"setSele",
-				"setSelectionModel"
-			],
-			[
-				"nodes",
-				"nodes_sheet_view"
+				"create",
+				"createNode"
 			],
 			[
 				"setM",
 				"setModel"
 			],
 			[
-				"ou",
-				"outlet_id"
+				"setup",
+				"setupMenuBar"
 			],
 			[
-				"findOutlet",
-				"findOutletRowById"
+				"QMenu",
+				"QMenuBar"
 			],
 			[
-				"Gra",
-				"GraphModel"
+				"Graph",
+				"GraphView"
 			],
 			[
-				"insert",
-				"insertErrorMessage"
+				"class",
+				"classmethod"
 			],
 			[
-				"text",
-				"textCursor"
+				"uni",
+				"unique"
 			],
 			[
-				"compl",
-				"completions"
+				"con",
+				"context"
 			],
 			[
-				"QFo",
-				"QFont"
+				"setS",
+				"setScript"
+			],
+			[
+				"previ",
+				"previewScrollArea"
+			],
+			[
+				"prev",
+				"previewScrollArea"
+			],
+			[
+				"logg",
+				"loggingScrollArea"
+			],
+			[
+				"QScroll",
+				"QScrollArea"
+			],
+			[
+				"scro",
+				"scrollArea"
+			],
+			[
+				"local",
+				"local_vars"
+			],
+			[
+				"natural",
+				"naturaltime"
+			],
+			[
+				"huma",
+				"humanize"
+			],
+			[
+				"setScene",
+				"setSceneRect"
+			],
+			[
+				"bnu",
+				"buttons"
+			],
+			[
+				"setD",
+				"setDragMode"
 			],
 			[
 				"ty",
 				"typing"
 			],
 			[
-				"Sim",
-				"SimplePythonHighlighter"
+				"mov",
+				"move_start"
 			],
 			[
-				"End",
-				"EndOfLine"
+				"data",
+				"dataChanged"
 			],
 			[
-				"wei",
-				"Weight"
+				"sibl",
+				"siblingAtColumn"
 			],
 			[
-				"fr",
-				"fromHsl"
+				"node",
+				"node_index"
 			],
 			[
-				"get",
-				"getHsl"
+				"colum",
+				"siblingAtColumn"
 			],
 			[
-				"hig",
-				"highlightColor"
+				"QMo",
+				"QModelIndex"
 			],
 			[
-				"C",
-				"ColorRole"
+				"R",
+				"RenderHint"
 			],
 			[
-				"c",
-				"color"
+				"Viewpo",
+				"ViewportUpdateMode"
+			],
+			[
+				"setviewpo",
+				"setViewportUpdateMode"
+			],
+			[
+				"setRen",
+				"setRenderHints"
+			],
+			[
+				"Opt",
+				"OptimizationFlag"
+			],
+			[
+				"setOp",
+				"setOptimizationFlags"
+			],
+			[
+				"QGrap",
+				"QGraphicsView"
+			],
+			[
+				"end",
+				"endpoint"
+			],
+			[
+				"Pi",
+				"PinType"
+			],
+			[
+				"graphv",
+				"graphview"
+			],
+			[
+				"ini",
+				"initiateConnection"
+			],
+			[
+				"edge",
+				"edge_item"
+			],
+			[
+				"source",
+				"sourcePin"
+			],
+			[
+				"tar",
+				"targetPin"
+			],
+			[
+				"gra",
+				"graph_model"
+			],
+			[
+				"setTrg",
+				"setTargetPin"
+			],
+			[
+				"update",
+				"updatePosition"
+			],
+			[
+				"Is",
+				"IsValidSource"
+			],
+			[
+				"sib",
+				"siblingAtColumn"
+			],
+			[
+				"upd",
+				"updatePosition"
+			],
+			[
+				"sourc",
+				"source_outlet"
+			],
+			[
+				"grap",
+				"graphics_item"
+			],
+			[
+				"sta",
+				"startpin"
+			],
+			[
+				"is",
+				"isinstance"
+			],
+			[
+				"inter",
+				"interactive_edge_start_pin"
+			],
+			[
+				"id",
+				"index_to_item_map"
+			],
+			[
+				"mapt",
+				"mapToScene"
+			],
+			[
+				"QStyleOption",
+				"QStyleOptionGraphicsItem"
+			],
+			[
+				"po",
+				"potential_edge"
 			],
 			[
 				"mo",
-				"MoveMode"
+				"moveConnection"
 			],
 			[
-				"Mov",
-				"MoveOperation"
+				"pare",
+				"parent_graph"
 			],
 			[
-				"QText",
-				"QTextCursor"
+				"draw",
+				"drawEllipse"
 			],
 			[
-				"split",
-				"splitlines"
+				"set",
+				"setColor"
 			],
 			[
-				"tex",
-				"textwrap"
+				"edg",
+				"edges_selectionmodel"
 			],
 			[
-				"typ",
-				"typing"
+				"nodes",
+				"nodes_selectionmodel"
 			],
 			[
-				"non",
-				"non_empty_lines"
-			],
-			[
-				"comm",
-				"common_indent"
-			],
-			[
-				"pr",
-				"preview_label"
-			],
-			[
-				"rs",
-				"rstrip"
-			],
-			[
-				"enum",
-				"enumerate"
-			],
-			[
-				"Traceb",
-				"TracebackFrameWidget"
-			],
-			[
-				"trace",
-				"traceback"
-			],
-			[
-				"pol",
-				"setSizePolicy"
-			],
-			[
-				"exception",
-				"exception_widget"
-			],
-			[
-				"Except",
-				"ExceptionTracebackWidget"
-			],
-			[
-				"format_",
-				"format_exception"
-			],
-			[
-				"exc",
-				"except"
-			],
-			[
-				"lin",
-				"lineno"
-			],
-			[
-				"err",
-				"error_labels"
-			],
-			[
-				"bloc",
-				"block_text_width"
-			],
-			[
-				"block",
-				"block_text_width"
-			],
-			[
-				"blo",
-				"block_text_width"
-			],
-			[
-				"star",
-				"starting_offset"
-			],
-			[
-				"self",
-				"setFlags"
-			],
-			[
-				"wr",
-				"WrapMode"
-			],
-			[
-				"QK",
-				"QKeyEvent"
-			],
-			[
-				"prop",
-				"proposals"
-			],
-			[
-				"it",
-				"italic"
-			],
-			[
-				"setFont",
-				"setFontWeight"
-			],
-			[
-				"setF",
-				"setForeground"
-			],
-			[
-				"iter",
-				"iterator"
-			],
-			[
-				"rules",
-				"rules_for_scope"
-			],
-			[
-				"con",
-				"context_stack"
+				"selected",
+				"selected_node"
 			],
 			[
 				"s",
-				"strip"
+				"selectionChanged"
+			],
+			[
+				"sel",
+				"ItemSelectedHasChanged"
+			],
+			[
+				"scene",
+				"sceneRect"
+			],
+			[
+				"tr",
+				"triggered"
+			],
+			[
+				"isC",
+				"isChecked"
+			],
+			[
+				"QPale",
+				"QPaletteFromJson"
+			],
+			[
+				"QPal",
+				"QPaletteFromJson"
+			],
+			[
+				"dark",
+				"dark_color_scheme"
+			],
+			[
+				"ligh",
+				"light_color_scheme"
+			],
+			[
+				"QMen",
+				"QMenuBar"
+			],
+			[
+				"QPalete",
+				"QPaletteToJson"
+			],
+			[
+				"QPalette",
+				"QPaletteToJson"
+			],
+			[
+				"json",
+				"json_object"
+			],
+			[
+				"light",
+				"light_color_scheme"
+			],
+			[
+				"cli",
+				"clicked"
+			],
+			[
+				"colo",
+				"color_scheme_toggle"
+			],
+			[
+				"color_rol",
+				"color_role_name"
+			],
+			[
+				"color_",
+				"color_roles"
+			],
+			[
+				"color",
+				"color_groups"
+			],
+			[
+				"color_gr",
+				"color_group_name"
 			]
 		]
 	},
 	"buffers":
 	[
 		{
-			"file": "pylive/livegraph.py",
+			"file": "pylive/QtGraphEditor/graphmodel_rolebased.py",
 			"settings":
 			{
-				"buffer_size": 4996,
+				"buffer_size": 19844,
 				"encoding": "UTF-8",
 				"line_ending": "Windows"
 			},
 			"undo_stack":
 			[
 				[
-					15,
+					4,
 					1,
 					"insert",
 					{
-						"characters": "f"
+						"characters": "Persistent"
 					},
-					"AQAAAOUQAAAAAAAA5hAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAA5RAAAAAAAADlEAAAAAAAAAAAAAAAAPC/"
+					"CgAAACMHAAAAAAAAJAcAAAAAAAAAAAAAJAcAAAAAAAAlBwAAAAAAAAAAAAAlBwAAAAAAACYHAAAAAAAAAAAAACYHAAAAAAAAJwcAAAAAAAAAAAAAJwcAAAAAAAAoBwAAAAAAAAAAAAAoBwAAAAAAACkHAAAAAAAAAAAAACkHAAAAAAAAKgcAAAAAAAAAAAAAKgcAAAAAAAArBwAAAAAAAAAAAAArBwAAAAAAACwHAAAAAAAAAAAAACwHAAAAAAAALQcAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAIwcAAAAAAAAjBwAAAAAAAAAAAAAAAPC/"
 				],
 				[
-					17,
+					14,
 					1,
-					"insert",
-					{
-						"characters": "\\n"
-					},
-					"AgAAAOcQAAAAAAAA6BAAAAAAAAAAAAAA6BAAAAAAAADpEAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAA5xAAAAAAAADnEAAAAAAAAAAAAAAAAPC/"
+					"paste",
+					null,
+					"AgAAAFIHAAAAAAAAZwcAAAAAAAAAAAAAZwcAAAAAAABnBwAAAAAAAAsAAABRTW9kZWxJbmRleA",
+					"AQAAAAAAAAABAAAAUgcAAAAAAABdBwAAAAAAAAAAAAAAAPC/"
 				],
 				[
-					18,
+					19,
 					1,
-					"insert",
-					{
-						"characters": "{}"
-					},
-					"AgAAAOkQAAAAAAAA6hAAAAAAAAAAAAAA6hAAAAAAAADrEAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAA6RAAAAAAAADpEAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					20,
-					1,
-					"insert",
-					{
-						"characters": "#"
-					},
-					"AQAAAOkQAAAAAAAA6hAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAA6RAAAAAAAADpEAAAAAAAAAAAAAAAAPC/"
+					"paste",
+					null,
+					"AgAAAIMHAAAAAAAAmAcAAAAAAAAAAAAAmAcAAAAAAACYBwAAAAAAAAsAAABRTW9kZWxJbmRleA",
+					"AQAAAAAAAAABAAAAgwcAAAAAAACOBwAAAAAAAAAAAAAAAPC/"
 				],
 				[
 					24,
 					1,
-					"insert",
-					{
-						"characters": "\nnode_name"
-					},
-					"DAAAAIgQAAAAAAAAiRAAAAAAAAAAAAAAiRAAAAAAAACLEAAAAAAAAAAAAACLEAAAAAAAAIwQAAAAAAAAAAAAAIwQAAAAAAAAjRAAAAAAAAAAAAAAjRAAAAAAAACOEAAAAAAAAAAAAACOEAAAAAAAAI8QAAAAAAAAAAAAAI8QAAAAAAAAkBAAAAAAAAAAAAAAkBAAAAAAAACREAAAAAAAAAAAAACREAAAAAAAAJIQAAAAAAAAAAAAAJIQAAAAAAAAkxAAAAAAAAAAAAAAkxAAAAAAAACUEAAAAAAAAAAAAACUEAAAAAAAAJUQAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAiBAAAAAAAACIEAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					25,
-					1,
-					"insert",
-					{
-						"characters": " ="
-					},
-					"AgAAAJUQAAAAAAAAlhAAAAAAAAAAAAAAlhAAAAAAAACXEAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAlRAAAAAAAACVEAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					26,
-					1,
-					"insert",
-					{
-						"characters": " "
-					},
-					"AQAAAJcQAAAAAAAAmBAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAlxAAAAAAAACXEAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					32,
-					1,
 					"paste",
 					null,
-					"AQAAAJgQAAAAAAAA1RAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAmBAAAAAAAACYEAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					38,
-					1,
-					"insert",
-					{
-						"characters": "Displ"
-					},
-					"BgAAAMoQAAAAAAAAyxAAAAAAAAAAAAAAyxAAAAAAAADLEAAAAAAAAAgAAABVc2VyUm9sZcsQAAAAAAAAzBAAAAAAAAAAAAAAzBAAAAAAAADNEAAAAAAAAAAAAADNEAAAAAAAAM4QAAAAAAAAAAAAAM4QAAAAAAAAzxAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAyhAAAAAAAADSEAAAAAAAAAAAAAAAAPC/"
+					"AgAAALUHAAAAAAAAygcAAAAAAAAAAAAAygcAAAAAAADKBwAAAAAAAAsAAABRTW9kZWxJbmRleA",
+					"AQAAAAAAAAABAAAAtQcAAAAAAADABwAAAAAAAAAAAAAAAPC/"
 				],
 				[
 					39,
 					1,
+					"insert",
+					{
+						"characters": "Outlet"
+					},
+					"BwAAAE8ZAAAAAAAAUBkAAAAAAAAAAAAAUBkAAAAAAABQGQAAAAAAAAsAAABRTW9kZWxJbmRleFAZAAAAAAAAURkAAAAAAAAAAAAAURkAAAAAAABSGQAAAAAAAAAAAABSGQAAAAAAAFMZAAAAAAAAAAAAAFMZAAAAAAAAVBkAAAAAAAAAAAAAVBkAAAAAAABVGQAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAATxkAAAAAAABaGQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					40,
+					1,
 					"insert_completion",
 					{
 						"completion": "lsp_select_completion {\"index\":1,\"session_name\":\"LSP-pyright\"}",
 						"format": "command",
 						"keep_prefix": false,
 						"must_insert": false,
-						"trigger": "DisplayRole"
+						"trigger": "OutletIndex"
 					},
-					"AgAAAMoQAAAAAAAAyhAAAAAAAAAFAAAARGlzcGzKEAAAAAAAANUQAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAzxAAAAAAAADPEAAAAAAAAAAAAAAAAPC/"
+					"AgAAAE8ZAAAAAAAATxkAAAAAAAAGAAAAT3V0bGV0TxkAAAAAAABaGQAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAVRkAAAAAAABVGQAAAAAAAAAAAAAAAPC/"
 				],
 				[
-					40,
-					2,
-					"right_delete",
-					null,
-					"AgAAANUQAAAAAAAA1RAAAAAAAAABAAAAK9UQAAAAAAAA1RAAAAAAAAABAAAAMQ",
-					"AQAAAAAAAAABAAAA1RAAAAAAAADVEAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					51,
-					1,
-					"paste",
-					null,
-					"AQAAADkRAAAAAAAAQhEAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAOREAAAAAAAA5EQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					54,
+					45,
 					1,
 					"insert",
 					{
-						"characters": " "
+						"characters": "InletI"
 					},
-					"AQAAADgRAAAAAAAAOREAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAOBEAAAAAAAA4EQAAAAAAAAAAAAAAAPC/"
+					"BwAAAGIZAAAAAAAAYxkAAAAAAAAAAAAAYxkAAAAAAABjGQAAAAAAAAsAAABRTW9kZWxJbmRleGMZAAAAAAAAZBkAAAAAAAAAAAAAZBkAAAAAAABlGQAAAAAAAAAAAABlGQAAAAAAAGYZAAAAAAAAAAAAAGYZAAAAAAAAZxkAAAAAAAAAAAAAZxkAAAAAAABoGQAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAYhkAAAAAAABtGQAAAAAAAAAAAAAAAPC/"
 				],
 				[
-					55,
+					46,
 					1,
-					"left_delete",
-					null,
-					"AQAAADgRAAAAAAAAOBEAAAAAAAABAAAAIA",
-					"AQAAAAAAAAABAAAAOREAAAAAAAA5EQAAAAAAAAAAAAAAAPC/"
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-pyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "InletIndex"
+					},
+					"AgAAAGIZAAAAAAAAYhkAAAAAAAAGAAAASW5sZXRJYhkAAAAAAABsGQAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAaBkAAAAAAABoGQAAAAAAAAAAAAAAAPC/"
 				],
 				[
 					56,
 					1,
-					"insert",
-					{
-						"characters": "%%"
-					},
-					"AgAAADgRAAAAAAAAOREAAAAAAAAAAAAAOREAAAAAAAA6EQAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAOBEAAAAAAAA4EQAAAAAAAAAAAAAAAPC/"
+					"reindent",
+					null,
+					"AQAAABoaAAAAAAAAHRoAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAGhoAAAAAAAAaGgAAAAAAAAAAAAAAAPC/"
 				],
 				[
 					57,
+					1,
+					"left_delete",
+					null,
+					"AQAAABwaAAAAAAAAHBoAAAAAAAABAAAACQ",
+					"AQAAAAAAAAABAAAAHRoAAAAAAAAdGgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					58,
+					1,
+					"insert",
+					{
+						"characters": "\ninlet.d"
+					},
+					"CgAAABwaAAAAAAAAHRoAAAAAAAAAAAAAHRoAAAAAAAAfGgAAAAAAAAAAAAAaGgAAAAAAABoaAAAAAAAAAgAAAAkJHRoAAAAAAAAeGgAAAAAAAAAAAAAeGgAAAAAAAB8aAAAAAAAAAAAAAB8aAAAAAAAAIBoAAAAAAAAAAAAAIBoAAAAAAAAhGgAAAAAAAAAAAAAhGgAAAAAAACIaAAAAAAAAAAAAACIaAAAAAAAAIxoAAAAAAAAAAAAAIxoAAAAAAAAkGgAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAHBoAAAAAAAAcGgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					59,
+					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-pyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "data"
+					},
+					"AgAAACMaAAAAAAAAIxoAAAAAAAABAAAAZCMaAAAAAAAAJxoAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAJBoAAAAAAAAkGgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					60,
+					12,
+					"left_delete",
+					null,
+					"DAAAACYaAAAAAAAAJhoAAAAAAAABAAAAYSUaAAAAAAAAJRoAAAAAAAABAAAAdCQaAAAAAAAAJBoAAAAAAAABAAAAYSMaAAAAAAAAIxoAAAAAAAABAAAAZCIaAAAAAAAAIhoAAAAAAAABAAAALiEaAAAAAAAAIRoAAAAAAAABAAAAdCAaAAAAAAAAIBoAAAAAAAABAAAAZR8aAAAAAAAAHxoAAAAAAAABAAAAbB4aAAAAAAAAHhoAAAAAAAABAAAAbh0aAAAAAAAAHRoAAAAAAAABAAAAaRwaAAAAAAAAHBoAAAAAAAABAAAACRsaAAAAAAAAGxoAAAAAAAABAAAACQ",
+					"AQAAAAAAAAABAAAAJxoAAAAAAAAnGgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					61,
+					1,
+					"left_delete",
+					null,
+					"AQAAABoaAAAAAAAAGhoAAAAAAAABAAAACg",
+					"AQAAAAAAAAABAAAAGxoAAAAAAAAbGgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					66,
+					1,
+					"insert",
+					{
+						"characters": "self.inlets"
+					},
+					"CwAAAI8aAAAAAAAAkBoAAAAAAAAAAAAAkBoAAAAAAACRGgAAAAAAAAAAAACRGgAAAAAAAJIaAAAAAAAAAAAAAJIaAAAAAAAAkxoAAAAAAAAAAAAAkxoAAAAAAACUGgAAAAAAAAAAAACUGgAAAAAAAJUaAAAAAAAAAAAAAJUaAAAAAAAAlhoAAAAAAAAAAAAAlhoAAAAAAACXGgAAAAAAAAAAAACXGgAAAAAAAJgaAAAAAAAAAAAAAJgaAAAAAAAAmRoAAAAAAAAAAAAAmRoAAAAAAACaGgAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAjxoAAAAAAACPGgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					67,
+					5,
+					"right_delete",
+					null,
+					"BQAAAJoaAAAAAAAAmhoAAAAAAAABAAAAaZoaAAAAAAAAmhoAAAAAAAABAAAAbpoaAAAAAAAAmhoAAAAAAAABAAAAbJoaAAAAAAAAmhoAAAAAAAABAAAAZZoaAAAAAAAAmhoAAAAAAAABAAAAdA",
+					"AQAAAAAAAAABAAAAmhoAAAAAAACaGgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					69,
+					1,
+					"insert",
+					{
+						"characters": "inlet,"
+					},
+					"BgAAAKAaAAAAAAAAoRoAAAAAAAAAAAAAoRoAAAAAAACiGgAAAAAAAAAAAACiGgAAAAAAAKMaAAAAAAAAAAAAAKMaAAAAAAAApBoAAAAAAAAAAAAApBoAAAAAAAClGgAAAAAAAAAAAAClGgAAAAAAAKYaAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAoBoAAAAAAACgGgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					70,
 					1,
 					"insert",
 					{
 						"characters": " "
 					},
-					"AQAAADoRAAAAAAAAOxEAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAOhEAAAAAAAA6EQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					65,
-					1,
-					"insert",
-					{
-						"characters": "\nself.scr"
-					},
-					"CwAAAIgQAAAAAAAAiRAAAAAAAAAAAAAAiRAAAAAAAACLEAAAAAAAAAAAAACLEAAAAAAAAIwQAAAAAAAAAAAAAIwQAAAAAAAAjRAAAAAAAAAAAAAAjRAAAAAAAACOEAAAAAAAAAAAAACOEAAAAAAAAI8QAAAAAAAAAAAAAI8QAAAAAAAAkBAAAAAAAAAAAAAAkBAAAAAAAACREAAAAAAAAAAAAACREAAAAAAAAJIQAAAAAAAAAAAAAJIQAAAAAAAAkxAAAAAAAAAAAAAAkxAAAAAAAACUEAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAiBAAAAAAAACIEAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					67,
-					1,
-					"insert_completion",
-					{
-						"completion": "lsp_select_completion {\"index\":8,\"session_name\":\"LSP-pyright\"}",
-						"format": "command",
-						"keep_prefix": false,
-						"must_insert": false,
-						"trigger": "scriptgraph"
-					},
-					"AgAAAJEQAAAAAAAAkRAAAAAAAAADAAAAc2NykRAAAAAAAACcEAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAlBAAAAAAAACUEAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					68,
-					1,
-					"insert",
-					{
-						"characters": ".getN"
-					},
-					"BQAAAJwQAAAAAAAAnRAAAAAAAAAAAAAAnRAAAAAAAACeEAAAAAAAAAAAAACeEAAAAAAAAJ8QAAAAAAAAAAAAAJ8QAAAAAAAAoBAAAAAAAAAAAAAAoBAAAAAAAAChEAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAnBAAAAAAAACcEAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					69,
-					1,
-					"insert_completion",
-					{
-						"completion": "lsp_select_completion {\"index\":1,\"session_name\":\"LSP-pyright\"}",
-						"format": "command",
-						"keep_prefix": false,
-						"must_insert": false,
-						"trigger": "getNode"
-					},
-					"AgAAAJ0QAAAAAAAAnRAAAAAAAAAEAAAAZ2V0Tp0QAAAAAAAApBAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAoRAAAAAAAAChEAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					70,
-					1,
-					"insert_snippet",
-					{
-						"contents": "($0)"
-					},
-					"AQAAAKQQAAAAAAAAphAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAApBAAAAAAAACkEAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					72,
-					1,
-					"insert_snippet",
-					{
-						"contents": "[$0]"
-					},
-					"AQAAAKYQAAAAAAAAqBAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAphAAAAAAAACmEAAAAAAAAAAAAAAAAPC/"
+					"AQAAAKYaAAAAAAAApxoAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAphoAAAAAAACmGgAAAAAAAAAAAAAAAPC/"
 				],
 				[
 					75,
 					1,
-					"insert_snippet",
+					"insert",
 					{
-						"contents": "\"$0\""
+						"characters": "inlet"
 					},
-					"AQAAAKcQAAAAAAAAqRAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAApxAAAAAAAACnEAAAAAAAAAAAAAAAAPC/"
+					"BgAAAJQaAAAAAAAAlRoAAAAAAAAAAAAAlRoAAAAAAACVGgAAAAAAAAYAAABpbmxldHOVGgAAAAAAAJYaAAAAAAAAAAAAAJYaAAAAAAAAlxoAAAAAAAAAAAAAlxoAAAAAAACYGgAAAAAAAAAAAACYGgAAAAAAAJkaAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAlBoAAAAAAACaGgAAAAAAAAAAAAAAAPC/"
 				],
 				[
 					76,
 					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":6,\"session_name\":\"LSP-pyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "inletList"
+					},
+					"AgAAAJQaAAAAAAAAlBoAAAAAAAAFAAAAaW5sZXSUGgAAAAAAAJ0aAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAmRoAAAAAAACZGgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					79,
+					1,
 					"insert",
 					{
-						"characters": "name"
+						"characters": "self.outletLis"
 					},
-					"BAAAAKgQAAAAAAAAqRAAAAAAAAAAAAAAqRAAAAAAAACqEAAAAAAAAAAAAACqEAAAAAAAAKsQAAAAAAAAAAAAAKsQAAAAAAAArBAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAqBAAAAAAAACoEAAAAAAAAAAAAAAAAPC/"
+					"DgAAAPUaAAAAAAAA9hoAAAAAAAAAAAAA9hoAAAAAAAD3GgAAAAAAAAAAAAD3GgAAAAAAAPgaAAAAAAAAAAAAAPgaAAAAAAAA+RoAAAAAAAAAAAAA+RoAAAAAAAD6GgAAAAAAAAAAAAD6GgAAAAAAAPsaAAAAAAAAAAAAAPsaAAAAAAAA/BoAAAAAAAAAAAAA/BoAAAAAAAD9GgAAAAAAAAAAAAD9GgAAAAAAAP4aAAAAAAAAAAAAAP4aAAAAAAAA/xoAAAAAAAAAAAAA/xoAAAAAAAAAGwAAAAAAAAAAAAAAGwAAAAAAAAEbAAAAAAAAAAAAAAEbAAAAAAAAAhsAAAAAAAAAAAAAAhsAAAAAAAADGwAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA9RoAAAAAAAD1GgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					80,
+					1,
+					"insert",
+					{
+						"characters": "t"
+					},
+					"AQAAAAMbAAAAAAAABBsAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAAxsAAAAAAAADGwAAAAAAAAAAAAAAAPC/"
 				],
 				[
 					81,
-					1,
-					"cut",
+					6,
+					"right_delete",
 					null,
-					"AQAAALIQAAAAAAAAshAAAAAAAAAJAAAAbm9kZV9uYW1l",
-					"AQAAAAAAAAABAAAAshAAAAAAAAC7EAAAAAAAAAAAAAAAAPC/"
+					"BgAAAAQbAAAAAAAABBsAAAAAAAABAAAAbwQbAAAAAAAABBsAAAAAAAABAAAAdQQbAAAAAAAABBsAAAAAAAABAAAAdAQbAAAAAAAABBsAAAAAAAABAAAAbAQbAAAAAAAABBsAAAAAAAABAAAAZQQbAAAAAAAABBsAAAAAAAABAAAAdA",
+					"AQAAAAAAAAABAAAABBsAAAAAAAAEGwAAAAAAAAAAAAAAAPC/"
 				],
 				[
 					84,
 					1,
-					"paste",
-					null,
-					"AQAAAIwQAAAAAAAAlRAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAjBAAAAAAAACMEAAAAAAAAAAAAAAAAPC/"
+					"insert",
+					{
+						"characters": "outlet,"
+					},
+					"BwAAAAobAAAAAAAACxsAAAAAAAAAAAAACxsAAAAAAAAMGwAAAAAAAAAAAAAMGwAAAAAAAA0bAAAAAAAAAAAAAA0bAAAAAAAADhsAAAAAAAAAAAAADhsAAAAAAAAPGwAAAAAAAAAAAAAPGwAAAAAAABAbAAAAAAAAAAAAABAbAAAAAAAAERsAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAChsAAAAAAAAKGwAAAAAAAAAAAAAAAPC/"
 				],
 				[
 					85,
 					1,
 					"insert",
 					{
-						"characters": " ="
+						"characters": " "
 					},
-					"AgAAAJUQAAAAAAAAlhAAAAAAAAAAAAAAlhAAAAAAAACXEAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAlRAAAAAAAACVEAAAAAAAAAAAAAAAAPC/"
+					"AQAAABEbAAAAAAAAEhsAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAERsAAAAAAAARGwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					111,
+					1,
+					"paste",
+					null,
+					"AgAAAC1JAAAAAAAANkkAAAAAAAAAAAAANkkAAAAAAAA2SQAAAAAAAAsAAABRTW9kZWxJbmRleA",
+					"AQAAAAAAAAABAAAALUkAAAAAAAA4SQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					124,
+					1,
+					"paste",
+					null,
+					"AgAAAEZLAAAAAAAAT0sAAAAAAAAAAAAAT0sAAAAAAABPSwAAAAAAAAsAAABRTW9kZWxJbmRleA",
+					"AQAAAAAAAAABAAAARksAAAAAAABRSwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					172,
+					1,
+					"paste",
+					null,
+					"AgAAADZGAAAAAAAAP0YAAAAAAAAAAAAAP0YAAAAAAAA/RgAAAAAAAAsAAABRTW9kZWxJbmRleA",
+					"AQAAAAAAAAABAAAANkYAAAAAAABBRgAAAAAAAAAAAAAAAPC/"
+				]
+			]
+		},
+		{
+			"file": "pylive/QtGraphEditor/graphmodel_columnbased.py",
+			"settings":
+			{
+				"buffer_size": 15472,
+				"encoding": "UTF-8",
+				"line_ending": "Windows"
+			},
+			"undo_stack":
+			[
+				[
+					26,
+					1,
+					"insert",
+					{
+						"characters": "Inlwe"
+					},
+					"BQAAAGsWAAAAAAAAbBYAAAAAAAAAAAAAbBYAAAAAAABtFgAAAAAAAAAAAABtFgAAAAAAAG4WAAAAAAAAAAAAAG4WAAAAAAAAbxYAAAAAAAAAAAAAbxYAAAAAAABwFgAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAaxYAAAAAAABrFgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					27,
+					2,
+					"left_delete",
+					null,
+					"AgAAAG8WAAAAAAAAbxYAAAAAAAABAAAAZW4WAAAAAAAAbhYAAAAAAAABAAAAdw",
+					"AQAAAAAAAAABAAAAcBYAAAAAAABwFgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					28,
+					1,
+					"insert",
+					{
+						"characters": "etIndex("
+					},
+					"CAAAAG4WAAAAAAAAbxYAAAAAAAAAAAAAbxYAAAAAAABwFgAAAAAAAAAAAABwFgAAAAAAAHEWAAAAAAAAAAAAAHEWAAAAAAAAchYAAAAAAAAAAAAAchYAAAAAAABzFgAAAAAAAAAAAABzFgAAAAAAAHQWAAAAAAAAAAAAAHQWAAAAAAAAdRYAAAAAAAAAAAAAdRYAAAAAAAB2FgAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAbhYAAAAAAABuFgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					32,
+					1,
+					"insert",
+					{
+						"characters": ")"
+					},
+					"AQAAAJsWAAAAAAAAnBYAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAmxYAAAAAAACbFgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					38,
+					1,
+					"insert",
+					{
+						"characters": "EdgeIndex("
+					},
+					"CgAAAGEaAAAAAAAAYhoAAAAAAAAAAAAAYhoAAAAAAABjGgAAAAAAAAAAAABjGgAAAAAAAGQaAAAAAAAAAAAAAGQaAAAAAAAAZRoAAAAAAAAAAAAAZRoAAAAAAABmGgAAAAAAAAAAAABmGgAAAAAAAGcaAAAAAAAAAAAAAGcaAAAAAAAAaBoAAAAAAAAAAAAAaBoAAAAAAABpGgAAAAAAAAAAAABpGgAAAAAAAGoaAAAAAAAAAAAAAGoaAAAAAAAAaxoAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAYRoAAAAAAABhGgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					40,
+					1,
+					"insert",
+					{
+						"characters": ")"
+					},
+					"AQAAAHwaAAAAAAAAfRoAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAfBoAAAAAAAB8GgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					44,
+					1,
+					"insert",
+					{
+						"characters": "EdgeIndex"
+					},
+					"CQAAACcdAAAAAAAAKB0AAAAAAAAAAAAAKB0AAAAAAAApHQAAAAAAAAAAAAApHQAAAAAAACodAAAAAAAAAAAAACodAAAAAAAAKx0AAAAAAAAAAAAAKx0AAAAAAAAsHQAAAAAAAAAAAAAsHQAAAAAAAC0dAAAAAAAAAAAAAC0dAAAAAAAALh0AAAAAAAAAAAAALh0AAAAAAAAvHQAAAAAAAAAAAAAvHQAAAAAAADAdAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAJx0AAAAAAAAnHQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					45,
+					1,
+					"insert",
+					{
+						"characters": "("
+					},
+					"AQAAADAdAAAAAAAAMR0AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAMB0AAAAAAAAwHQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					47,
+					1,
+					"insert",
+					{
+						"characters": ")"
+					},
+					"AQAAAEIdAAAAAAAAQx0AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAQh0AAAAAAABCHQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					60,
+					1,
+					"insert",
+					{
+						"characters": "OutletIndex"
+					},
+					"CwAAAOYXAAAAAAAA5xcAAAAAAAAAAAAA5xcAAAAAAADoFwAAAAAAAAAAAADoFwAAAAAAAOkXAAAAAAAAAAAAAOkXAAAAAAAA6hcAAAAAAAAAAAAA6hcAAAAAAADrFwAAAAAAAAAAAADrFwAAAAAAAOwXAAAAAAAAAAAAAOwXAAAAAAAA7RcAAAAAAAAAAAAA7RcAAAAAAADuFwAAAAAAAAAAAADuFwAAAAAAAO8XAAAAAAAAAAAAAO8XAAAAAAAA8BcAAAAAAAAAAAAA8BcAAAAAAADxFwAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA5hcAAAAAAADmFwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					61,
+					1,
+					"insert",
+					{
+						"characters": "("
+					},
+					"AQAAAPEXAAAAAAAA8hcAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA8RcAAAAAAADxFwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					63,
+					1,
+					"insert",
+					{
+						"characters": ")"
+					},
+					"AQAAABgYAAAAAAAAGRgAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAGBgAAAAAAAAYGAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					68,
+					1,
+					"insert",
+					{
+						"characters": "0"
+					},
+					"AQAAADEUAAAAAAAAMhQAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAMRQAAAAAAAAxFAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					76,
+					1,
+					"left_delete",
+					null,
+					"AQAAADEUAAAAAAAAMRQAAAAAAAABAAAAMA",
+					"AQAAAAAAAAABAAAAMhQAAAAAAAAyFAAAAAAAAAAAAAAAAPC/"
+				]
+			]
+		},
+		{
+			"file": "pylive/QtGraphEditor/graphlistview_rolebased.py",
+			"settings":
+			{
+				"buffer_size": 7959,
+				"encoding": "UTF-8",
+				"line_ending": "Windows"
+			},
+			"undo_stack":
+			[
+				[
+					3,
+					1,
+					"paste",
+					null,
+					"AQAAAAAAAAAAAAAAfyEAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					10,
+					1,
+					"insert",
+					{
+						"characters": "QListV"
+					},
+					"BwAAAOIEAAAAAAAA4wQAAAAAAAAAAAAA4wQAAAAAAADjBAAAAAAAAAoAAABRVGFibGVWaWV34wQAAAAAAADkBAAAAAAAAAAAAADkBAAAAAAAAOUEAAAAAAAAAAAAAOUEAAAAAAAA5gQAAAAAAAAAAAAA5gQAAAAAAADnBAAAAAAAAAAAAADnBAAAAAAAAOgEAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA4gQAAAAAAADsBAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					11,
+					1,
+					"insert",
+					{
+						"characters": "iew"
+					},
+					"AwAAAOgEAAAAAAAA6QQAAAAAAAAAAAAA6QQAAAAAAADqBAAAAAAAAAAAAADqBAAAAAAAAOsEAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA6AQAAAAAAADoBAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					15,
+					1,
+					"left_delete",
+					null,
+					"AgAAAO4EAAAAAAAA7gQAAAAAAACHAAAACQlzZWxmLm5vZGVzX3NoZWV0X3ZpZXcuc2V0U2VsZWN0aW9uQmVoYXZpb3IoUVRhYmxlVmlldy5TZWxlY3Rpb25CZWhhdmlvci5TZWxlY3RSb3dzKQoJCXNlbGYubm9kZXNfc2hlZXRfdmlldy5yZXNpemVDb2x1bW5zVG9Db250ZW50cygp7QQAAAAAAADtBAAAAAAAAAEAAAAK",
+					"AQAAAAAAAAABAAAAdQUAAAAAAADuBAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					18,
+					1,
+					"left_delete",
+					null,
+					"AgAAABcFAAAAAAAAFwUAAAAAAACJAAAACQlzZWxmLmlubGV0c19zaGVldF92aWV3LnNldFNlbGVjdGlvbkJlaGF2aW9yKFFUYWJsZVZpZXcuU2VsZWN0aW9uQmVoYXZpb3IuU2VsZWN0Um93cykKCQlzZWxmLmlubGV0c19zaGVldF92aWV3LnJlc2l6ZUNvbHVtbnNUb0NvbnRlbnRzKCkWBQAAAAAAABYFAAAAAAAAAQAAAAo",
+					"AQAAAAAAAAABAAAAoAUAAAAAAAAXBQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					21,
+					1,
+					"left_delete",
+					null,
+					"AQAAAEAFAAAAAAAAQAUAAAAAAACMAAAACgkJc2VsZi5vdXRsZXRzX3NoZWV0X3ZpZXcuc2V0U2VsZWN0aW9uQmVoYXZpb3IoUVRhYmxlVmlldy5TZWxlY3Rpb25CZWhhdmlvci5TZWxlY3RSb3dzKQoJCXNlbGYub3V0bGV0c19zaGVldF92aWV3LnJlc2l6ZUNvbHVtbnNUb0NvbnRlbnRzKCk",
+					"AQAAAAAAAAABAAAAzAUAAAAAAABABQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					24,
+					1,
+					"left_delete",
+					null,
+					"AQAAAGgFAAAAAAAAaAUAAAAAAACIAAAACgkJc2VsZi5lZGdlc19zaGVldF92aWV3LnNldFNlbGVjdGlvbkJlaGF2aW9yKFFUYWJsZVZpZXcuU2VsZWN0aW9uQmVoYXZpb3IuU2VsZWN0Um93cykKCQlzZWxmLmVkZ2VzX3NoZWV0X3ZpZXcucmVzaXplQ29sdW1uc1RvQ29udGVudHMoKQ",
+					"AQAAAAAAAAABAAAA8AUAAAAAAABoBQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					27,
+					1,
+					"left_delete",
+					null,
+					"AQAAAEAFAAAAAAAAQAUAAAAAAAABAAAACg",
+					"AQAAAAAAAAABAAAAQQUAAAAAAABBBQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					30,
+					1,
+					"left_delete",
+					null,
+					"AQAAABYFAAAAAAAAFgUAAAAAAAABAAAACg",
+					"AQAAAAAAAAABAAAAFwUAAAAAAAAXBQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					33,
+					1,
+					"left_delete",
+					null,
+					"AQAAAO0EAAAAAAAA7QQAAAAAAAABAAAACg",
+					"AQAAAAAAAAABAAAA7gQAAAAAAADuBAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					43,
+					1,
+					"paste",
+					null,
+					"AgAAAAkFAAAAAAAAEgUAAAAAAAAAAAAAEgUAAAAAAAASBQAAAAAAAAoAAABRVGFibGVWaWV3",
+					"AQAAAAAAAAABAAAACQUAAAAAAAATBQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					48,
+					1,
+					"paste",
+					null,
+					"AgAAADEFAAAAAAAAOgUAAAAAAAAAAAAAOgUAAAAAAAA6BQAAAAAAAAoAAABRVGFibGVWaWV3",
+					"AQAAAAAAAAABAAAAMQUAAAAAAAA7BQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					53,
+					1,
+					"paste",
+					null,
+					"AgAAAFcFAAAAAAAAYAUAAAAAAAAAAAAAYAUAAAAAAABgBQAAAAAAAAoAAABRVGFibGVWaWV3",
+					"AQAAAAAAAAABAAAAVwUAAAAAAABhBQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					56,
+					1,
+					"left_delete",
+					null,
+					"AQAAAGIFAAAAAAAAYgUAAAAAAAABAAAACg",
+					"AQAAAAAAAAABAAAAYwUAAAAAAABjBQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					61,
+					1,
+					"insert",
+					{
+						"characters": "List"
+					},
+					"BQAAALgEAAAAAAAAuQQAAAAAAAAAAAAAuQQAAAAAAAC5BAAAAAAAAAUAAABUYWJsZbkEAAAAAAAAugQAAAAAAAAAAAAAugQAAAAAAAC7BAAAAAAAAAAAAAC7BAAAAAAAALwEAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAuAQAAAAAAAC9BAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					75,
+					1,
+					"left_delete",
+					null,
+					"AQAAAHgHAAAAAAAAeAcAAAAAAAABAAAACg",
+					"AQAAAAAAAAABAAAAeQcAAAAAAAB5BwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					112,
+					1,
+					"",
+					null,
+					"CAAAAPkUAAAAAAAADRUAAAAAAAAVAAAAc2VsZi5ub2Rlc19zaGVldF92aWV3CRIAAAAAAAAdEgAAAAAAABUAAABzZWxmLm5vZGVzX3NoZWV0X3ZpZXepEAAAAAAAAL0QAAAAAAAAFQAAAHNlbGYubm9kZXNfc2hlZXRfdmlld2oPAAAAAAAAfg8AAAAAAAAVAAAAc2VsZi5ub2Rlc19zaGVldF92aWV3ZAwAAAAAAAB4DAAAAAAAABUAAABzZWxmLm5vZGVzX3NoZWV0X3ZpZXcgCwAAAAAAADQLAAAAAAAAFQAAAHNlbGYubm9kZXNfc2hlZXRfdmlld6IGAAAAAAAAtgYAAAAAAAAVAAAAc2VsZi5ub2Rlc19zaGVldF92aWV3yQQAAAAAAADdBAAAAAAAABUAAABzZWxmLm5vZGVzX3NoZWV0X3ZpZXc",
+					"AQAAAAAAAAABAAAAogYAAAAAAAC3BgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					115,
+					1,
+					"",
+					null,
+					"BgAAAMUXAAAAAAAA2hcAAAAAAAAWAAAAc2VsZi5pbmxldHNfc2hlZXRfdmlldy4WAAAAAAAAQxYAAAAAAAAWAAAAc2VsZi5pbmxldHNfc2hlZXRfdmlld/AMAAAAAAAABQ0AAAAAAAAWAAAAc2VsZi5pbmxldHNfc2hlZXRfdmlld1kLAAAAAAAAbgsAAAAAAAAWAAAAc2VsZi5pbmxldHNfc2hlZXRfdmlld/cIAAAAAAAADAkAAAAAAAAWAAAAc2VsZi5pbmxldHNfc2hlZXRfdmlld+4EAAAAAAAAAwUAAAAAAAAWAAAAc2VsZi5pbmxldHNfc2hlZXRfdmlldw",
+					"AQAAAAAAAAABAAAABAUAAAAAAADuBAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					118,
+					1,
+					"",
+					null,
+					"BgAAAIAXAAAAAAAAlhcAAAAAAAAXAAAAc2VsZi5vdXRsZXRzX3NoZWV0X3ZpZXc9EwAAAAAAAFMTAAAAAAAAFwAAAHNlbGYub3V0bGV0c19zaGVldF92aWV3gA0AAAAAAACWDQAAAAAAABcAAABzZWxmLm91dGxldHNfc2hlZXRfdmlld5QLAAAAAAAAqgsAAAAAAAAXAAAAc2VsZi5vdXRsZXRzX3NoZWV0X3ZpZXeSCAAAAAAAAKgIAAAAAAAAFwAAAHNlbGYub3V0bGV0c19zaGVldF92aWV3FAUAAAAAAAAqBQAAAAAAABcAAABzZWxmLm91dGxldHNfc2hlZXRfdmlldw",
+					"AQAAAAAAAAABAAAAKwUAAAAAAAAUBQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					121,
+					1,
+					"",
+					null,
+					"BQAAAOYYAAAAAAAA+hgAAAAAAAAVAAAAc2VsZi5lZGdlc19zaGVldF92aWV3Dg4AAAAAAAAiDgAAAAAAABUAAABzZWxmLmVkZ2VzX3NoZWV0X3ZpZXfRCwAAAAAAAOULAAAAAAAAFQAAAHNlbGYuZWRnZXNfc2hlZXRfdmlld7IJAAAAAAAAxgkAAAAAAAAVAAAAc2VsZi5lZGdlc19zaGVldF92aWV3OwUAAAAAAABPBQAAAAAAABUAAABzZWxmLmVkZ2VzX3NoZWV0X3ZpZXc",
+					"AQAAAAAAAAABAAAAUAUAAAAAAAA7BQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					127,
+					1,
+					"insert",
+					{
+						"characters": "list"
+					},
+					"BQAAAEwPAAAAAAAATQ8AAAAAAAAAAAAATQ8AAAAAAABNDwAAAAAAAAUAAAB0YWJsZU0PAAAAAAAATg8AAAAAAAAAAAAATg8AAAAAAABPDwAAAAAAAAAAAABPDwAAAAAAAFAPAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAATA8AAAAAAABRDwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					152,
+					1,
+					"insert",
+					{
+						"characters": "\nself."
+					},
+					"BwAAANUPAAAAAAAA1g8AAAAAAAAAAAAA1g8AAAAAAADZDwAAAAAAAAAAAADZDwAAAAAAANoPAAAAAAAAAAAAANoPAAAAAAAA2w8AAAAAAAAAAAAA2w8AAAAAAADcDwAAAAAAAAAAAADcDwAAAAAAAN0PAAAAAAAAAAAAAN0PAAAAAAAA3g8AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA1Q8AAAAAAADVDwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					156,
+					1,
+					"insert",
+					{
+						"characters": "List"
+					},
+					"BQAAANQDAAAAAAAA1QMAAAAAAAAAAAAA1QMAAAAAAADVAwAAAAAAAAUAAABUYWJsZdUDAAAAAAAA1gMAAAAAAAAAAAAA1gMAAAAAAADXAwAAAAAAAAAAAADXAwAAAAAAANgDAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA1AMAAAAAAADZAwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					167,
+					1,
+					"insert",
+					{
+						"characters": "\nself."
+					},
+					"BwAAAFQPAAAAAAAAVQ8AAAAAAAAAAAAAVQ8AAAAAAABYDwAAAAAAAAAAAABYDwAAAAAAAFkPAAAAAAAAAAAAAFkPAAAAAAAAWg8AAAAAAAAAAAAAWg8AAAAAAABbDwAAAAAAAAAAAABbDwAAAAAAAFwPAAAAAAAAAAAAAFwPAAAAAAAAXQ8AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAVA8AAAAAAABUDwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					168,
+					1,
+					"insert",
+					{
+						"characters": "node_s"
+					},
+					"BgAAAF0PAAAAAAAAXg8AAAAAAAAAAAAAXg8AAAAAAABfDwAAAAAAAAAAAABfDwAAAAAAAGAPAAAAAAAAAAAAAGAPAAAAAAAAYQ8AAAAAAAAAAAAAYQ8AAAAAAABiDwAAAAAAAAAAAABiDwAAAAAAAGMPAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAXQ8AAAAAAABdDwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					169,
+					1,
+					"insert",
+					{
+						"characters": "el"
+					},
+					"AgAAAGMPAAAAAAAAZA8AAAAAAAAAAAAAZA8AAAAAAABlDwAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAYw8AAAAAAABjDwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					170,
+					1,
+					"insert_completion",
+					{
+						"completion": "nodes_selectionmodel",
+						"format": "text",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "nodes_selectionmodel"
+					},
+					"AgAAAF0PAAAAAAAAXQ8AAAAAAAAIAAAAbm9kZV9zZWxdDwAAAAAAAHEPAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAZQ8AAAAAAABlDwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					171,
+					1,
+					"insert",
+					{
+						"characters": ".sel"
+					},
+					"BAAAAHEPAAAAAAAAcg8AAAAAAAAAAAAAcg8AAAAAAABzDwAAAAAAAAAAAABzDwAAAAAAAHQPAAAAAAAAAAAAAHQPAAAAAAAAdQ8AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAcQ8AAAAAAABxDwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					174,
+					2,
+					"left_delete",
+					null,
+					"AgAAAFUPAAAAAAAAVQ8AAAAAAAAgAAAACQkJc2VsZi5ub2Rlc19zZWxlY3Rpb25tb2RlbC5zZWxUDwAAAAAAAFQPAAAAAAAAAQAAAAo",
+					"AQAAAAAAAAABAAAAdQ8AAAAAAABVDwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					179,
+					1,
+					"insert",
+					{
+						"characters": ".sel"
+					},
+					"BAAAAGwPAAAAAAAAbQ8AAAAAAAAAAAAAbQ8AAAAAAABuDwAAAAAAAAAAAABuDwAAAAAAAG8PAAAAAAAAAAAAAG8PAAAAAAAAcA8AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAbA8AAAAAAABsDwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					180,
+					1,
+					"insert",
+					{
+						"characters": "ectio"
+					},
+					"BQAAAHAPAAAAAAAAcQ8AAAAAAAAAAAAAcQ8AAAAAAAByDwAAAAAAAAAAAAByDwAAAAAAAHMPAAAAAAAAAAAAAHMPAAAAAAAAdA8AAAAAAAAAAAAAdA8AAAAAAAB1DwAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAcA8AAAAAAABwDwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					181,
+					1,
+					"insert",
+					{
+						"characters": "nMo"
+					},
+					"AwAAAHUPAAAAAAAAdg8AAAAAAAAAAAAAdg8AAAAAAAB3DwAAAAAAAAAAAAB3DwAAAAAAAHgPAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAdQ8AAAAAAAB1DwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					183,
+					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":2,\"session_name\":\"LSP-pyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "selectionModel"
+					},
+					"AgAAAG0PAAAAAAAAbQ8AAAAAAAALAAAAc2VsZWN0aW9uTW9tDwAAAAAAAHsPAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAeA8AAAAAAAB4DwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					184,
+					1,
+					"insert",
+					{
+						"characters": "()."
+					},
+					"AwAAAHsPAAAAAAAAfA8AAAAAAAAAAAAAfA8AAAAAAAB9DwAAAAAAAAAAAAB9DwAAAAAAAH4PAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAew8AAAAAAAB7DwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					185,
+					1,
+					"insert",
+					{
+						"characters": "sele"
+					},
+					"BAAAAH4PAAAAAAAAfw8AAAAAAAAAAAAAfw8AAAAAAACADwAAAAAAAAAAAACADwAAAAAAAIEPAAAAAAAAAAAAAIEPAAAAAAAAgg8AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAfg8AAAAAAAB+DwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					186,
+					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":10,\"session_name\":\"LSP-pyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "select"
+					},
+					"AgAAAH4PAAAAAAAAfg8AAAAAAAAEAAAAc2VsZX4PAAAAAAAAhA8AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAgg8AAAAAAACCDwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					187,
+					1,
+					"insert",
+					{
+						"characters": "("
+					},
+					"AQAAAIQPAAAAAAAAhQ8AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAhA8AAAAAAACEDwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					188,
+					1,
+					"insert",
+					{
+						"characters": "node)"
+					},
+					"BQAAAIUPAAAAAAAAhg8AAAAAAAAAAAAAhg8AAAAAAACHDwAAAAAAAAAAAACHDwAAAAAAAIgPAAAAAAAAAAAAAIgPAAAAAAAAiQ8AAAAAAAAAAAAAiQ8AAAAAAACKDwAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAhQ8AAAAAAACFDwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					191,
+					1,
+					"left_delete",
+					null,
+					"AQAAAIoPAAAAAAAAig8AAAAAAAAWAAAALnNlbGVjdFJvdyhub2RlLnJvdygpKQ",
+					"AQAAAAAAAAABAAAAig8AAAAAAACgDwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					204,
+					2,
+					"left_delete",
+					null,
+					"AgAAAFUPAAAAAAAAVQ8AAAAAAAA1AAAACQkJc2VsZi5ub2Rlc19saXN0X3ZpZXcuc2VsZWN0aW9uTW9kZWwoKS5zZWxlY3Qobm9kZSlUDwAAAAAAAFQPAAAAAAAAAQAAAAo",
+					"AQAAAAAAAAABAAAAig8AAAAAAABVDwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					209,
+					1,
+					"insert",
+					{
+						"characters": "List"
+					},
+					"BQAAABAcAAAAAAAAERwAAAAAAAAAAAAAERwAAAAAAAARHAAAAAAAAAUAAABUYWJsZREcAAAAAAAAEhwAAAAAAAAAAAAAEhwAAAAAAAATHAAAAAAAAAAAAAATHAAAAAAAABQcAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAFRwAAAAAAAAQHAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					219,
+					1,
+					"paste",
+					null,
+					"AgAAADwdAAAAAAAASR0AAAAAAAAAAAAASR0AAAAAAABJHQAAAAAAAA4AAABHcmFwaFRhYmxlVmlldw",
+					"AQAAAAAAAAABAAAAPB0AAAAAAABKHQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					225,
+					2,
+					"left_delete",
+					null,
+					"AgAAAKcPAAAAAAAApw8AAAAAAAAIAAAACQkJc2VsZi6mDwAAAAAAAKYPAAAAAAAAAQAAAAo",
+					"AQAAAAAAAAABAAAArw8AAAAAAACnDwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					234,
+					1,
+					"insert",
+					{
+						"characters": "role"
+					},
+					"BQAAAGIDAAAAAAAAYwMAAAAAAAAAAAAAYwMAAAAAAABjAwAAAAAAAAsAAABjb2x1bW5iYXNlZGMDAAAAAAAAZAMAAAAAAAAAAAAAZAMAAAAAAABlAwAAAAAAAAAAAABlAwAAAAAAAGYDAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAYgMAAAAAAABtAwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					235,
+					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-pyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "graphmodel_rolebased"
+					},
+					"AgAAAFcDAAAAAAAAVwMAAAAAAAAPAAAAZ3JhcGhtb2RlbF9yb2xlVwMAAAAAAABrAwAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAZgMAAAAAAABmAwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					243,
+					1,
+					"insert",
+					{
+						"characters": "nodeList"
+					},
+					"CQAAAEMLAAAAAAAARAsAAAAAAAAAAAAARAsAAAAAAABECwAAAAAAAAkAAABub2RlVGFibGVECwAAAAAAAEULAAAAAAAAAAAAAEULAAAAAAAARgsAAAAAAAAAAAAARgsAAAAAAABHCwAAAAAAAAAAAABHCwAAAAAAAEgLAAAAAAAAAAAAAEgLAAAAAAAASQsAAAAAAAAAAAAASQsAAAAAAABKCwAAAAAAAAAAAABKCwAAAAAAAEsLAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAQwsAAAAAAABMCwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					247,
+					1,
+					"insert",
+					{
+						"characters": "List"
+					},
+					"BQAAAIMLAAAAAAAAhAsAAAAAAAAAAAAAhAsAAAAAAACECwAAAAAAAAUAAABUYWJsZYQLAAAAAAAAhQsAAAAAAAAAAAAAhQsAAAAAAACGCwAAAAAAAAAAAACGCwAAAAAAAIcLAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAgwsAAAAAAACICwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					251,
+					1,
+					"insert",
+					{
+						"characters": "List"
+					},
+					"BQAAAMELAAAAAAAAwgsAAAAAAAAAAAAAwgsAAAAAAADCCwAAAAAAAAUAAABUYWJsZcILAAAAAAAAwwsAAAAAAAAAAAAAwwsAAAAAAADECwAAAAAAAAAAAADECwAAAAAAAMULAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAwQsAAAAAAADGCwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					255,
+					1,
+					"insert",
+					{
+						"characters": "List"
+					},
+					"BQAAAPsLAAAAAAAA/AsAAAAAAAAAAAAA/AsAAAAAAAD8CwAAAAAAAAUAAABUYWJsZfwLAAAAAAAA/QsAAAAAAAAAAAAA/QsAAAAAAAD+CwAAAAAAAAAAAAD+CwAAAAAAAP8LAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA+wsAAAAAAAAADAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					258,
+					1,
+					"left_delete",
+					null,
+					"AQAAABcPAAAAAAAAFw8AAAAAAAAMAAAALCAiIyBzY3JpcHQi",
+					"AQAAAAAAAAABAAAAIw8AAAAAAAAXDwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					261,
+					1,
+					"insert",
+					{
+						"characters": "List"
+					},
+					"BQAAAAcbAAAAAAAACBsAAAAAAAAAAAAACBsAAAAAAAAIGwAAAAAAAAUAAABUYWJsZQgbAAAAAAAACRsAAAAAAAAAAAAACRsAAAAAAAAKGwAAAAAAAAAAAAAKGwAAAAAAAAsbAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAABxsAAAAAAAAMGwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					267,
+					1,
+					"insert",
+					{
+						"characters": "inletL"
+					},
+					"BwAAAEcbAAAAAAAASBsAAAAAAAAAAAAASBsAAAAAAABIGwAAAAAAAAoAAABpbmxldFRhYmxlSBsAAAAAAABJGwAAAAAAAAAAAABJGwAAAAAAAEobAAAAAAAAAAAAAEobAAAAAAAASxsAAAAAAAAAAAAASxsAAAAAAABMGwAAAAAAAAAAAABMGwAAAAAAAE0bAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAARxsAAAAAAABRGwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					268,
+					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-pyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "inletList"
+					},
+					"AgAAAEcbAAAAAAAARxsAAAAAAAAGAAAAaW5sZXRMRxsAAAAAAABQGwAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAATRsAAAAAAABNGwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					273,
+					1,
+					"insert",
+					{
+						"characters": "outletL"
+					},
+					"CAAAAIwbAAAAAAAAjRsAAAAAAAAAAAAAjRsAAAAAAACNGwAAAAAAAAsAAABvdXRsZXRUYWJsZY0bAAAAAAAAjhsAAAAAAAAAAAAAjhsAAAAAAACPGwAAAAAAAAAAAACPGwAAAAAAAJAbAAAAAAAAAAAAAJAbAAAAAAAAkRsAAAAAAAAAAAAAkRsAAAAAAACSGwAAAAAAAAAAAACSGwAAAAAAAJMbAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAjBsAAAAAAACXGwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					274,
+					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-pyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "outletList"
+					},
+					"AgAAAIwbAAAAAAAAjBsAAAAAAAAHAAAAb3V0bGV0TIwbAAAAAAAAlhsAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAkxsAAAAAAACTGwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					279,
+					1,
+					"insert",
+					{
+						"characters": "edgeList"
+					},
+					"CQAAANIbAAAAAAAA0xsAAAAAAAAAAAAA0xsAAAAAAADTGwAAAAAAAAkAAABlZGdlVGFibGXTGwAAAAAAANQbAAAAAAAAAAAAANQbAAAAAAAA1RsAAAAAAAAAAAAA1RsAAAAAAADWGwAAAAAAAAAAAADWGwAAAAAAANcbAAAAAAAAAAAAANcbAAAAAAAA2BsAAAAAAAAAAAAA2BsAAAAAAADZGwAAAAAAAAAAAADZGwAAAAAAANobAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA0hsAAAAAAADbGwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					281,
+					1,
+					"left_delete",
+					null,
+					"AgAAACIaAAAAAAAAIhoAAAAAAAAMAAAALCAiU2NyaXB0IDIi4hkAAAAAAADiGQAAAAAAAAwAAAAsICJTY3JpcHQgMSI",
+					"AQAAAAAAAAACAAAA4hkAAAAAAADuGQAAAAAAAAAAAAAAAPC/IhoAAAAAAAAuGgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					287,
+					1,
+					"insert",
+					{
+						"characters": "List"
+					},
+					"BQAAAD4EAAAAAAAAPwQAAAAAAAAAAAAAPwQAAAAAAAA/BAAAAAAAAAUAAABUYWJsZT8EAAAAAAAAQAQAAAAAAAAAAAAAQAQAAAAAAABBBAAAAAAAAAAAAABBBAAAAAAAAEIEAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAPgQAAAAAAABDBAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					294,
+					1,
+					"insert",
+					{
+						"characters": "\nwindow.set"
+					},
+					"DAAAADoeAAAAAAAAOx4AAAAAAAAAAAAAOx4AAAAAAAA8HgAAAAAAAAAAAAA8HgAAAAAAAD0eAAAAAAAAAAAAAD0eAAAAAAAAPh4AAAAAAAAAAAAAPh4AAAAAAAA/HgAAAAAAAAAAAAA/HgAAAAAAAEAeAAAAAAAAAAAAAEAeAAAAAAAAQR4AAAAAAAAAAAAAQR4AAAAAAABCHgAAAAAAAAAAAABCHgAAAAAAAEMeAAAAAAAAAAAAAEMeAAAAAAAARB4AAAAAAAAAAAAARB4AAAAAAABFHgAAAAAAAAAAAABFHgAAAAAAAEYeAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAOh4AAAAAAAA6HgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					295,
+					1,
+					"insert",
+					{
+						"characters": "Window"
+					},
+					"BgAAAEYeAAAAAAAARx4AAAAAAAAAAAAARx4AAAAAAABIHgAAAAAAAAAAAABIHgAAAAAAAEkeAAAAAAAAAAAAAEkeAAAAAAAASh4AAAAAAAAAAAAASh4AAAAAAABLHgAAAAAAAAAAAABLHgAAAAAAAEweAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAARh4AAAAAAABGHgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					296,
+					1,
+					"insert",
+					{
+						"characters": "T"
+					},
+					"AQAAAEweAAAAAAAATR4AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAATB4AAAAAAABMHgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					297,
+					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":5,\"session_name\":\"LSP-pyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "setWindowTitle"
+					},
+					"AgAAAEMeAAAAAAAAQx4AAAAAAAAKAAAAc2V0V2luZG93VEMeAAAAAAAAUR4AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAATR4AAAAAAABNHgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					298,
+					1,
+					"insert_snippet",
+					{
+						"contents": "($0)"
+					},
+					"AQAAAFEeAAAAAAAAUx4AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAUR4AAAAAAABRHgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					299,
+					1,
+					"insert_snippet",
+					{
+						"contents": "\"$0\""
+					},
+					"AQAAAFIeAAAAAAAAVB4AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAUh4AAAAAAABSHgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					300,
+					1,
+					"insert",
+					{
+						"characters": "Gr"
+					},
+					"AgAAAFMeAAAAAAAAVB4AAAAAAAAAAAAAVB4AAAAAAABVHgAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAUx4AAAAAAABTHgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					301,
+					1,
+					"insert",
+					{
+						"characters": "aphList"
+					},
+					"BwAAAFUeAAAAAAAAVh4AAAAAAAAAAAAAVh4AAAAAAABXHgAAAAAAAAAAAABXHgAAAAAAAFgeAAAAAAAAAAAAAFgeAAAAAAAAWR4AAAAAAAAAAAAAWR4AAAAAAABaHgAAAAAAAAAAAABaHgAAAAAAAFseAAAAAAAAAAAAAFseAAAAAAAAXB4AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAVR4AAAAAAABVHgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					302,
+					1,
+					"insert",
+					{
+						"characters": "View"
+					},
+					"BAAAAFweAAAAAAAAXR4AAAAAAAAAAAAAXR4AAAAAAABeHgAAAAAAAAAAAABeHgAAAAAAAF8eAAAAAAAAAAAAAF8eAAAAAAAAYB4AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAXB4AAAAAAABcHgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					303,
+					1,
+					"insert",
+					{
+						"characters": " for"
+					},
+					"BAAAAGAeAAAAAAAAYR4AAAAAAAAAAAAAYR4AAAAAAABiHgAAAAAAAAAAAABiHgAAAAAAAGMeAAAAAAAAAAAAAGMeAAAAAAAAZB4AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAYB4AAAAAAABgHgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					304,
+					1,
+					"insert",
+					{
+						"characters": " role"
+					},
+					"BQAAAGQeAAAAAAAAZR4AAAAAAAAAAAAAZR4AAAAAAABmHgAAAAAAAAAAAABmHgAAAAAAAGceAAAAAAAAAAAAAGceAAAAAAAAaB4AAAAAAAAAAAAAaB4AAAAAAABpHgAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAZB4AAAAAAABkHgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					305,
+					1,
+					"insert",
+					{
+						"characters": " based"
+					},
+					"BgAAAGkeAAAAAAAAah4AAAAAAAAAAAAAah4AAAAAAABrHgAAAAAAAAAAAABrHgAAAAAAAGweAAAAAAAAAAAAAGweAAAAAAAAbR4AAAAAAAAAAAAAbR4AAAAAAABuHgAAAAAAAAAAAABuHgAAAAAAAG8eAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAaR4AAAAAAABpHgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					306,
+					1,
+					"insert",
+					{
+						"characters": " graphmodel"
+					},
+					"CwAAAG8eAAAAAAAAcB4AAAAAAAAAAAAAcB4AAAAAAABxHgAAAAAAAAAAAABxHgAAAAAAAHIeAAAAAAAAAAAAAHIeAAAAAAAAcx4AAAAAAAAAAAAAcx4AAAAAAAB0HgAAAAAAAAAAAAB0HgAAAAAAAHUeAAAAAAAAAAAAAHUeAAAAAAAAdh4AAAAAAAAAAAAAdh4AAAAAAAB3HgAAAAAAAAAAAAB3HgAAAAAAAHgeAAAAAAAAAAAAAHgeAAAAAAAAeR4AAAAAAAAAAAAAeR4AAAAAAAB6HgAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAbx4AAAAAAABvHgAAAAAAAAAAAAAAAPC/"
+				]
+			]
+		},
+		{
+			"file": "pylive/QtGraphEditor/GraphDetailsView_columnbased.py",
+			"settings":
+			{
+				"buffer_size": 7498,
+				"encoding": "UTF-8",
+				"line_ending": "Windows"
+			},
+			"undo_stack":
+			[
+				[
+					5,
+					1,
+					"insert",
+					{
+						"characters": "graphmodel_"
+					},
+					"DAAAAD4CAAAAAAAAPwIAAAAAAAAAAAAAPwIAAAAAAAA/AgAAAAAAAAoAAABHcmFwaE1vZGVsPwIAAAAAAABAAgAAAAAAAAAAAABAAgAAAAAAAEECAAAAAAAAAAAAAEECAAAAAAAAQgIAAAAAAAAAAAAAQgIAAAAAAABDAgAAAAAAAAAAAABDAgAAAAAAAEQCAAAAAAAAAAAAAEQCAAAAAAAARQIAAAAAAAAAAAAARQIAAAAAAABGAgAAAAAAAAAAAABGAgAAAAAAAEcCAAAAAAAAAAAAAEcCAAAAAAAASAIAAAAAAAAAAAAASAIAAAAAAABJAgAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAPgIAAAAAAABIAgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					7,
+					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":1,\"session_name\":\"LSP-pyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "graphmodel_columnbased"
+					},
+					"AgAAAD4CAAAAAAAAPgIAAAAAAAALAAAAZ3JhcGhtb2RlbF8+AgAAAAAAAFQCAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAASQIAAAAAAABJAgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					13,
+					1,
+					"insert",
+					{
+						"characters": "node"
+					},
+					"BQAAAFAQAAAAAAAAURAAAAAAAAAAAAAAURAAAAAAAABREAAAAAAAAAUAAABub2Rlc1EQAAAAAAAAUhAAAAAAAAAAAAAAUhAAAAAAAABTEAAAAAAAAAAAAABTEAAAAAAAAFQQAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAUBAAAAAAAABVEAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					14,
+					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":4,\"session_name\":\"LSP-pyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "nodeTable"
+					},
+					"AgAAAFAQAAAAAAAAUBAAAAAAAAAEAAAAbm9kZVAQAAAAAAAAWRAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAVBAAAAAAAABUEAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					19,
+					1,
+					"insert",
+					{
+						"characters": "inletT"
+					},
+					"BwAAAK0RAAAAAAAArhEAAAAAAAAAAAAArhEAAAAAAACuEQAAAAAAAAYAAABpbmxldHOuEQAAAAAAAK8RAAAAAAAAAAAAAK8RAAAAAAAAsBEAAAAAAAAAAAAAsBEAAAAAAACxEQAAAAAAAAAAAACxEQAAAAAAALIRAAAAAAAAAAAAALIRAAAAAAAAsxEAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAArREAAAAAAACzEQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					20,
+					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-pyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "inletTable"
+					},
+					"AgAAAK0RAAAAAAAArREAAAAAAAAGAAAAaW5sZXRUrREAAAAAAAC3EQAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAsxEAAAAAAACzEQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					25,
+					1,
+					"insert",
+					{
+						"characters": "outletT"
+					},
+					"CAAAANESAAAAAAAA0hIAAAAAAAAAAAAA0hIAAAAAAADSEgAAAAAAAAcAAABvdXRsZXRz0hIAAAAAAADTEgAAAAAAAAAAAADTEgAAAAAAANQSAAAAAAAAAAAAANQSAAAAAAAA1RIAAAAAAAAAAAAA1RIAAAAAAADWEgAAAAAAAAAAAADWEgAAAAAAANcSAAAAAAAAAAAAANcSAAAAAAAA2BIAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA0RIAAAAAAADYEgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					26,
+					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-pyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "outletTable"
+					},
+					"AgAAANESAAAAAAAA0RIAAAAAAAAHAAAAb3V0bGV0VNESAAAAAAAA3BIAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA2BIAAAAAAADYEgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					32,
+					1,
+					"insert",
+					{
+						"characters": "nodeT"
+					},
+					"BgAAAIgVAAAAAAAAiRUAAAAAAAAAAAAAiRUAAAAAAACJFQAAAAAAAAUAAABub2Rlc4kVAAAAAAAAihUAAAAAAAAAAAAAihUAAAAAAACLFQAAAAAAAAAAAACLFQAAAAAAAIwVAAAAAAAAAAAAAIwVAAAAAAAAjRUAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAiBUAAAAAAACNFQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					33,
+					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-pyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "nodeTable"
+					},
+					"AgAAAIgVAAAAAAAAiBUAAAAAAAAFAAAAbm9kZVSIFQAAAAAAAJEVAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAjRUAAAAAAACNFQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					39,
+					1,
+					"insert",
+					{
+						"characters": "grapht"
+					},
+					"BwAAACcYAAAAAAAAKBgAAAAAAAAAAAAAKBgAAAAAAAAoGAAAAAAAAA4AAABHcmFwaFRhYmxlVmlldygYAAAAAAAAKRgAAAAAAAAAAAAAKRgAAAAAAAAqGAAAAAAAAAAAAAAqGAAAAAAAACsYAAAAAAAAAAAAACsYAAAAAAAALBgAAAAAAAAAAAAALBgAAAAAAAAtGAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAJxgAAAAAAAA1GAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					40,
+					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":3,\"session_name\":\"LSP-pyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "graphtableview_columnbased"
+					},
+					"AgAAACcYAAAAAAAAJxgAAAAAAAAGAAAAZ3JhcGh0JxgAAAAAAABBGAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAALRgAAAAAAAAtGAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					45,
+					1,
+					"left_delete",
+					null,
+					"AQAAAGEZAAAAAAAAYRkAAAAAAAABAAAAcw",
+					"AQAAAAAAAAABAAAAYhkAAAAAAABiGQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					46,
+					1,
+					"insert",
+					{
+						"characters": "T"
+					},
+					"AQAAAGEZAAAAAAAAYhkAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAYRkAAAAAAABhGQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					47,
+					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-pyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "nodeTable"
+					},
+					"AgAAAF0ZAAAAAAAAXRkAAAAAAAAFAAAAbm9kZVRdGQAAAAAAAGYZAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAYhkAAAAAAABiGQAAAAAAAAAAAAAAAPC/"
+				]
+			]
+		},
+		{
+			"file": "pylive/QtGraphEditor/test_graphmodel_rolebased.py",
+			"settings":
+			{
+				"buffer_size": 5784,
+				"encoding": "UTF-8",
+				"line_ending": "Windows"
+			},
+			"undo_stack":
+			[
+				[
+					5,
+					2,
+					"right_delete",
+					null,
+					"AgAAAJ4BAAAAAAAAngEAAAAAAAAVAAAAUVBlcnNpc3RlbnRNb2RlbEluZGV4ngEAAAAAAACeAQAAAAAAAAEAAAAo",
+					"AQAAAAAAAAABAAAAngEAAAAAAACzAQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					8,
+					1,
+					"left_delete",
+					null,
+					"AQAAAKIBAAAAAAAAogEAAAAAAAABAAAAKQ",
+					"AQAAAAAAAAABAAAAowEAAAAAAACjAQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					13,
+					2,
+					"right_delete",
+					null,
+					"AgAAAIABAAAAAAAAgAEAAAAAAAAVAAAAUVBlcnNpc3RlbnRNb2RlbEluZGV4gAEAAAAAAACAAQAAAAAAAAEAAAAo",
+					"AQAAAAAAAAABAAAAgAEAAAAAAACVAQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					16,
+					1,
+					"left_delete",
+					null,
+					"AQAAAIQBAAAAAAAAhAEAAAAAAAABAAAAKQ",
+					"AQAAAAAAAAABAAAAhQEAAAAAAACFAQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					21,
+					2,
+					"right_delete",
+					null,
+					"AgAAAEACAAAAAAAAQAIAAAAAAAAVAAAAUVBlcnNpc3RlbnRNb2RlbEluZGV4QAIAAAAAAABAAgAAAAAAAAEAAAAo",
+					"AQAAAAAAAAABAAAAQAIAAAAAAABVAgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					24,
+					1,
+					"left_delete",
+					null,
+					"AQAAAEYCAAAAAAAARgIAAAAAAAABAAAAKQ",
+					"AQAAAAAAAAABAAAARwIAAAAAAABHAgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					29,
+					2,
+					"right_delete",
+					null,
+					"AgAAAEkCAAAAAAAASQIAAAAAAAAVAAAAUVBlcnNpc3RlbnRNb2RlbEluZGV4SQIAAAAAAABJAgAAAAAAAAEAAAAo",
+					"AQAAAAAAAAABAAAASQIAAAAAAABeAgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					32,
+					1,
+					"left_delete",
+					null,
+					"AQAAAE8CAAAAAAAATwIAAAAAAAABAAAAKQ",
+					"AQAAAAAAAAABAAAAUAIAAAAAAABQAgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					37,
+					2,
+					"right_delete",
+					null,
+					"AgAAAIMCAAAAAAAAgwIAAAAAAAAVAAAAUVBlcnNpc3RlbnRNb2RlbEluZGV4gwIAAAAAAACDAgAAAAAAAAEAAAAo",
+					"AQAAAAAAAAABAAAAgwIAAAAAAACYAgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					40,
+					1,
+					"left_delete",
+					null,
+					"AQAAAIkCAAAAAAAAiQIAAAAAAAABAAAAKQ",
+					"AQAAAAAAAAABAAAAigIAAAAAAACKAgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					45,
+					2,
+					"right_delete",
+					null,
+					"AgAAAIwCAAAAAAAAjAIAAAAAAAAVAAAAUVBlcnNpc3RlbnRNb2RlbEluZGV4jAIAAAAAAACMAgAAAAAAAAEAAAAo",
+					"AQAAAAAAAAABAAAAjAIAAAAAAAChAgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					48,
+					1,
+					"right_delete",
+					null,
+					"AQAAAJICAAAAAAAAkgIAAAAAAAABAAAAKQ",
+					"AQAAAAAAAAABAAAAkgIAAAAAAACSAgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					53,
+					2,
+					"right_delete",
+					null,
+					"AgAAAE8DAAAAAAAATwMAAAAAAAAVAAAAUVBlcnNpc3RlbnRNb2RlbEluZGV4TwMAAAAAAABPAwAAAAAAAAEAAAAo",
+					"AQAAAAAAAAABAAAATwMAAAAAAABkAwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					56,
+					1,
+					"right_delete",
+					null,
+					"AQAAAFQDAAAAAAAAVAMAAAAAAAABAAAAKQ",
+					"AQAAAAAAAAABAAAAVAMAAAAAAABUAwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					63,
+					2,
+					"right_delete",
+					null,
+					"AgAAAKUDAAAAAAAApQMAAAAAAAAVAAAAUVBlcnNpc3RlbnRNb2RlbEluZGV4pQMAAAAAAAClAwAAAAAAAAEAAAAo",
+					"AQAAAAAAAAABAAAApQMAAAAAAAC6AwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					66,
+					1,
+					"left_delete",
+					null,
+					"AQAAAKoDAAAAAAAAqgMAAAAAAAABAAAAKQ",
+					"AQAAAAAAAAABAAAAqwMAAAAAAACrAwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					71,
+					2,
+					"right_delete",
+					null,
+					"AgAAAFcDAAAAAAAAVwMAAAAAAAAVAAAAUVBlcnNpc3RlbnRNb2RlbEluZGV4VwMAAAAAAABXAwAAAAAAAAEAAAAo",
+					"AQAAAAAAAAABAAAAVwMAAAAAAABsAwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					74,
+					1,
+					"right_delete",
+					null,
+					"AQAAAFwDAAAAAAAAXAMAAAAAAAABAAAAKQ",
+					"AQAAAAAAAAABAAAAXAMAAAAAAABcAwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					79,
+					2,
+					"right_delete",
+					null,
+					"AgAAAJYDAAAAAAAAlgMAAAAAAAAVAAAAUVBlcnNpc3RlbnRNb2RlbEluZGV4lgMAAAAAAACWAwAAAAAAAAEAAAAo",
+					"AQAAAAAAAAABAAAAlgMAAAAAAACrAwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					82,
+					1,
+					"left_delete",
+					null,
+					"AQAAAJsDAAAAAAAAmwMAAAAAAAABAAAAKQ",
+					"AQAAAAAAAAABAAAAnAMAAAAAAACcAwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					91,
+					1,
+					"insert",
+					{
+						"characters": "edge"
+					},
+					"DwAAAMEFAAAAAAAAwgUAAAAAAAAAAAAAwgUAAAAAAADCBQAAAAAAABsAAABRUGVyc2lzdGVudE1vZGVsSW5kZXgoZWRnZSlOBQAAAAAAAE8FAAAAAAAAAAAAAE8FAAAAAAAATwUAAAAAAAAbAAAAUVBlcnNpc3RlbnRNb2RlbEluZGV4KGVkZ2Up5QQAAAAAAADmBAAAAAAAAAAAAADmBAAAAAAAAOYEAAAAAAAAGwAAAFFQZXJzaXN0ZW50TW9kZWxJbmRleChlZGdlKY4FAAAAAAAAjwUAAAAAAAAAAAAANQUAAAAAAAA2BQAAAAAAAAAAAADmBAAAAAAAAOcEAAAAAAAAAAAAAJEFAAAAAAAAkgUAAAAAAAAAAAAANwUAAAAAAAA4BQAAAAAAAAAAAADnBAAAAAAAAOgEAAAAAAAAAAAAAJQFAAAAAAAAlQUAAAAAAAAAAAAAOQUAAAAAAAA6BQAAAAAAAAAAAADoBAAAAAAAAOkEAAAAAAAAAAAAAA",
+					"AQAAAAAAAAADAAAA5QQAAAAAAAAABQAAAAAAAAAAAAAAAPC/TgUAAAAAAABpBQAAAAAAAAAAAAAAAPC/wQUAAAAAAADcBQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					96,
+					1,
+					"left_delete",
+					null,
+					"AwAAAJkFAAAAAAAAmQUAAAAAAAAXAAAAW1FQZXJzaXN0ZW50TW9kZWxJbmRleCg9BQAAAAAAAD0FAAAAAAAAFwAAAFtRUGVyc2lzdGVudE1vZGVsSW5kZXgo6wQAAAAAAADrBAAAAAAAABcAAABbUVBlcnNpc3RlbnRNb2RlbEluZGV4KA",
+					"AQAAAAAAAAADAAAA6wQAAAAAAAACBQAAAAAAAAAAAAAAAPC/PQUAAAAAAABUBQAAAAAAAAAAAAAAAPC/mQUAAAAAAACwBQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					98,
+					1,
+					"left_delete",
+					null,
+					"AwAAAG8FAAAAAAAAbwUAAAAAAAABAAAAKSoFAAAAAAAAKgUAAAAAAAABAAAAKe8EAAAAAAAA7wQAAAAAAAABAAAAKQ",
+					"AQAAAAAAAAADAAAA8AQAAAAAAADwBAAAAAAAAAAAAAAAAPC/KwUAAAAAAAArBQAAAAAAAAAAAAAAAPC/cAUAAAAAAABwBQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					101,
+					1,
+					"insert",
+					{
+						"characters": "ő"
+					},
+					"AwAAAGkFAAAAAAAAagUAAAAAAAAAAAAAJQUAAAAAAAAmBQAAAAAAAAAAAADrBAAAAAAAAOwEAAAAAAAAAAAAAA",
+					"AQAAAAAAAAADAAAA6wQAAAAAAADrBAAAAAAAAAAAAAAAAPC/JQUAAAAAAAAlBQAAAAAAAAAAAAAAAPC/aQUAAAAAAABpBQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					102,
+					1,
+					"left_delete",
+					null,
+					"AwAAAGsFAAAAAAAAawUAAAAAAAACAAAAxZEmBQAAAAAAACYFAAAAAAAAAgAAAMWR6wQAAAAAAADrBAAAAAAAAAIAAADFkQ",
+					"AQAAAAAAAAADAAAA7AQAAAAAAADsBAAAAAAAAAAAAAAAAPC/JwUAAAAAAAAnBQAAAAAAAAAAAAAAAPC/bAUAAAAAAABsBQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					103,
+					1,
+					"insert",
+					{
+						"characters": "["
+					},
+					"AwAAAGkFAAAAAAAAagUAAAAAAAAAAAAAJQUAAAAAAAAmBQAAAAAAAAAAAADrBAAAAAAAAOwEAAAAAAAAAAAAAA",
+					"AQAAAAAAAAADAAAA6wQAAAAAAADrBAAAAAAAAAAAAAAAAPC/JQUAAAAAAAAlBQAAAAAAAAAAAAAAAPC/aQUAAAAAAABpBQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					110,
+					2,
+					"right_delete",
+					null,
+					"AgAAAK8FAAAAAAAArwUAAAAAAAAVAAAAUVBlcnNpc3RlbnRNb2RlbEluZGV4rwUAAAAAAACvBQAAAAAAAAEAAAAo",
+					"AQAAAAAAAAABAAAArwUAAAAAAADEBQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					118,
+					2,
+					"right_delete",
+					null,
+					"AgAAAP4FAAAAAAAA/gUAAAAAAAAVAAAAUVBlcnNpc3RlbnRNb2RlbEluZGV4/gUAAAAAAAD+BQAAAAAAAAEAAAAo",
+					"AQAAAAAAAAABAAAA/gUAAAAAAAATBgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					121,
+					1,
+					"right_delete",
+					null,
+					"AQAAALQFAAAAAAAAtAUAAAAAAAABAAAAKQ",
+					"AQAAAAAAAAABAAAAtAUAAAAAAAC0BQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					124,
+					1,
+					"right_delete",
+					null,
+					"AQAAAAMGAAAAAAAAAwYAAAAAAAABAAAAKQ",
+					"AQAAAAAAAAABAAAAAwYAAAAAAAADBgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					129,
+					2,
+					"right_delete",
+					null,
+					"AgAAALYFAAAAAAAAtgUAAAAAAAAVAAAAUVBlcnNpc3RlbnRNb2RlbEluZGV4tgUAAAAAAAC2BQAAAAAAAAEAAAAo",
+					"AQAAAAAAAAABAAAAtgUAAAAAAADLBQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					133,
+					1,
+					"left_delete",
+					null,
+					"AQAAANIFAAAAAAAA0gUAAAAAAAABAAAAKQ",
+					"AQAAAAAAAAABAAAA0wUAAAAAAADTBQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					138,
+					3,
+					"right_delete",
+					null,
+					"AwAAAO4FAAAAAAAA7gUAAAAAAAAVAAAAUVBlcnNpc3RlbnRNb2RlbEluZGV47gUAAAAAAADuBQAAAAAAAAEAAAAo7gUAAAAAAADuBQAAAAAAAAEAAAAg",
+					"AQAAAAAAAAABAAAA7gUAAAAAAAADBgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					141,
+					1,
+					"left_delete",
+					null,
+					"AQAAAAkGAAAAAAAACQYAAAAAAAABAAAAKQ",
+					"AQAAAAAAAAABAAAACgYAAAAAAAAKBgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					163,
+					1,
+					"insert",
+					{
+						"characters": "\n"
+					},
+					"AQAAAOcAAAAAAAAA6AAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA5wAAAAAAAADnAAAAAAAAAAAAAAAAAPC/"
+				]
+			]
+		},
+		{
+			"file": "pylive/QtGraphEditor/graphview_rolebased.py",
+			"settings":
+			{
+				"buffer_size": 40518,
+				"encoding": "UTF-8",
+				"line_ending": "Windows"
+			},
+			"undo_stack":
+			[
+				[
+					3,
+					1,
+					"paste",
+					null,
+					"AQAAAAAAAAAAAAAA7qEAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					9,
+					1,
+					"insert",
+					{
+						"characters": "gr"
+					},
+					"AwAAAO4AAAAAAAAA7wAAAAAAAAAAAAAA7wAAAAAAAADvAAAAAAAAAAoAAABHcmFwaE1vZGVs7wAAAAAAAADwAAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA7gAAAAAAAAD4AAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					12,
+					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":5,\"session_name\":\"LSP-pyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "graphmodel_rolebased"
+					},
+					"AgAAAO4AAAAAAAAA7gAAAAAAAAACAAAAZ3LuAAAAAAAAAAIBAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA8AAAAAAAAADwAAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					18,
+					1,
+					"insert",
+					{
+						"characters": ".Focu"
+					},
+					"BQAAAL8OAAAAAAAAwA4AAAAAAAAAAAAAwA4AAAAAAADBDgAAAAAAAAAAAADBDgAAAAAAAMIOAAAAAAAAAAAAAMIOAAAAAAAAww4AAAAAAAAAAAAAww4AAAAAAADEDgAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAvw4AAAAAAAC/DgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					19,
+					4,
+					"left_delete",
+					null,
+					"BAAAAMMOAAAAAAAAww4AAAAAAAABAAAAdcIOAAAAAAAAwg4AAAAAAAABAAAAY8EOAAAAAAAAwQ4AAAAAAAABAAAAb8AOAAAAAAAAwA4AAAAAAAABAAAARg",
+					"AQAAAAAAAAABAAAAxA4AAAAAAADEDgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					20,
+					1,
+					"insert",
+					{
+						"characters": "Item"
+					},
+					"BAAAAMAOAAAAAAAAwQ4AAAAAAAAAAAAAwQ4AAAAAAADCDgAAAAAAAAAAAADCDgAAAAAAAMMOAAAAAAAAAAAAAMMOAAAAAAAAxA4AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAwA4AAAAAAADADgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					21,
+					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":1,\"session_name\":\"LSP-pyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "GraphicsItemFlag"
+					},
+					"AgAAAMAOAAAAAAAAwA4AAAAAAAAEAAAASXRlbcAOAAAAAAAA0A4AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAxA4AAAAAAADEDgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					27,
+					1,
+					"insert",
+					{
+						"characters": ".TextIn"
+					},
+					"BwAAABkPAAAAAAAAGg8AAAAAAAAAAAAAGg8AAAAAAAAbDwAAAAAAAAAAAAAbDwAAAAAAABwPAAAAAAAAAAAAABwPAAAAAAAAHQ8AAAAAAAAAAAAAHQ8AAAAAAAAeDwAAAAAAAAAAAAAeDwAAAAAAAB8PAAAAAAAAAAAAAB8PAAAAAAAAIA8AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAGQ8AAAAAAAAZDwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					28,
+					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-pyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "TextInteractionFlag"
+					},
+					"AgAAABoPAAAAAAAAGg8AAAAAAAAGAAAAVGV4dEluGg8AAAAAAAAtDwAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAIA8AAAAAAAAgDwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					33,
+					1,
+					"insert",
+					{
+						"characters": ".Alig"
+					},
+					"BQAAAPgPAAAAAAAA+Q8AAAAAAAAAAAAA+Q8AAAAAAAD6DwAAAAAAAAAAAAD6DwAAAAAAAPsPAAAAAAAAAAAAAPsPAAAAAAAA/A8AAAAAAAAAAAAA/A8AAAAAAAD9DwAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA+A8AAAAAAAD4DwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					34,
+					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-pyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "AlignmentFlag"
+					},
+					"AgAAAPkPAAAAAAAA+Q8AAAAAAAAEAAAAQWxpZ/kPAAAAAAAABhAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA/Q8AAAAAAAD9DwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					46,
+					1,
+					"insert",
+					{
+						"characters": "."
+					},
+					"AQAAAIURAAAAAAAAhhEAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAhREAAAAAAACFEQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					47,
+					1,
+					"paste",
+					null,
+					"AQAAAIYRAAAAAAAAmREAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAhhEAAAAAAACGEQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					54,
+					1,
+					"insert",
+					{
+						"characters": ".Fou"
+					},
+					"BAAAAMMRAAAAAAAAxBEAAAAAAAAAAAAAxBEAAAAAAADFEQAAAAAAAAAAAADFEQAAAAAAAMYRAAAAAAAAAAAAAMYRAAAAAAAAxxEAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAwxEAAAAAAADDEQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					56,
+					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":1,\"session_name\":\"LSP-pyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "FocusReason"
+					},
+					"AgAAAMQRAAAAAAAAxBEAAAAAAAADAAAARm91xBEAAAAAAADPEQAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAxxEAAAAAAADHEQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					71,
+					1,
+					"insert",
+					{
+						"characters": "."
+					},
+					"AQAAACoTAAAAAAAAKxMAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAKhMAAAAAAAAqEwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					72,
+					1,
+					"paste",
+					null,
+					"AQAAACsTAAAAAAAAPhMAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAKxMAAAAAAAArEwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					85,
+					1,
+					"insert",
+					{
+						"characters": ".Gra"
+					},
+					"BAAAAAwSAAAAAAAADRIAAAAAAAAAAAAADRIAAAAAAAAOEgAAAAAAAAAAAAAOEgAAAAAAAA8SAAAAAAAAAAAAAA8SAAAAAAAAEBIAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAADBIAAAAAAAAMEgAAAAAAAAAAAAAAAPC/"
 				],
 				[
 					86,
 					1,
 					"insert",
 					{
-						"characters": " "
+						"characters": "p"
 					},
-					"AQAAAJcQAAAAAAAAmBAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAlxAAAAAAAACXEAAAAAAAAAAAAAAAAPC/"
+					"AQAAABASAAAAAAAAERIAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAEBIAAAAAAAAQEgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					87,
+					4,
+					"left_delete",
+					null,
+					"BAAAABASAAAAAAAAEBIAAAAAAAABAAAAcA8SAAAAAAAADxIAAAAAAAABAAAAYQ4SAAAAAAAADhIAAAAAAAABAAAAcg0SAAAAAAAADRIAAAAAAAABAAAARw",
+					"AQAAAAAAAAABAAAAERIAAAAAAAAREgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					88,
+					1,
+					"insert",
+					{
+						"characters": "event"
+					},
+					"BQAAAA0SAAAAAAAADhIAAAAAAAAAAAAADhIAAAAAAAAPEgAAAAAAAAAAAAAPEgAAAAAAABASAAAAAAAAAAAAABASAAAAAAAAERIAAAAAAAAAAAAAERIAAAAAAAASEgAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAADRIAAAAAAAANEgAAAAAAAAAAAAAAAPC/"
 				],
 				[
 					89,
+					6,
+					"left_delete",
+					null,
+					"BgAAABESAAAAAAAAERIAAAAAAAABAAAAdBASAAAAAAAAEBIAAAAAAAABAAAAbg8SAAAAAAAADxIAAAAAAAABAAAAZQ4SAAAAAAAADhIAAAAAAAABAAAAdg0SAAAAAAAADRIAAAAAAAABAAAAZQwSAAAAAAAADBIAAAAAAAABAAAALg",
+					"AQAAAAAAAAABAAAAEhIAAAAAAAASEgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					98,
+					1,
+					"insert",
+					{
+						"characters": "QGraphicsSc"
+					},
+					"DAAAAEIXAAAAAAAAQxcAAAAAAAAAAAAAQxcAAAAAAABDFwAAAAAAAAsAAABRTW91c2VFdmVudEMXAAAAAAAARBcAAAAAAAAAAAAARBcAAAAAAABFFwAAAAAAAAAAAABFFwAAAAAAAEYXAAAAAAAAAAAAAEYXAAAAAAAARxcAAAAAAAAAAAAARxcAAAAAAABIFwAAAAAAAAAAAABIFwAAAAAAAEkXAAAAAAAAAAAAAEkXAAAAAAAAShcAAAAAAAAAAAAAShcAAAAAAABLFwAAAAAAAAAAAABLFwAAAAAAAEwXAAAAAAAAAAAAAEwXAAAAAAAATRcAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAQhcAAAAAAABNFwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					99,
+					1,
+					"insert",
+					{
+						"characters": "eneMou"
+					},
+					"BgAAAE0XAAAAAAAAThcAAAAAAAAAAAAAThcAAAAAAABPFwAAAAAAAAAAAABPFwAAAAAAAFAXAAAAAAAAAAAAAFAXAAAAAAAAURcAAAAAAAAAAAAAURcAAAAAAABSFwAAAAAAAAAAAABSFwAAAAAAAFMXAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAATRcAAAAAAABNFwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					100,
+					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-pyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "QGraphicsSceneMouseEvent"
+					},
+					"AgAAAEIXAAAAAAAAQhcAAAAAAAARAAAAUUdyYXBoaWNzU2NlbmVNb3VCFwAAAAAAAFoXAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAUxcAAAAAAABTFwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					106,
+					1,
+					"insert",
+					{
+						"characters": "\ngraph.se"
+					},
+					"CgAAAGMtAAAAAAAAZC0AAAAAAAAAAAAAZC0AAAAAAABnLQAAAAAAAAAAAABnLQAAAAAAAGgtAAAAAAAAAAAAAGgtAAAAAAAAaS0AAAAAAAAAAAAAaS0AAAAAAABqLQAAAAAAAAAAAABqLQAAAAAAAGstAAAAAAAAAAAAAGstAAAAAAAAbC0AAAAAAAAAAAAAbC0AAAAAAABtLQAAAAAAAAAAAABtLQAAAAAAAG4tAAAAAAAAAAAAAG4tAAAAAAAAby0AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAYy0AAAAAAABjLQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					107,
+					1,
+					"insert",
+					{
+						"characters": "tNode"
+					},
+					"BQAAAG8tAAAAAAAAcC0AAAAAAAAAAAAAcC0AAAAAAABxLQAAAAAAAAAAAABxLQAAAAAAAHItAAAAAAAAAAAAAHItAAAAAAAAcy0AAAAAAAAAAAAAcy0AAAAAAAB0LQAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAby0AAAAAAABvLQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					108,
+					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-pyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "setNodeData"
+					},
+					"AgAAAG0tAAAAAAAAbS0AAAAAAAAHAAAAc2V0Tm9kZW0tAAAAAAAAeC0AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAdC0AAAAAAAB0LQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					109,
+					1,
+					"insert_snippet",
+					{
+						"contents": "($0)"
+					},
+					"AQAAAHgtAAAAAAAAei0AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAeC0AAAAAAAB4LQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					110,
+					1,
+					"insert",
+					{
+						"characters": "node_in"
+					},
+					"BwAAAHktAAAAAAAAei0AAAAAAAAAAAAAei0AAAAAAAB7LQAAAAAAAAAAAAB7LQAAAAAAAHwtAAAAAAAAAAAAAHwtAAAAAAAAfS0AAAAAAAAAAAAAfS0AAAAAAAB+LQAAAAAAAAAAAAB+LQAAAAAAAH8tAAAAAAAAAAAAAH8tAAAAAAAAgC0AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAeS0AAAAAAAB5LQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					111,
+					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-pyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "node_index"
+					},
+					"AgAAAHktAAAAAAAAeS0AAAAAAAAHAAAAbm9kZV9pbnktAAAAAAAAgy0AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAgC0AAAAAAACALQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					112,
+					1,
+					"insert",
+					{
+						"characters": ","
+					},
+					"AQAAAIMtAAAAAAAAhC0AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAgy0AAAAAAACDLQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					113,
+					1,
+					"insert",
+					{
+						"characters": " new_"
+					},
+					"BQAAAIQtAAAAAAAAhS0AAAAAAAAAAAAAhS0AAAAAAACGLQAAAAAAAAAAAACGLQAAAAAAAIctAAAAAAAAAAAAAIctAAAAAAAAiC0AAAAAAAAAAAAAiC0AAAAAAACJLQAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAhC0AAAAAAACELQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					114,
+					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-pyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "new_name"
+					},
+					"AgAAAIUtAAAAAAAAhS0AAAAAAAAEAAAAbmV3X4UtAAAAAAAAjS0AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAiS0AAAAAAACJLQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					115,
+					1,
+					"insert",
+					{
+						"characters": ","
+					},
+					"AQAAAI0tAAAAAAAAji0AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAjS0AAAAAAACNLQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					116,
+					1,
+					"insert",
+					{
+						"characters": " NodeR"
+					},
+					"BgAAAI4tAAAAAAAAjy0AAAAAAAAAAAAAjy0AAAAAAACQLQAAAAAAAAAAAACQLQAAAAAAAJEtAAAAAAAAAAAAAJEtAAAAAAAAki0AAAAAAAAAAAAAki0AAAAAAACTLQAAAAAAAAAAAACTLQAAAAAAAJQtAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAji0AAAAAAACOLQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					117,
+					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":24,\"session_name\":\"LSP-pyright\"}",
+						"format": "command",
+						"keep_prefix": true,
+						"must_insert": false,
+						"query_change_id":
+						[
+							69,
+							116,
+							6
+						],
+						"trigger": "NodeDataRole"
+					},
+					"AwAAAI8tAAAAAAAAjy0AAAAAAAAFAAAATm9kZVKPLQAAAAAAAJstAAAAAAAAAAAAABQBAAAAAAAAIgEAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAlC0AAAAAAACULQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					118,
+					1,
+					"insert",
+					{
+						"characters": ".Name"
+					},
+					"BQAAAKktAAAAAAAAqi0AAAAAAAAAAAAAqi0AAAAAAACrLQAAAAAAAAAAAACrLQAAAAAAAKwtAAAAAAAAAAAAAKwtAAAAAAAArS0AAAAAAAAAAAAArS0AAAAAAACuLQAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAqS0AAAAAAACpLQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					119,
+					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-pyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "NameRole"
+					},
+					"AgAAAKotAAAAAAAAqi0AAAAAAAAEAAAATmFtZaotAAAAAAAAsi0AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAri0AAAAAAACuLQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					124,
+					2,
+					"left_delete",
+					null,
+					"AgAAALQtAAAAAAAAtC0AAAAAAAAwAAAACQkJZ3JhcGguc2V0Tm9kZShub2RlX2luZGV4LCB7Im5hbWUiOiBuZXdfbmFtZX0psy0AAAAAAACzLQAAAAAAAAEAAAAK",
+					"AQAAAAAAAAABAAAA5C0AAAAAAAC0LQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					150,
 					1,
 					"left_delete",
 					null,
-					"AQAAALoQAAAAAAAAuhAAAAAAAABFAAAACgkJCSA9IHNlbGYuc2NyaXB0Z3JhcGgubm9kZXMuZGF0YShub2RlLCBRdC5JdGVtRGF0YVJvbGUuRGlzcGxheVJvbGUp",
-					"AQAAAAAAAAABAAAA/xAAAAAAAAC6EAAAAAAAAAAAAAAAAPC/"
+					"AQAAAPM6AAAAAAAA8zoAAAAAAAASAAAAZ3JhcGguZWRnZXMuaW5kZXgo",
+					"AQAAAAAAAAABAAAABTsAAAAAAADzOgAAAAAAAAAAAAAAAPC/"
 				],
 				[
-					94,
+					153,
+					1,
+					"left_delete",
+					null,
+					"AQAAAA07AAAAAAAADTsAAAAAAAAKAAAALnJvdygpLCAwKQ",
+					"AQAAAAAAAAABAAAAFzsAAAAAAAANOwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					156,
+					1,
+					"insert",
+					{
+						"characters": "\nassert"
+					},
+					"CAAAAA07AAAAAAAADjsAAAAAAAAAAAAADjsAAAAAAAATOwAAAAAAAAAAAAATOwAAAAAAABQ7AAAAAAAAAAAAABQ7AAAAAAAAFTsAAAAAAAAAAAAAFTsAAAAAAAAWOwAAAAAAAAAAAAAWOwAAAAAAABc7AAAAAAAAAAAAABc7AAAAAAAAGDsAAAAAAAAAAAAAGDsAAAAAAAAZOwAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAADTsAAAAAAAANOwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					157,
+					1,
+					"insert",
+					{
+						"characters": " e"
+					},
+					"AgAAABk7AAAAAAAAGjsAAAAAAAAAAAAAGjsAAAAAAAAbOwAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAGTsAAAAAAAAZOwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					158,
+					1,
+					"left_delete",
+					null,
+					"AQAAABo7AAAAAAAAGjsAAAAAAAABAAAAZQ",
+					"AQAAAAAAAAABAAAAGzsAAAAAAAAbOwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					159,
+					1,
+					"insert",
+					{
+						"characters": "isin"
+					},
+					"BAAAABo7AAAAAAAAGzsAAAAAAAAAAAAAGzsAAAAAAAAcOwAAAAAAAAAAAAAcOwAAAAAAAB07AAAAAAAAAAAAAB07AAAAAAAAHjsAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAGjsAAAAAAAAaOwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					160,
+					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":40,\"session_name\":\"LSP-pyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "isinstance"
+					},
+					"AgAAABo7AAAAAAAAGjsAAAAAAAAEAAAAaXNpbho7AAAAAAAAJDsAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAHjsAAAAAAAAeOwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					161,
+					1,
+					"insert_snippet",
+					{
+						"contents": "($0)"
+					},
+					"AQAAACQ7AAAAAAAAJjsAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAJDsAAAAAAAAkOwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					162,
+					1,
+					"insert",
+					{
+						"characters": "edge"
+					},
+					"BAAAACU7AAAAAAAAJjsAAAAAAAAAAAAAJjsAAAAAAAAnOwAAAAAAAAAAAAAnOwAAAAAAACg7AAAAAAAAAAAAACg7AAAAAAAAKTsAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAJTsAAAAAAAAlOwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					163,
+					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":24,\"session_name\":\"LSP-pyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "edge_index"
+					},
+					"AgAAACU7AAAAAAAAJTsAAAAAAAAEAAAAZWRnZSU7AAAAAAAALzsAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAKTsAAAAAAAApOwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					164,
+					1,
+					"insert",
+					{
+						"characters": ","
+					},
+					"AQAAAC87AAAAAAAAMDsAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAALzsAAAAAAAAvOwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					165,
+					1,
+					"insert",
+					{
+						"characters": " Edge"
+					},
+					"BQAAADA7AAAAAAAAMTsAAAAAAAAAAAAAMTsAAAAAAAAyOwAAAAAAAAAAAAAyOwAAAAAAADM7AAAAAAAAAAAAADM7AAAAAAAANDsAAAAAAAAAAAAANDsAAAAAAAA1OwAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAMDsAAAAAAAAwOwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					166,
+					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":1,\"session_name\":\"LSP-pyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "EdgeIndex"
+					},
+					"AgAAADE7AAAAAAAAMTsAAAAAAAAEAAAARWRnZTE7AAAAAAAAOjsAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAANTsAAAAAAAA1OwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					177,
+					1,
+					"left_delete",
+					null,
+					"AQAAAFFHAAAAAAAAUUcAAAAAAAAdAAAAc2VsZi5ncmFwaF9tb2RlbC5ub2Rlcy5pbmRleCg",
+					"AQAAAAAAAAABAAAAbkcAAAAAAABRRwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					180,
+					1,
+					"left_delete",
+					null,
+					"AQAAAGtHAAAAAAAAa0cAAAAAAAAsAAAALnJvdygpLCBpdGVtLnBlcnNpc3RlbnRfbm9kZV9pbmRleC5jb2x1bW4oKSk",
+					"AQAAAAAAAAABAAAAl0cAAAAAAABrRwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					192,
+					1,
+					"insert",
+					{
+						"characters": "\nassert"
+					},
+					"CAAAAGtHAAAAAAAAbEcAAAAAAAAAAAAAbEcAAAAAAAByRwAAAAAAAAAAAAByRwAAAAAAAHNHAAAAAAAAAAAAAHNHAAAAAAAAdEcAAAAAAAAAAAAAdEcAAAAAAAB1RwAAAAAAAAAAAAB1RwAAAAAAAHZHAAAAAAAAAAAAAHZHAAAAAAAAd0cAAAAAAAAAAAAAd0cAAAAAAAB4RwAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAa0cAAAAAAABrRwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					193,
+					1,
+					"insert",
+					{
+						"characters": " isin"
+					},
+					"BQAAAHhHAAAAAAAAeUcAAAAAAAAAAAAAeUcAAAAAAAB6RwAAAAAAAAAAAAB6RwAAAAAAAHtHAAAAAAAAAAAAAHtHAAAAAAAAfEcAAAAAAAAAAAAAfEcAAAAAAAB9RwAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAeEcAAAAAAAB4RwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					194,
+					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-pyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "isinstance"
+					},
+					"AgAAAHlHAAAAAAAAeUcAAAAAAAAEAAAAaXNpbnlHAAAAAAAAg0cAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAfUcAAAAAAAB9RwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					195,
+					1,
+					"insert_snippet",
+					{
+						"contents": "($0)"
+					},
+					"AQAAAINHAAAAAAAAhUcAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAg0cAAAAAAACDRwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					196,
+					1,
+					"insert",
+					{
+						"characters": "node,"
+					},
+					"BQAAAIRHAAAAAAAAhUcAAAAAAAAAAAAAhUcAAAAAAACGRwAAAAAAAAAAAACGRwAAAAAAAIdHAAAAAAAAAAAAAIdHAAAAAAAAiEcAAAAAAAAAAAAAiEcAAAAAAACJRwAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAhEcAAAAAAACERwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					197,
+					1,
+					"insert",
+					{
+						"characters": " NodeIn"
+					},
+					"BwAAAIlHAAAAAAAAikcAAAAAAAAAAAAAikcAAAAAAACLRwAAAAAAAAAAAACLRwAAAAAAAIxHAAAAAAAAAAAAAIxHAAAAAAAAjUcAAAAAAAAAAAAAjUcAAAAAAACORwAAAAAAAAAAAACORwAAAAAAAI9HAAAAAAAAAAAAAI9HAAAAAAAAkEcAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAiUcAAAAAAACJRwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					198,
+					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-pyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "NodeIndex"
+					},
+					"AgAAAIpHAAAAAAAAikcAAAAAAAAGAAAATm9kZUluikcAAAAAAACTRwAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAkEcAAAAAAACQRwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					204,
+					1,
+					"insert",
+					{
+						"characters": "\n"
+					},
+					"AgAAAH5IAAAAAAAAf0gAAAAAAAAAAAAAf0gAAAAAAACFSAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAfkgAAAAAAAB+SAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					205,
+					1,
+					"paste",
+					null,
+					"AQAAAIVIAAAAAAAAp0gAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAhUgAAAAAAACFSAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					210,
+					1,
+					"insert",
+					{
+						"characters": "EdgeIn"
+					},
+					"BwAAAJ1IAAAAAAAAnkgAAAAAAAAAAAAAnkgAAAAAAACeSAAAAAAAAAkAAABOb2RlSW5kZXieSAAAAAAAAJ9IAAAAAAAAAAAAAJ9IAAAAAAAAoEgAAAAAAAAAAAAAoEgAAAAAAAChSAAAAAAAAAAAAAChSAAAAAAAAKJIAAAAAAAAAAAAAKJIAAAAAAAAo0gAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAnUgAAAAAAACmSAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					211,
+					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-pyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "EdgeIndex"
+					},
+					"AgAAAJ1IAAAAAAAAnUgAAAAAAAAGAAAARWRnZUlunUgAAAAAAACmSAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAo0gAAAAAAACjSAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					221,
+					1,
+					"paste",
+					null,
+					"AgAAAJdIAAAAAAAAm0gAAAAAAAAAAAAAm0gAAAAAAACbSAAAAAAAAAQAAABub2Rl",
+					"AQAAAAAAAAABAAAAl0gAAAAAAACbSAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					224,
+					1,
+					"left_delete",
+					null,
+					"AQAAABtIAAAAAAAAG0gAAAAAAAAdAAAAc2VsZi5ncmFwaF9tb2RlbC5ub2Rlcy5pbmRleCg",
+					"AQAAAAAAAAABAAAAOEgAAAAAAAAbSAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					227,
+					1,
+					"left_delete",
+					null,
+					"AQAAADVIAAAAAAAANUgAAAAAAAAsAAAALnJvdygpLCBpdGVtLnBlcnNpc3RlbnRfZWRnZV9pbmRleC5jb2x1bW4oKSk",
+					"AQAAAAAAAAABAAAANUgAAAAAAABhSAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					232,
+					1,
+					"left_delete",
+					null,
+					"AQAAAJFIAAAAAAAAkUgAAAAAAAABAAAACg",
+					"AQAAAAAAAAABAAAAkkgAAAAAAACSSAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					233,
+					1,
+					"reindent",
+					null,
+					"AQAAAJFIAAAAAAAAmEgAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAkUgAAAAAAACRSAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					234,
+					1,
+					"insert",
+					{
+						"characters": "\t"
+					},
+					"AQAAAJhIAAAAAAAAmUgAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAmEgAAAAAAACYSAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					235,
+					5,
+					"left_delete",
+					null,
+					"BQAAAJhIAAAAAAAAmEgAAAAAAAABAAAACZdIAAAAAAAAl0gAAAAAAAABAAAACZZIAAAAAAAAlkgAAAAAAAABAAAACZVIAAAAAAAAlUgAAAAAAAABAAAACZRIAAAAAAAAlEgAAAAAAAABAAAACQ",
+					"AQAAAAAAAAABAAAAmUgAAAAAAACZSAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					243,
+					1,
+					"cut",
+					null,
+					"AQAAAD0OAAAAAAAAPQ4AAAAAAABBBQAAY2xhc3MgRWRpdGFibGVUZXh0SXRlbShRR3JhcGhpY3NUZXh0SXRlbSk6CglkZWYgX19pbml0X18oc2VsZiwgdGV4dCwgcGFyZW50PU5vbmUpOgoJCXN1cGVyKCkuX19pbml0X18odGV4dCwgcGFyZW50KQoJCXNlbGYuc2V0RmxhZyhRR3JhcGhpY3NJdGVtLkdyYXBoaWNzSXRlbUZsYWcuSXRlbUlzRm9jdXNhYmxlKSAgIyBBbGxvdyBmb2N1cyBldmVudHMKCQlzZWxmLnNldFRleHRJbnRlcmFjdGlvbkZsYWdzKFF0LlRleHRJbnRlcmFjdGlvbkZsYWcuTm9UZXh0SW50ZXJhY3Rpb24pICAjIEluaXRpYWxseSBub24tZWRpdGFibGUKCQkjIHNlbGYuc2V0RmxhZyhRR3JhcGhpY3NJdGVtLkl0ZW1Jc1NlbGVjdGFibGUsIFRydWUpCgoJCSMgQ2VudGVyLWFsaWduIHRoZSB0ZXh0IHdpdGhpbiB0aGUgaXRlbQoJCXRleHRfb3B0aW9uID0gUVRleHRPcHRpb24oKQoJCXRleHRfb3B0aW9uLnNldEFsaWdubWVudChRdC5BbGlnbm1lbnRGbGFnLkFsaWduQ2VudGVyKQoJCXNlbGYuZG9jdW1lbnQoKS5zZXREZWZhdWx0VGV4dE9wdGlvbih0ZXh0X29wdGlvbikKCgkJIyBSZW1vdmUgdGhlIGRlZmF1bHQgbWFyZ2lucwoJCXNlbGYuZG9jdW1lbnQoKS5zZXREb2N1bWVudE1hcmdpbigwKQoKCWRlZiBtb3VzZURvdWJsZUNsaWNrRXZlbnQoc2VsZiwgZXZlbnQpOgoJCSMgRW5hYmxlIGVkaXRpbmcgb24gZG91YmxlLWNsaWNrCgkJIiIicGFyZW50IG5vZGUgbXVzdCBtYW51YWxseSBjYWwgdGhlIGRvdWJsZSBjbGljayBldmVudCwKCQliZWNhdXNlIGFuIGl0ZW0gbm9yIHNsZWN0YWJsZSBub3IgbW92YWJsZSB3aWxsIG5vdCByZWNlaXZlIHByZXNzIGV2ZW50cyIiIgoJCXNlbGYuc2V0VGV4dEludGVyYWN0aW9uRmxhZ3MoUXQuVGV4dEludGVyYWN0aW9uRmxhZy5UZXh0RWRpdG9ySW50ZXJhY3Rpb24pCgkJc2VsZi5zZXRGb2N1cyhRdC5Gb2N1c1JlYXNvbi5Nb3VzZUZvY3VzUmVhc29uKQoKCQljbGljayA9IFFHcmFwaGljc1NjZW5lTW91c2VFdmVudChRRXZlbnQuR3JhcGhpY3NTY2VuZU1vdXNlUHJlc3MpCgkJY2xpY2suc2V0QnV0dG9uKGV2ZW50LmJ1dHRvbigpKQoJCWNsaWNrLnNldFBvcyhldmVudC5wb3MoKSkKCQlzZWxmLm1vdXNlUHJlc3NFdmVudChjbGljaykKCQkjIHN1cGVyKCkubW91c2VEb3VibGVDbGlja0V2ZW50KGV2ZW50KQoKCWRlZiBmb2N1c091dEV2ZW50KHNlbGYsIGV2ZW50OiBRRm9jdXNFdmVudCk6CgkJIyBXaGVuIHRoZSBpdGVtIGxvc2VzIGZvY3VzLCBkaXNhYmxlIGVkaXRpbmcKCQlzZWxmLnNldFRleHRJbnRlcmFjdGlvbkZsYWdzKFF0LlRleHRJbnRlcmFjdGlvbkZsYWcuTm9UZXh0SW50ZXJhY3Rpb24pCgkJc3VwZXIoKS5mb2N1c091dEV2ZW50KGV2ZW50KQ",
+					"AQAAAAAAAAABAAAAfhMAAAAAAAA9DgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					244,
+					3,
+					"left_delete",
+					null,
+					"BAAAADwOAAAAAAAAPA4AAAAAAAABAAAACk9DAAAAAAAAT0MAAAAAAAADAAAACQkJOw4AAAAAAAA7DgAAAAAAAAEAAAAKOg4AAAAAAAA6DgAAAAAAAAEAAAAK",
+					"AQAAAAAAAAABAAAAPQ4AAAAAAAA9DgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					249,
+					1,
+					"insert",
+					{
+						"characters": "\n\n"
+					},
+					"AgAAAFIBAAAAAAAAUwEAAAAAAAAAAAAAUwEAAAAAAABUAQAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAUgEAAAAAAABSAQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					251,
+					1,
+					"insert",
+					{
+						"characters": "\n"
+					},
+					"AQAAAFMBAAAAAAAAVAEAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAUwEAAAAAAABTAQAAAAAAAAAAAAAAAAAA"
+				],
+				[
+					253,
+					1,
+					"insert",
+					{
+						"characters": "\n"
+					},
+					"AQAAAFMBAAAAAAAAVAEAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAUwEAAAAAAABTAQAAAAAAAAAAAAAAAAAA"
+				],
+				[
+					254,
+					1,
+					"paste",
+					null,
+					"AQAAAFQBAAAAAAAAlQYAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAVAEAAAAAAABUAQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					259,
+					1,
+					"insert",
+					{
+						"characters": "Data"
+					},
+					"BAAAACMpAAAAAAAAJCkAAAAAAAAAAAAAJCkAAAAAAAAlKQAAAAAAAAAAAAAlKQAAAAAAACYpAAAAAAAAAAAAACYpAAAAAAAAJykAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAIykAAAAAAAAjKQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					265,
+					1,
+					"left_delete",
+					null,
+					"AQAAADQpAAAAAAAANCkAAAAAAAAbAAAAeyJwb3N4IjogcG9zeCwgInBvc3kiOnBvc3l9",
+					"AQAAAAAAAAABAAAANCkAAAAAAABPKQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					266,
+					1,
+					"insert_snippet",
+					{
+						"contents": "($0)"
+					},
+					"AQAAADQpAAAAAAAANikAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAANCkAAAAAAAA0KQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					269,
+					1,
+					"insert",
+					{
+						"characters": "posx,"
+					},
+					"BQAAADUpAAAAAAAANikAAAAAAAAAAAAANikAAAAAAAA3KQAAAAAAAAAAAAA3KQAAAAAAADgpAAAAAAAAAAAAADgpAAAAAAAAOSkAAAAAAAAAAAAAOSkAAAAAAAA6KQAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAANSkAAAAAAAA1KQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					270,
+					1,
+					"insert",
+					{
+						"characters": " posy"
+					},
+					"BQAAADopAAAAAAAAOykAAAAAAAAAAAAAOykAAAAAAAA8KQAAAAAAAAAAAAA8KQAAAAAAAD0pAAAAAAAAAAAAAD0pAAAAAAAAPikAAAAAAAAAAAAAPikAAAAAAAA/KQAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAOikAAAAAAAA6KQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					272,
+					1,
+					"insert",
+					{
+						"characters": ","
+					},
+					"AQAAAEApAAAAAAAAQSkAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAQCkAAAAAAABAKQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					273,
+					1,
+					"insert",
+					{
+						"characters": " Node"
+					},
+					"BQAAAEEpAAAAAAAAQikAAAAAAAAAAAAAQikAAAAAAABDKQAAAAAAAAAAAABDKQAAAAAAAEQpAAAAAAAAAAAAAEQpAAAAAAAARSkAAAAAAAAAAAAARSkAAAAAAABGKQAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAQSkAAAAAAABBKQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					274,
+					1,
+					"insert",
+					{
+						"characters": "Data"
+					},
+					"BAAAAEYpAAAAAAAARykAAAAAAAAAAAAARykAAAAAAABIKQAAAAAAAAAAAABIKQAAAAAAAEkpAAAAAAAAAAAAAEkpAAAAAAAASikAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAARikAAAAAAABGKQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					275,
+					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-pyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "NodeDataRole"
+					},
+					"AgAAAEIpAAAAAAAAQikAAAAAAAAIAAAATm9kZURhdGFCKQAAAAAAAE4pAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAASikAAAAAAABKKQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					276,
+					1,
+					"insert",
+					{
+						"characters": ".l"
+					},
+					"AgAAAE4pAAAAAAAATykAAAAAAAAAAAAATykAAAAAAABQKQAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAATikAAAAAAABOKQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					277,
+					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":1,\"session_name\":\"LSP-pyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "LocationRole"
+					},
+					"AgAAAE8pAAAAAAAATykAAAAAAAABAAAAbE8pAAAAAAAAWykAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAUCkAAAAAAABQKQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					280,
+					2,
+					"left_delete",
+					null,
+					"AgAAAF4pAAAAAAAAXikAAAAAAAB0AgAACQkJCSMgY2FzZSBRR3JhcGhpY3NJdGVtLkdyYXBoaWNzSXRlbUNoYW5nZS5JdGVtU2VsZWN0ZWRIYXNDaGFuZ2VkOgoJCQkJIyAJaWYgbm9kZXNfc2VsZWN0aW9ubW9kZWw6PXNlbGYucGFyZW50X2dyYXBoLm5vZGVzX3NlbGVjdGlvbm1vZGVsOgoJCQkJIyAJCWdyYXBoID0gc2VsZi5wYXJlbnRfZ3JhcGguZ3JhcGhfbW9kZWwKCQkJCSMgCQlub2RlX2luZGV4ID0gZ3JhcGgubm9kZXMuaW5kZXgoc2VsZi5wZXJzaXN0ZW50X25vZGVfaW5kZXgucm93KCksIDApCgkJCQkjIAkJaWYgdmFsdWUgPT0gMToKCQkJCSMgCQkJbm9kZXNfc2VsZWN0aW9ubW9kZWwuc2VsZWN0KG5vZGVfaW5kZXgsIFFJdGVtU2VsZWN0aW9uTW9kZWwuU2VsZWN0aW9uRmxhZy5TZWxlY3RDdXJyZW50KQoJCQkJIyAJCQlub2Rlc19zZWxlY3Rpb25tb2RlbC5zZXRDdXJyZW50SW5kZXgobm9kZV9pbmRleCwgUUl0ZW1TZWxlY3Rpb25Nb2RlbC5TZWxlY3Rpb25GbGFnLkN1cnJlbnQpCgkJCQkjIAkJZWxpZiB2YWx1ZSA9PSAwOgoJCQkJIyAJCQlub2Rlc19zZWxlY3Rpb25tb2RlbC5zZWxlY3Qobm9kZV9pbmRleCwgUUl0ZW1TZWxlY3Rpb25Nb2RlbC5TZWxlY3Rpb25GbGFnLkRlc2VsZWN0KQoJCQkJIyAJZWxzZToKCQkJCSMgCQlwYXNzCl0pAAAAAAAAXSkAAAAAAAABAAAACg",
+					"AQAAAAAAAAABAAAA0isAAAAAAABeKQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					286,
+					1,
+					"left_delete",
+					null,
+					"AQAAAIEoAAAAAAAAgSgAAAAAAAAzAAAALm1vZGVsKCkuaW5kZXgoc2VsZi5wZXJzaXN0ZW50X25vZGVfaW5kZXgucm93KCksIDAp",
+					"AQAAAAAAAAABAAAAgSgAAAAAAAC0KAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					289,
+					1,
+					"insert",
+					{
+						"characters": "\nself."
+					},
+					"BwAAALwnAAAAAAAAvScAAAAAAAAAAAAAvScAAAAAAADAJwAAAAAAAAAAAADAJwAAAAAAAMEnAAAAAAAAAAAAAMEnAAAAAAAAwicAAAAAAAAAAAAAwicAAAAAAADDJwAAAAAAAAAAAADDJwAAAAAAAMQnAAAAAAAAAAAAAMQnAAAAAAAAxScAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAvCcAAAAAAAC8JwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					290,
+					1,
+					"insert",
+					{
+						"characters": "pers"
+					},
+					"BAAAAMUnAAAAAAAAxicAAAAAAAAAAAAAxicAAAAAAADHJwAAAAAAAAAAAADHJwAAAAAAAMgnAAAAAAAAAAAAAMgnAAAAAAAAyScAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAxScAAAAAAADFJwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					291,
+					1,
+					"insert",
+					{
+						"characters": "istan"
+					},
+					"BQAAAMknAAAAAAAAyicAAAAAAAAAAAAAyicAAAAAAADLJwAAAAAAAAAAAADLJwAAAAAAAMwnAAAAAAAAAAAAAMwnAAAAAAAAzScAAAAAAAAAAAAAzScAAAAAAADOJwAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAyScAAAAAAADJJwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					292,
+					2,
+					"left_delete",
+					null,
+					"AgAAAM0nAAAAAAAAzScAAAAAAAABAAAAbswnAAAAAAAAzCcAAAAAAAABAAAAYQ",
+					"AQAAAAAAAAABAAAAzicAAAAAAADOJwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					293,
+					1,
+					"insert",
+					{
+						"characters": "en"
+					},
+					"AgAAAMwnAAAAAAAAzScAAAAAAAAAAAAAzScAAAAAAADOJwAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAzCcAAAAAAADMJwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					294,
+					18,
+					"left_delete",
+					null,
+					"EgAAAM0nAAAAAAAAzScAAAAAAAABAAAAbswnAAAAAAAAzCcAAAAAAAABAAAAZcsnAAAAAAAAyycAAAAAAAABAAAAdMonAAAAAAAAyicAAAAAAAABAAAAc8knAAAAAAAAyScAAAAAAAABAAAAacgnAAAAAAAAyCcAAAAAAAABAAAAc8cnAAAAAAAAxycAAAAAAAABAAAAcsYnAAAAAAAAxicAAAAAAAABAAAAZcUnAAAAAAAAxScAAAAAAAABAAAAcMQnAAAAAAAAxCcAAAAAAAABAAAALsMnAAAAAAAAwycAAAAAAAABAAAAZsInAAAAAAAAwicAAAAAAAABAAAAbMEnAAAAAAAAwScAAAAAAAABAAAAZcAnAAAAAAAAwCcAAAAAAAABAAAAc78nAAAAAAAAvycAAAAAAAABAAAACb4nAAAAAAAAvicAAAAAAAABAAAACb0nAAAAAAAAvScAAAAAAAABAAAACbwnAAAAAAAAvCcAAAAAAAABAAAACg",
+					"AQAAAAAAAAABAAAAzicAAAAAAADOJwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					298,
+					1,
+					"left_delete",
+					null,
+					"AQAAAFgqAAAAAAAAWCoAAAAAAAAKAAAATm9kZUluZGV4KA",
+					"AQAAAAAAAAABAAAAYioAAAAAAABYKgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					301,
+					1,
+					"left_delete",
+					null,
+					"AQAAAHoqAAAAAAAAeioAAAAAAAAsAAAALmluZGV4KHNlbGYucGVyc2lzdGVudF9ub2RlX2luZGV4LnJvdygpLCAwKSk",
+					"AQAAAAAAAAABAAAAeioAAAAAAACmKgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					311,
+					1,
+					"left_delete",
+					null,
+					"AQAAAHIqAAAAAAAAcioAAAAAAAAIAAAALm1vZGVsKCk",
+					"AQAAAAAAAAABAAAAeioAAAAAAAByKgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					325,
+					1,
+					"insert",
+					{
+						"characters": "NodeIndex"
+					},
+					"CgAAANgUAAAAAAAA2RQAAAAAAAAAAAAA2RQAAAAAAADZFAAAAAAAABUAAABRUGVyc2lzdGVudE1vZGVsSW5kZXjZFAAAAAAAANoUAAAAAAAAAAAAANoUAAAAAAAA2xQAAAAAAAAAAAAA2xQAAAAAAADcFAAAAAAAAAAAAADcFAAAAAAAAN0UAAAAAAAAAAAAAN0UAAAAAAAA3hQAAAAAAAAAAAAA3hQAAAAAAADfFAAAAAAAAAAAAADfFAAAAAAAAOAUAAAAAAAAAAAAAOAUAAAAAAAA4RQAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA2BQAAAAAAADtFAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					343,
+					1,
+					"left_delete",
+					null,
+					"AQAAAD1UAAAAAAAAPVQAAAAAAAAnAAAARWRnZUluZGV4KHNlbGYuZ3JhcGhfbW9kZWwuZWRnZXMuaW5kZXgo",
+					"AQAAAAAAAAABAAAAZFQAAAAAAAA9VAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					349,
+					1,
+					"left_delete",
+					null,
+					"AQAAAFJUAAAAAAAAUlQAAAAAAAALAAAALnJvdygpLCAwKSk",
+					"AQAAAAAAAAABAAAAXVQAAAAAAABSVAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					361,
+					1,
+					"left_delete",
+					null,
+					"AQAAAN1UAAAAAAAA3VQAAAAAAAAKAAAALnJvdygpLCAwKQ",
+					"AQAAAAAAAAABAAAA3VQAAAAAAADnVAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					364,
+					1,
+					"left_delete",
+					null,
+					"AQAAAKZUAAAAAAAAplQAAAAAAAAfAAAAc2VsZi5ncmFwaF9tb2RlbC5vdXRsZXRzLmluZGV4KA",
+					"AQAAAAAAAAABAAAAxVQAAAAAAACmVAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					375,
+					1,
+					"insert",
+					{
+						"characters": "Sourc"
+					},
+					"BQAAANxUAAAAAAAA3VQAAAAAAAAAAAAA3VQAAAAAAADeVAAAAAAAAAAAAADeVAAAAAAAAN9UAAAAAAAAAAAAAN9UAAAAAAAA4FQAAAAAAAAAAAAA4FQAAAAAAADhVAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA3FQAAAAAAADcVAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					376,
+					1,
+					"insert",
+					{
+						"characters": "e"
+					},
+					"AQAAAOFUAAAAAAAA4lQAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA4VQAAAAAAADhVAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					381,
+					1,
+					"left_delete",
+					null,
+					"AQAAAO9UAAAAAAAA71QAAAAAAAALAAAAeyJzb3VyY2UiOiA",
+					"AQAAAAAAAAABAAAA71QAAAAAAAD6VAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					384,
+					1,
+					"left_delete",
+					null,
+					"AQAAAPVUAAAAAAAA9VQAAAAAAAABAAAAfQ",
+					"AQAAAAAAAAABAAAA9lQAAAAAAAD2VAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					409,
+					1,
+					"insert",
+					{
+						"characters": "EdgeIndex"
+					},
+					"CgAAAKYtAAAAAAAApy0AAAAAAAAAAAAApy0AAAAAAACnLQAAAAAAABUAAABRUGVyc2lzdGVudE1vZGVsSW5kZXinLQAAAAAAAKgtAAAAAAAAAAAAAKgtAAAAAAAAqS0AAAAAAAAAAAAAqS0AAAAAAACqLQAAAAAAAAAAAACqLQAAAAAAAKstAAAAAAAAAAAAAKstAAAAAAAArC0AAAAAAAAAAAAArC0AAAAAAACtLQAAAAAAAAAAAACtLQAAAAAAAK4tAAAAAAAAAAAAAK4tAAAAAAAAry0AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAApi0AAAAAAAC7LQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					417,
+					1,
+					"left_delete",
+					null,
+					"AQAAAHRVAAAAAAAAdFUAAAAAAAAKAAAALnJvdygpLCAwKQ",
+					"AQAAAAAAAAABAAAAflUAAAAAAAB0VQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					420,
+					1,
+					"left_delete",
+					null,
+					"AQAAAD5VAAAAAAAAPlUAAAAAAAAeAAAAc2VsZi5ncmFwaF9tb2RlbC5pbmxldHMuaW5kZXgo",
+					"AQAAAAAAAAABAAAAXFUAAAAAAAA+VQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					424,
+					1,
+					"insert",
+					{
+						"characters": "Target"
+					},
+					"BgAAAHRVAAAAAAAAdVUAAAAAAAAAAAAAdVUAAAAAAAB2VQAAAAAAAAAAAAB2VQAAAAAAAHdVAAAAAAAAAAAAAHdVAAAAAAAAeFUAAAAAAAAAAAAAeFUAAAAAAAB5VQAAAAAAAAAAAAB5VQAAAAAAAHpVAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAdFUAAAAAAAB0VQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					427,
+					1,
+					"left_delete",
+					null,
+					"AQAAAIdVAAAAAAAAh1UAAAAAAAALAAAAeyJ0YXJnZXQiOiA",
+					"AQAAAAAAAAABAAAAklUAAAAAAACHVQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					430,
+					1,
+					"left_delete",
+					null,
+					"AQAAAIxVAAAAAAAAjFUAAAAAAAABAAAAfQ",
+					"AQAAAAAAAAABAAAAjVUAAAAAAACNVQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					443,
+					1,
+					"left_delete",
+					null,
+					"AQAAAENYAAAAAAAAQ1gAAAAAAAALAAAALnJvdygpLCAwKSk",
+					"AQAAAAAAAAABAAAAQ1gAAAAAAABOWAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					446,
+					1,
+					"left_delete",
+					null,
+					"AQAAAAdYAAAAAAAAB1gAAAAAAAAnAAAARWRnZUluZGV4KHNlbGYuZ3JhcGhfbW9kZWwuZWRnZXMuaW5kZXgo",
+					"AQAAAAAAAAABAAAALlgAAAAAAAAHWAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					451,
+					1,
+					"left_delete",
+					null,
+					"AQAAADlZAAAAAAAAOVkAAAAAAAABAAAAcw",
+					"AQAAAAAAAAABAAAAOlkAAAAAAAA6WQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					452,
+					1,
+					"insert",
+					{
+						"characters": "List"
+					},
+					"BAAAADlZAAAAAAAAOlkAAAAAAAAAAAAAOlkAAAAAAAA7WQAAAAAAAAAAAAA7WQAAAAAAADxZAAAAAAAAAAAAADxZAAAAAAAAPVkAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAOVkAAAAAAAA5WQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					462,
+					1,
+					"insert",
+					{
+						"characters": "inletL"
+					},
+					"BwAAAItZAAAAAAAAjFkAAAAAAAAAAAAAjFkAAAAAAACMWQAAAAAAAAYAAABpbmxldHOMWQAAAAAAAI1ZAAAAAAAAAAAAAI1ZAAAAAAAAjlkAAAAAAAAAAAAAjlkAAAAAAACPWQAAAAAAAAAAAACPWQAAAAAAAJBZAAAAAAAAAAAAAJBZAAAAAAAAkVkAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAi1kAAAAAAACRWQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					463,
+					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-pyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "inletList"
+					},
+					"AgAAAItZAAAAAAAAi1kAAAAAAAAGAAAAaW5sZXRMi1kAAAAAAACUWQAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAkVkAAAAAAACRWQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					468,
+					1,
+					"insert",
+					{
+						"characters": "outletL"
+					},
+					"CAAAAONZAAAAAAAA5FkAAAAAAAAAAAAA5FkAAAAAAADkWQAAAAAAAAcAAABvdXRsZXRz5FkAAAAAAADlWQAAAAAAAAAAAADlWQAAAAAAAOZZAAAAAAAAAAAAAOZZAAAAAAAA51kAAAAAAAAAAAAA51kAAAAAAADoWQAAAAAAAAAAAADoWQAAAAAAAOlZAAAAAAAAAAAAAOlZAAAAAAAA6lkAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA41kAAAAAAADqWQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					469,
+					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-pyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "outletList"
+					},
+					"AgAAAONZAAAAAAAA41kAAAAAAAAHAAAAb3V0bGV0TONZAAAAAAAA7VkAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA6lkAAAAAAADqWQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					474,
+					1,
+					"insert",
+					{
+						"characters": "edgeL"
+					},
+					"BgAAADpaAAAAAAAAO1oAAAAAAAAAAAAAO1oAAAAAAAA7WgAAAAAAAAUAAABlZGdlcztaAAAAAAAAPFoAAAAAAAAAAAAAPFoAAAAAAAA9WgAAAAAAAAAAAAA9WgAAAAAAAD5aAAAAAAAAAAAAAD5aAAAAAAAAP1oAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAOloAAAAAAAA/WgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					475,
+					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-pyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "edgeList"
+					},
+					"AgAAADpaAAAAAAAAOloAAAAAAAAFAAAAZWRnZUw6WgAAAAAAAEJaAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAP1oAAAAAAAA/WgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					479,
+					1,
+					"insert",
+					{
+						"characters": "List"
+					},
+					"DwAAAPtaAAAAAAAA/FoAAAAAAAAAAAAA/FoAAAAAAAD8WgAAAAAAAAEAAABzsVoAAAAAAACyWgAAAAAAAAAAAACyWgAAAAAAALJaAAAAAAAAAQAAAHNpWgAAAAAAAGpaAAAAAAAAAAAAAGpaAAAAAAAAaloAAAAAAAABAAAAc/xaAAAAAAAA/VoAAAAAAAAAAAAAsloAAAAAAACzWgAAAAAAAAAAAABqWgAAAAAAAGtaAAAAAAAAAAAAAP9aAAAAAAAAAFsAAAAAAAAAAAAAtFoAAAAAAAC1WgAAAAAAAAAAAABrWgAAAAAAAGxaAAAAAAAAAAAAAAJbAAAAAAAAA1sAAAAAAAAAAAAAtloAAAAAAAC3WgAAAAAAAAAAAABsWgAAAAAAAG1aAAAAAAAAAAAAAA",
+					"AQAAAAAAAAADAAAAaVoAAAAAAABqWgAAAAAAAAAAAAAAAPC/sVoAAAAAAACyWgAAAAAAAAAAAAAAAPC/+1oAAAAAAAD8WgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					483,
+					1,
+					"insert",
+					{
+						"characters": "List"
+					},
+					"DwAAAOtbAAAAAAAA7FsAAAAAAAAAAAAA7FsAAAAAAADsWwAAAAAAAAEAAABzn1sAAAAAAACgWwAAAAAAAAAAAACgWwAAAAAAAKBbAAAAAAAAAQAAAHNVWwAAAAAAAFZbAAAAAAAAAAAAAFZbAAAAAAAAVlsAAAAAAAABAAAAc+xbAAAAAAAA7VsAAAAAAAAAAAAAoFsAAAAAAAChWwAAAAAAAAAAAABWWwAAAAAAAFdbAAAAAAAAAAAAAO9bAAAAAAAA8FsAAAAAAAAAAAAAolsAAAAAAACjWwAAAAAAAAAAAABXWwAAAAAAAFhbAAAAAAAAAAAAAPJbAAAAAAAA81sAAAAAAAAAAAAApFsAAAAAAAClWwAAAAAAAAAAAABYWwAAAAAAAFlbAAAAAAAAAAAAAA",
+					"AQAAAAAAAAADAAAAVVsAAAAAAABWWwAAAAAAAAAAAAAAAPC/n1sAAAAAAACgWwAAAAAAAAAAAAAAAPC/61sAAAAAAADsWwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					488,
+					1,
+					"insert",
+					{
+						"characters": "List"
+					},
+					"DwAAAOFcAAAAAAAA4lwAAAAAAAAAAAAA4lwAAAAAAADiXAAAAAAAAAEAAABzk1wAAAAAAACUXAAAAAAAAAAAAACUXAAAAAAAAJRcAAAAAAAAAQAAAHNHXAAAAAAAAEhcAAAAAAAAAAAAAEhcAAAAAAAASFwAAAAAAAABAAAAc+JcAAAAAAAA41wAAAAAAAAAAAAAlFwAAAAAAACVXAAAAAAAAAAAAABIXAAAAAAAAElcAAAAAAAAAAAAAOVcAAAAAAAA5lwAAAAAAAAAAAAAllwAAAAAAACXXAAAAAAAAAAAAABJXAAAAAAAAEpcAAAAAAAAAAAAAOhcAAAAAAAA6VwAAAAAAAAAAAAAmFwAAAAAAACZXAAAAAAAAAAAAABKXAAAAAAAAEtcAAAAAAAAAAAAAA",
+					"AQAAAAAAAAADAAAAR1wAAAAAAABIXAAAAAAAAAAAAAAAAPC/k1wAAAAAAACUXAAAAAAAAAAAAAAAAPC/4VwAAAAAAADiXAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					493,
+					1,
+					"insert",
+					{
+						"characters": "List"
+					},
+					"DwAAAM5dAAAAAAAAz10AAAAAAAAAAAAAz10AAAAAAADPXQAAAAAAAAEAAABzhF0AAAAAAACFXQAAAAAAAAAAAACFXQAAAAAAAIVdAAAAAAAAAQAAAHM8XQAAAAAAAD1dAAAAAAAAAAAAAD1dAAAAAAAAPV0AAAAAAAABAAAAc89dAAAAAAAA0F0AAAAAAAAAAAAAhV0AAAAAAACGXQAAAAAAAAAAAAA9XQAAAAAAAD5dAAAAAAAAAAAAANJdAAAAAAAA010AAAAAAAAAAAAAh10AAAAAAACIXQAAAAAAAAAAAAA+XQAAAAAAAD9dAAAAAAAAAAAAANVdAAAAAAAA1l0AAAAAAAAAAAAAiV0AAAAAAACKXQAAAAAAAAAAAAA/XQAAAAAAAEBdAAAAAAAAAAAAAA",
+					"AQAAAAAAAAADAAAAPF0AAAAAAAA9XQAAAAAAAAAAAAAAAPC/hF0AAAAAAACFXQAAAAAAAAAAAAAAAPC/zl0AAAAAAADPXQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					505,
+					2,
+					"right_delete",
+					null,
+					"AgAAALVmAAAAAAAAtWYAAAAAAAAVAAAAUVBlcnNpc3RlbnRNb2RlbEluZGV4tWYAAAAAAAC1ZgAAAAAAAAEAAAAo",
+					"AQAAAAAAAAABAAAAtWYAAAAAAADKZgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					508,
+					1,
+					"left_delete",
+					null,
+					"AQAAALlmAAAAAAAAuWYAAAAAAAABAAAAKQ",
+					"AQAAAAAAAAABAAAAumYAAAAAAAC6ZgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					513,
 					1,
 					"insert",
 					{
 						"characters": "node"
 					},
-					"BAAAALEQAAAAAAAAshAAAAAAAAAAAAAAshAAAAAAAACzEAAAAAAAAAAAAACzEAAAAAAAALQQAAAAAAAAAAAAALQQAAAAAAAAtRAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAsRAAAAAAAACxEAAAAAAAAAAAAAAAAPC/"
+					"BQAAAOBmAAAAAAAA4WYAAAAAAAAAAAAA4WYAAAAAAADhZgAAAAAAABUAAABwZXJzaXN0ZW50X25vZGVfaW5kZXjhZgAAAAAAAOJmAAAAAAAAAAAAAOJmAAAAAAAA42YAAAAAAAAAAAAA42YAAAAAAADkZgAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA4GYAAAAAAAD1ZgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					516,
+					2,
+					"left_delete",
+					null,
+					"AgAAAJlmAAAAAAAAmWYAAAAAAAAgAAAACQkJCXBlcnNpc3RlbnRfbm9kZV9pbmRleCA9IG5vZGWYZgAAAAAAAJhmAAAAAAAAAQAAAAo",
+					"AQAAAAAAAAABAAAAuWYAAAAAAACZZgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					562,
+					1,
+					"insert",
+					{
+						"characters": "node,"
+					},
+					"BQAAAENnAAAAAAAARGcAAAAAAAAAAAAARGcAAAAAAABFZwAAAAAAAAAAAABFZwAAAAAAAEZnAAAAAAAAAAAAAEZnAAAAAAAAR2cAAAAAAAAAAAAAR2cAAAAAAABIZwAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAQ2cAAAAAAABDZwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					563,
+					1,
+					"insert",
+					{
+						"characters": " "
+					},
+					"AQAAAEhnAAAAAAAASWcAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAASGcAAAAAAABIZwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					567,
+					1,
+					"left_delete",
+					null,
+					"AQAAAEdnAAAAAAAAR2cAAAAAAAAkAAAALCBOb2RlSW5kZXgobm9kZS5zaWJsaW5nQXRDb2x1bW4oNCkp",
+					"AQAAAAAAAAABAAAAa2cAAAAAAABHZwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					589,
+					1,
+					"insert",
+					{
+						"characters": "node"
+					},
+					"BQAAAN9mAAAAAAAA4GYAAAAAAAAAAAAA4GYAAAAAAADgZgAAAAAAABUAAABwZXJzaXN0ZW50X25vZGVfaW5kZXjgZgAAAAAAAOFmAAAAAAAAAAAAAOFmAAAAAAAA4mYAAAAAAAAAAAAA4mYAAAAAAADjZgAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA32YAAAAAAAD0ZgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					599,
+					1,
+					"left_delete",
+					null,
+					"AQAAAFdoAAAAAAAAV2gAAAAAAAABAAAAcw",
+					"AQAAAAAAAAABAAAAWGgAAAAAAABYaAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					600,
+					1,
+					"insert",
+					{
+						"characters": "List"
+					},
+					"BAAAAFdoAAAAAAAAWGgAAAAAAAAAAAAAWGgAAAAAAABZaAAAAAAAAAAAAABZaAAAAAAAAFpoAAAAAAAAAAAAAFpoAAAAAAAAW2gAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAV2gAAAAAAABXaAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					606,
+					1,
+					"insert",
+					{
+						"characters": "NodeIndex("
+					},
+					"CgAAAEJoAAAAAAAAQ2gAAAAAAAAAAAAAQ2gAAAAAAABEaAAAAAAAAAAAAABEaAAAAAAAAEVoAAAAAAAAAAAAAEVoAAAAAAAARmgAAAAAAAAAAAAARmgAAAAAAABHaAAAAAAAAAAAAABHaAAAAAAAAEhoAAAAAAAAAAAAAEhoAAAAAAAASWgAAAAAAAAAAAAASWgAAAAAAABKaAAAAAAAAAAAAABKaAAAAAAAAEtoAAAAAAAAAAAAAEtoAAAAAAAATGgAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAQmgAAAAAAABCaAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					609,
+					1,
+					"insert",
+					{
+						"characters": ")"
+					},
+					"AQAAAHNoAAAAAAAAdGgAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAc2gAAAAAAABzaAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					614,
+					2,
+					"right_delete",
+					null,
+					"AgAAAJxoAAAAAAAAnGgAAAAAAAAVAAAAUVBlcnNpc3RlbnRNb2RlbEluZGV4nGgAAAAAAACcaAAAAAAAAAEAAAAo",
+					"AQAAAAAAAAABAAAAnGgAAAAAAACxaAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					616,
+					1,
+					"left_delete",
+					null,
+					"AQAAAKBoAAAAAAAAoGgAAAAAAAABAAAAKQ",
+					"AQAAAAAAAAABAAAAoWgAAAAAAAChaAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					623,
+					2,
+					"right_delete",
+					null,
+					"AgAAANloAAAAAAAA2WgAAAAAAAAVAAAAUVBlcnNpc3RlbnRNb2RlbEluZGV42WgAAAAAAADZaAAAAAAAAAEAAAAo",
+					"AQAAAAAAAAABAAAA2WgAAAAAAADuaAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					625,
+					1,
+					"left_delete",
+					null,
+					"AQAAAN1oAAAAAAAA3WgAAAAAAAABAAAAKQ",
+					"AQAAAAAAAAABAAAA3mgAAAAAAADeaAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					628,
+					1,
+					"left_delete",
+					null,
+					"AQAAAN5oAAAAAAAA3mgAAAAAAAAeAAAACgkJCQkjIHNlbGYubm9kZXMucmVtb3ZlKG5vZGUp",
+					"AQAAAAAAAAABAAAA/GgAAAAAAADeaAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					632,
+					1,
+					"left_delete",
+					null,
+					"AQAAANVpAAAAAAAA1WkAAAAAAAABAAAAcw",
+					"AQAAAAAAAAABAAAA1mkAAAAAAADWaQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					633,
+					1,
+					"insert",
+					{
+						"characters": "List"
+					},
+					"BAAAANVpAAAAAAAA1mkAAAAAAAAAAAAA1mkAAAAAAADXaQAAAAAAAAAAAADXaQAAAAAAANhpAAAAAAAAAAAAANhpAAAAAAAA2WkAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA1WkAAAAAAADVaQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					639,
+					1,
+					"insert",
+					{
+						"characters": " "
+					},
+					"AQAAABprAAAAAAAAG2sAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAGmsAAAAAAAAaawAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					641,
+					1,
+					"insert",
+					{
+						"characters": "self."
+					},
+					"BQAAABprAAAAAAAAG2sAAAAAAAAAAAAAG2sAAAAAAAAcawAAAAAAAAAAAAAcawAAAAAAAB1rAAAAAAAAAAAAAB1rAAAAAAAAHmsAAAAAAAAAAAAAHmsAAAAAAAAfawAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAGmsAAAAAAAAaawAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					642,
+					1,
+					"insert",
+					{
+						"characters": "grap"
+					},
+					"BAAAAB9rAAAAAAAAIGsAAAAAAAAAAAAAIGsAAAAAAAAhawAAAAAAAAAAAAAhawAAAAAAACJrAAAAAAAAAAAAACJrAAAAAAAAI2sAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAH2sAAAAAAAAfawAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					643,
+					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-pyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "graph_model"
+					},
+					"AgAAAB9rAAAAAAAAH2sAAAAAAAAEAAAAZ3JhcB9rAAAAAAAAKmsAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAI2sAAAAAAAAjawAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					644,
+					1,
+					"insert",
+					{
+						"characters": ".ge"
+					},
+					"AwAAACprAAAAAAAAK2sAAAAAAAAAAAAAK2sAAAAAAAAsawAAAAAAAAAAAAAsawAAAAAAAC1rAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAKmsAAAAAAAAqawAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					645,
+					1,
+					"insert",
+					{
+						"characters": "tNodeD"
+					},
+					"BgAAAC1rAAAAAAAALmsAAAAAAAAAAAAALmsAAAAAAAAvawAAAAAAAAAAAAAvawAAAAAAADBrAAAAAAAAAAAAADBrAAAAAAAAMWsAAAAAAAAAAAAAMWsAAAAAAAAyawAAAAAAAAAAAAAyawAAAAAAADNrAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAALWsAAAAAAAAtawAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					646,
+					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-pyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "getNodeData"
+					},
+					"AgAAACtrAAAAAAAAK2sAAAAAAAAIAAAAZ2V0Tm9kZUQrawAAAAAAADZrAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAM2sAAAAAAAAzawAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					647,
+					1,
+					"insert_snippet",
+					{
+						"contents": "($0)"
+					},
+					"AQAAADZrAAAAAAAAOGsAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAANmsAAAAAAAA2awAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					648,
+					1,
+					"insert",
+					{
+						"characters": "node,"
+					},
+					"BQAAADdrAAAAAAAAOGsAAAAAAAAAAAAAOGsAAAAAAAA5awAAAAAAAAAAAAA5awAAAAAAADprAAAAAAAAAAAAADprAAAAAAAAO2sAAAAAAAAAAAAAO2sAAAAAAAA8awAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAN2sAAAAAAAA3awAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					649,
+					1,
+					"insert",
+					{
+						"characters": " NodeR"
+					},
+					"BgAAADxrAAAAAAAAPWsAAAAAAAAAAAAAPWsAAAAAAAA+awAAAAAAAAAAAAA+awAAAAAAAD9rAAAAAAAAAAAAAD9rAAAAAAAAQGsAAAAAAAAAAAAAQGsAAAAAAABBawAAAAAAAAAAAABBawAAAAAAAEJrAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAPGsAAAAAAAA8awAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					650,
+					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-pyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "NodeDataRole"
+					},
+					"AgAAAD1rAAAAAAAAPWsAAAAAAAAFAAAATm9kZVI9awAAAAAAAElrAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAQmsAAAAAAABCawAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					651,
+					1,
+					"insert",
+					{
+						"characters": "."
+					},
+					"AQAAAElrAAAAAAAASmsAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAASWsAAAAAAABJawAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					654,
+					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":2,\"session_name\":\"LSP-pyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": true,
+						"trigger": "NameRole"
+					},
+					"AQAAAEprAAAAAAAAUmsAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAASmsAAAAAAABKawAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					657,
+					1,
+					"left_delete",
+					null,
+					"AgAAAFRrAAAAAAAAVGsAAAAAAAAlAAAAbm9kZV9pbmRleC5zaWJsaW5nQXRDb2x1bW4oMSkuZGF0YSgpKVNrAAAAAAAAU2sAAAAAAAABAAAAIA",
+					"AQAAAAAAAAABAAAAVGsAAAAAAAB5awAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					675,
+					1,
+					"insert",
+					{
+						"characters": "\nnode"
+					},
+					"BwAAAMtqAAAAAAAAzGoAAAAAAAAAAAAAzGoAAAAAAADQagAAAAAAAAAAAADQagAAAAAAANFqAAAAAAAAAAAAANFqAAAAAAAA0moAAAAAAAAAAAAA0moAAAAAAADTagAAAAAAAAAAAADTagAAAAAAANRqAAAAAAAAAAAAANRqAAAAAAAA1WoAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAy2oAAAAAAADLagAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					676,
+					1,
+					"insert",
+					{
+						"characters": " ="
+					},
+					"AgAAANVqAAAAAAAA1moAAAAAAAAAAAAA1moAAAAAAADXagAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA1WoAAAAAAADVagAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					677,
+					1,
+					"insert",
+					{
+						"characters": " NodeI"
+					},
+					"BgAAANdqAAAAAAAA2GoAAAAAAAAAAAAA2GoAAAAAAADZagAAAAAAAAAAAADZagAAAAAAANpqAAAAAAAAAAAAANpqAAAAAAAA22oAAAAAAAAAAAAA22oAAAAAAADcagAAAAAAAAAAAADcagAAAAAAAN1qAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA12oAAAAAAADXagAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					678,
+					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-pyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "NodeIndex"
+					},
+					"AgAAANhqAAAAAAAA2GoAAAAAAAAFAAAATm9kZUnYagAAAAAAAOFqAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA3WoAAAAAAADdagAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					679,
+					1,
+					"insert_snippet",
+					{
+						"contents": "($0)"
+					},
+					"AQAAAOFqAAAAAAAA42oAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA4WoAAAAAAADhagAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					680,
+					1,
+					"insert",
+					{
+						"characters": "self.gra"
+					},
+					"CAAAAOJqAAAAAAAA42oAAAAAAAAAAAAA42oAAAAAAADkagAAAAAAAAAAAADkagAAAAAAAOVqAAAAAAAAAAAAAOVqAAAAAAAA5moAAAAAAAAAAAAA5moAAAAAAADnagAAAAAAAAAAAADnagAAAAAAAOhqAAAAAAAAAAAAAOhqAAAAAAAA6WoAAAAAAAAAAAAA6WoAAAAAAADqagAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA4moAAAAAAADiagAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					681,
+					1,
+					"insert_snippet",
+					{
+						"contents": "[$0]"
+					},
+					"AQAAAOpqAAAAAAAA7GoAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA6moAAAAAAADqagAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					682,
+					1,
+					"insert",
+					{
+						"characters": "h"
+					},
+					"AQAAAOtqAAAAAAAA7GoAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA62oAAAAAAADragAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					683,
+					1,
+					"left_delete",
+					null,
+					"AQAAAOtqAAAAAAAA62oAAAAAAAABAAAAaA",
+					"AQAAAAAAAAABAAAA7GoAAAAAAADsagAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					684,
+					1,
+					"run_macro_file",
+					{
+						"file": "res://Packages/Default/Delete Left Right.sublime-macro"
+					},
+					"AgAAAOpqAAAAAAAA6moAAAAAAAABAAAAW+pqAAAAAAAA6moAAAAAAAABAAAAXQ",
+					"AQAAAAAAAAABAAAA62oAAAAAAADragAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					685,
+					1,
+					"insert",
+					{
+						"characters": "ph"
+					},
+					"AgAAAOpqAAAAAAAA62oAAAAAAAAAAAAA62oAAAAAAADsagAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA6moAAAAAAADqagAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					686,
+					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-pyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "graph_model"
+					},
+					"AgAAAOdqAAAAAAAA52oAAAAAAAAFAAAAZ3JhcGjnagAAAAAAAPJqAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA7GoAAAAAAADsagAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					687,
+					1,
+					"insert",
+					{
+						"characters": ".node"
+					},
+					"BQAAAPJqAAAAAAAA82oAAAAAAAAAAAAA82oAAAAAAAD0agAAAAAAAAAAAAD0agAAAAAAAPVqAAAAAAAAAAAAAPVqAAAAAAAA9moAAAAAAAAAAAAA9moAAAAAAAD3agAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA8moAAAAAAADyagAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					688,
+					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":7,\"session_name\":\"LSP-pyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "nodeList"
+					},
+					"AgAAAPNqAAAAAAAA82oAAAAAAAAEAAAAbm9kZfNqAAAAAAAA+2oAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA92oAAAAAAAD3agAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					689,
+					1,
+					"insert",
+					{
+						"characters": ".index"
+					},
+					"BgAAAPtqAAAAAAAA/GoAAAAAAAAAAAAA/GoAAAAAAAD9agAAAAAAAAAAAAD9agAAAAAAAP5qAAAAAAAAAAAAAP5qAAAAAAAA/2oAAAAAAAAAAAAA/2oAAAAAAAAAawAAAAAAAAAAAAAAawAAAAAAAAFrAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA+2oAAAAAAAD7agAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					690,
+					1,
+					"insert_snippet",
+					{
+						"contents": "($0)"
+					},
+					"AQAAAAFrAAAAAAAAA2sAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAAWsAAAAAAAABawAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					691,
+					1,
+					"insert",
+					{
+						"characters": "row,"
+					},
+					"BAAAAAJrAAAAAAAAA2sAAAAAAAAAAAAAA2sAAAAAAAAEawAAAAAAAAAAAAAEawAAAAAAAAVrAAAAAAAAAAAAAAVrAAAAAAAABmsAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAAmsAAAAAAAACawAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					692,
+					1,
+					"insert",
+					{
+						"characters": " col"
+					},
+					"BAAAAAZrAAAAAAAAB2sAAAAAAAAAAAAAB2sAAAAAAAAIawAAAAAAAAAAAAAIawAAAAAAAAlrAAAAAAAAAAAAAAlrAAAAAAAACmsAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAABmsAAAAAAAAGawAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					699,
+					1,
+					"insert",
+					{
+						"characters": ")"
+					},
+					"AQAAAJRrAAAAAAAAlWsAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAlGsAAAAAAACUawAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					703,
+					2,
+					"left_delete",
+					null,
+					"AgAAAABsAAAAAAAAAGwAAAAAAAA6AAAACQkJCQkJCW5vZGVfaXRlbS5uYW1lID0gbmV3X25hbWUKCQkJCQkJCW5vZGVfaXRlbS51cGRhdGUoKf9rAAAAAAAA/2sAAAAAAAABAAAACg",
+					"AQAAAAAAAAABAAAAOmwAAAAAAAAAbAAAAAAAAAAAAAAAAPC/"
 				]
+			]
+		},
+		{
+			"file": "pylive/QtGraphEditor/graphview_columnbased.py",
+			"settings":
+			{
+				"buffer_size": 41454,
+				"encoding": "UTF-8",
+				"line_ending": "Windows"
+			},
+			"undo_stack":
+			[
 			]
 		}
 	],
@@ -858,30 +4032,6 @@
 		"selected_items":
 		[
 			[
-				"remove",
-				"Package Control: Remove Package"
-			],
-			[
-				"inst",
-				"Package Control: Install Package"
-			],
-			[
-				"install",
-				"Package Control: Install Package"
-			],
-			[
-				"remov",
-				"Package Control: Remove Package"
-			],
-			[
-				"insta",
-				"Package Control: Install Package"
-			],
-			[
-				"termin",
-				"Terminus: Toggle Panel"
-			],
-			[
 				"terminus",
 				"Terminus: Toggle Panel"
 			],
@@ -894,11 +4044,19 @@
 				"Terminus: Close All"
 			],
 			[
+				"insta",
+				"Package Control: Install Package"
+			],
+			[
 				"instl",
 				"Package Control: Install Package"
 			],
 			[
 				"REMOE",
+				"Package Control: Remove Package"
+			],
+			[
+				"remove",
 				"Package Control: Remove Package"
 			],
 			[
@@ -908,6 +4066,10 @@
 			[
 				"reind",
 				"Indentation: Reindent Lines"
+			],
+			[
+				"install",
+				"Package Control: Install Package"
 			],
 			[
 				"enable",
@@ -943,74 +4105,88 @@
 	"expanded_folders":
 	[
 		"/C/dev/src/pylive",
+		"/C/dev/src/pylive/.ropeproject",
 		"/C/dev/src/pylive/docs",
-		"/C/dev/src/pylive/expreiments",
 		"/C/dev/src/pylive/pylive",
-		"/C/dev/src/pylive/pylive/__pycache__",
 		"/C/dev/src/pylive/pylive/QtGraphEditor"
 	],
 	"file_history":
 	[
+		"/C/dev/src/pylive/pylive/QtGraphEditor/graphtableview_columnbased.py",
 		"/C/dev/src/pylive/pylive/QtGraphEditor/GraphView.py",
+		"/C/dev/src/pylive/pylive/QtGraphEditor/test_graphmodel_rolebased.py",
+		"/C/dev/src/pylive/pylive/QtGraphEditor/test_graphmodel_columnbased.py",
+		"/C/dev/src/pylive/pylive/QtGraphEditor/graphlistview_rolebased.py",
+		"/C/dev/src/pylive/pylive/QtGraphEditor/graphmodel_rolebased.py",
+		"/C/dev/src/pylive/pylive/QtGraphEditor/graphmodel_columnbased.py",
+		"/C/dev/src/pylive/pylive/LiveScript.py",
+		"/C/dev/src/pylive/pylive/QtGraphEditor/PanAndZoomGraphicsView.py",
 		"/C/dev/src/pylive/pylive/QtGraphEditor/GraphModel.py",
 		"/C/dev/src/pylive/pylive/__init__.py",
-		"/C/dev/src/pylive/pylive/livegraph.py",
-		"/C/dev/src/pylive/pyproject.toml",
-		"/C/dev/src/pylive/pylive/LiveScript.py",
-		"/C/dev/src/pylive/pylive/test_script.py",
-		"/C/dev/src/pylive/pylive/test_exec.py",
-		"/C/dev/src/pylive/pylive/test_ipython.py",
-		"/C/dev/src/pylive/pylive/QtGraphEditor/PanAndZoomGraphicsView.py",
 		"/C/dev/src/pylive/pylive/QtGraphEditor/GraphDetailsView.py",
+		"/C/dev/src/pylive/pylive/QtGraphEditor/test_graphmodel.py",
+		"/C/dev/src/pylive/pylive/livegraph.py",
 		"/C/dev/src/pylive/pylive/QtGraphEditor/GraphTableView.py",
+		"/C/dev/src/pylive/pylive/QtLiveScript_OLD.py",
+		"/C/dev/src/pylive-examples/main.py",
+		"/C/dev/src/pylive/docs/2024_10_30-interactively-execute-scripts.md",
+		"/C/dev/src/pylive/pylive/QtScriptEditor/ReadMe.md",
+		"/C/dev/src/pylive/expreiments/test_exec_scope.py",
+		"/C/dev/src/pylive/pylive/__main__.py",
+		"/C/dev/src/pylive/pylive/live_example_scripts.py/using_qopenglwidget.py",
+		"/C/dev/src/pylive/pylive/live_example_scripts.py/using_display_example.py",
+		"/C/dev/src/pylive/pylive/test_script.py",
+		"/C/dev/src/pylive/pylive/QtScriptEditor/ScriptEdit.py",
+		"/C/dev/src/pylive/pylive/QtScriptEditor/components/RopeCompleter.py",
+		"/C/dev/src/pylive/pylive/QtScriptEditor/components/KeywordsCompleter.py",
+		"/C/dev/src/pylive/pylive/QtScriptEditor/components/PygmentsSyntaxHighlighter.py",
+		"/C/dev/src/pylive/pylive/QtScriptEditor/components/ScriptCursor.py",
+		"/C/dev/src/pylive/pyproject.toml",
+		"/C/dev/src/pylive/pylive/createElement.py",
+		"/C/dev/src/pylive/pylive/QtScriptEditor/QtLiveScript.py",
+		"/C/dev/src/pylive/pylive/QtScriptEditor/components/InvisiblesHighlighter.py",
+		"/C/dev/src/pylive/pylive/QtScriptEditor/components/RopeAssistStringModel.py",
 		"/C/dev/src/pylive/pylive/QtGraphEditor/SimpleGraphView.py",
+		"/C/dev/src/pylive/pylive/QtGraphEditor/InfiniteGraphicsView.py",
+		"/C/dev/src/pylive/pylive/QtGraphEditor/InfiniteGraphicsView2.py",
 		"/C/dev/src/pylive/expreiments/display_builtin_icons.py",
-		"/C/dev/src/pylive/pylive/QtGraphEditor/FlowView.py",
-		"/C/dev/src/pylive/pylive/QtGraphEditor/PanAndZoom.py",
-		"/C/dev/src/pylive/pylive/QtGraphEditor/nodesheet_and_details_view.py",
-		"/C/dev/src/pylive/pylive/QtGraphEditor/GraphViewForNodeGraphQt.py",
-		"/C/dev/src/pylive/pylive/QtGraphEditor/GraphDetails.py",
-		"/C/dev/src/pylive/venv/Lib/site-packages/NodeGraphQt/base/menu.py",
-		"/C/dev/src/pylive/pylive/ScriptEditor/ScriptEdit.py",
-		"/C/dev/src/pylive/pylive/ScriptEditor/components/PygmentsSyntaxHighlighter.py",
-		"/C/dev/src/pylive/pylive/ScriptEditor/components/RopeCompleter.py",
-		"/C/dev/src/pylive/pylive/ScriptEditor/CompletingPlainTextEdit.py",
-		"/C/dev/src/pylive/pylive/ScriptEditor/components/WhitespaceHighlighter.py",
-		"/C/dev/src/pylive/pylive/ScriptEditor/components/RopeAssistStringModel.py",
-		"/C/dev/src/pylive/pylive/ScriptEditor/components/KeywordsCompleter.py",
-		"/C/dev/src/pylive/pylive/ScriptEditor/components/ScriptEditBase.py",
-		"/C/dev/src/pylive/pylive/ScriptEditor/components/ScriptEdit.py",
-		"/C/dev/src/pylive/pylive/ScriptEditor/ScriptEditor.py",
-		"/C/dev/src/pylive/pylive/ScriptEditor/utils.py",
-		"/C/dev/src/pylive/pylive/ScriptEditor/CodeAssistinPlainTextEdit.py",
-		"/C/dev/src/pylive/pylive/ScriptEditor/components/TextEditCompleter.py",
-		"/C/dev/src/pylive/pylive/ScriptEditor/PygmentsSyntaxHighlighter.py",
-		"/C/dev/src/pylive/pylive/ScriptEditor/components/ScriptCursor.py",
-		"/C/dev/src/pylive/pylive.sublime-project",
+		"/C/dev/src/pylive/expreiments/ColorModeSwitcher.py",
+		"/C/dev/src/pylive/pylive/ColorModeSwitcher.py",
+		"/C/dev/src/pylive/pylive/ColorPaletteToggle.py",
 		"/C/dev/src/pylive/expreiments/display_colorpalette.py",
-		"/C/dev/src/pylive/pylive/ScriptCursor.py",
-		"/C/dev/src/pylive/pylive/SimplePythonHighlighter.py",
-		"/C/Users/andris/AppData/Local/Temp/Rar$DIa8284.3407/s3-zldww.nfo",
+		"/C/dev/src/pylive/expreiments/save_system_color_palette.py",
+		"/C/dev/src/pylive/pylive/ScriptEditor/ReadMe.md",
+		"/C/dev/src/pylive/pylive/ScriptEditor/ScriptEdit.py",
+		"/C/dev/src/pylive/pylive/ScriptEditor/components/RopeAssistStringModel.py",
+		"/C/dev/src/pylive/pylive/ScriptEditor/CodeAssistinPlainTextEdit.py",
+		"/C/dev/src/pylive/pylive/analyze_script_with_rope.py",
+		"/C/dev/src/pylive/venv/Lib/site-packages/rope/base/resourceobserver.py",
+		"/C/dev/src/pylive/venv/Lib/site-packages/rope/base/pycore.py",
+		"/C/dev/src/pylive/pylive/QTextEditCompleter.py",
+		"/C/dev/src/pylive/pylive/CodeAssistinPlainTextEdit.py",
+		"/C/dev/src/pylive/pylive/PygmentsSyntaxHighlighter.py",
+		"/C/dev/src/pylive/pylive/QRopeAssistStringModel.py",
+		"/C/dev/src/pylive/pylive/CompletingPlainTextEdit.py",
 		"/C/dev/src/pylive/pylive/QScriptEditor.py",
-		"/C/dev/src/pylive/pylive/WhitespaceHighlighter.py",
-		"/C/dev/src/find_and_play_movie_torrents/mian.py",
+		"/C/dev/src/pylive/pylive/RopeAssistStringModel.py",
+		"/C/dev/src/pylive/pylive/SimpleKeywordsCompleter.py",
 		"/C/dev/src/pylive/pylive/QtLiveScript.py",
-		"/C/Users/andris/AppData/Roaming/Sublime Text/Packages/SublimePythonIDE/SublimePython.sublime-settings",
-		"/C/Users/andris/AppData/Roaming/Sublime Text/Packages/User/SublimePython.sublime-settings",
-		"/C/dev/src/pylive/pylive/error_overlay_test.py",
-		"/C/Users/andris/Desktop/whatever.py",
+		"/C/dev/src/pylive/pylive/RopeCompleter.py",
 		"/C/dev/src/pylive/pylive/PythonSyntaxHighlighter.py",
+		"/C/dev/src/pylive/pylive/IndentablePlainTextEdit.py",
+		"/C/dev/src/pylive/pylive/CommentablePlainTextEdit.py",
+		"/C/dev/src/pylive/pylive/inline_widget_test.py",
 		"/C/dev/src/pylive/pylive/QCompletingPlainTextEdit.py",
 		"/C/dev/src/pylive/pylive/InvisiblesHighlighter.py",
 		"/C/dev/src/pylive/pylive/SyntaxHighlighterWithColorScheme.py",
 		"/C/dev/src/pylive/pylive/PythonSyntaxHighlighterVSCode.py",
-		"/C/dev/src/pylive/pylive/__main__.py",
 		"/C/dev/src/pylive/docs/2024_10_16-add_python_module_to_windows_startmenu.md",
 		"/C/dev/src/pylive/QtWatchCode.lnk",
 		"/C/dev/src/pylive/__main__.py",
 		"/C/dev/src/pylive/pylive/script_test_file.py",
 		"/C/dev/src/pylive/pylive/QtWatchCode.py",
 		"/C/dev/src/pylive/expreiments/QCustomWindow.py",
+		"/C/dev/src/pylive/pylive.sublime-project",
 		"/C/Users/and/AppData/Roaming/Sublime Text/Packages/User/python(myenv).sublime-build",
 		"/C/dev/src/pylive/pylive/utils.py",
 		"/C/Users/and/AppData/Roaming/Sublime Text/Packages/User/LSP-pyright.sublime-settings",
@@ -1063,22 +4239,7 @@
 		"/C/Users/and/Documents/Nodes/three-js-basic/nodes/Mesh.js",
 		"/C/dev/src/my_interactive-python/utils.py",
 		"/C/dev/src/my_interactive-python/main.py",
-		"/C/Users/and/Documents/Nodes/three-js-basic/nodes/GLTF Scene.js",
-		"/C/Users/and/Documents/Nodes/three-js-basic/nodes/EnvMap.js",
-		"/C/Users/and/Documents/Nodes/three-js-basic/nodes/DirectionalLight.js",
-		"/C/Users/and/AppData/Local/Packages/PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0/LocalCache/local-packages/Python312/Scripts/python_qt_live_coding",
-		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/make_html_with_pandoc.py",
-		"/C/Users/and/Documents/Nodes/three-js-basic/nodes/TorusKnotBufferGeometry.js",
-		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/make_html_with_seperate_chapters.py",
-		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/src/index-multipage.md",
-		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/dist(from_index)/index-paginated.html",
-		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB edition/scripts/signal_graph.py",
-		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB edition/src/index-paginated.md",
-		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB edition/make_single_html.py",
-		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB edition/make_html_with_seperate_chapters.py",
-		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/image_path_filter.py",
-		"/C/dev/src/my-md-editor/src/main.tsx",
-		"/C/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB Edition/markdown/4.7 A tér ökológiai modellje.md"
+		"/C/Users/and/Documents/Nodes/three-js-basic/nodes/GLTF Scene.js"
 	],
 	"find":
 	{
@@ -1097,40 +4258,99 @@
 		"case_sensitive": false,
 		"find_history":
 		[
-			"self.edges",
-			"handleInletsRemoved",
+			"self.handleNodesDataChanged",
+			"QModelIndex",
+			"select",
+			"self.edges_sheet_view",
+			"self.outlets_sheet_view",
+			"self.inlets_sheet_view",
+			"self.nodes_sheet_view",
+			"self.edges.",
+			"self.outlets.",
+			"self.inlets.",
+			"self.nodes.",
 			"self.nodes",
-			"handleNodesRemoved",
-			"inletsREmoved",
-			"addNode",
-			"addOutlet",
-			"handleNodesRemove",
-			"handleInletsRemoved",
-			"icon",
+			"self.outlets.",
+			"self.inlets.",
+			"self.nodes.",
+			"self.edges.",
+			"self.edges",
+			"setData",
+			"self.inlets.find",
+			"handleNodesDataChanged",
 			"print",
-			"int(",
-			"str(",
-			"NodeFilter",
-			"setModel",
-			"setNodeData",
-			"assert",
-			"findEdges",
-			"resiz",
-			"graphView",
-			"setNodeData",
-			"unique",
-			"return",
-			"QTextOption option;\n    option.setFlags(QTextOption::ShowLineAndParagraphSeparators | QTextOption::ShowTabsAndSpaces);\n    doc->setDefaultTextOption(option);",
-			"offset",
-			"self.scriptCursor()",
-			"Typewriter",
-			"wrap",
+			"MenuBar",
+			"MeuBar",
+			"A_GLOBAL",
+			"getWid",
 			"exec",
-			"dedent",
-			"strip",
-			"self.eval",
-			"evaluate(",
-			"block",
+			"openFile(",
+			"save",
+			"exec",
+			"print",
+			"QLiveScript",
+			"set_scale_range",
+			"click",
+			"paste",
+			"scale_up",
+			"try",
+			"handleNodesDataChanged",
+			"nodesChanged",
+			"setData",
+			"graph_model.nodes",
+			".nodes",
+			"modif",
+			"data",
+			"modifyConnection",
+			"handleEdgesInserted",
+			"finishConnection",
+			"removeEdge",
+			"handleEdgesRemoved",
+			"addEdge",
+			"handleEdges",
+			"handleEdgesREmoved",
+			"handleEdgesRemoved",
+			"updatePosition",
+			"addEdge",
+			".target_pin_item",
+			".source_pin_item",
+			"source_pin_item",
+			"finishConnection",
+			"handleEdgesDataChanged",
+			"finishConnection",
+			"moveConnection",
+			"initiate",
+			"moveConnection",
+			"pinAt",
+			"finishConnect",
+			"interactive_endpoint",
+			"type",
+			"sele",
+			"persistent_inlet",
+			"persistent_outlet",
+			"handleOutletsDatachanged",
+			"OutletItem",
+			"InletItem",
+			"HANDLEiNLETSdA",
+			")\n",
+			"handleNodesData",
+			"addNode",
+			"setCompleter",
+			"movePos",
+			"RopeAssistStringModel",
+			"cursor",
+			"insertComple",
+			"handle",
+			"insertNotifi",
+			"error",
+			"updateCompleterPref",
+			"updateComple",
+			"UpdateCompleter",
+			"Fall back",
+			"complete(",
+			"()\n",
+			"TracebackFrameWidget",
+			"completer",
 			"exec",
 			"error_label",
 			"print",
@@ -1149,6 +4369,20 @@
 		"regex": false,
 		"replace_history":
 		[
+			"self.edges_list_view",
+			"self.outlets_list_view",
+			"self.inlets_list_view",
+			"self.nodes_list_view",
+			"self.edgeTable.",
+			"self.outletTable.",
+			"self.inletTable.",
+			"self.inletTable",
+			"self.nodeTable.",
+			"self.outletList.",
+			"self.inletList.",
+			"self.nodeList.",
+			"self.edgeList.",
+			"self.edgeList"
 		],
 		"reverse": false,
 		"scrollbar_highlights": true,
@@ -1165,20 +4399,20 @@
 			[
 				{
 					"buffer": 0,
-					"file": "pylive/livegraph.py",
+					"file": "pylive/QtGraphEditor/graphmodel_rolebased.py",
 					"selected": true,
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 4996,
+						"buffer_size": 19844,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								4277,
-								4277
+								900,
+								900
 							]
 						],
 						"settings":
@@ -1200,17 +4434,167 @@
 								}
 							],
 							"lsp_active": true,
-							"lsp_uri": "file:///C:/dev/src/pylive/pylive/livegraph.py",
+							"lsp_uri": "file:///C:/dev/src/pylive/pylive/QtGraphEditor/graphmodel_rolebased.py",
 							"show_definitions": false,
 							"syntax": "Packages/Python/Python.sublime-syntax",
 							"tab_size": 4,
 							"translate_tabs_to_spaces": false
 						},
 						"translation.x": 0.0,
-						"translation.y": 728.0,
+						"translation.y": 708.0,
 						"zoom_level": 1.0
 					},
 					"stack_index": 0,
+					"stack_multiselect": false,
+					"type": "text"
+				},
+				{
+					"buffer": 1,
+					"file": "pylive/QtGraphEditor/graphmodel_columnbased.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 15472,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								5074,
+								5074
+							]
+						],
+						"settings":
+						{
+							"auto_complete_triggers":
+							[
+								{
+									"characters": "<",
+									"selector": "text.html, text.xml"
+								},
+								{
+									"rhs_empty": true,
+									"selector": "punctuation.accessor"
+								},
+								{
+									"characters": ".[\"'",
+									"selector": "meta.tag, source - comment - string.quoted.double.block - string.quoted.single.block - string.unquoted.heredoc",
+									"server": "LSP-pyright"
+								}
+							],
+							"lsp_active": true,
+							"lsp_uri": "file:///C:/dev/src/pylive/pylive/QtGraphEditor/graphmodel_columnbased.py",
+							"show_definitions": false,
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 1542.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 3,
+					"stack_multiselect": false,
+					"type": "text"
+				},
+				{
+					"buffer": 2,
+					"file": "pylive/QtGraphEditor/graphlistview_rolebased.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 7959,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								263,
+								263
+							]
+						],
+						"settings":
+						{
+							"auto_complete_triggers":
+							[
+								{
+									"characters": "<",
+									"selector": "text.html, text.xml"
+								},
+								{
+									"rhs_empty": true,
+									"selector": "punctuation.accessor"
+								},
+								{
+									"characters": ".[\"'",
+									"selector": "meta.tag, source - comment - string.quoted.double.block - string.quoted.single.block - string.unquoted.heredoc",
+									"server": "LSP-pyright"
+								}
+							],
+							"lsp_active": true,
+							"lsp_uri": "file:///C:/dev/src/pylive/pylive/QtGraphEditor/graphlistview_rolebased.py",
+							"show_definitions": false,
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 395.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 1,
+					"stack_multiselect": false,
+					"type": "text"
+				},
+				{
+					"buffer": 3,
+					"file": "pylive/QtGraphEditor/GraphDetailsView_columnbased.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 7498,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								6259,
+								6259
+							]
+						],
+						"settings":
+						{
+							"auto_complete_triggers":
+							[
+								{
+									"characters": "<",
+									"selector": "text.html, text.xml"
+								},
+								{
+									"rhs_empty": true,
+									"selector": "punctuation.accessor"
+								},
+								{
+									"characters": ".[\"'",
+									"selector": "meta.tag, source - comment - string.quoted.double.block - string.quoted.single.block - string.unquoted.heredoc",
+									"server": "LSP-pyright"
+								}
+							],
+							"lsp_active": true,
+							"lsp_uri": "file:///C:/dev/src/pylive/pylive/QtGraphEditor/GraphDetailsView_columnbased.py",
+							"show_definitions": false,
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 2,
 					"stack_multiselect": false,
 					"type": "text"
 				}
@@ -1219,17 +4603,162 @@
 		{
 			"sheets":
 			[
-			]
-		},
-		{
-			"sheets":
-			[
+				{
+					"buffer": 4,
+					"file": "pylive/QtGraphEditor/test_graphmodel_rolebased.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 5784,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								232,
+								232
+							]
+						],
+						"settings":
+						{
+							"auto_complete_triggers":
+							[
+								{
+									"characters": "<",
+									"selector": "text.html, text.xml"
+								},
+								{
+									"rhs_empty": true,
+									"selector": "punctuation.accessor"
+								},
+								{
+									"characters": ".[\"'",
+									"selector": "meta.tag, source - comment - string.quoted.double.block - string.quoted.single.block - string.unquoted.heredoc",
+									"server": "LSP-pyright"
+								}
+							],
+							"lsp_active": true,
+							"lsp_uri": "file:///C:/dev/src/pylive/pylive/QtGraphEditor/test_graphmodel_rolebased.py",
+							"show_definitions": false,
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 2,
+					"stack_multiselect": false,
+					"type": "text"
+				},
+				{
+					"buffer": 5,
+					"file": "pylive/QtGraphEditor/graphview_rolebased.py",
+					"selected": true,
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 40518,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								27991,
+								26849
+							]
+						],
+						"settings":
+						{
+							"auto_complete_triggers":
+							[
+								{
+									"characters": "<",
+									"selector": "text.html, text.xml"
+								},
+								{
+									"rhs_empty": true,
+									"selector": "punctuation.accessor"
+								},
+								{
+									"characters": ".[\"'",
+									"selector": "meta.tag, source - comment - string.quoted.double.block - string.quoted.single.block - string.unquoted.heredoc",
+									"server": "LSP-pyright"
+								}
+							],
+							"lsp_active": true,
+							"lsp_uri": "file:///C:/dev/src/pylive/pylive/QtGraphEditor/graphview_rolebased.py",
+							"show_definitions": false,
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4
+						},
+						"translation.x": 0.0,
+						"translation.y": 10129.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 0,
+					"stack_multiselect": false,
+					"type": "text"
+				},
+				{
+					"buffer": 6,
+					"file": "pylive/QtGraphEditor/graphview_columnbased.py",
+					"semi_transient": true,
+					"settings":
+					{
+						"buffer_size": 41454,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								0,
+								41454
+							]
+						],
+						"settings":
+						{
+							"auto_complete_triggers":
+							[
+								{
+									"characters": "<",
+									"selector": "text.html, text.xml"
+								},
+								{
+									"rhs_empty": true,
+									"selector": "punctuation.accessor"
+								},
+								{
+									"characters": ".[\"'",
+									"selector": "meta.tag, source - comment - string.quoted.double.block - string.quoted.single.block - string.unquoted.heredoc",
+									"server": "LSP-pyright"
+								}
+							],
+							"lsp_active": true,
+							"lsp_uri": "file:///C:/dev/src/pylive/pylive/QtGraphEditor/graphview_columnbased.py",
+							"show_definitions": false,
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 1,
+					"stack_multiselect": false,
+					"type": "text"
+				}
 			]
 		}
 	],
 	"incremental_find":
 	{
-		"height": 22.0
+		"height": 23.0
 	},
 	"input":
 	{
@@ -1250,19 +4779,12 @@
 				0,
 				2,
 				1
-			],
-			[
-				2,
-				0,
-				3,
-				1
 			]
 		],
 		"cols":
 		[
 			0.0,
-			0.460358191426,
-			0.689947152085,
+			0.437752700415,
 			1.0
 		],
 		"rows":
@@ -1276,21 +4798,13 @@
 	{
 		"height": 0.0
 	},
-	"output.SublimeLinter":
-	{
-		"height": 0.0
-	},
-	"output.Terminus":
-	{
-		"height": 412.0
-	},
 	"output.diagnostics":
 	{
 		"height": 0.0
 	},
 	"output.exec":
 	{
-		"height": 247.0
+		"height": 234.0
 	},
 	"output.find_results":
 	{
@@ -1300,11 +4814,11 @@
 	{
 		"height": 0.0
 	},
-	"pinned_build_system": "Python: Run File (Windows)",
+	"pinned_build_system": "Packages/User/python(builtin).sublime-build",
 	"project": "pylive.sublime-project",
 	"replace":
 	{
-		"height": 40.0
+		"height": 68.0
 	},
 	"save_all_on_build": true,
 	"select_file":
@@ -1334,7 +4848,7 @@
 		],
 		"width": 0.0
 	},
-	"selected_group": 0,
+	"selected_group": 1,
 	"settings":
 	{
 	},
@@ -1342,7 +4856,7 @@
 	"show_open_files": false,
 	"show_tabs": true,
 	"side_bar_visible": true,
-	"side_bar_width": 289.0,
+	"side_bar_width": 401.0,
 	"status_bar_visible": true,
 	"template_settings":
 	{

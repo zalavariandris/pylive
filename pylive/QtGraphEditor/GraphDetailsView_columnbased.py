@@ -14,7 +14,7 @@ class MiniTableView(QTableView):
 		# self.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
 
 from pylive.Panel import Panel
-from GraphModel import GraphModel, NodeIndex, EdgeIndex, InletIndex, OutletIndex
+from graphmodel_columnbased import GraphModel, NodeIndex, EdgeIndex, InletIndex, OutletIndex
 class GraphDetailsView(QWidget):
 	def __init__(self, parent=None):
 		super().__init__(parent)
@@ -127,7 +127,7 @@ class GraphDetailsView(QWidget):
 
 		# mapper
 		
-		self.mapper.setModel(graphmodel.nodes)
+		self.mapper.setModel(graphmodel.nodeTable)
 		# self.mapper.addMapping(self.id_label, 0)
 		self.mapper.addMapping(self.name_edit, 1)
 		self.mapper.addMapping(self.posx_edit, 2)
@@ -135,14 +135,14 @@ class GraphDetailsView(QWidget):
 
 		# inlets list
 		self.selected_node_inlets = QSortFilterProxyModel()  # Node column is 1 (for node name)
-		self.selected_node_inlets.setSourceModel(graphmodel.inlets)
+		self.selected_node_inlets.setSourceModel(graphmodel.inletTable)
 		self.selected_node_inlets.setFilterKeyColumn(1)
 		self.inlets_sheet_editor.setModel(self.selected_node_inlets)
 		
 
 		# outlets list
 		self.selected_node_outlets = QSortFilterProxyModel()  # Node column is 1 (for node name)
-		self.selected_node_outlets.setSourceModel(graphmodel.outlets)
+		self.selected_node_outlets.setSourceModel(graphmodel.outletTable)
 		self.selected_node_outlets.setFilterKeyColumn(1)
 		self.outlets_sheet_editor.setModel(self.selected_node_outlets)
 
@@ -161,7 +161,7 @@ class GraphDetailsView(QWidget):
 		if index.isValid():
 			self.id_label.setText(index.data())
 			self.mapper.setCurrentModelIndex(index)  # Update the mapper's current index
-			node_name = self._model.nodes.itemFromIndex(index).text()  # Get the selected node's name
+			node_name = self._model.nodeTable.itemFromIndex(index).text()  # Get the selected node's name
 			self.selected_node_inlets.setFilterFixedString(node_name) # update inlet filters
 			self.selected_node_outlets.setFilterFixedString(node_name) # update outlet filters
 			self.panel.show()
@@ -175,7 +175,7 @@ class GraphDetailsView(QWidget):
 		self.layout().invalidate()
 
 if __name__ == "__main__":
-	from GraphTableView import GraphTableView
+	from graphtableview_columnbased import GraphTableView
 	class MainWindow(QWidget):
 		def __init__(self):
 			super().__init__()
@@ -184,7 +184,7 @@ if __name__ == "__main__":
 
 			# Initialize the GraphModel
 			self.graph_model = GraphModel()
-			self.nodes_selectionmodel = QItemSelectionModel(self.graph_model.nodes)
+			self.nodes_selectionmodel = QItemSelectionModel(self.graph_model.nodeTable)
 
 			# Add some example nodes and edges
 			node1_id = self.graph_model.addNode("Node 1", 0, 0, "Script 1")
