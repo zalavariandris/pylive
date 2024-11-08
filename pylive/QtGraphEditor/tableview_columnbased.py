@@ -160,7 +160,7 @@ class GraphTableView(QWidget):
 		self.new_node_action = QAction("new node", self)
 		@self.new_node_action.triggered.connect
 		def add_new_node():
-			node = self.graphmodel.addNode("new node", 0, 0, "# script")
+			node = self.graphmodel.addNode("new node", 0, 0)
 			# Select the new node in the table view
 			self.nodes_sheet_view.selectRow(node.row())
 			self.graphmodel.addInlet(node, "in")
@@ -203,8 +203,8 @@ class GraphTableView(QWidget):
 		self.new_edge_action = QAction("new edge", self)
 		@self.new_edge_action.triggered.connect
 		def add_edge_to_current_ports():
-			current_outlet_index = self.outlets_sheet_view.currentIndex()
-			current_inlet_index = self.inlets_sheet_view.currentIndex()
+			current_outlet_index = OutletIndex(self.outlets_sheet_view.currentIndex())
+			current_inlet_index = InletIndex(self.inlets_sheet_view.currentIndex())
 			self.graphmodel.addEdge(current_outlet_index, current_inlet_index)
 
 		self.remove_edge_action = QAction("remove selected edges", self)
@@ -217,8 +217,8 @@ class GraphTableView(QWidget):
 if __name__ == "__main__":
 	app = QApplication(sys.argv)
 	graph_model = GraphModel()
-	node1_id = graph_model.addNode("Node 1", 100, 100, "Script 1")
-	node2_id = graph_model.addNode("Node 2", 300, 150, "Script 2")
+	node1_id = graph_model.addNode("Node 1", 100, 100)
+	node2_id = graph_model.addNode("Node 2", 300, 150)
 	outlet_id = graph_model.addOutlet(node1_id, "Out1")
 	inlet_id = graph_model.addInlet(node2_id, "In1")
 	edge = graph_model.addEdge(outlet_id, inlet_id)

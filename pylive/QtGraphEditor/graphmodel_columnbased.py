@@ -1,3 +1,5 @@
+from enum import IntEnum, StrEnum
+from os import set_inheritable
 from pylive import unique
 import sys
 from PySide6.QtGui import *
@@ -5,6 +7,8 @@ from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
 from typing import *
+
+from pylive.QtGraphEditor.graphview_rolebased import EdgeItem
 
 def group_consecutive_numbers(data):
 	from itertools import groupby
@@ -18,39 +22,64 @@ def group_consecutive_numbers(data):
 		ranges.append((group[0],group[-1]))
 	return ranges
 
-class NodeIndex(QModelIndex):
-	pass
+class NodeProperty(IntEnum):
+	Id = 0
+	Name = 1
+	LocationX = 2
+	LocationY = 3
+	User = 4
 
-class EdgeIndex(QModelIndex):
-	pass
+class InletProperty(IntEnum):
+	Id = 0
+	Owner = 1
+	Name = 2
+	User = 3
 
-class InletIndex(QModelIndex):
-	pass
+class OutletProperty(IntEnum):
+	Id = 0
+	Owner = 1
+	Name = 2
+	User = 3
 
-class OutletIndex(QModelIndex):
-	pass
+class EdgeProperty(IntEnum):
+	Id = 0
+	SourceOutlet =  1
+	TargetInlet = 2
+
+
+class NodeIndex(QPersistentModelIndex):
+	def __repr__(self) -> str:
+		return f"{self.__class__.__name__}({self.row()},{self.column()})"
+
+class EdgeIndex(QPersistentModelIndex):
+	def __repr__(self) -> str:
+		return f"{self.__class__.__name__}({self.row()},{self.column()})"
+
+class InletIndex(QPersistentModelIndex):
+	def __repr__(self) -> str:
+		return f"{self.__class__.__name__}({self.row()},{self.column()})"
+
+class OutletIndex(QPersistentModelIndex):
+	def __repr__(self) -> str:
+		return f"{self.__class__.__name__}({self.row()},{self.column()})"
 
 
 class GraphModel(QObject):
-	# nodesInserted = Signal(QModelIndex, int, int)
-	# nodesRemoved = Signal(QModelIndex, int, int)
-	# nodesAboutToBeRemoved = Signal(QModelIndex, int, int)
-	# nodesChanged = Signal(QModelIndex, QModelIndex, List[int])
+	nodesAdded = Signal(list)
+	nodesAboutToBeRemoved = Signal(list)
+	nodesDataChanged = Signal(list, list)
 
-	# outletsInserted = Signal(QModelIndex, int, int)
-	# outletsRemoved = Signal(QModelIndex, int, int)
-	# outletsAboutToBeRemoved = Signal(QModelIndex, int, int)
-	# outletsChanged = Signal(QModelIndex, QModelIndex, List[int])
+	inletsAdded = Signal(list)
+	inletsAboutToBeRemoved = Signal(list)
+	inletsDataChanged = Signal(list, list)
 
-	# inletsInserted = Signal(QModelIndex, int, int)
-	# inletsRemoved = Signal(QModelIndex, int, int)
-	# inletsAboutToBeRemoved = Signal(QModelIndex, int, int)
-	# inletsChanged = Signal(QModelIndex, QModelIndex, List[int])
+	outletsAdded = Signal(list)
+	outletsAboutToBeRemoved = Signal(list)
+	outletsDataChanged = Signal(list, list)
 
-	# edgesInserted = Signal(QModelIndex, int, int)
-	# edgesRemoved = Signal(QModelIndex, int, int)
-	# edgesAboutToBeRemoved = Signal(QModelIndex, int, int)
-	# edgesChanged = Signal(QModelIndex, QModelIndex, List[int])
+	edgesAdded = Signal(list)
+	edgesAboutToBeRemoved = Signal(list)
+	edgesDataChanged = Signal(list, list)
 
 	def __init__(self, parent=None):
 		super().__init__(parent)
@@ -58,141 +87,254 @@ class GraphModel(QObject):
 
 		### Nodes Model ###
 		self.nodeTable = QStandardItemModel()
-		self.nodeTable.setHorizontalHeaderLabels(['id', 'name', 'posx', 'posy', 'script'])
-		# self.nodeTable.rowsInserted.connect(self.nodesInserted.emit)
-		# self.nodeTable.rowsRemoved.connect(self.nodesRemoved.emit)
-		# self.nodeTable.rowsAboutToBeRemoved.connect(self.nodesAboutToBeRemoved.emit)
-		# self.nodeTable.dataChanged.connect(self.nodesChanged.emit)
+
+		self.nodeTable.setHorizontalHeaderLabels(NodeProperty._member_names_)
+		self.nodeTable.rowsInserted.connect(lambda parent, first, last:
+			self.nodesAdded.emit([NodeIndex(self.nodeTable.index(row, 0)) for row in range(first, last+1)])
+		)
+
+		self.nodeTable.rowsAboutToBeRemoved.connect(lambda parent, first, last:
+			self.nodesAboutToBeRemoved.emit([NodeIndex(self.nodeTable.index(row, 0)) for row in range(first, last+1)])
+		)
+
+		self.nodeTable.dataChanged.connect(lambda topLeft, bottomRight, roles:
+			self.nodesDataChanged.emit(
+				[NodeIndex(self.nodeTable.index(row, 0)) for row in range(topLeft.row(), bottomRight.row()+1)],
+				roles
+			)
+		)
 
 		### Inlets Model ###
 		self.inletTable = QStandardItemModel()
-		self.inletTable.setHorizontalHeaderLabels(['id', 'owner', "name"])
-		# self.inletTable.rowsInserted.connect(self.inletsInserted.emit)
-		# self.inletTable.rowsRemoved.connect(self.inletsRemoved.emit)
-		# self.inletTable.rowsAboutToBeRemoved.connect(self.inletsAboutToBeRemoved.emit)
-		# self.inletTable.dataChanged.connect(self.inletsChanged.emit)
+		self.inletTable.setHorizontalHeaderLabels(InletProperty._member_names_)
+		self.inletTable.rowsInserted.connect(lambda parent, first, last:
+			self.inletsAdded.emit([InletIndex(self.inletTable.index(row, 0)) for row in range(first, last+1)])
+		)
+
+		self.inletTable.rowsAboutToBeRemoved.connect(lambda parent, first, last:
+			self.inletsAboutToBeRemoved.emit([InletIndex(self.inletTable.index(row, 0)) for row in range(first, last+1)])
+		)
+
+		self.inletTable.dataChanged.connect(lambda topLeft, bottomRight, roles:
+			self.inletsDataChanged.emit(
+				[InletIndex(self.inletTable.index(row, 0)) for row in range(topLeft.row(), bottomRight.row()+1)],
+				roles
+			)
+		)
 
 		### Outlets Model ###
 		self.outletTable = QStandardItemModel()
-		self.outletTable.setHorizontalHeaderLabels(['id', 'owner', "name"])
-		# self.outletTable.rowsInserted.connect(self.outletsInserted.emit)
-		# self.outletTable.rowsRemoved.connect(self.outletsRemoved.emit)
-		# self.outletTable.rowsAboutToBeRemoved.connect(self.outletsAboutToBeRemoved.emit)
-		# self.outletTable.dataChanged.connect(self.outletsChanged.emit)
+		self.outletTable.setHorizontalHeaderLabels(OutletProperty._member_names_)
+		self.outletTable.rowsInserted.connect(lambda parent, first, last:
+			self.outletsAdded.emit([OutletIndex(self.outletTable.index(row, 0)) for row in range(first, last+1)])
+		)
+
+		self.outletTable.rowsAboutToBeRemoved.connect(lambda parent, first, last:
+			self.outletsAboutToBeRemoved.emit([OutletIndex(self.outletTable.index(row, 0)) for row in range(first, last+1)])
+		)
+
+		self.outletTable.dataChanged.connect(lambda topLeft, bottomRight, roles:
+			self.outletsDataChanged.emit(
+				[OutletIndex(self.outletTable.index(row, 0)) for row in range(topLeft.row(), bottomRight.row()+1)],
+				roles
+			)
+		)
 
 		### Edges Model ###
 		self.edgeTable = QStandardItemModel()
-		self.edgeTable.setHorizontalHeaderLabels(["id", "outlet_id", "inlet_id"])
-		# self.edgeTable.rowsInserted.connect(self.edgesInserted.emit)
-		# self.edgeTable.rowsRemoved.connect(self.edgesRemoved.emit)
-		# self.edgeTable.rowsAboutToBeRemoved.connect(self.edgesAboutToBeRemoved.emit)
-		# self.edgeTable.dataChanged.connect(self.edgesChanged.emit)
+		self.edgeTable.setHorizontalHeaderLabels(EdgeProperty._member_names_)
+		self.edgeTable.rowsInserted.connect(lambda parent, first, last:
+			self.edgesAdded.emit([EdgeIndex(self.edgeTable.index(row, 0)) for row in range(first, last+1)])
+		)
 
-	def addNode(self, name:str, posx:int, posy:int, script:str)->NodeIndex:
-		assert isinstance(name, str)
-		assert isinstance(posx, int)
-		assert isinstance(posy, int)
-		id_item =   QStandardItem(unique.make_unique_id())
+		self.edgeTable.rowsAboutToBeRemoved.connect(lambda parent, first, last:
+			self.edgesAboutToBeRemoved.emit([EdgeIndex(self.edgeTable.index(row, 0)) for row in range(first, last+1)])
+		)
+
+		self.edgeTable.dataChanged.connect(lambda topLeft, bottomRight, roles:
+			self.edgesDataChanged.emit(
+				[EdgeIndex(self.edgeTable.index(row, 0)) for row in range(topLeft.row(), bottomRight.row()+1)],
+				roles
+			)
+		)
+
+	def getNodes(self)->Iterable[NodeIndex]:
+		for row in range(self.nodeTable.rowCount()):
+			yield NodeIndex(self.nodeTable.index(row, 0))
+
+	def getInlets(self)->Iterable[InletIndex]:
+		for row in range(self.inletTable.rowCount()):
+			yield InletIndex(self.inletTable.index(row, 0))
+
+	def getOutlets(self)->Iterable[OutletIndex]:
+		for row in range(self.outletTable.rowCount()):
+			yield OutletIndex(self.outletTable.index(row, 0))
+
+	def getEdges(self)->Iterable[EdgeIndex]:
+		for row in range(self.edgeTable.rowCount()):
+			yield EdgeIndex(self.edgeTable.index(row, 0))
+
+	def addNode(self, name:str, posx:int, posy:int)->NodeIndex:
+		if not isinstance(name, str):
+			raise TypeError(f"'name' must be s tring, got: '{name}'")
+		if not isinstance(posx, int) or not isinstance(posy, int):
+			raise TypeError(f"'posx and posy' must be s tring, got: '{posx}', '{posy}")
+
+		id_item   = QStandardItem()
+		id_item.setData(unique.make_unique_id(), Qt.ItemDataRole.DisplayRole)
 		name_item = QStandardItem()
 		name_item.setData(name, Qt.ItemDataRole.DisplayRole)
 		posx_item = QStandardItem()
 		posx_item.setData(int(posx), Qt.ItemDataRole.DisplayRole)
 		posy_item = QStandardItem()
 		posy_item.setData(int(posy), Qt.ItemDataRole.DisplayRole)
-		script_item = QStandardItem(script)
-		script_item.setData(script, Qt.ItemDataRole.DisplayRole)
-		self.nodeTable.appendRow([id_item, name_item, posx_item, posy_item, script_item])
+
+		self.nodeTable.appendRow([id_item, name_item, posx_item, posy_item])
 
 		return NodeIndex(self.nodeTable.indexFromItem(id_item))
 
 	def addInlet(self, node:NodeIndex, name:str)->InletIndex:
 		if not node.isValid():
-			raise KeyError(f"Node {node.data()}, does not exist!")
+			raise ValueError(f"Node {node.data()}, does not exist!")
+		if not node.column() == 0:
+			raise ValueError("Node column must be 0")
 
-		id_item =    QStandardItem(unique.make_unique_id())
-		owner_item = QStandardItem(node.data())
-		name_item =  QStandardItem(name)
+		id_item    = QStandardItem()
+		id_item.setData(unique.make_unique_id(), Qt.ItemDataRole.DisplayRole)
+		owner_item = QStandardItem()
+		owner_item.setData(node.data(), Qt.ItemDataRole.DisplayRole)
+		name_item  = QStandardItem()
+		name_item.setData(name, Qt.ItemDataRole.DisplayRole)
 		
 		self.inletTable.appendRow([id_item, owner_item, name_item])
 		return InletIndex(self.inletTable.indexFromItem(id_item))
 
 	def addOutlet(self, node:NodeIndex, name:str)->OutletIndex:
 		if not node.isValid():
-			raise KeyError(f"Node {node.data()}, does not exist!")
-		id_item =    QStandardItem(unique.make_unique_id())
-		owner_item = QStandardItem(node.data())
-		name_item =  QStandardItem(name)
+			raise ValueError(f"Node {node.data()}, does not exist!")
+		if not node.column() == 0:
+			raise ValueError("Node column must be 0")
+
+		id_item    = QStandardItem()
+		id_item.setData(unique.make_unique_id(), Qt.ItemDataRole.DisplayRole)
+		owner_item = QStandardItem()
+		owner_item.setData(node.data(), Qt.ItemDataRole.DisplayRole)
+		name_item  = QStandardItem()
+		name_item.setData(name, Qt.ItemDataRole.DisplayRole)
 		
 		self.outletTable.appendRow([id_item, owner_item, name_item])
 		return OutletIndex(self.outletTable.indexFromItem(id_item))
 
-	def addEdge(self, outlet:QModelIndex, inlet:QModelIndex)->EdgeIndex:
+	def addEdge(self, outlet:OutletIndex, inlet:InletIndex)->EdgeIndex:
 		if not outlet.isValid():
-			raise KeyError(f"outlet '{outlet}'' does not exist")
+			raise ValueError(f"outlet '{outlet}'' does not exist")
 		if not inlet.isValid():
-			raise KeyError(f"inlet {inlet} does not exist")
+			raise ValueError(f"inlet {inlet} does not exist")
+		if outlet.column() != 0:
+			raise ValueError(f"outlet column must be 0")
+		if inlet.column() !=0:
+			raise ValueError(f"inlet column must be 0")
 
 		id_item =        QStandardItem(unique.make_unique_id())
 		outlet_id_item = QStandardItem(outlet.data())
 		inlet_id_item =  QStandardItem(inlet.data())
+
 		self.edgeTable.appendRow([id_item, outlet_id_item, inlet_id_item])
 		return EdgeIndex(self.edgeTable.indexFromItem(id_item))
 
-	def removeNodes(self, nodes:List[NodeIndex]):
-		# Collect the rows to be removed
-		rows_to_remove = sorted(set(index.row() for index in nodes), reverse=True)
+	def removeNodes(self, nodes_to_remove:List[NodeIndex]):
+		assert all( isinstance(node, NodeIndex) for node in nodes_to_remove )
+		assert all( node.column() == 0 for node in nodes_to_remove)
 
 		# collect inlets to be removed
 		inlets_to_remove = []
-		for row in rows_to_remove:
-			owner_id = self.nodeTable.item(row, 0).text()
-			inlet_items = self.inletTable.findItems(owner_id, Qt.MatchFlag.MatchExactly, 1)
-			for inlet_item in inlet_items:
-				inlets_to_remove.append( InletIndex(inlet_item.index().siblingAtColumn(0)) )
+		for node in nodes_to_remove:
+			node_inlets = self.getNodeInlets(node)
+			inlets_to_remove+=node_inlets
 		self.removeInlets(inlets_to_remove)
 
-		# collect outlets to be removed
 		outlets_to_remove = []
-		for row in rows_to_remove:
-			owner_id = self.nodeTable.item(row, 0).text()
-			outlet_items = self.outletTable.findItems(owner_id, Qt.MatchFlag.MatchExactly, 1)
-			for outlet_item in outlet_items:
-				outlets_to_remove.append( OutletIndex(outlet_item.index().siblingAtColumn(0)) )
+		for node in nodes_to_remove:
+			node_outlets = self.getNodeOutlets(node)
+			outlets_to_remove+=node_outlets
 		self.removeOutlets(outlets_to_remove)
 
-		# Remove the node rows from the GraphModel (starting from the last one, to avoid shifting indices)
-		for row in reversed(rows_to_remove):
-			self.nodeTable.removeRow(row)
+		for node in sorted(nodes_to_remove, key=lambda node:node.row(), reverse=True):
+			self.nodeTable.removeRow(node.row())
 
 	def removeOutlets(self, outlets_to_remove:List[OutletIndex]):
 		# collect edges to be removed
 		assert all( isinstance(outlet, OutletIndex) for outlet in outlets_to_remove )
+		assert all( outlet.column()==0 for outlet in outlets_to_remove )
+
 		edges_to_remove = []
 		for outlet in outlets_to_remove:
-			edge_items = self.edgeTable.findItems(outlet.data(), Qt.MatchFlag.MatchExactly, 1)
-			for edge_item in edge_items:
-				edges_to_remove.append( EdgeIndex(edge_item.index()) )
+			outlet_edges = self.getOutletEdges(outlet)
+			edges_to_remove+=outlet_edges
 		self.removeEdges(edges_to_remove)
 
-		# Remove the rows from the GraphModel (starting from the last one, to avoid shifting indices)
-		rows_to_remove = set([outlet.row() for outlet in outlets_to_remove]) # keep unique rows
-		for row in sorted(rows_to_remove, reverse=True):
-			self.outletTable.removeRow(row)
+		for outlet in sorted(outlets_to_remove, key=lambda outlet: outlet.row(), reverse=True):
+			self.outletTable.removeRow(outlet.row())
+
+	def getOutletEdges(self, outlet:OutletIndex)->List[EdgeIndex]:
+		assert isinstance(outlet, OutletIndex) and outlet.isValid()
+		assert outlet.model() == self.outletTable
+		assert outlet.column() == 0
+		
+		outlet_id = outlet.data()
+		connected_edges = [EdgeIndex(idx.siblingAtColumn(0)) for idx in self.edgeTable.match(
+			self.edgeTable.index(0,EdgeProperty.SourceOutlet), Qt.ItemDataRole.DisplayRole, outlet_id, 1, Qt.MatchFlag.MatchExactly
+		)]
+		return connected_edges
+
+	def getInletEdges(self, inlet:InletIndex)->List[EdgeIndex]:
+		assert isinstance(inlet, InletIndex) and inlet.isValid()
+		assert inlet.model() == self.inletTable
+		assert inlet.column() == 0
+
+		inlet_id = inlet.data()
+		connected_edges = [EdgeIndex(idx.siblingAtColumn(0)) for idx in self.edgeTable.match(
+			self.edgeTable.index(0,EdgeProperty.TargetInlet), Qt.ItemDataRole.DisplayRole, inlet_id, 1, Qt.MatchFlag.MatchExactly
+		)]
+		return connected_edges
+
+	def getOutletOwner(self, outlet: OutletIndex)->NodeIndex:
+		assert isinstance(outlet, OutletIndex) and outlet.isValid()
+		assert outlet.model() == self.outletTable
+		assert outlet.column() == 0
+
+		node_id:str = self.outletTable.data(outlet.sibling(outlet.row(), OutletProperty.Owner), Qt.ItemDataRole.DisplayRole)
+		owner_nodes = [NodeIndex(index) for index in self.nodeTable.match(
+			self.nodeTable.index(0, NodeProperty.Id), Qt.ItemDataRole.DisplayRole, node_id, 1, Qt.MatchFlag.MatchExactly
+		)]
+		assert len(owner_nodes)==1
+		return owner_nodes[0]
+
+	def setOutletOwner(self, outlet:OutletIndex, node:NodeIndex):
+		assert isinstance(outlet, OutletIndex) and outlet.isValid()
+		assert outlet.model() == self.outletTable
+		assert outlet.column() == 0
+
+		if not isinstance(node, NodeIndex):
+			raise ValueError(f"Value must be a node, got: {node}")
+
+		node_id:str = self.nodeTable.data(node.sibling(node.row(), NodeProperty.Id), Qt.ItemDataRole.DisplayRole)
+		self.outletTable.setData(outlet.sibling(outlet.row(), OutletProperty.Owner), node_id, Qt.ItemDataRole.DisplayRole)
+
 
 	def removeInlets(self, inlets_to_remove:List[InletIndex]):
 		# collect edges to be removed
-		assert all( isinstance(inlet, InletIndex) for inlet in inlets_to_remove )
+		assert all( isinstance(inlet, InletIndex) for inlet in inlets_to_remove ), f"got: {inlets_to_remove}"
+		assert all( inlet.column()==0 for inlet in inlets_to_remove)
+
 		edges_to_remove = []
 		for inlet in inlets_to_remove:
-			edge_items = self.edgeTable.findItems(inlet.data(), Qt.MatchFlag.MatchExactly, 2)
-			for edge_item in edge_items:
-				edges_to_remove.append( EdgeIndex(edge_item.index()) )
+			inlet_edges = self.getInletEdges(inlet)
+			edges_to_remove+=inlet_edges
 		self.removeEdges(edges_to_remove)
 
-		# Remove the rows from the GraphModel (starting from the last one, to avoid shifting indices)
-		rows_to_remove = set([inlet.row() for inlet in inlets_to_remove]) # keep unique rows
-		for row in sorted(rows_to_remove, reverse=True):
-			self.inletTable.removeRow(row)
+		for inlet in sorted(inlets_to_remove, key=lambda inlet: inlet.row(), reverse=True):
+			self.inletTable.removeRow(inlet.row())
 
 	def removeEdges(self, edges_to_remove:List[EdgeIndex]):
 		# Remove the rows from the GraphModel (starting from the last one, to avoid shifting indices)
@@ -201,175 +343,237 @@ class GraphModel(QObject):
 		for row in sorted(rows_to_remove, reverse=True):
 			self.edgeTable.removeRow(row)
 
-	def getNode(self, node:NodeIndex, relations=True):
+	def getNodeData(self, node:NodeIndex, propertyId:NodeProperty):
 		assert isinstance(node, NodeIndex) and node.isValid(), f"got: {node}"
 		assert node.column() == 0
-		properties = {
-			'id': node.data(),
-			'name': node.siblingAtColumn(1).data(),
-			'posx': int(node.siblingAtColumn(2).data()),
-			'posy': int(node.siblingAtColumn(3).data()),
-		}
-		if relations:
-			inlets = [InletIndex(item.index().siblingAtColumn(0)) for item in self.inletTable.findItems(node.data(), Qt.MatchFlag.MatchExactly, 1)]
-			outlets = [OutletIndex(item.index().siblingAtColumn(0)) for item in self.outletTable.findItems(node.data(), Qt.MatchFlag.MatchExactly, 1)]
-			properties.update({
-				'outlets': outlets,
-				'inlets': inlets
-			})
-		return properties
 
-	def setNode(self, node:NodeIndex, properties:dict):
+		match propertyId:
+			case NodeProperty.Id:
+				return self.nodeTable.data(node.sibling(node.row(), propertyId), Qt.ItemDataRole.DisplayRole)
+			case NodeProperty.Name:
+				return self.nodeTable.data(node.sibling(node.row(), propertyId), Qt.ItemDataRole.DisplayRole)
+			case NodeProperty.LocationX:
+				return self.nodeTable.data(node.sibling(node.row(), propertyId), Qt.ItemDataRole.DisplayRole)
+			case NodeProperty.LocationY:
+				return self.nodeTable.data(node.sibling(node.row(), propertyId), Qt.ItemDataRole.DisplayRole)
+			case _:
+				return self.nodeTable.data(node.sibling(node.row(), propertyId), Qt.ItemDataRole.DisplayRole)
+
+	def setNodeData(self, node:NodeIndex, value, propertyId:NodeProperty):
 		assert isinstance(node, NodeIndex) and node.isValid(), f"got: {node}"
 		assert node.column() == 0
 		# self.nodeTable.blockSignals(True)
 		columnsChanged = []
-		for key, value in properties.items():
-			match key:
-				case "id":
-					assert isinstance(value, str)
-					columnsChanged.append(0)
-					self.nodeTable.setData(node.siblingAtColumn(0), value)
-				case "name":
-					assert isinstance(value, str)
-					columnsChanged.append(1)
-					prevValue = self.nodeTable.data(node.siblingAtColumn(1))
-					res = self.nodeTable.setData(node.siblingAtColumn(1), value)
-					print(res, value, prevValue)
-				case "posx":
-					assert isinstance(value, int)
-					columnsChanged.append(2)
-					self.nodeTable.setData(node.siblingAtColumn(2), value)
-				case "posy":
-					assert isinstance(value, int)
-					columnsChanged.append(3)
-					self.nodeTable.setData(node.siblingAtColumn(3), value)
+		match propertyId:
+			case NodeProperty.Id: #id
+				assert isinstance(value, str)
+				self.nodeTable.setData(node.sibling(node.row(), propertyId), value, Qt.ItemDataRole.DisplayRole)
+			case NodeProperty.Name: #name
+				assert isinstance(value, str)
+				self.nodeTable.setData(node.sibling(node.row(), propertyId), value, Qt.ItemDataRole.DisplayRole)
+			case NodeProperty.LocationX: #"posx":
+				assert isinstance(value, int)
+				self.nodeTable.setData(node.sibling(node.row(), propertyId), value, Qt.ItemDataRole.DisplayRole)
+			case NodeProperty.LocationY: #"posy":
+				assert isinstance(value, int)
+				self.nodeTable.setData(node.sibling(node.row(), propertyId), value, Qt.ItemDataRole.DisplayRole)
+			case _:
+				self.nodeTable.setData(node.sibling(node.row(), propertyId), value, Qt.ItemDataRole.DisplayRole)
 			
 		# self.nodeTable.blockSignals(False)
 		# for start, end in group_consecutive_numbers(columnsChanged):
 		# 	self.nodeTable.dataChanged.emit(node.siblingAtColumn(start), node.siblingAtColumn(end))
 
-	def setNodeData(self, node:NodeIndex, role):
-		raise NotImplementedError
-
-	def getInlet(self, inlet:InletIndex, relations=True):
+	def getInletData(self, inlet:InletIndex, propertyId:InletProperty):
 		assert isinstance(inlet, InletIndex) and inlet.isValid()
 		assert inlet.model() == self.inletTable
 		assert inlet.column() == 0
 
-		properties = {
-			'id': inlet.data(),
-			"name": inlet.siblingAtColumn(2).data(),
-		}
-		if relations:
-			node_id = inlet.siblingAtColumn(1).data()
-			owner_nodes = [NodeIndex(item.index()) for item in self.nodeTable.findItems(node_id, Qt.MatchFlag.MatchExactly, 0)]
-			assert len(owner_nodes)==1, f"Outlet {inlet} supposed to have exacly one owner node!"
-			edges = [EdgeIndex(item.index().siblingAtColumn(0)) for item in self.edgeTable.findItems(inlet.data(), Qt.MatchFlag.MatchExactly, 2)]
-			properties.update({
-				'node': owner_nodes[0],
-				"edges": edges
-			})
-		return properties
+		match propertyId:
+			case InletProperty.Id: #Id:
+				return self.inletTable.data(inlet.sibling(inlet.row(), propertyId))
+			case InletProperty.Name: #Name
+				return self.inletTable.data(inlet.sibling(inlet.row(), propertyId))
+			case _:
+				return self.inletTable.data(inlet.sibling(inlet.row(), propertyId))
 
-	def getOutlet(self, outlet:OutletIndex, relations=True):
-		assert isinstance(outlet, OutletIndex)
+	def setInletData(self, inlet: InletIndex, value, propertyId:InletProperty):
+		assert isinstance(inlet, InletIndex) and inlet.isValid()
+		assert inlet.model() == self.outletTable
+		assert inlet.column() == 0
+
+		match propertyId:
+			case InletProperty.Id: #Id:
+				self.outletTable.setData(inlet.sibling(inlet.row(), propertyId), value, Qt.ItemDataRole.DisplayRole)
+			case InletProperty.Name: #Name
+				self.outletTable.setData(inlet.sibling(inlet.row(), propertyId), value, Qt.ItemDataRole.DisplayRole)
+			case _:
+				self.outletTable.setData(inlet.sibling(inlet.row(), propertyId), value, Qt.ItemDataRole.DisplayRole)
+
+	def getOutletData(self, outlet:OutletIndex, propertyId:OutletProperty):
+		assert isinstance(outlet, OutletIndex) and outlet.isValid()
 		assert outlet.model() == self.outletTable
 		assert outlet.column() == 0
 
-		properties = {
-			'id': outlet.data(),
-			'name': outlet.siblingAtColumn(2).data(),
-		}
-		if relations:
-			node_id = outlet.siblingAtColumn(1).data()
-			owner_nodes = [NodeIndex(item.index()) for item in self.nodeTable.findItems(node_id, Qt.MatchFlag.MatchExactly, 0)]
-			assert len(owner_nodes)==1, f"Outlet {outlet} supposed to have exacly one owner node!"
-			edges = [EdgeIndex(item.index().siblingAtColumn(0)) for item in self.edgeTable.findItems(outlet.data(), Qt.MatchFlag.MatchExactly, 1)]
-			properties.update({
-				'node': owner_nodes[0],
-				"edges": edges
-			})
-		return properties
+		match propertyId:
+			case OutletProperty.Id: #Id
+				return self.outletTable.data(outlet.sibling(outlet.row(), propertyId), Qt.ItemDataRole.DisplayRole)
+			case OutletProperty.Name: #Name:
+				return self.outletTable.data(outlet.sibling(outlet.row(), propertyId), Qt.ItemDataRole.DisplayRole)
+			case _:
+				return self.outletTable.data(outlet.sibling(outlet.row(), propertyId), Qt.ItemDataRole.DisplayRole)
 
-	def getEdge(self, edge:EdgeIndex, relations=True):
+	def setOutletData(self, outlet: OutletIndex, value, propertyId:OutletProperty):
+		assert isinstance(outlet, OutletIndex) and outlet.isValid()
+		assert outlet.model() == self.outletTable
+		assert outlet.column() == 0
+
+		match propertyId:
+			case OutletProperty.Id: #Id
+				self.outletTable.setData(outlet.sibling(outlet.row(), propertyId), value, Qt.ItemDataRole.DisplayRole)
+			case OutletProperty.Name: #Name
+				self.outletTable.setData(outlet.sibling(outlet.row(), propertyId), value, Qt.ItemDataRole.DisplayRole)
+			case _:
+				self.outletTable.setData(outlet.sibling(outlet.row(), propertyId), value, Qt.ItemDataRole.DisplayRole)
+
+	def getEdgeData(self, edge:EdgeIndex, propertyId:EdgeProperty):
 		assert isinstance(edge, EdgeIndex)
 		assert edge.model() == self.edgeTable
 		assert edge.column() == 0
 
-		properties = {
-			'id': edge.data(),
-		}
-		if relations:
-			outlet_id:str = edge.siblingAtColumn(1).data()
-			inlet_id:str = edge.siblingAtColumn(2).data()
-			source_outlets = [OutletIndex(item.index()) for item in self.outletTable.findItems(outlet_id, Qt.MatchFlag.MatchExactly, 0)]
-			target_inlets =  [InletIndex(item.index()) for item in self.inletTable.findItems(inlet_id, Qt.MatchFlag.MatchExactly, 0)]
-			assert len(source_outlets)==1, f"Edges {edge} supposed to have exacly one source, got {len(source_outlets)}!"
-			assert len(target_inlets)==1, f"Edges {edge} supposed to have exacly one target, got {len(source_outlets)}!"
-			properties.update({
-				'source': source_outlets[0],
-				"target": target_inlets[0]
-			})
-		return properties
+		match propertyId:
+			case EdgeProperty.Id: #Id
+				return self.edgeTable.data(edge.sibling(edge.row(), propertyId), Qt.ItemDataRole.DisplayRole)
+			case _:
+				return self.edgeTable.data(edge.sibling(edge.row(), propertyId), Qt.ItemDataRole.DisplayRole)
 
-	def setEdge(self, edge:EdgeIndex, properties:dict):
+	def setEdgeData(self, edge:EdgeIndex, value, propertyId:EdgeProperty):
 		assert isinstance(edge, EdgeIndex)
 		assert edge.model() == self.edgeTable
 		assert edge.column() == 0
 
-		for key, value in properties.items():
-			match key:
-				case "source":
-					IsValidSource = (isinstance(value, QModelIndex)
-									and value.model() == self.outletTable
-									and value.isValid())
-					if not IsValidSource:
-						raise ValueError(f"source is not an outlet, got: {value}")
+		match propertyId:
+			case EdgeProperty.Id: #Id
+				if not isinstance(value, str):
+					raise ValueError(f"id must be a string, got: {value}")
+				return self.edgeTable.setData(edge.sibling(edge.row(), propertyId), value, Qt.ItemDataRole.DisplayRole)
+			case _:
+				return self.edgeTable.setData(edge.sibling(edge.row(), propertyId), value, Qt.ItemDataRole.DisplayRole)
 
-					source_id:str = value.data()
-					self.edgeTable.setData(edge.siblingAtColumn(1), source_id)
-				case "target":
-					IsValidTarget = (isinstance(value, QModelIndex)
-									and value.model() == self.inletTable
-									and value.isValid())
-					if not IsValidTarget:
-						raise ValueError(f"source is not an inlet, got: {value}")
-					target_id:str = value.data()
-					self.edgeTable.setData(edge.siblingAtColumn(2), target_id)
-
-	def getSourceNodes(self, node:NodeIndex):
-		assert isinstance(node, QModelIndex)
-		assert node.model() == self.nodeTable
-		assert node.column() == 0
-
-		inlets = self.getNode(node)["inlets"]
-		for inlet in inlets:
-			for edge in self.getInlet(inlet)["edges"]:
-				outlet = self.getEdge(edge)["source"]
-				yield self.getOutlet(outlet)["node"]
-
-	def getTargetNodes(self, node:NodeIndex):
+	def getNodeInlets(self, node:NodeIndex)->List[InletIndex]:
 		assert isinstance(node, NodeIndex)
 		assert node.model() == self.nodeTable
 		assert node.column() == 0
 
-		outlets = self.getNode(node)["outlets"]
+		node_id = self.nodeTable.data(node.sibling(node.row(), NodeProperty.Id))
+		inlets = [InletIndex(idx.siblingAtColumn(0)) for idx in self.inletTable.match(
+			self.inletTable.index(0,InletProperty.Owner), Qt.ItemDataRole.DisplayRole, node_id, 1, Qt.MatchFlag.MatchExactly
+		)]
+		return inlets
+
+	def getNodeOutlets(self, node:NodeIndex)->List[OutletIndex]:
+		assert isinstance(node, NodeIndex)
+		assert node.model() == self.nodeTable
+		assert node.column() == 0
+
+		node_id = self.nodeTable.data(node.sibling(node.row(), NodeProperty.Id))
+		outlets = [OutletIndex(idx.siblingAtColumn(OutletProperty.Id)) for idx in self.outletTable.match(
+			self.outletTable.index(0, OutletProperty.Owner), Qt.ItemDataRole.DisplayRole, node_id, 1, Qt.MatchFlag.MatchExactly
+		)]
+		return outlets
+
+	def getInletOwner(self, inlet:InletIndex)->NodeIndex:
+		assert isinstance(inlet, InletIndex) and inlet.isValid()
+		assert inlet.model() == self.inletTable
+		assert inlet.column() == InletProperty.Id
+
+		node_id:str = self.inletTable.data(inlet.sibling(inlet.row(), InletProperty.Owner), Qt.ItemDataRole.DisplayRole)
+		owner_nodes = [NodeIndex(idx.siblingAtColumn(NodeProperty.Id)) for idx in self.nodeTable.match(
+			self.nodeTable.index(0,NodeProperty.Id), Qt.ItemDataRole.DisplayRole, node_id, 1, Qt.MatchFlag.MatchExactly
+		)]
+		assert len(owner_nodes)==1
+		return owner_nodes[0]
+
+	def getEdgeSource(self, edge: EdgeIndex)->OutletIndex:
+		assert isinstance(edge, EdgeIndex)
+		assert edge.model() == self.edgeTable
+		assert edge.column() == 0
+
+		outlet_id:str = self.edgeTable.data(edge.sibling(edge.row(), EdgeProperty.SourceOutlet))
+		source_outlets = [OutletIndex(idx.siblingAtColumn(OutletProperty.Id)) for idx in self.outletTable.match(
+			self.outletTable.index(0, OutletProperty.Id), Qt.ItemDataRole.DisplayRole, outlet_id, 1, Qt.MatchFlag.MatchExactly
+		)]
+		assert len(source_outlets) == 1
+		return source_outlets[0]
+
+	def setEdgeSource(self, edge:EdgeIndex, outlet:OutletIndex):
+		assert isinstance(edge, EdgeIndex) and edge.isValid()
+		assert edge.model() == self.edgeTable
+		assert edge.column() == 0
+
+		if not isinstance(outlet, OutletIndex):
+			raise ValueError(f"Value must be an outlet, got: {value}")
+
+		outlet_id:str = self.outletTable.data(outlet.sibling(outlet.row(), OutletProperty.Id), Qt.ItemDataRole.DisplayRole)
+		self.edgeTable.setData(edge.sibling(edge.row(), EdgeProperty.SourceOutlet), outlet_id,  Qt.ItemDataRole.DisplayRole)
+
+	def getEdgeTarget(self, edge:EdgeIndex)->InletIndex:
+		assert isinstance(edge, EdgeIndex)
+		assert edge.model() == self.edgeTable
+		assert edge.column() == EdgeProperty.Id
+
+		inlet_id:str = self.edgeTable.data(edge.sibling(edge.row(), EdgeProperty.TargetInlet), Qt.ItemDataRole.DisplayRole)
+		assert isinstance(inlet_id, str)
+		target_inlets = [InletIndex(idx.siblingAtColumn(InletProperty.Id)) for idx in self.inletTable.match(
+			self.inletTable.index(0,InletProperty.Id), Qt.ItemDataRole.DisplayRole, inlet_id, 1, Qt.MatchFlag.MatchExactly
+		)]
+		assert len(target_inlets) == 1
+		return target_inlets[0]
+
+	def setEdgeTarget(self, edge:EdgeIndex, inlet:InletIndex):
+		assert isinstance(edge, EdgeIndex) and edge.isValid()
+		assert edge.model() == self.edgeTable
+		assert edge.column() == 0
+
+		if not isinstance(inlet, InletIndex):
+			raise ValueError(f"Value must be an inlet, got: {value}")
+
+		inlet_id:str = self.inletTable.data(inlet.sibling(inlet.row(), InletProperty.Id), Qt.ItemDataRole.DisplayRole)
+		assert isinstance(inlet_id, str)
+		self.edgeTable.setData(edge.sibling(edge.row(), EdgeProperty.TargetInlet), inlet_id, Qt.ItemDataRole.DisplayRole)
+
+	def getSourceNodes(self, node:NodeIndex):
+		assert isinstance(node, NodeIndex)
+		assert node.model() == self.nodeTable
+		assert node.column() == 0
+
+		inlets = self.getNodeInlets(node)
+		for inlet in inlets:
+			for edge in self.getInletEdges(inlet):
+				outlet = self.getEdgeSource(edge)
+				yield self.getOutletOwner(outlet)
+
+	def getTargetNodes(self, node:NodeIndex):
+		assert isinstance(node, NodeIndex)
+		assert node.model() == self.nodeTable
+		assert node.column() == NodeProperty.Id
+
+		outlets = self.getNodeOutlets(node)
 		for outlet in outlets:
-			for edge in self.getOutlet(outlet)["edges"]:
-				inlet = self.getEdge(edge)["target"]
-				yield self.getInlet(inlet)["node"]
+			for edge in self.getOutletEdges(outlet):
+				inlet = self.getEdgeTarget(edge)
+				yield self.getInletOwner(inlet)
 
 	def rootRodes(self)->Iterable[NodeIndex]:
 		"""Yield all root nodes (nodes without outlets) in the graph."""
 		def hasTargets(node:NodeIndex):
-			assert isinstance(node, QModelIndex)
+			assert isinstance(node, NodeIndex)
 			assert node.model() == self.nodeTable
 			assert node.column() == 0
 			return len(list(self.getTargetNodes(node)))>0
 		
 		for row in range(self.nodeTable.rowCount()):
-			node = NodeIndex(self.nodeTable.index(row, 0))
+			node = NodeIndex(self.nodeTable.index(row, NodeProperty.Id))
 			if not hasTargets(node):
 				yield node
 
@@ -378,9 +582,9 @@ class GraphModel(QObject):
 		visited = set()  # Set to track visited nodes
 		def dfs_visit(node:NodeIndex):
 			"""Recursive helper function to perform DFS."""
-			assert isinstance(node, QModelIndex)
+			assert isinstance(node, NodeIndex)
 			assert node.model() == self.nodeTable
-			assert node.column() == 0
+			assert node.column() == NodeProperty.Id
 
 			visited.add(node)
 			yield node  # Yield the current node

@@ -2,7 +2,7 @@ import sys
 from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
-from typing import List, Tuple
+from typing import *
 
 class MiniTableView(QTableView):
 	def __init__(self, parent=None):
@@ -14,7 +14,7 @@ class MiniTableView(QTableView):
 		# self.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
 
 from pylive.Panel import Panel
-from graphmodel_columnbased import GraphModel, NodeIndex, EdgeIndex, InletIndex, OutletIndex
+from graphmodel_columnbased import GraphModel, InletProperty, NodeIndex, EdgeIndex, InletIndex, OutletIndex, OutletProperty
 class GraphDetailsView(QWidget):
 	def __init__(self, parent=None):
 		super().__init__(parent)
@@ -136,14 +136,14 @@ class GraphDetailsView(QWidget):
 		# inlets list
 		self.selected_node_inlets = QSortFilterProxyModel()  # Node column is 1 (for node name)
 		self.selected_node_inlets.setSourceModel(graphmodel.inletTable)
-		self.selected_node_inlets.setFilterKeyColumn(1)
+		self.selected_node_inlets.setFilterKeyColumn(InletProperty.Owner)
 		self.inlets_sheet_editor.setModel(self.selected_node_inlets)
 		
 
 		# outlets list
 		self.selected_node_outlets = QSortFilterProxyModel()  # Node column is 1 (for node name)
 		self.selected_node_outlets.setSourceModel(graphmodel.outletTable)
-		self.selected_node_outlets.setFilterKeyColumn(1)
+		self.selected_node_outlets.setFilterKeyColumn(OutletProperty.Owner)
 		self.outlets_sheet_editor.setModel(self.selected_node_outlets)
 
 		# set no rows
@@ -157,7 +157,6 @@ class GraphDetailsView(QWidget):
 		if not self._model:
 			return
 
-		index = NodeIndex(index.siblingAtColumn(0))
 		if index.isValid():
 			self.id_label.setText(index.data())
 			self.mapper.setCurrentModelIndex(index)  # Update the mapper's current index
@@ -175,7 +174,7 @@ class GraphDetailsView(QWidget):
 		self.layout().invalidate()
 
 if __name__ == "__main__":
-	from graphtableview_columnbased import GraphTableView
+	from tableview_columnbased import GraphTableView
 	class MainWindow(QWidget):
 		def __init__(self):
 			super().__init__()
@@ -187,10 +186,10 @@ if __name__ == "__main__":
 			self.nodes_selectionmodel = QItemSelectionModel(self.graph_model.nodeTable)
 
 			# Add some example nodes and edges
-			node1_id = self.graph_model.addNode("Node 1", 0, 0, "Script 1")
-			node2_id = self.graph_model.addNode("Node 2", 10, 200, "Script 2")
-			outlet_id = self.graph_model.addOutlet(node1_id, "Out1")
-			inlet_id = self.graph_model.addInlet(node2_id, "In1")
+			start_node = self.graph_model.addNode("StartNode", 0, 0)
+			finish_node = self.graph_model.addNode("FinishNode", 10, 200)
+			outlet_id = self.graph_model.addOutlet(start_node, "Out")
+			inlet_id = self.graph_model.addInlet(finish_node, "In")
 			edge = self.graph_model.addEdge(outlet_id, inlet_id)
 
 			# Set up the node editor view
