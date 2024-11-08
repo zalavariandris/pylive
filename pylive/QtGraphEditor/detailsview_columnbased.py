@@ -134,7 +134,7 @@ class GraphDetailsView(QWidget):
 
 		# mapper
 		
-		self.mapper.setModel(graphmodel.nodeTable)
+		self.mapper.setModel(graphmodel._nodeTable)
 		# self.mapper.addMapping(self.id_label, 0)
 		self.mapper.addMapping(self.name_edit, 1)
 		self.mapper.addMapping(self.posx_edit, 2)
@@ -142,14 +142,14 @@ class GraphDetailsView(QWidget):
 
 		# inlets list
 		self.selected_node_inlets = QSortFilterProxyModel()  # Node column is 1 (for node name)
-		self.selected_node_inlets.setSourceModel(graphmodel.inletTable)
+		self.selected_node_inlets.setSourceModel(graphmodel._inletTable)
 		self.selected_node_inlets.setFilterKeyColumn(InletProperty.Owner)
 		self.inlets_sheet_editor.setModel(self.selected_node_inlets)
 		
 
 		# outlets list
 		self.selected_node_outlets = QSortFilterProxyModel()  # Node column is 1 (for node name)
-		self.selected_node_outlets.setSourceModel(graphmodel.outletTable)
+		self.selected_node_outlets.setSourceModel(graphmodel._outletTable)
 		self.selected_node_outlets.setFilterKeyColumn(OutletProperty.Owner)
 		self.outlets_sheet_editor.setModel(self.selected_node_outlets)
 
@@ -167,7 +167,7 @@ class GraphDetailsView(QWidget):
 		if index.isValid():
 			self.id_label.setText(index.data())
 			self.mapper.setCurrentModelIndex(index)  # Update the mapper's current index
-			node_name = self._model.nodeTable.itemFromIndex(index).text()  # Get the selected node's name
+			node_name = self._model._nodeTable.itemFromIndex(index).text()  # Get the selected node's name
 			self.selected_node_inlets.setFilterFixedString(node_name) # update inlet filters
 			self.selected_node_outlets.setFilterFixedString(node_name) # update outlet filters
 			self.panel.show()
@@ -190,7 +190,7 @@ if __name__ == "__main__":
 
 			# Initialize the GraphModel
 			self.graph_model = GraphModel()
-			self.nodes_selectionmodel = QItemSelectionModel(self.graph_model.nodeTable)
+			self.nodes_selectionmodel = QItemSelectionModel(self.graph_model._nodeTable)
 
 			# Add some example nodes and edges
 			start_node = self.graph_model.addNode("StartNode", 0, 0)

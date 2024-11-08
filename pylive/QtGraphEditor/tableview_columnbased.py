@@ -138,10 +138,10 @@ class GraphTableView(QWidget):
 		self.graphmodel = graphmodel
 
 		# bind table views
-		self.nodes_sheet_view.setModel(self.graphmodel.nodeTable)
-		self.inlets_sheet_view.setModel(self.graphmodel.inletTable)
-		self.outlets_sheet_view.setModel(self.graphmodel.outletTable)
-		self.edges_sheet_view.setModel(self.graphmodel.edgeTable)
+		self.nodes_sheet_view.setModel(self.graphmodel._nodeTable)
+		self.inlets_sheet_view.setModel(self.graphmodel._inletTable)
+		self.outlets_sheet_view.setModel(self.graphmodel._outletTable)
+		self.edges_sheet_view.setModel(self.graphmodel._edgeTable)
 
 	def setNodesSelectionModel(self, nodes_selectionmodel:QItemSelectionModel):
 		self.nodes_sheet_view.setSelectionModel(nodes_selectionmodel)
@@ -223,10 +223,10 @@ if __name__ == "__main__":
 	inlet_id = graph_model.addInlet(node2_id, "In1")
 	edge = graph_model.addEdge(outlet_id, inlet_id)
 
-	nodes_selectionmodel =   QItemSelectionModel(graph_model.nodeTable)
-	inlets_selectionmodel =  QItemSelectionModel(graph_model.inletTable)
-	outlets_selectionmodel = QItemSelectionModel(graph_model.outletTable)
-	edges_selectionmodel =   QItemSelectionModel(graph_model.edgeTable)
+	nodes_selectionmodel =   QItemSelectionModel(graph_model._nodeTable)
+	inlets_selectionmodel =  QItemSelectionModel(graph_model._inletTable)
+	outlets_selectionmodel = QItemSelectionModel(graph_model._outletTable)
+	edges_selectionmodel =   QItemSelectionModel(graph_model._edgeTable)
 
 	graph_view1 = GraphTableView()
 	graph_view1.setModel(graph_model)
