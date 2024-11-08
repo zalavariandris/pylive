@@ -189,8 +189,10 @@ class GraphListView(QWidget):
 		self.new_edge_action = QAction("new edge", self)
 		@self.new_edge_action.triggered.connect
 		def add_edge_to_current_ports():
-			current_outlet_index = self.outlets_list_view.currentIndex()
-			current_inlet_index = self.inlets_list_view.currentIndex()
+			print("add new edge")
+			current_outlet_index = OutletIndex(self.outlets_list_view.currentIndex())
+			current_inlet_index = InletIndex(self.inlets_list_view.currentIndex())
+			print("add new edge", current_outlet_index, current_inlet_index)
 			self.graphmodel.addEdge(current_outlet_index, current_inlet_index)
 
 		self.remove_edge_action = QAction("remove selected edges", self)

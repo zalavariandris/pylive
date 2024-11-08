@@ -1,7 +1,14 @@
-"""
-TODO make indexes persistent
-"""
 
+"""
+TODO
+12. Potential Mislabeling in Signals
+    The signals nodesDataChanged, inletsDataChanged, and others
+    take a roles parameter but do not use it consistently.
+    Ensure roles is propagated and processed as needed for
+    clarity and debugging.
+
+
+"""
 from pylive import unique
 import sys
 from PySide6.QtGui import *
@@ -31,7 +38,6 @@ class NodeDataRole(IntEnum):
 	LocationRole = Qt.ItemDataRole.UserRole+2
 	UserRole =     Qt.ItemDataRole.UserRole+3
 
-
 class InletDataRole(IntEnum):
 	IdRole =    Qt.ItemDataRole.UserRole+1
 	OwnerRole = Qt.ItemDataRole.UserRole+2
@@ -46,10 +52,9 @@ class OutletDataRole(IntEnum):
 
 
 class EdgeDataRole(IntEnum):
-	IdRole =    Qt.ItemDataRole.UserRole+1
+	IdRole =    Qt.ItemDataRole.DisplayRole
 	TargetInletIdRole = Qt.ItemDataRole.UserRole+2
 	SourceOutletIdRole =  Qt.ItemDataRole.UserRole+3
-
 
 class NodeTableProxyModel(QAbstractProxyModel):
 	def mapFromSource(self, sourceIndex: Union[QModelIndex, QPersistentModelIndex]) -> QModelIndex:
@@ -64,36 +69,42 @@ class NodeTableProxyModel(QAbstractProxyModel):
 	def mapSelectionToSource(self, selection: QItemSelection) -> QItemSelection:
 		return super().mapSelectionToSource(selection)
 
+
 class NodeIndex(QPersistentModelIndex):
-	pass
+	def __repr__(self) -> str:
+		return f"{self.__class__.__name__}({self.row()},{self.column()})"
 
 
 class EdgeIndex(QPersistentModelIndex):
-	pass
+	def __repr__(self) -> str:
+		return f"{self.__class__.__name__}({self.row()},{self.column()})"
 
 
 class InletIndex(QPersistentModelIndex):
-	pass
+	def __repr__(self) -> str:
+		return f"{self.__class__.__name__}({self.row()},{self.column()})"
 
 
 class OutletIndex(QPersistentModelIndex):
-	pass
+	def __repr__(self) -> str:
+		return f"{self.__class__.__name__}({self.row()},{self.column()})"
+
 
 class GraphModel(QObject):
 	nodesAdded = Signal(list)
-	nodesRemoved = Signal(list)
+	nodesAboutToBeRemoved = Signal(list)
 	nodesDataChanged = Signal(list, list)
 
 	inletsAdded = Signal(list)
-	inletsRemoved = Signal(list)
+	inletsAboutToBeRemoved = Signal(list)
 	inletsDataChanged = Signal(list, list)
 
 	outletsAdded = Signal(list)
-	outletsRemoved = Signal(list)
+	outletsAboutToBeRemoved = Signal(list)
 	outletsDataChanged = Signal(list, list)
 
 	edgesAdded = Signal(list)
-	edgesRemoved = Signal(list)
+	edgesAboutToBeRemoved = Signal(list)
 	edgesDataChanged = Signal(list, list)
 
 
@@ -109,7 +120,7 @@ class GraphModel(QObject):
 		)
 
 		self.nodeList.rowsAboutToBeRemoved.connect(lambda parent, first, last:
-			self.nodesRemoved.emit([NodeIndex(self.nodeList.index(row, 0)) for row in range(first, last+1)])
+			self.nodesAboutToBeRemoved.emit([NodeIndex(self.nodeList.index(row, 0)) for row in range(first, last+1)])
 		)
 
 		self.nodeList.dataChanged.connect(lambda topLeft, bottomRight, roles:
@@ -127,7 +138,7 @@ class GraphModel(QObject):
 		)
 
 		self.inletList.rowsAboutToBeRemoved.connect(lambda parent, first, last:
-			self.inletsRemoved.emit([InletIndex(self.inletList.index(row, 0)) for row in range(first, last+1)])
+			self.inletsAboutToBeRemoved.emit([InletIndex(self.inletList.index(row, 0)) for row in range(first, last+1)])
 		)
 
 		self.inletList.dataChanged.connect(lambda topLeft, bottomRight, roles:
@@ -145,7 +156,7 @@ class GraphModel(QObject):
 		)
 
 		self.outletList.rowsAboutToBeRemoved.connect(lambda parent, first, last:
-			self.outletsRemoved.emit([OutletIndex(self.outletList.index(row, 0)) for row in range(first, last+1)])
+			self.outletsAboutToBeRemoved.emit([OutletIndex(self.outletList.index(row, 0)) for row in range(first, last+1)])
 		)
 
 		self.outletList.dataChanged.connect(lambda topLeft, bottomRight, roles:
@@ -163,7 +174,7 @@ class GraphModel(QObject):
 		)
 
 		self.edgeList.rowsAboutToBeRemoved.connect(lambda parent, first, last:
-			self.edgesRemoved.emit([EdgeIndex(self.edgeList.index(row, 0)) for row in range(first, last+1)])
+			self.edgesAboutToBeRemoved.emit([EdgeIndex(self.edgeList.index(row, 0)) for row in range(first, last+1)])
 		)
 
 		self.edgeList.dataChanged.connect(lambda topLeft, bottomRight, roles:
@@ -174,9 +185,12 @@ class GraphModel(QObject):
 		)
 
 	def addNode(self, name:str, posx:int, posy:int)->NodeIndex:
-		assert isinstance(name, str)
-		assert isinstance(posx, int)
-		assert isinstance(posy, int)
+		if not isinstance(name, str):
+			raise TypeError(f"'name' must be s tring, got: '{name}'")
+
+		if not isinstance(posx, int) or not isinstance(posy, int):
+			raise TypeError(f"'posx and posy' must be s tring, got: '{posx}', '{posy}")
+
 		node_item = QStandardItem()
 		node_item.setData( unique.make_unique_id(), NodeDataRole.IdRole)
 		node_item.setData( name, NodeDataRole.NameRole)
@@ -190,21 +204,21 @@ class GraphModel(QObject):
 		for row in range(self.nodeList.rowCount()):
 			yield NodeIndex(self.nodeList.index(row, 0))
 
-	def getInlets(self):
+	def getInlets(self)->Iterable[InletIndex]:
 		for row in range(self.inletList.rowCount()):
-			yield self.inletList.index(row, 0)
+			yield InletIndex(self.inletList.index(row, 0))
 
-	def getOutlets(self):
+	def getOutlets(self)->Iterable[OutletIndex]:
 		for row in range(self.outletList.rowCount()):
-			yield self.outletList.index(row, 0)
+			yield OutletIndex(self.outletList.index(row, 0))
 
-	def getEdges(self):
+	def getEdges(self)->Iterable[EdgeIndex]:
 		for row in range(self.edgeList.rowCount()):
-			yield self.edgeList.index(row, 0)
+			yield EdgeIndex(self.edgeList.index(row, 0))
 
 	def addInlet(self, node:NodeIndex, name:str)->InletIndex:
 		if not node.isValid():
-			raise KeyError(f"Node {node.data()}, does not exist!")
+			raise ValueError(f"Node {node.data()}, does not exist!")
 
 		inlet_item = QStandardItem()
 		inlet_item.setData(unique.make_unique_id(), InletDataRole.IdRole)
@@ -218,7 +232,7 @@ class GraphModel(QObject):
 
 	def addOutlet(self, node:NodeIndex, name:str)->OutletIndex:
 		if not node.isValid():
-			raise KeyError(f"Node {node.data()}, does not exist!")
+			raise ValueError(f"Node {node.data()}, does not exist!")
 
 		outlet_item = QStandardItem()
 		outlet_item.setData(unique.make_unique_id(), OutletDataRole.IdRole)
@@ -230,14 +244,16 @@ class GraphModel(QObject):
 
 	def addEdge(self, outlet:OutletIndex, inlet:InletIndex)->EdgeIndex:
 		if not outlet.isValid():
-			raise KeyError(f"outlet '{outlet}'' does not exist")
+			raise ValueError(f"outlet '{outlet}'' does not exist")
 		if not inlet.isValid():
-			raise KeyError(f"inlet {inlet} does not exist")
+			raise ValueError(f"inlet {inlet} does not exist")
 
 		edge_item = QStandardItem()
 		edge_item.setData(unique.make_unique_id(), EdgeDataRole.IdRole)
-		edge_item.setData(self.inletList.data(inlet, InletDataRole.IdRole), EdgeDataRole.TargetInletIdRole)
-		edge_item.setData(self.outletList.data(outlet, OutletDataRole.IdRole), EdgeDataRole.SourceOutletIdRole)
+		inlet_id = self.inletList.data(inlet, InletDataRole.IdRole)
+		edge_item.setData(inlet_id, EdgeDataRole.TargetInletIdRole)
+		outlet_id = self.outletList.data(outlet, OutletDataRole.IdRole)
+		edge_item.setData(outlet_id, EdgeDataRole.SourceOutletIdRole)
 
 		self.edgeList.appendRow(edge_item)
 		return EdgeIndex(self.edgeList.indexFromItem(edge_item))
@@ -256,7 +272,7 @@ class GraphModel(QObject):
 		for node in nodes_to_remove:
 			node_outlets = self.getNodeOutlets(node)
 			outlets_to_remove+=node_outlets
-		self.removeInlets(outlets_to_remove)
+		self.removeOutlets(outlets_to_remove)
 
 		for node in sorted(nodes_to_remove, key=lambda node:node.row(), reverse=True):
 			self.nodeList.removeRow(node.row())
@@ -277,7 +293,7 @@ class GraphModel(QObject):
 
 	def removeInlets(self, inlets_to_remove:List[InletIndex]):
 		# collect edges to be removed
-		assert all( isinstance(inlet, InletIndex) for inlet in inlets_to_remove )
+		assert all( isinstance(inlet, InletIndex) for inlet in inlets_to_remove ), f"got: {inlets_to_remove}"
 		assert all( inlet.column()==0 for inlet in inlets_to_remove)
 
 		edges_to_remove = []
@@ -294,7 +310,7 @@ class GraphModel(QObject):
 		assert all( isinstance(edge, EdgeIndex) for edge in edges_to_remove )
 		assert all( edge.column()==0 for edge in edges_to_remove )
 
-		for edge in sorted(edges_to_remove, key=lambda inlet: edge.row(), reverse=True):
+		for edge in sorted(edges_to_remove, key=lambda edge: edge.row(), reverse=True):
 			self.edgeList.removeRow(edge.row())
 
 	def getNodeData(self, node:NodeIndex, role:NodeDataRole):
@@ -308,6 +324,8 @@ class GraphModel(QObject):
 				return self.nodeList.data(node, NodeDataRole.NameRole)
 			case NodeDataRole.LocationRole:
 				return self.nodeList.data(node, NodeDataRole.LocationRole)
+			case _:
+				return self.nodeList.data(node, role)
 
 	def setNodeData(self, node:NodeIndex, value, role:NodeDataRole):
 		assert isinstance(node, NodeIndex) and node.isValid(), f"got: {node}"
@@ -323,6 +341,8 @@ class GraphModel(QObject):
 			case NodeDataRole.LocationRole:
 				assert isinstance(value, tuple)
 				self.nodeList.setData(node, value, NodeDataRole.LocationRole)
+			case _:
+				return self.nodeList.setData(node, role)
 
 	def getInletData(self, inlet:InletIndex, role:InletDataRole):
 		assert isinstance(inlet, InletIndex) and inlet.isValid()
@@ -331,10 +351,11 @@ class GraphModel(QObject):
 
 		match role:
 			case InletDataRole.IdRole:
-				return inlet.data(InletDataRole.IdRole)
-
+				return self.inletList.data(inlet, InletDataRole.IdRole)
 			case InletDataRole.NameRole:
-				return inlet.data(InletDataRole.NameRole)
+				return self.inletList.data(inlet, InletDataRole.NameRole)
+			case _:
+				return self.inletList.data(inlet, role)
 
 	def setInletData(self, inlet: InletIndex, value, role:InletDataRole):
 		assert isinstance(inlet, InletIndex) and inlet.isValid()
@@ -344,8 +365,9 @@ class GraphModel(QObject):
 		match role:
 			case InletDataRole.IdRole:
 				self.inletList.setData(inlet, value, role)
-
 			case InletDataRole.NameRole:
+				self.inletList.setData(inlet, value, role)
+			case _:
 				self.inletList.setData(inlet, value, role)
 
 	def getOutletData(self, outlet:OutletIndex, role:OutletDataRole):
@@ -355,21 +377,23 @@ class GraphModel(QObject):
 
 		match role:
 			case OutletDataRole.IdRole:
-				return outlet.data(OutletDataRole.IdRole)
-
+				return self.outletList.data(outlet, OutletDataRole.IdRole)
 			case OutletDataRole.NameRole:
-				return outlet.data(OutletDataRole.NameRole)
+				return self.outletList.data(outlet, OutletDataRole.NameRole)
+			case _:
+				return self.outletList.data(outlet, role)
 
 	def setOutletData(self, outlet: OutletIndex, value, role:OutletDataRole):
-		assert isinstance(outlet, InletIndex) and outlet.isValid()
+		assert isinstance(outlet, OutletIndex) and outlet.isValid()
 		assert outlet.model() == self.outletList
 		assert outlet.column() == 0
 
 		match role:
 			case OutletDataRole.IdRole:
 				self.outletList.setData(outlet, value, role)
-
 			case OutletDataRole.NameRole:
+				self.outletList.setData(outlet, value, role)
+			case _:
 				self.outletList.setData(outlet, value, role)
 
 	def getEdgeData(self, edge:EdgeIndex, role:EdgeDataRole):
@@ -380,13 +404,8 @@ class GraphModel(QObject):
 		match role:
 			case EdgeDataRole.IdRole:
 				return self.edgeList.data(edge, EdgeDataRole.IdRole)
-
-			case EdgeDataRole.TargetInletIdRole:
-				inlet_id:str = edge.data(EdgeDataRole.TargetInletIdRole)
-				target_outlets = [InletIndex(index) for index in self.inletList.match(
-					self.inletList.index(0,0), InletDataRole.IdRole, inlet_id, 1, Qt.MatchFlag.MatchExactly
-				)]
-				return target_outlets 
+			case _:
+				return self.edgeList.data(edge, role)
 
 	def setEdgeData(self, edge:EdgeIndex, value, role:EdgeDataRole):
 		assert isinstance(edge, EdgeIndex)
@@ -398,6 +417,8 @@ class GraphModel(QObject):
 				if not isinstance(value, str):
 					raise ValueError(f"id must be a string, got: {value}")
 				return self.edgeList.setData(edge, value, EdgeDataRole.IdRole)
+			case _:
+				return self.edgeList.setData(edge, value, role)
 
 	def getNodeInlets(self, node:NodeIndex)->List[InletIndex]:
 		assert isinstance(node, NodeIndex)
@@ -439,7 +460,7 @@ class GraphModel(QObject):
 		assert inlet.column() == 0
 
 		if not isinstance(node, NodeIndex):
-			raise ValueError(f"Value must be a node, got: {value}")
+			raise ValueError(f"Value must be a node, got: {node}")
 
 		node_id:str = self.nodeList.data(node, NodeDataRole.IdRole)
 		self.inletList.setData(inlet, node_id, InletDataRole.OwnerRole)
@@ -468,12 +489,12 @@ class GraphModel(QObject):
 		return owner_nodes[0]
 
 	def setOutletOwner(self, outlet:OutletIndex, node:NodeIndex):
-		assert isinstance(outlet, InletIndex) and outlet.isValid()
+		assert isinstance(outlet, OutletIndex) and outlet.isValid()
 		assert outlet.model() == self.outletList
 		assert outlet.column() == 0
 
 		if not isinstance(node, NodeIndex):
-			raise ValueError(f"Value must be a node, got: {value}")
+			raise ValueError(f"Value must be a node, got: {node}")
 
 		node_id:str = self.nodeList.data(node, NodeDataRole.IdRole)
 		self.outletList.setData(outlet, node_id, InletDataRole.OwnerRole)
@@ -518,6 +539,7 @@ class GraphModel(QObject):
 		assert edge.column() == 0
 
 		inlet_id:str = edge.data(EdgeDataRole.TargetInletIdRole)
+		assert isinstance(inlet_id, str)
 		target_inlets = [InletIndex(idx) for idx in self.inletList.match(
 			self.inletList.index(0,0), InletDataRole.IdRole, inlet_id, 1, Qt.MatchFlag.MatchExactly
 		)]
@@ -533,6 +555,7 @@ class GraphModel(QObject):
 			raise ValueError(f"Value must be an inlet, got: {value}")
 
 		inlet_id:str = self.inletList.data(inlet, InletDataRole.IdRole)
+		assert isinstance(inlet_id, str)
 		self.edgeList.setData(edge, inlet_id, EdgeDataRole.TargetInletIdRole)
 
 	def getSourceNodes(self, node:NodeIndex):

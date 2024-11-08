@@ -34,7 +34,6 @@ class TestGraphCreations(unittest.TestCase):
 		outlet = graph.addOutlet(start_node, "out")
 		finish_node = graph.addNode("Finish", 5,5)
 		inlet = graph.addInlet(finish_node, "in")
-
 		edge = graph.addEdge(outlet, inlet)
 
 
@@ -46,8 +45,55 @@ class TestGraphCreations(unittest.TestCase):
 
 
 class TestGraphDeletions(unittest.TestCase):
-	pass
+	def setup_graph(self):
+		self.graph = GraphModel()
+		self.start_node = self.graph.addNode("Start", 5,5)
+		self.outlet = self.graph.addOutlet(self.start_node, "out")
+		self.finish_node = self.graph.addNode("Finish", 5,5)
+		self.inlet = self.graph.addInlet(self.finish_node, "in")
+		self.edge = self.graph.addEdge(self.outlet, self.inlet)
 
+	def test_removing_edges(self):
+		self.setup_graph()
+		self.graph.removeEdges([self.edge])
+		self.assertNotIn(self.edge, list(self.graph.getEdges()))
+
+	def test_removing_outlets(self):
+		self.setup_graph()
+		self.graph.removeOutlets([self.outlet])
+		self.assertNotIn(self.outlet, list(self.graph.getOutlets()))
+
+	def test_removing_inlets(self):
+		self.setup_graph()
+		self.graph.removeInlets([self.inlet])
+		self.assertNotIn(self.inlet, list(self.graph.getInlets()))
+
+	def test_removing_inlets_with_connected_edge(self):
+		self.setup_graph()
+		self.graph.removeInlets([self.inlet])
+
+		self.assertNotIn(self.inlet, list(self.graph.getInlets()))
+		self.assertNotIn(self.edge, list(self.graph.getEdges()))
+
+	def test_removing_outlet_with_connected_edge(self):
+		self.setup_graph()
+		self.graph.removeInlets([self.inlet])
+
+		self.assertNotIn(self.inlet, self.graph.getInlets())
+		self.assertNotIn(self.edge, self.graph.getEdges())
+
+	def test_removing_nodes(self):
+		self.setup_graph()
+		self.graph.removeNodes([self.start_node])
+		self.assertNotIn(self.start_node, list(self.graph.getNodes()))
+
+	def test_removing_nodes_with_connected_pins(self):
+		self.setup_graph()
+		self.graph.removeNodes([self.start_node])
+
+		self.assertNotIn(self.start_node, self.graph.getNodes())
+		self.assertNotIn(self.outlet, self.graph.getOutlets())
+		self.assertNotIn(self.edge, self.graph.getEdges())
 
 class TestGraphData(unittest.TestCase):
 	def setUp(self) -> None:
@@ -94,32 +140,32 @@ class TestGraphRelations(unittest.TestCase):
 	def test_get_node_outlets(self):
 		"""node outlets"""
 		outlets = self.graph.getNodeOutlets(self.read_node)
-		self.assertEqual([QPersistentModelIndex(idx) for idx in outlets], [QPersistentModelIndex(self.image_out)])
+		self.assertEqual([idx for idx in outlets], [self.image_out])
 
 	def test_get_node_inlets(self):
 		"""node inlets"""
 		inlets = self.graph.getNodeInlets(self.write_node)
-		self.assertEqual([QPersistentModelIndex(idx) for idx in inlets], [QPersistentModelIndex(self.image_in)])
+		self.assertEqual([idx for idx in inlets], [self.image_in])
 
 	def test_get_inlet_owner(self):
 		"""inlet owner"""
 		owner_node = self.graph.getInletOwner(self.image_in)
-		self.assertEqual(QPersistentModelIndex(owner_node), QPersistentModelIndex(self.write_node))
+		self.assertEqual(owner_node, self.write_node)
 
 	def test_get_inlet_edges(self):
 		"""inlet edges"""
 		edges = self.graph.getInletEdges(self.image_in)
-		self.assertEqual([QPersistentModelIndex(edge) for edge in edges], [QPersistentModelIndex(self.edge)])
+		self.assertEqual([edge for edge in edges], [self.edge])
 
 	def test_get_outlet_owner(self):
 		"""outlet owner"""
 		owner_node = self.graph.getOutletOwner(self.image_out)
-		self.assertEqual(QPersistentModelIndex(owner_node), QPersistentModelIndex(self.read_node))
+		self.assertEqual(owner_node, self.read_node)
 
 	def test_get_outlet_edges(self):
 		"""outlet edges"""
 		edges = self.graph.getOutletEdges(self.image_out)
-		self.assertEqual([QPersistentModelIndex(edge) for edge in edges], [QPersistentModelIndex(self.edge)])
+		self.assertEqual([edge for edge in edges], [self.edge])
 
 	def test_get_edge_source(self):
 		"""edge source"""
@@ -131,59 +177,76 @@ class TestGraphRelations(unittest.TestCase):
 
 from PySide6.QtTest import QSignalSpy
 class TestGraphModelSignals(unittest.TestCase):
-	def setUp(self) -> None:
+	def setup_graph(self):
 		self.graph = GraphModel()
-		self.start_node = self.graph.addNode("Start", 0,0)
-		self.graph.addInlet(self.start_node, "in")
+		self.start_node = self.graph.addNode("Start", 5,5)
 		self.outlet = self.graph.addOutlet(self.start_node, "out")
-
-		self.finish_node = self.graph.addNode("Finish", 0,0)
+		self.outlet2 = self.graph.addOutlet(self.start_node, "out2")
+		self.finish_node = self.graph.addNode("Finish", 5,5)
 		self.inlet = self.graph.addInlet(self.finish_node, "in")
-		self.finish_outlet = self.graph.addOutlet(self.finish_node, "out")
 
-		self.graph.addEdge(self.outlet, self.inlet)
-		return super().setUp()
+		self.edge = self.graph.addEdge(self.outlet, self.inlet)
 
 	def test_nodes_added(self):
+		self.setup_graph()
 		spy = QSignalSpy(self.graph.nodesAdded)
 		self.graph.addNode("a new node", 0, 0)
 		self.assertEqual(spy.count(), 1, "'nodesAdded' Signal was not emitted exactly once.")
 
 	def test_nodes_removed(self):
-		spy = QSignalSpy(self.graph.nodesAdded)
-		self.graph.addNode("a new node", 0, 0)
-		self.assertEqual(spy.count(), 1, "'nodesAdded' Signal was not emitted exactly once.")
-
+		self.setup_graph()
+		spy = QSignalSpy(self.graph.nodesAboutToBeRemoved)
+		self.graph.removeNodes([self.start_node])
+		self.assertEqual(spy.count(), 1, "'nodesAboutToBeRemoved' Signal was not emitted exactly once.")
 
 	def test_nodes_changed(self):
 		pass
 
 	def test_inlets_added(self):
-		pass
+		self.setup_graph()
+		spy = QSignalSpy(self.graph.inletsAdded)
+		self.graph.addInlet(self.start_node, "inlet")
+		self.assertEqual(spy.count(), 1, "'inletsAdded' Signal was not emitted exactly once.")
 
 	def test_inlets_removed(self):
-		pass
+		self.setup_graph()
+		spy = QSignalSpy(self.graph.inletsAboutToBeRemoved)
+		self.graph.removeInlets([self.inlet])
+		self.assertEqual(spy.count(), 1, "'inletsAboutToBeRemoved' Signal was not emitted exactly once.")
 
 	def test_inlets_changed(self):
 		pass
 
 	def test_outlets_added(self):
-		pass
+		self.setup_graph()
+		spy = QSignalSpy(self.graph.outletsAdded)
+		self.graph.addOutlet(self.finish_node, "outlet")
+		self.assertEqual(spy.count(), 1, "'outletsAdded' Signal was not emitted exactly once.")
 
 	def test_outlets_removed(self):
-		pass
+		self.setup_graph()
+		spy = QSignalSpy(self.graph.outletsAboutToBeRemoved)
+		self.graph.removeOutlets([self.outlet])
+		self.assertEqual(spy.count(), 1, "'outletsAboutToBeRemoved' Signal was not emitted exactly once.")
 
 	def test_outlets_changed(self):
 		pass
 
 	def test_edges_added(self):
-		pass
+		self.setup_graph()
+		spy = QSignalSpy(self.graph.edgesAdded)
+		new_edge = self.graph.addEdge(self.outlet2, self.inlet)
+		self.assertEqual(spy.count(), 1, "'edgesAdded' Signal was not emitted exactly once.")
 
 	def test_edges_removed(self):
-		pass
+		self.setup_graph()
+		spy = QSignalSpy(self.graph.edgesAboutToBeRemoved)
+		self.graph.removeEdges([self.edge])
+		self.assertEqual(spy.count(), 1, "'edgesAboutToBeRemoved' Signal was not emitted exactly once.")
 
+	@unittest.skip("Edges has no data assigned yet other then the source and target pins")
 	def test_edges_changed(self):
-		pass
+		raise NotImplementedError()
 
 
 class TestGraphModelDFS(unittest.TestCase):
