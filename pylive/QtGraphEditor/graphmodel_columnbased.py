@@ -8,8 +8,6 @@ from PySide6.QtWidgets import *
 
 from typing import *
 
-from pylive.QtGraphEditor.graphview_rolebased import EdgeItem
-
 def group_consecutive_numbers(data):
 	from itertools import groupby
 	from operator import itemgetter
@@ -65,21 +63,21 @@ class OutletIndex(QPersistentModelIndex):
 
 
 class GraphModel(QObject):
-	nodesAdded = Signal(list)
-	nodesAboutToBeRemoved = Signal(list)
-	nodesDataChanged = Signal(list, list)
+	nodesAdded = Signal(list) #List[NodeIndex]
+	nodesAboutToBeRemoved = Signal(list) #List[NodeIndex]
+	nodesDataChanged = Signal(list, list) #List[NodeIndex], List[NodeProperty]
 
-	inletsAdded = Signal(list)
-	inletsAboutToBeRemoved = Signal(list)
-	inletsDataChanged = Signal(list, list)
+	inletsAdded = Signal(list) #List[InletIndex]
+	inletsAboutToBeRemoved = Signal(list) #List[InletIndex]
+	inletsDataChanged = Signal(list, list) #List[InletIndex], List[InletProperty]
 
-	outletsAdded = Signal(list)
-	outletsAboutToBeRemoved = Signal(list)
-	outletsDataChanged = Signal(list, list)
+	outletsAdded = Signal(list) #List[OutletIndex]
+	outletsAboutToBeRemoved = Signal(list) #List[OutletIndex]
+	outletsDataChanged = Signal(list, list) #List[OutletIndex], List[OutletProperty]
 
-	edgesAdded = Signal(list)
-	edgesAboutToBeRemoved = Signal(list)
-	edgesDataChanged = Signal(list, list)
+	edgesAdded = Signal(list) #List[EdgeIndex]
+	edgesAboutToBeRemoved = Signal(list) #List[EdgeIndex]
+	edgesDataChanged = Signal(list, list) #List[EdgeIndex], List[EdgeProperty]
 
 	def __init__(self, parent=None):
 		super().__init__(parent)
@@ -173,6 +171,18 @@ class GraphModel(QObject):
 	def getEdges(self)->Iterable[EdgeIndex]:
 		for row in range(self.edgeTable.rowCount()):
 			yield EdgeIndex(self.edgeTable.index(row, 0))
+
+	def nodeCount(self)->int:
+		return self.nodeTable.rowCount()
+
+	def inletCount(self)->int:
+		return self.inletTable.rowCount()
+
+	def outletCount(self)->int:
+		return self.outletTable.rowCount()
+
+	def edgeCount(self)->int:
+		return self.edgeTable.rowCount()
 
 	def addNode(self, name:str, posx:int, posy:int)->NodeIndex:
 		if not isinstance(name, str):

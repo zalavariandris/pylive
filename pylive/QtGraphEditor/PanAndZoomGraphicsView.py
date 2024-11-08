@@ -27,10 +27,12 @@ class PanAndZoomGraphicsView(QGraphicsView):
     def __init__(self, parent=None):
         super().__init__(parent)
 
+        self.setInteractive(True)
         self.setDragMode(QGraphicsView.DragMode.RubberBandDrag) # optional, default mouse behaviour
-        self.setRenderHint(QPainter.RenderHint.Antialiasing)
+        self.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
+        self.setRenderHint(QPainter.RenderHint.Antialiasing, True)
         self.setTransformationAnchor(QGraphicsView.ViewportAnchor.NoAnchor) # important for panning and zooming
-        # self.setCacheMode(QGraphicsView.CacheBackground)
+        self.setCacheMode(QGraphicsView.CacheModeFlag.CacheNone)
         self.setViewportUpdateMode(QGraphicsView.ViewportUpdateMode.FullViewportUpdate)
 
         max_size = 32767

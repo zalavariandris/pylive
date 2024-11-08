@@ -4,6 +4,14 @@ from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 from typing import *
 
+from pylive.Panel import Panel
+from pylive.QtGraphEditor.graphmodel_columnbased import (
+	GraphModel, 
+	NodeIndex, InletIndex, OutletIndex, EdgeIndex, 
+	NodeProperty, InletProperty, OutletProperty, EdgeProperty
+)
+
+
 class MiniTableView(QTableView):
 	def __init__(self, parent=None):
 		super().__init__(parent)
@@ -13,8 +21,7 @@ class MiniTableView(QTableView):
 		
 		# self.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
 
-from pylive.Panel import Panel
-from graphmodel_columnbased import GraphModel, InletProperty, NodeIndex, EdgeIndex, InletIndex, OutletIndex, OutletProperty
+
 class GraphDetailsView(QWidget):
 	def __init__(self, parent=None):
 		super().__init__(parent)

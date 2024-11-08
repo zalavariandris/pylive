@@ -34,13 +34,15 @@ from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 from typing import List, Tuple
-
-from shiboken6 import isValid
+from pathlib import Path
 
 from pylive.Panel import Panel
 
-from pylive.QtGraphEditor.graphmodel_rolebased import GraphModel, NodeIndex, InletIndex, OutletIndex, EdgeIndex
-from pathlib import Path
+from pylive.QtGraphEditor.graphmodel_rolebased import (
+	GraphModel, 
+	NodeIndex, InletIndex, OutletIndex, EdgeIndex
+)
+
 
 class GraphListView(QWidget):
 	def __init__(self, parent=None):

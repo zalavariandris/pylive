@@ -5,7 +5,11 @@ from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 from pylive.QtGraphEditor.PanAndZoomGraphicsView import PanAndZoomGraphicsView
-from pylive.QtGraphEditor.GraphModel import GraphModel, NodeIndex, EdgeIndex, InletIndex, OutletIndex
+from pylive.QtGraphEditor.graphmodel_columnbased import (
+	GraphModel,
+	NodeIndex, EdgeIndex, InletIndex, OutletIndex,
+	NodeProperty, EdgeProperty, InletProperty, OutletProperty
+)
 
 from enum import Enum
 class PinType(Enum):
@@ -503,17 +507,6 @@ class GraphView(PanAndZoomGraphicsView):
 		self.nodes_selectionmodel = None
 		self.edges_selectionmodel = None
 
-		self.setCacheMode(QGraphicsView.CacheModeFlag.CacheNone)
-		self.setInteractive(True)
-		self.setRenderHint(QPainter.RenderHint.TextAntialiasing, False)
-		self.setRenderHint(QPainter.RenderHint.Antialiasing, False)
-		self.setViewportUpdateMode(QGraphicsView.ViewportUpdateMode.FullViewportUpdate)
-
-		# polkaBrush = QBrush()
-		# polkaBrush.setColor(QApplication.palette().mid().color())
-		# polkaBrush.setStyle(Qt.BrushStyle.Dense7Pattern)
-		# self.setBackgroundBrush(polkaBrush)
-
 	def setScene(self, scene:QGraphicsScene|None):
 		if self.scene():
 			self.scene().selectionChanged.disconnect(self.onSceneSelectionChanged)
@@ -559,7 +552,6 @@ class GraphView(PanAndZoomGraphicsView):
 					self.edges_selectionmodel.setCurrentIndex(edge_selection[-1], QItemSelectionModel.SelectionFlag.Current)
 				else:
 					self.edges_selectionmodel.setCurrentIndex(QModelIndex(), QItemSelectionModel.SelectionFlag.Clear)
-
 
 	def pinAt(self, pos:QPoint):
 		"""Returns the topmost pin at position pos, which is in viewport coordinates."""
@@ -667,64 +659,26 @@ class GraphView(PanAndZoomGraphicsView):
 
 	def setModel(self, graph_model:GraphModel):
 		self.graph_model = graph_model
-		self.handleNodesInserted(  NodeIndex(), 0, self.graph_model.nodes.rowCount()-1)
-		self.handleInletsInserted( InletIndex(), 0, self.graph_model.inlets.rowCount()-1)
-		self.handleOutletsInserted(OutletIndex(), 0, self.graph_model.outlets.rowCount()-1)
-		self.handleEdgesInserted(  EdgeIndex(), 0, self.graph_model.edges.rowCount()-1)
+		self.handleNodesAdded(  NodeIndex(), 0, self.graph_model.nodeCount()-1)
+		self.handleInletsAdded( InletIndex(), 0, self.graph_model.inletount()-1)
+		self.handleOutletsAdded(OutletIndex(), 0, self.graph_model.outletCount()-1)
+		self.handleEdgesAdded(  EdgeIndex(), 0, self.graph_model.edgeCount()-1)
 
-		self.graph_model.nodes.rowsInserted.connect(self.handleNodesInserted)
-		self.graph_model.nodes.dataChanged.connect(self.handleNodesDataChanged)
-		self.graph_model.nodes.rowsAboutToBeRemoved.connect(self.handleNodesRemoved)
+		self.graph_model.nodesAdded.connect(self.handleNodesInserted)
+		self.graph_model.nodesDataChanged.connect(self.handleNodesDataChanged)
+		self.graph_model.nodesAboutToBeRemoved.connect(self.handleNodesRemoved)
 
-		self.graph_model.inlets.rowsInserted.connect(self.handleInletsInserted)
-		self.graph_model.inlets.dataChanged.connect(self.handleInletsDataChanged)
-		self.graph_model.inlets.rowsAboutToBeRemoved.connect(self.handleInletsRemoved)
+		self.graph_model.inletsAdded.connect(self.handleInletsInserted)
+		self.graph_model.inletsDataChanged.connect(self.handleInletsDataChanged)
+		self.graph_model.inletsAboutToBeRemoved.connect(self.handleInletsRemoved)
 
-		self.graph_model.outlets.rowsInserted.connect(self.handleOutletsInserted)
-		self.graph_model.outlets.dataChanged.connect(self.handleOutletsDataChanged)
-		self.graph_model.outlets.rowsAboutToBeRemoved.connect(self.handleOutletsRemoved)
+		self.graph_model.outletsAdded.connect(self.handleOutletsInserted)
+		self.graph_model.outletsDataChanged.connect(self.handleOutletsDataChanged)
+		self.graph_model.outletsAboutToBeRemoved.connect(self.handleOutletsRemoved)
 
-		self.graph_model.edges.rowsInserted.connect(self.handleEdgesInserted)
-		self.graph_model.edges.dataChanged.connect(self.handleEdgesDataChanged)
-		self.graph_model.edges.rowsAboutToBeRemoved.connect(self.handleEdgesRemoved)
-
-	def setNodesSelectionModel(self, nodes_selectionmodel:QItemSelectionModel):
-		self.nodes_selectionmodel = nodes_selectionmodel
-		self.nodes_selectionmodel.selectionChanged.connect(self.handleNodesSelectionChanged)
-
-	def setEdgesSelectionModel(self, edges_selectionmodel:QItemSelectionModel):
-		self.edges_selectionmodel = edges_selectionmodel
-		self.edges_selectionmodel.selectionChanged.connect(self.handleEdgesSelectionChanged)
-
-		self.zoom_factor=1.2
-
-	@Slot(QItemSelection, QItemSelection)
-	def handleNodesSelectionChanged(self, selected:QItemSelection, deselected:QItemSelection):
-
-		self.scene().blockSignals(True)
-		for node in [index for index in selected.indexes() if index.column()==0]:
-			persistent_node_index = QPersistentModelIndex(node)
-			node_item = self.index_to_item_map[persistent_node_index]
-			node_item.setSelected(True)
-
-		for node in [index for index in deselected.indexes() if index.column()==0]:
-			persistent_node_index = QPersistentModelIndex(node)
-			node_item = self.index_to_item_map[persistent_node_index]
-			node_item.setSelected(False)
-		self.scene().blockSignals(False)
-
-	def handleEdgesSelectionChanged(self, selected:QItemSelection, deselected:QItemSelection):
-		self.scene().blockSignals(True)
-		for index in [index for index in selected.indexes() if index.column()==0]:
-			persistent_index = QPersistentModelIndex(index)
-			item = self.index_to_item_map[persistent_index]
-			item.setSelected(True)
-
-		for index in [index for index in deselected.indexes() if index.column()==0]:
-			persistent_index = QPersistentModelIndex(index)
-			item = self.index_to_item_map[persistent_index]
-			item.setSelected(False)
-		self.scene().blockSignals(False)
+		self.graph_model.edgesAdded.connect(self.handleEdgesInserted)
+		self.graph_model.edgesDataChanged.connect(self.handleEdgesDataChanged)
+		self.graph_model.edgesAboutToBeRemoved.connect(self.handleEdgesRemoved)
 
 	@Slot(QModelIndex, int, int)
 	def handleNodesInserted(self, parent:NodeIndex, first:int, last:int):
@@ -978,64 +932,45 @@ class GraphView(PanAndZoomGraphicsView):
 							"""name changed"""
 							graphics_item.label.setText( str(inlet.siblingAtColumn(2).data()) )
 
-	
-	
-	def drawBackground(self, painter: QPainter, rect:QRectF | QRect):
-		super().drawBackground(painter, rect);
+	def setNodesSelectionModel(self, nodes_selectionmodel:QItemSelectionModel):
+		self.nodes_selectionmodel = nodes_selectionmodel
+		self.nodes_selectionmodel.selectionChanged.connect(self.handleNodesSelectionChanged)
 
-		def drawGrid(gridStep:int):
-			windowRect:QRect = self.rect()
-			tl:QPointF = self.mapToScene(windowRect.topLeft())
-			br:QPointF = self.mapToScene(windowRect.bottomRight())
+	def setEdgesSelectionModel(self, edges_selectionmodel:QItemSelectionModel):
+		self.edges_selectionmodel = edges_selectionmodel
+		self.edges_selectionmodel.selectionChanged.connect(self.handleEdgesSelectionChanged)
 
-			left = math.floor(tl.x() / gridStep - 0.5)
-			right = math.floor(br.x() / gridStep + 1.0)
-			bottom = math.floor(tl.y() / gridStep - 0.5)
-			top = math.floor(br.y() / gridStep + 1.0)
+	@Slot(QItemSelection, QItemSelection)
+	def handleNodesSelectionChanged(self, selected:QItemSelection, deselected:QItemSelection):
+		self.scene().blockSignals(True)
+		for node in [index for index in selected.indexes() if index.column()==0]:
+			persistent_node_index = QPersistentModelIndex(node)
+			node_item = self.index_to_item_map[persistent_node_index]
+			node_item.setSelected(True)
 
-			# vertical lines
-			for xi in range(left, right):
-				line = QLineF(xi * gridStep, bottom * gridStep, xi * gridStep, top * gridStep);
-				painter.drawLine(line)
+		for node in [index for index in deselected.indexes() if index.column()==0]:
+			persistent_node_index = QPersistentModelIndex(node)
+			node_item = self.index_to_item_map[persistent_node_index]
+			node_item.setSelected(False)
+		self.scene().blockSignals(False)
 
-			# horizontal lines
-			for yi in range(bottom, top):
-				line = QLineF(left * gridStep, yi * gridStep, right * gridStep, yi * gridStep);
-				painter.drawLine(line)
+	def handleEdgesSelectionChanged(self, selected:QItemSelection, deselected:QItemSelection):
+		self.scene().blockSignals(True)
+		for index in [index for index in selected.indexes() if index.column()==0]:
+			persistent_index = QPersistentModelIndex(index)
+			item = self.index_to_item_map[persistent_index]
+			item.setSelected(True)
 
-		def drawDots(gridStep:int, radius=2):
-			windowRect:QRect = self.rect()
-			tl:QPointF = self.mapToScene(windowRect.topLeft())
-			br:QPointF = self.mapToScene(windowRect.bottomRight())
+		for index in [index for index in deselected.indexes() if index.column()==0]:
+			persistent_index = QPersistentModelIndex(index)
+			item = self.index_to_item_map[persistent_index]
+			item.setSelected(False)
+		self.scene().blockSignals(False)
 
-			left = math.floor(tl.x() / gridStep - 0.5)
-			right = math.floor(br.x() / gridStep + 1.0)
-			bottom = math.floor(tl.y() / gridStep - 0.5)
-			top = math.floor(br.y() / gridStep + 1.0)
-
-			for xi in range(left, right):
-				for yi in range(bottom, top):
-					painter.drawEllipse(QPoint(xi*gridStep, yi*gridStep), radius,radius)
-
-		fineGridColor = self.palette().text().color()
-		fineGridColor.setAlpha(5)
-		pFine = QPen(fineGridColor, 1.0)
-
-		coarseGridColor = self.palette().text().color()
-		coarseGridColor.setAlpha(10)
-		pCoarse = QPen(coarseGridColor, 1.0)
-
-		# painter.setPen(pFine)
-		# drawGrid(10)
-		# painter.setPen(pCoarse)
-		# drawGrid(100)
-		painter.setPen(Qt.PenStyle.NoPen)
-		painter.setBrush(coarseGridColor)
-		drawDots(20, radius=1)
 
 if __name__ == "__main__":
-	from GraphTableView import GraphTableView
-	from GraphDetailsView import GraphDetailsView
+	from tableview_columnbased import GraphTableView
+	from detailsview_columnbased import GraphDetailsView
 	class MainWindow(QWidget):
 		def __init__(self):
 			super().__init__()
@@ -1045,16 +980,16 @@ if __name__ == "__main__":
 
 			# Initialize the GraphModel
 			self.graph_model = GraphModel()
-			self.nodes_selectionmodel = QItemSelectionModel(self.graph_model.nodes)
-			self.edges_selectionmodel = QItemSelectionModel(self.graph_model.edges)
+			self.nodes_selectionmodel = QItemSelectionModel(self.graph_model.nodeTable)
+			self.edges_selectionmodel = QItemSelectionModel(self.graph_model.edgeTable)
 
 			# Add some example nodes and edges
-			read_node = self.graph_model.addNode("Read", 10, -100, "Script 1")
+			read_node = self.graph_model.addNode("Read", 10, -100)
 			outlet_id = self.graph_model.addOutlet(read_node, "image")
-			write_node = self.graph_model.addNode("Write", 20, 100, "Script 2")
+			write_node = self.graph_model.addNode("Write", 20, 100)
 			inlet_id = self.graph_model.addInlet(write_node, "image")
 
-			node3_id = self.graph_model.addNode("Preview", -50, 10, "Script 2")
+			node3_id = self.graph_model.addNode("Preview", -50, 10)
 			self.graph_model.addInlet(node3_id, "in")
 			self.graph_model.addOutlet(node3_id, "out")
 			

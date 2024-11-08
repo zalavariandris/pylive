@@ -5,7 +5,7 @@ from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 from pylive.QtGraphEditor.PanAndZoomGraphicsView import PanAndZoomGraphicsView
-from pylive.QtGraphEditor.graphmodel_rolebased import GraphModel, NodeDataRole, NodeIndex, EdgeIndex, InletIndex, OutletIndex
+from graphmodel_columnbased import GraphModel, InletProperty, NodeIndex, EdgeIndex, InletIndex, OutletIndex, OutletProperty
 
 
 class EditableTextItem(QGraphicsTextItem):
@@ -30,7 +30,7 @@ class EditableTextItem(QGraphicsTextItem):
 		self.setTextInteractionFlags(Qt.TextInteractionFlag.TextEditorInteraction)
 		self.setFocus(Qt.FocusReason.MouseFocusReason)
 
-		click = QGraphicsSceneMouseEvent(QEvent.GraphicsSceneMousePress)
+		click = QGraphicsSceneMouseEvent()
 		click.setButton(event.button())
 		click.setPos(event.pos())
 		self.mousePressEvent(click)
