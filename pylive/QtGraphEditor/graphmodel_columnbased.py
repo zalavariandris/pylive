@@ -73,8 +73,8 @@ class NodeTableView(QAbstractItemModel):
 	def index(self, row:int, column:int, parent:QModelIndex|QPersistentModelIndex = QModelIndex())->QModelIndex:
 		node = NodeIndex(self._sourceModel._nodeTable.index(row, 0))
 		identification = (node, column)
-		return self.createIndex(row, column, identification)	
-
+		return self.createIndex(row, column, identification)
+		
 	def parent(self, child:QModelIndex=QModelIndex())->QModelIndex|QObject: #type:ignore
 		if child.isValid():
 			return QModelIndex()
@@ -118,7 +118,6 @@ class NodeTableView(QAbstractItemModel):
 	# 	return True
 
 
-
 class GraphModel(QObject):
 	nodesAdded = Signal(list) #List[NodeIndex]
 	nodesAboutToBeRemoved = Signal(list) #List[NodeIndex]
@@ -140,10 +139,6 @@ class GraphModel(QObject):
 		super().__init__(parent)
 		### CREATE QT MODELS ###
 
-		m = QStandardItemModel()
-		m.parent()
-		m.setData()
-
 		### Nodes Model ###
 		self._nodeTable = QStandardItemModel()
 
@@ -159,7 +154,7 @@ class GraphModel(QObject):
 		self._nodeTable.dataChanged.connect(lambda topLeft, bottomRight, roles:
 			self.nodesDataChanged.emit(
 				[NodeIndex(self._nodeTable.index(row, 0)) for row in range(topLeft.row(), bottomRight.row()+1)],
-				roles
+				None
 			)
 		)
 
@@ -220,14 +215,6 @@ class GraphModel(QObject):
 	def getNodes(self)->Iterable[NodeIndex]:
 		for row in range(self._nodeTable.rowCount()):
 			yield NodeIndex(self._nodeTable.index(row, 0))
-
-	def getInlets(self)->Iterable[InletIndex]:
-		for row in range(self._inletTable.rowCount()):
-			yield InletIndex(self._inletTable.index(row, 0))
-
-	def getOutlets(self)->Iterable[OutletIndex]:
-		for row in range(self._outletTable.rowCount()):
-			yield OutletIndex(self._outletTable.index(row, 0))
 
 	def getEdges(self)->Iterable[EdgeIndex]:
 		for row in range(self._edgeTable.rowCount()):
