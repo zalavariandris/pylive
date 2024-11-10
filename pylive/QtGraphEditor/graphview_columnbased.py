@@ -8,7 +8,7 @@ from pylive.QtGraphEditor.PanAndZoomGraphicsView import PanAndZoomGraphicsView
 from pylive.QtGraphEditor.graphmodel_columnbased import (
 	GraphModel,
 	NodeIndex, EdgeIndex, InletIndex, OutletIndex,
-	NodeProperty, EdgeProperty, InletProperty, OutletProperty
+	NodeAttribute, EdgeAttribute, InletAttribute, OutletAttribute
 )
 
 from enum import Enum
@@ -16,12 +16,11 @@ class PinType(Enum):
 	INLET = "INLET"
 	OUTLET = "OUTLET"
 
-
 class PinItem(QGraphicsItem):
 	"""Graphics item representing a pin (either inlet or outlet)."""
 	def __init__(self, parent=None):
 		super().__init__(parent=parent)
-		self.parent_node:"NodeGraphicsItem"|None = None
+		self.parent_node:'NodeGraphicsItem|None' = None
 		self.edges = []
 
 		self.label = QGraphicsSimpleTextItem(parent=self)
@@ -59,11 +58,6 @@ class PinItem(QGraphicsItem):
 			painter.setBrush(palette.windowText().color())
 		painter.drawEllipse(-self.pin_radius, -self.pin_radius, self.pin_radius * 2, self.pin_radius * 2)
 
-		# # Draw the name
-		# painter.setPen(option.palette.light().color())
-		# font = QApplication.font()
-		# painter.drawText(5, -QFontMetrics(font).descent(), self.name)
-
 	def hoverEnterEvent(self, event):
 		self.update()
 		self.label.show()
@@ -80,19 +74,21 @@ class PinItem(QGraphicsItem):
 		return super().itemChange(change, value)
 
 	def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
-		graphview = self.parent_node.parent_graph
-		graphview.initiateConnection(pin=self)
+		if self.parent_node:
+			graphview = self.parent_node.parent_graph
+			graphview.initiateConnection(pin=self)
 
 	def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent) -> None:
-		graphview = self.parent_node.parent_graph
-		graphview.moveConnection(graphview.mapFromScene(event.scenePos()))
-		# return super().mouseMoveEvent(event)
+		if self.parent_node:
+			graphview = self.parent_node.parent_graph
+			graphview.moveConnection(graphview.mapFromScene(event.scenePos()))
+			# return super().mouseMoveEvent(event)
 
 	def mouseReleaseEvent(self, event: QGraphicsSceneMouseEvent) -> None:
-		graphview = self.parent_node.parent_graph
-
-		pin = graphview.pinAt(graphview.mapFromScene(event.scenePos()))
-		graphview.finishConnection(pin)
+		if self.parent_node:
+			graphview = self.parent_node.parent_graph
+			pin = graphview.pinAt(graphview.mapFromScene(event.scenePos()))
+			graphview.finishConnection(pin)
 
 	def destroy(self):
 		for edge in self.edges:
@@ -135,7 +131,6 @@ class NodeGraphicsItem(QGraphicsItem):
 		outlet.setParentItem(self)
 		self.outlets.append(outlet)
 		self.updatePinPositions()
-		return outlet
 
 	def removeOutlet(self, outlet:PinItem):
 		self.outlets.remove(outlet)
@@ -146,7 +141,6 @@ class NodeGraphicsItem(QGraphicsItem):
 		inlet.setParentItem(self)
 		self.inlets.append(inlet)
 		self.updatePinPositions()
-		return inlet
 
 	def removeInlet(self, inlet:PinItem):
 		self.inlets.remove(inlet)
@@ -270,8 +264,8 @@ class NodeView(NodeGraphicsItem):
 					posx = int(new_pos.x())
 					posy = int(new_pos.y())
 
-					graph.setNodeData(self.persistent_node_index, posx, NodeProperty.LocationX)
-					graph.setNodeData(self.persistent_node_index, posy, NodeProperty.LocationY)
+					graph.setNodeData(self.persistent_node_index, posx, NodeAttribute.LocationX)
+					graph.setNodeData(self.persistent_node_index, posy, NodeAttribute.LocationY)
 
 		return super().itemChange(change, value)
 
@@ -283,33 +277,33 @@ class NodeView(NodeGraphicsItem):
 			graph:GraphModel = self.parent_graph.graph_model
 			node_index = self.persistent_node_index
 			new_name = self.nameedit.toPlainText()
-			graph.setNodeData(node_index, new_name, NodeProperty.Name)
+			graph.setNodeData(node_index, new_name, NodeAttribute.Name)
 
-	def handleNodeDataChanged(self, properties):
+	def handleNodeDataChanged(self, attributes):
 		new_pos = self.pos()
 		node = self.persistent_node_index
 		graph = self.parent_graph.graph_model
 		if not graph or not node:
 			return
-		for propertyId in properties:
-			match propertyId:
-				case NodeProperty.Id:
+		for attribute in attributes:
+			match attribute:
+				case NodeAttribute.Id:
 					pass
 
-				case NodeProperty.Name:
-					new_name = graph.getNodeData(node, propertyId)
+				case NodeAttribute.Name:
+					new_name = graph.getNodeData(node, attribute)
 					old_name = self.nameedit.toPlainText()
 					if old_name != new_name:
 						self.nameedit.setPlainText(new_name)
 
-				case NodeProperty.LocationX:
+				case NodeAttribute.LocationX:
 					"""posx changed"""
-					data = graph.getNodeData(node, propertyId)
+					data = graph.getNodeData(node, attribute)
 					new_pos.setX(int(data))
 
-				case NodeProperty.LocationY:
+				case NodeAttribute.LocationY:
 					"""posy changed"""
-					data = graph.getNodeData(node, propertyId)
+					data = graph.getNodeData(node, attribute)
 					new_pos.setY(int(data))
 
 		if new_pos!=self.pos():
@@ -514,9 +508,30 @@ class EdgeItem(QGraphicsLineItem):
 		else:
 			return super().mouseReleaseEvent(event)
 
+
 class EdgeView(EdgeItem):
 	def __init__(self, source_pin_item:OutletView|None, target_pin_item:InletView|None, parent_graph:"GraphView"):
 		super().__init__(source_pin_item, target_pin_item, parent_graph)
+
+
+class NodeItemDelegate(QObject):
+	def createEditor(self, parent:'GraphView', option:QStyleOptionViewItem , node: NodeIndex)->NodeGraphicsItem:
+		node_item = NodeView(parent_graph=parent)
+		return node_item
+
+	def setEditorData(self, node: NodeIndex, attribute: NodeAttribute):
+		...
+
+	def setModelData(self, editor: NodeView, model:GraphModel, node:NodeIndex):
+		...
+
+
+class PinItemDelegate(QObject):
+	...
+
+
+class EdgeItemDelegate(QObject):
+	...
 
 
 class GraphView(PanAndZoomGraphicsView):
@@ -533,6 +548,8 @@ class GraphView(PanAndZoomGraphicsView):
 		self.graph_model = None
 		self.nodes_selectionmodel = None
 		self.edges_selectionmodel = None
+
+		self.delegate = NodeItemDelegate()
 
 	def setScene(self, scene:QGraphicsScene|None):
 		if self.scene():
@@ -684,6 +701,9 @@ class GraphView(PanAndZoomGraphicsView):
 				"""remove interactive edge"""
 				self.interactive_edge.destroy()
 
+	def model(self)->GraphModel|None:
+		return self.graph_model
+
 	def setModel(self, graph_model:GraphModel):
 		self.graph_model = graph_model
 		self.handleNodesAdded(  self.graph_model.getNodes())
@@ -732,12 +752,12 @@ class GraphView(PanAndZoomGraphicsView):
 			node_item.destroy()
 			del self.index_to_item_map[node]
 	
-	def handleNodesDataChanged(self, nodes:List[NodeIndex], properties:List[NodeProperty]|None=None):
+	def handleNodesDataChanged(self, nodes:List[NodeIndex], properties:List[NodeAttribute]|None=None):
 		if not self.graph_model:
 			return
 
 		if not properties:
-			properties = [NodeProperty.Id, NodeProperty.Name, NodeProperty.LocationX, NodeProperty.LocationY]
+			properties = [NodeAttribute.Id, NodeAttribute.Name, NodeAttribute.LocationX, NodeAttribute.LocationY]
 
 		for node in nodes:
 			node_item = cast(NodeView, self.index_to_item_map[node])
@@ -764,28 +784,28 @@ class GraphView(PanAndZoomGraphicsView):
 			edge_item.destroy()
 			del self.index_to_item_map[edge]
 	
-	def handleEdgesDataChanged(self, edges:List[EdgeIndex], properties:List[EdgeProperty]|None=None):
+	def handleEdgesDataChanged(self, edges:List[EdgeIndex], attributes:List[EdgeAttribute]|None=None):
 		if not self.graph_model:
 			return
 
-		if not properties:
-			properties = [EdgeProperty.Id, EdgeProperty.SourceOutlet, EdgeProperty.TargetInlet]
+		if not attributes:
+			attributes = [EdgeAttribute.Id, EdgeAttribute.SourceOutlet, EdgeAttribute.TargetInlet]
 
 		for edge in edges:
 			edge_item = cast(EdgeView, self.index_to_item_map[edge])
-			for propertyId in properties:
-				match propertyId:
-					case EdgeProperty.Id:
+			for attribute in attributes:
+				match attribute:
+					case EdgeAttribute.Id:
 						"""unique id changed"""
 						pass
 
-					case EdgeProperty.SourceOutlet:
+					case EdgeAttribute.SourceOutlet:
 						"""source outlet changed"""
 						outlet = self.graph_model.getEdgeSource(edge)
 						source_pin_item = cast(OutletView, self.index_to_item_map[outlet])
 						edge_item.setSourcePin( source_pin_item )
 
-					case EdgeProperty.TargetInlet:
+					case EdgeAttribute.TargetInlet:
 						"""target inlet changed"""
 						inlet = self.graph_model.getEdgeTarget(edge)
 						target_pin_item = cast(InletView, self.index_to_item_map[inlet])
@@ -801,7 +821,8 @@ class GraphView(PanAndZoomGraphicsView):
 
 			# create outlet grtaphics item
 			parent_node_item = cast(NodeView, self.index_to_item_map[parent_node]) # get the node graphics item
-			outlet_item = parent_node_item.addOutlet(OutletView())
+			outlet_item = OutletView()
+			parent_node_item.addOutlet(outlet_item)
 
 			# map inlet to graphics item
 			outlet_item.persistent_index = outlet
@@ -825,26 +846,26 @@ class GraphView(PanAndZoomGraphicsView):
 			# remove mapping
 			del self.index_to_item_map[outlet]
 	
-	def handleOutletsDataChanged(self, outlets:List[OutletIndex], properties:List[OutletProperty]|None=None):
+	def handleOutletsDataChanged(self, outlets:List[OutletIndex], attributes:List[OutletAttribute]|None=None):
 		if not self.graph_model:
 			return
 
-		if not properties:
-			properties = [OutletProperty.Id, OutletProperty.Owner, OutletProperty.Name]
+		if not attributes:
+			attributes = [OutletAttribute.Id, OutletAttribute.Owner, OutletAttribute.Name]
 
 		for outlet in outlets:
 			outlet_item = cast(OutletView, self.index_to_item_map[outlet])
-			for propertyId in properties:
-				match propertyId:
-					case OutletProperty.Id:
+			for attribute in attributes:
+				match attribute:
+					case OutletAttribute.Id:
 						"""unique id changed"""
 						pass
-					case OutletProperty.Owner:
+					case OutletAttribute.Owner:
 						"""parent node changed"""
 						pass
-					case OutletProperty.Name:
+					case OutletAttribute.Name:
 						"""name changed"""
-						new_name = self.graph_model.getOutletData(outlet, propertyId)
+						new_name = self.graph_model.getOutletData(outlet, attribute)
 						if outlet_item.label.text() != new_name:
 							outlet_item.label.setText(new_name)
 
@@ -856,7 +877,8 @@ class GraphView(PanAndZoomGraphicsView):
 		for inlet in inlets:
 			inlet_node = self.graph_model.getInletOwner(inlet) # get the node reference
 			parent_node_item = cast(NodeView, self.index_to_item_map[inlet_node]) # get the node graphics item
-			inlet_item = parent_node_item.addInlet(InletView())
+			inlet_item = InletView()
+			parent_node_item.addInlet(inlet_item)
 
 			# map inlet to graphics item
 			inlet_item.persistent_index = inlet
@@ -876,26 +898,26 @@ class GraphView(PanAndZoomGraphicsView):
 			inlet_item.destroy()
 			del self.index_to_item_map[persistent_index]
 
-	def handleInletsDataChanged(self, inlets:List[InletIndex], properties:List[InletProperty]|None=None):
+	def handleInletsDataChanged(self, inlets:List[InletIndex], attributes:List[InletAttribute]|None=None):
 		if not self.graph_model:
 			return
 
-		if not properties:
-			properties = [InletProperty.Id, InletProperty.Owner, InletProperty.Name]
+		if not attributes:
+			attributes = [InletAttribute.Id, InletAttribute.Owner, InletAttribute.Name]
 
 		for inlet in inlets:
 			inlet_item = cast(InletView, self.index_to_item_map[inlet])
-			for propertyId in properties:
-				match propertyId:
-					case InletProperty.Id:
+			for attribute in attributes:
+				match attribute:
+					case InletAttribute.Id:
 						"""unique id changed"""
 						pass
-					case InletProperty.Owner:
+					case InletAttribute.Owner:
 						"""parent node changed"""
 						pass
-					case InletProperty.Name:
+					case InletAttribute.Name:
 						"""name changed"""
-						new_name = self.graph_model.getInletData(inlet, propertyId)
+						new_name = self.graph_model.getInletData(inlet, attribute)
 						if inlet_item.label.text() != new_name:
 							inlet_item.label.setText(new_name)
 

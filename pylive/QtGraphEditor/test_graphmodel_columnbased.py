@@ -1,5 +1,7 @@
 import unittest
-from graphmodel_columnbased import GraphModel, NodeProperty, InletProperty, OutletProperty, EdgeProperty
+from graphmodel_columnbased import (
+	GraphModel, NodeAttribute, InletAttribute, OutletAttribute, EdgeAttribute
+)
 
 from PySide6.QtGui import *
 from PySide6.QtCore import *
@@ -77,20 +79,20 @@ class TestGraphData(unittest.TestCase):
 		return super().tearDown()
 
 	def test_get_node_data(self):
-		name = self.graph.getNodeData(self.read_node, NodeProperty.Name)
-		posx = self.graph.getNodeData(self.read_node, NodeProperty.LocationX)
-		posy = self.graph.getNodeData(self.read_node, NodeProperty.LocationY)
+		name = self.graph.getNodeData(self.read_node, NodeAttribute.Name)
+		posx = self.graph.getNodeData(self.read_node, NodeAttribute.LocationX)
+		posy = self.graph.getNodeData(self.read_node, NodeAttribute.LocationY)
 
 		self.assertEqual(name, "read")
 		self.assertEqual(posx, 5 )
 		self.assertEqual(posy, 10 )
 
 	def test_get_inlet_data(self):
-		inlet_name = self.graph.getInletData(self.image_in, InletProperty.Name)
+		inlet_name = self.graph.getInletData(self.image_in, InletAttribute.Name)
 		self.assertEqual(inlet_name, "image_in")
 
 	def test_get_outlet_data(self):
-		outlet_name = self.graph.getOutletData(self.image_out, OutletProperty.Name)
+		outlet_name = self.graph.getOutletData(self.image_out, OutletAttribute.Name)
 		self.assertEqual(outlet_name, "image_out")
 
 

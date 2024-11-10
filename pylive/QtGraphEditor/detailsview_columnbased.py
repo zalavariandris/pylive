@@ -8,7 +8,7 @@ from pylive.Panel import Panel
 from pylive.QtGraphEditor.graphmodel_columnbased import (
 	GraphModel, 
 	NodeIndex, InletIndex, OutletIndex, EdgeIndex, 
-	NodeProperty, InletProperty, OutletProperty, EdgeProperty
+	NodeAttribute, InletAttribute, OutletAttribute, EdgeAttribute
 )
 
 
@@ -143,14 +143,14 @@ class GraphDetailsView(QWidget):
 		# inlets list
 		self.selected_node_inlets = QSortFilterProxyModel()  # Node column is 1 (for node name)
 		self.selected_node_inlets.setSourceModel(graphmodel._inletTable)
-		self.selected_node_inlets.setFilterKeyColumn(InletProperty.Owner)
+		self.selected_node_inlets.setFilterKeyColumn(GraphModel.InletDataColumn.Owner)
 		self.inlets_sheet_editor.setModel(self.selected_node_inlets)
 		
 
 		# outlets list
 		self.selected_node_outlets = QSortFilterProxyModel()  # Node column is 1 (for node name)
 		self.selected_node_outlets.setSourceModel(graphmodel._outletTable)
-		self.selected_node_outlets.setFilterKeyColumn(OutletProperty.Owner)
+		self.selected_node_outlets.setFilterKeyColumn(GraphModel.OutletDataColumn.Owner)
 		self.outlets_sheet_editor.setModel(self.selected_node_outlets)
 
 		# set no rows
