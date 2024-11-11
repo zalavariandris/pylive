@@ -39,7 +39,7 @@ from shiboken6 import isValid
 
 from pylive.Panel import Panel
 
-from pylive.QtGraphEditor.graphmodel_columnbased import GraphModel, NodeIndex, InletIndex, OutletIndex, EdgeIndex
+from pylive.QtGraphEditor.graphmodel_columnbased import GraphModel, NodeRef, InletRef, OutletRef, EdgeRef
 from pathlib import Path
 
 class GraphTableView(QWidget):
@@ -169,20 +169,20 @@ class GraphTableView(QWidget):
 		self.remove_node_action = QAction("remove selected nodes", self)
 		@self.remove_node_action.triggered.connect
 		def remove_selected_nodes():
-			selected_indexes = [NodeIndex(idx.siblingAtColumn(0)) for idx in self.nodes_sheet_view.selectedIndexes()] # Get the selected indexes from the node selection model
+			selected_indexes = [NodeRef(idx.siblingAtColumn(0)) for idx in self.nodes_sheet_view.selectedIndexes()] # Get the selected indexes from the node selection model
 			self.graphmodel.removeNodes(selected_indexes) # remove the nodes from the graphmodel
 		self.new_outlet_action = QAction("new outlet", self)
 
 		@self.new_outlet_action.triggered.connect
 		def add_outlet_for_current_node():
-			node = NodeIndex(self.nodes_sheet_view.currentIndex().siblingAtColumn(0))
+			node = NodeRef(self.nodes_sheet_view.currentIndex().siblingAtColumn(0))
 			if node.isValid():
 				self.graphmodel.addOutlet(node, name="out")
 
 		self.remove_outlet_action = QAction("remove outlet", self)
 		@self.remove_outlet_action.triggered.connect
 		def remove_selected_outlets():
-			selected_indexes = [OutletIndex(idx.siblingAtColumn(0)) for idx in self.outlets_sheet_view.selectedIndexes()] # Get the selected indexes from the node selection model
+			selected_indexes = [OutletRef(idx.siblingAtColumn(0)) for idx in self.outlets_sheet_view.selectedIndexes()] # Get the selected indexes from the node selection model
 			if not selected_indexes:
 				return  # No node is selected, exit the function
 			self.graphmodel.removeOutlets(selected_indexes) # remove the nodes from the graphmodel
@@ -190,27 +190,27 @@ class GraphTableView(QWidget):
 		self.new_inlet_action = QAction("new inlet", self)
 		@self.new_inlet_action.triggered.connect
 		def add_inlet_for_current_node():
-			node = NodeIndex(self.nodes_sheet_view.currentIndex().siblingAtColumn(0))
+			node = NodeRef(self.nodes_sheet_view.currentIndex().siblingAtColumn(0))
 			if node.isValid():
 				self.graphmodel.addInlet(node=node, name="in")
 
 		self.remove_inlet_action = QAction("remove inlet", self)
 		@self.remove_inlet_action.triggered.connect
 		def remove_selected_inlets():
-			selected_indexes = [InletIndex(idx.siblingAtColumn(0)) for idx in self.inlets_sheet_view.selectedIndexes()] # Get the selected indexes from the node selection model
+			selected_indexes = [InletRef(idx.siblingAtColumn(0)) for idx in self.inlets_sheet_view.selectedIndexes()] # Get the selected indexes from the node selection model
 			self.graphmodel.removeInlets(selected_indexes) # remove the nodes from the graphmodel
 
 		self.new_edge_action = QAction("new edge", self)
 		@self.new_edge_action.triggered.connect
 		def add_edge_to_current_ports():
-			current_outlet_index = OutletIndex(self.outlets_sheet_view.currentIndex().siblingAtColumn(0))
-			current_inlet_index = InletIndex(self.inlets_sheet_view.currentIndex().siblingAtColumn(0))
+			current_outlet_index = OutletRef(self.outlets_sheet_view.currentIndex().siblingAtColumn(0))
+			current_inlet_index = InletRef(self.inlets_sheet_view.currentIndex().siblingAtColumn(0))
 			self.graphmodel.addEdge(current_outlet_index, current_inlet_index)
 
 		self.remove_edge_action = QAction("remove selected edges", self)
 		@self.remove_edge_action.triggered.connect
 		def remove_selected_edges():
-			selected_indexes = [EdgeIndex(idx.siblingAtColumn(0)) for idx in self.edges_sheet_view.selectedIndexes()] # Get the selected indexes from the node selection model
+			selected_indexes = [EdgeRef(idx.siblingAtColumn(0)) for idx in self.edges_sheet_view.selectedIndexes()] # Get the selected indexes from the node selection model
 			self.graphmodel.removeEdges(selected_indexes) # remove the nodes from the graphmodel
 
 

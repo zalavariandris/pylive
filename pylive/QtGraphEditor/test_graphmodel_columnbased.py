@@ -27,12 +27,11 @@ class TestGraphCreations(unittest.TestCase):
 	def test_create_edge(self):
 		self.assertIn(self.edge, [edge for edge in self.graph.getEdges()])
 
-	def test_node_inlets(self):
+	def test_node_outlets(self):
 		self.assertIn(self.outlet, [outlet for outlet in self.graph.getNodeOutlets(self.start_node)])
 
-	def test_node_outlets(self):
+	def test_node_inlets(self):
 		self.assertIn(self.inlet, [inlet for inlet in self.graph.getNodeInlets(self.finish_node)])
-
 
 
 class TestGraphDeletions(unittest.TestCase):
@@ -62,6 +61,8 @@ class TestGraphDeletions(unittest.TestCase):
 	def test_removing_nodes(self):
 		self.setup_graph()
 		self.graph.removeNodes([self.start_node])
+
+		self.assertIn(self.finish_node, list(self.graph.getNodes()))
 		self.assertNotIn(self.start_node, list(self.graph.getNodes()))
 
 
@@ -238,7 +239,6 @@ class TestGraphModelAlgorithms(unittest.TestCase):
 	def test_get_target_nodes(self):
 		node_outlets = self.graph.getNodeOutlets(self.finish_node)
 		self.assertEqual(len(node_outlets), 1)
-		self.assertEqual(node_outlets[0].model(), self.finish_outlet.model())
 		self.assertEqual(node_outlets[0], self.finish_outlet)
 
 		target_nodes = self.graph.getTargetNodes(self.finish_node)

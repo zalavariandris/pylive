@@ -7,7 +7,7 @@ from typing import *
 from pylive.Panel import Panel
 from pylive.QtGraphEditor.graphmodel_columnbased import (
 	GraphModel, 
-	NodeIndex, InletIndex, OutletIndex, EdgeIndex, 
+	NodeRef, InletRef, OutletRef, EdgeRef, 
 	NodeAttribute, InletAttribute, OutletAttribute, EdgeAttribute
 )
 
@@ -103,27 +103,27 @@ class GraphDetailsView(QWidget):
 
 	def addOutletToCurrentNode(self):
 		if self._model and self.nodes_selectionmodel:
-			node = NodeIndex(self.nodes_selectionmodel.currentIndex())
+			node = NodeRef(self.nodes_selectionmodel.currentIndex())
 			outlet = self._model.addOutlet(node, "<out>")
 			self.outlets_sheet_editor.selectRow(outlet.row())
 			self.outlets_sheet_editor.setCurrentIndex(outlet)
 
 	def addInletToCurrentNode(self):
 		if self._model and self.nodes_selectionmodel:
-			node = NodeIndex(self.nodes_selectionmodel.currentIndex())
+			node = NodeRef(self.nodes_selectionmodel.currentIndex(), self._model)
 			inlet = self._model.addInlet(node, "<in>")
 			self.inlets_sheet_editor.selectRow(inlet.row())
 			self.inlets_sheet_editor.setCurrentIndex(inlet)
 
 	def removeSelectedInlets(self):
 		if self._model:
-			inlets = [InletIndex(idx) for idx in self.inlets_sheet_editor.selectedIndexes() if idx.column()==0]
+			inlets = [InletRef(idx, self._model) for idx in self.inlets_sheet_editor.selectedIndexes() if idx.column()==0]
 			print("removeSelectedInlets: {selectedIndexes}")
 			self._model.removeInlets(inlets)
 
 	def removeSelectedOutlets(self):
 		if self._model:
-			outlets = [OutletIndex(idx) for idx in self.outlets_sheet_editor.selectedIndexes() if idx.column()==0]
+			outlets = [OutletRef(idx, self._model) for idx in self.outlets_sheet_editor.selectedIndexes() if idx.column()==0]
 			self._model.removeOutlets(outlets)
 
 	def model(self):
@@ -154,19 +154,19 @@ class GraphDetailsView(QWidget):
 		self.outlets_sheet_editor.setModel(self.selected_node_outlets)
 
 		# set no rows
-		self.setCurrentModelIndex(NodeIndex())
+		self.setCurrentModelIndex(None)
 
 	def setNodesSelectionModel(self, nodes_selectionmodel:QItemSelectionModel):
 		self.nodes_selectionmodel = nodes_selectionmodel
 		self.nodes_selectionmodel.currentRowChanged.connect(self.setCurrentModelIndex)
 
-	def setCurrentModelIndex(self, index:NodeIndex):
+	def setCurrentModelIndex(self, node:NodeRef):
 		if not self._model:
 			return
 
-		if index.isValid():
-			self.id_label.setText(index.data())
-			self.mapper.setCurrentModelIndex(index)  # Update the mapper's current index
+		if node.isValid():
+			self.id_label.setText(node.data())
+			self.mapper.setCurrentModelIndex(node)  # Update the mapper's current index
 			node_name = self._model._nodeTable.itemFromIndex(index).text()  # Get the selected node's name
 			self.selected_node_inlets.setFilterFixedString(node_name) # update inlet filters
 			self.selected_node_outlets.setFilterFixedString(node_name) # update outlet filters
