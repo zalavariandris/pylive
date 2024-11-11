@@ -1,6 +1,7 @@
 import sys
 import math
 from typing import *
+from typing_extensions import NoDefault
 from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
@@ -101,10 +102,14 @@ class PinItem(QGraphicsItem):
 		self.scene().removeItem(self)
 
 
-class NodeGraphicsItem(QGraphicsItem):
+class NodeGraphicsItem(QGraphicsObject):
 	"""Graphics item representing a node."""
+	positionChanged = Signal()
 	def __init__(self, parent_graph:"GraphView"):
+		# QObject.__init__(self, parent=None)
 		super().__init__(parent=None)
+		
+
 		self.parent_graph = parent_graph
 		self.rect = QRectF(-5, -5, 100, 27)  # Set size of the node box
 		
@@ -238,77 +243,12 @@ class NodeGraphicsItem(QGraphicsItem):
 		# painter.setPen(palette.text().color())
 		# painter.drawText(self.rect, Qt.AlignmentFlag.AlignCenter, self.name)
 
-
-class NodeView(NodeGraphicsItem):
-	def __init__(self, parent_graph: "GraphView"):
-		# model reference
-		self.persistent_node_index:Optional[NodeIndex] = None
-		super().__init__(parent_graph)
-
-		# widgets
-		self.nameedit = EditableTextItem(self)
-		self.nameedit.setPos(0,0)
-		self.nameedit.setTextWidth(self.rect.width()-10)
-		self.nameedit.document().contentsChanged.connect(self.nameChangedEvent)
-
 	def itemChange(self, change, value):
-		if (self.parent_graph.graph_model and
-			self.persistent_node_index and
-			self.persistent_node_index.isValid()
-		):
-			match change:
-				case QGraphicsItem.GraphicsItemChange.ItemPositionHasChanged:
-					graph:GraphModel = self.parent_graph.graph_model
-					
-					new_pos = self.pos()
-					posx = int(new_pos.x())
-					posy = int(new_pos.y())
-
-					graph.setNodeData(self.persistent_node_index, posx, NodeAttribute.LocationX)
-					graph.setNodeData(self.persistent_node_index, posy, NodeAttribute.LocationY)
+		match change:
+			case QGraphicsItem.GraphicsItemChange.ItemPositionHasChanged:
+				self.positionChanged.emit()
 
 		return super().itemChange(change, value)
-
-	def nameChangedEvent(self):
-		if (self.parent_graph.graph_model and
-			self.persistent_node_index and
-			self.persistent_node_index.isValid()
-		):
-			graph:GraphModel = self.parent_graph.graph_model
-			node_index = self.persistent_node_index
-			new_name = self.nameedit.toPlainText()
-			graph.setNodeData(node_index, new_name, NodeAttribute.Name)
-
-	def handleNodeDataChanged(self, attributes):
-		new_pos = self.pos()
-		node = self.persistent_node_index
-		graph = self.parent_graph.graph_model
-		if not graph or not node:
-			return
-		for attribute in attributes:
-			match attribute:
-				case NodeAttribute.Id:
-					pass
-
-				case NodeAttribute.Name:
-					new_name = graph.getNodeData(node, attribute)
-					old_name = self.nameedit.toPlainText()
-					if old_name != new_name:
-						self.nameedit.setPlainText(new_name)
-
-				case NodeAttribute.LocationX:
-					"""posx changed"""
-					data = graph.getNodeData(node, attribute)
-					new_pos.setX(int(data))
-
-				case NodeAttribute.LocationY:
-					"""posy changed"""
-					data = graph.getNodeData(node, attribute)
-					new_pos.setY(int(data))
-
-		if new_pos!=self.pos():
-			self.setPos(new_pos)
-
 
 class OutletView(PinItem):
 	def __init__(self, parent=None):
@@ -514,16 +454,94 @@ class EdgeView(EdgeItem):
 		super().__init__(source_pin_item, target_pin_item, parent_graph)
 
 
+class NodeView(NodeGraphicsItem):
+	def __init__(self, parent_graph: "GraphView"):
+		# model reference
+		self.persistent_node_index:Optional[NodeIndex] = None
+		super().__init__(parent_graph)
+
+		# widgets
+		self.nameedit = EditableTextItem(self)
+		self.nameedit.setPos(0,0)
+		self.nameedit.setTextWidth(self.rect.width()-10)
+
+		# self.nameedit.document().contentsChanged.connect(self.nameChangedEvent)
+		# self.positionChanged.connect(self.positionChangedEvent)
+
+	# def nameChangedEvent(self):
+	# 	if (self.parent_graph.graph_model and
+	# 		self.persistent_node_index and
+	# 		self.persistent_node_index.isValid()
+	# 	):
+	# 		graph:GraphModel = self.parent_graph.graph_model
+	# 		node_index = self.persistent_node_index
+	# 		new_name = self.nameedit.toPlainText()
+	# 		graph.setNodeData(node_index, new_name, NodeAttribute.Name)
+
+	# def positionChangedEvent(self):
+	# 	if (self.parent_graph.graph_model and
+	# 		self.persistent_node_index and
+	# 		self.persistent_node_index.isValid()
+	# 	):
+	# 		graph:GraphModel = self.parent_graph.graph_model
+	# 		node_index = self.persistent_node_index
+	# 		new_pos = self.pos()
+	# 		graph.setNodeData(node_index, int(new_pos.x()), NodeAttribute.LocationX)
+	# 		graph.setNodeData(node_index, int(new_pos.y()), NodeAttribute.LocationY)
+
+
+
 class NodeItemDelegate(QObject):
+	commitData = Signal(NodeGraphicsItem, NodeIndex, list)
+	def __init__(self, parent: Optional[QObject] = None) -> None:
+		super().__init__(parent)
+		self.commitData.connect(self.setModelData)
+
 	def createEditor(self, parent:'GraphView', option:QStyleOptionViewItem , node: NodeIndex)->NodeGraphicsItem:
 		node_item = NodeView(parent_graph=parent)
+		node_item.nameedit.document().contentsChanged.connect(lambda: self.commitData.emit(node_item, node, [NodeAttribute.Name]))
 		return node_item
 
-	def setEditorData(self, node: NodeIndex, attribute: NodeAttribute):
-		...
+	def setEditorData(self, editor: NodeGraphicsItem, graph:GraphModel, node: NodeIndex, attributes: List[NodeAttribute]):
+		editor = cast(NodeView, editor)
+		new_pos = editor.pos()
+		for attribute in attributes:
+			match attribute:
+				case NodeAttribute.Id:
+					pass
 
-	def setModelData(self, editor: NodeView, model:GraphModel, node:NodeIndex):
-		...
+				case NodeAttribute.Name:
+					new_name = graph.getNodeData(node, attribute)
+					old_name = editor.nameedit.toPlainText()
+					if old_name != new_name:
+						editor.nameedit.setPlainText(new_name)
+
+				case NodeAttribute.LocationX:
+					"""posx changed"""
+					data = graph.getNodeData(node, attribute)
+					new_pos.setX(int(data))
+
+				case NodeAttribute.LocationY:
+					"""posy changed"""
+					data = graph.getNodeData(node, attribute)
+					new_pos.setY(int(data))
+
+		if new_pos!=editor.pos():
+			editor.setPos(new_pos)
+
+	def setModelData(self, editor: NodeGraphicsItem, node:NodeIndex, attributes: List[NodeAttribute]):
+		editor = cast(NodeView, editor)
+		graph = editor.parent_graph.model()
+		if not graph:
+			return
+		for attr in attributes:
+			match attr:
+				case NodeAttribute.Name:
+					graph.setNodeData(node, editor.nameedit.toPlainText(), NodeAttribute.Name)
+				case NodeAttribute.LocationX:
+					graph.setNodeData(node, editor.pos().x(), NodeAttribute.LocationX)
+				case NodeAttribute.LocationY:
+					graph.setNodeData(node, editor.pos().x(), NodeAttribute.LocationX)
 
 
 class PinItemDelegate(QObject):
@@ -550,6 +568,7 @@ class GraphView(PanAndZoomGraphicsView):
 		self.edges_selectionmodel = None
 
 		self.delegate = NodeItemDelegate()
+		self.delegate.commitData.connect(lambda item, index, attributes: self.handleNodesDataChanged()) !!!!!!!!!!!
 
 	def setScene(self, scene:QGraphicsScene|None):
 		if self.scene():
@@ -752,16 +771,17 @@ class GraphView(PanAndZoomGraphicsView):
 			node_item.destroy()
 			del self.index_to_item_map[node]
 	
-	def handleNodesDataChanged(self, nodes:List[NodeIndex], properties:List[NodeAttribute]|None=None):
+	def handleNodesDataChanged(self, nodes:List[NodeIndex], attributes:List[NodeAttribute]|None=None):
 		if not self.graph_model:
 			return
 
-		if not properties:
-			properties = [NodeAttribute.Id, NodeAttribute.Name, NodeAttribute.LocationX, NodeAttribute.LocationY]
+		if not attributes:
+			attributes = [NodeAttribute.Id, NodeAttribute.Name, NodeAttribute.LocationX, NodeAttribute.LocationY]
 
 		for node in nodes:
 			node_item = cast(NodeView, self.index_to_item_map[node])
-			node_item.handleNodeDataChanged(properties)			
+			self.delegate.setEditorData(node_item, self.graph_model, node, attributes)
+			# node_item.handleNodeDataChanged(properties)			
 
 	@Slot(QModelIndex, int, int)
 	def handleEdgesAdded(self, edges:List[EdgeIndex]):
