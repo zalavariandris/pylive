@@ -96,6 +96,13 @@ class TestGraphData(unittest.TestCase):
 		outlet_name = self.graph.getOutletData(self.image_out, OutletAttribute.Name)
 		self.assertEqual(outlet_name, "image_out")
 
+class TestArbitraryData(unittest.TestCase):
+	def test_setting_node_arbitrary_data(self):
+		graph = GraphModel()
+		node = graph.addNode("read", 5,10)
+		graph.setNodeData(node, "MyData", "MyAttribute")
+
+		self.assertEqual(graph.getNodeData(node, "MyAttribute"), "MyData")
 
 class TestGraphRelations(unittest.TestCase):
 	def setUp(self) -> None:

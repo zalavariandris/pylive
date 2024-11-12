@@ -438,9 +438,12 @@ class GraphModel(QObject):
 		for edge in sorted(edges_to_remove, key=lambda edge: edge._index.row(), reverse=True):
 			self._edgeTable.removeRow(edge._index.row())
 
-	def getNodeData(self, node:NodeRef, attr:NodeAttribute):
+	def getNodeData(self, node:NodeRef, attr:NodeAttribute|str):
 		assert isinstance(node, NodeRef) and node.isValid(), f"got: {node}"
 
+		def getNodeAttributes():
+			return [self._nodeTable.horizontalHeaderItem(col).text() for col in range(self._nodeTable.columnCount())]
+		
 		match attr:
 			case NodeAttribute.Id:
 				return self._nodeTable.data(node._index.sibling(node._index.row(), GraphModel.NodeDataColumn.Id), Qt.ItemDataRole.DisplayRole)
@@ -451,10 +454,18 @@ class GraphModel(QObject):
 			case NodeAttribute.LocationY:
 				return self._nodeTable.data(node._index.sibling(node._index.row(), GraphModel.NodeDataColumn.LocationY), Qt.ItemDataRole.DisplayRole)
 			case _:
-				raise ValueError(f"cant get attribute for node: attribute column {attr} does not exist")
+				attributes = getNodeAttributes()
+				try:
+					column = attributes.index(attr)
+					return self._nodeTable.data(node._index.sibling(node._index.row(), column), Qt.ItemDataRole.DisplayRole)
+				except ValueError as err:
+					raise ValueError(f"Nodes has node '{attr}' attribute!")
 
-	def setNodeData(self, node:NodeRef, value, attr:NodeAttribute):
+	def setNodeData(self, node:NodeRef, value, attr:NodeAttribute|str):
 		assert isinstance(node, NodeRef) and node.isValid(), f"got: {node}"
+
+		def getNodeAttributes():
+			return [self._nodeTable.horizontalHeaderItem(col).text() for col in range(self._nodeTable.columnCount())]
 		# self._nodeTable.blockSignals(True)
 		columnsChanged = []
 		match attr:
@@ -471,8 +482,16 @@ class GraphModel(QObject):
 				assert isinstance(value, int)
 				self._nodeTable.setData(node._index.sibling(node._index.row(), GraphModel.NodeDataColumn.LocationY), value, Qt.ItemDataRole.DisplayRole)
 			case _:
-				raise ValueError(f"cant set attribute for node: attribute column {attr} does not exist")
-			
+				node_attributes = getNodeAttributes()
+				if attr not in node_attributes:
+					print(f"info: create attribute column '{attr}'")
+					new_column = self._nodeTable.columnCount()
+					self._nodeTable.insertColumn(new_column)
+					self._nodeTable.setHorizontalHeaderItem(new_column, QStandardItem(attr))
+
+				column = getNodeAttributes().index(attr)
+				self._nodeTable.setData(node._index.sibling(node._index.row(), column), value, Qt.ItemDataRole.DisplayRole)
+
 		# self._nodeTable.blockSignals(False)
 		# for start, end in group_consecutive_numbers(columnsChanged):
 		# 	self._nodeTable.dataChanged.emit(node.siblingAtColumn(start), node.siblingAtColumn(end))
