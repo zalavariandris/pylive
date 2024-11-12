@@ -161,29 +161,29 @@ class GraphModel(QObject):
 	edgesAboutToBeRemoved = Signal(list) #List[EdgeRef]
 	edgesDataChanged = Signal(list, list) #List[EdgeRef], List[EdgeDataColumn]
 
-	class NodeDataColumn(IntEnum):
-		Id = 0
-		Name = 1
-		LocationX = 2
-		LocationY = 3
-		User = 4
+	# class NodeDataColumn(IntEnum):
+	# 	Id = 0
+	# 	Name = 1
+	# 	LocationX = 2
+	# 	LocationY = 3
+	# 	User = 4
 
-	class InletDataColumn(IntEnum):
-		Id = 0
-		Owner = 1
-		Name = 2
-		User = 3
+	# class InletDataColumn(IntEnum):
+	# 	Id = 0
+	# 	Owner = 1
+	# 	Name = 2
+	# 	User = 3
 
-	class OutletDataColumn(IntEnum):
-		Id = 0
-		Owner = 1
-		Name = 2
-		User = 3
+	# class OutletDataColumn(IntEnum):
+	# 	Id = 0
+	# 	Owner = 1
+	# 	Name = 2
+	# 	User = 3
 
-	class EdgeDataColumn(IntEnum):
-		Id = 0
-		SourceOutlet =  1
-		TargetInlet = 2
+	# class EdgeDataColumn(IntEnum):
+	# 	Id = 0
+	# 	SourceOutlet =  1
+	# 	TargetInlet = 2
 
 	def __init__(self, parent=None):
 		super().__init__(parent)
@@ -192,7 +192,7 @@ class GraphModel(QObject):
 		### Nodes Model ###
 		self._nodeTable = QStandardItemModel()
 
-		self._nodeTable.setHorizontalHeaderLabels(GraphModel.NodeDataColumn._member_names_)
+		self._nodeTable.setHorizontalHeaderLabels([member.name for member in NodeAttribute])
 		self._nodeTable.rowsInserted.connect(lambda parent, first, last:
 			self.nodesAdded.emit([NodeRef(self._nodeTable.index(row, 0), self) for row in range(first, last+1)])
 		)
@@ -210,7 +210,7 @@ class GraphModel(QObject):
 
 		### Inlets Model ###
 		self._inletTable = QStandardItemModel()
-		self._inletTable.setHorizontalHeaderLabels(GraphModel.InletDataColumn._member_names_)
+		self._inletTable.setHorizontalHeaderLabels([member.name for member in InletAttribute])
 		self._inletTable.rowsInserted.connect(lambda parent, first, last:
 			self.inletsAdded.emit([InletRef(self._inletTable.index(row, 0), self) for row in range(first, last+1)])
 		)
@@ -228,7 +228,7 @@ class GraphModel(QObject):
 
 		### Outlets Model ###
 		self._outletTable = QStandardItemModel()
-		self._outletTable.setHorizontalHeaderLabels(GraphModel.OutletDataColumn._member_names_)
+		self._outletTable.setHorizontalHeaderLabels([member.name for member in OutletAttribute])
 		self._outletTable.rowsInserted.connect(lambda parent, first, last:
 			self.outletsAdded.emit([OutletRef(self._outletTable.index(row, 0), self) for row in range(first, last+1)])
 		)
@@ -246,7 +246,7 @@ class GraphModel(QObject):
 
 		### Edges Model ###
 		self._edgeTable = QStandardItemModel()
-		self._edgeTable.setHorizontalHeaderLabels(GraphModel.EdgeDataColumn._member_names_)
+		self._edgeTable.setHorizontalHeaderLabels([member.name for member in EdgeAttribute])
 		self._edgeTable.rowsInserted.connect(lambda parent, first, last:
 			self.edgesAdded.emit([EdgeRef(self._edgeTable.index(row, 0), self) for row in range(first, last+1)])
 		)
@@ -261,17 +261,6 @@ class GraphModel(QObject):
 				roles
 			)
 		)
-
-	def setNodeAttributeLabels(self, labels: List[str]):
-		base_labels = [name for name, column in self.NodeDataColumn.__members__]
-		self._nodeTable.setHorizontalHeaderLabels(base_labels + labels)
-
-	def getNodeAttributeLabels(self):
-		base_labels = [name for name, column in self.NodeDataColumn.__members__]
-		def getNodeAttributeLabels():
-			return [self._nodeTable.horizontalHeaderItem(col).text() for col in range(self._nodeTable.columnCount())]
-		
-		return getNodeAttributeLabels()[len(base_labels)-1 : ]
 		
 	def getNodes(self)->Iterable[NodeRef]:
 		for row in range(self._nodeTable.rowCount()):
@@ -423,16 +412,6 @@ class GraphModel(QObject):
 		assert len(owner_nodes)==1
 		return owner_nodes[0]
 
-	def setOutletOwner(self, outlet:OutletRef, node:NodeRef):
-		assert isinstance(outlet, OutletRef) and outlet.isValid()
-
-		if not isinstance(node, NodeRef):
-			raise ValueError(f"Value must be a node, got: {node}")
-
-		node_id:str = self._nodeTable.data(node._index.sibling(node._index.row(), GraphModel.NodeDataColumn.Id), Qt.ItemDataRole.DisplayRole)
-		self._outletTable.setData(outlet._index.sibling(outlet._index.row(), GraphModel.OutletDataColumn.Owner), node_id, Qt.ItemDataRole.DisplayRole)
-
-
 	def removeInlets(self, inlets_to_remove:List[InletRef]):
 		# collect edges to be removed
 		assert all( isinstance(inlet, InletRef) for inlet in inlets_to_remove ), f"got: {inlets_to_remove}"
@@ -457,57 +436,55 @@ class GraphModel(QObject):
 	def getNodeData(self, node:NodeRef, attr:NodeAttribute|str):
 		assert isinstance(node, NodeRef) and node.isValid(), f"got: {node}"
 
-		def getNodeAttributes():
-			return [self._nodeTable.horizontalHeaderItem(col).text() for col in range(self._nodeTable.columnCount())]
+		def findColumn(label)->int:
+			for column in range(self._nodeTable.columnCount()):
+				if self._nodeTable.horizontalHeaderItem(column).text() == label:
+					return column
+			raise KeyError(f"No '{label}' in node table")
 		
 		match attr:
 			case NodeAttribute.Id:
-				return self._nodeTable.data(node._index.sibling(node._index.row(), GraphModel.NodeDataColumn.Id), Qt.ItemDataRole.DisplayRole)
+				column = [self._nodeTable.horizontalHeaderItem(col).text() for col in range(self._nodeTable.columnCount())]
+				return self._nodeTable.data(node._index.sibling(node._index.row(), findColumn(NodeAttribute.Id)), Qt.ItemDataRole.DisplayRole)
 			case NodeAttribute.Name:
-				return self._nodeTable.data(node._index.sibling(node._index.row(), GraphModel.NodeDataColumn.Name), Qt.ItemDataRole.DisplayRole)
+				return self._nodeTable.data(node._index.sibling(node._index.row(), findColumn(NodeAttribute.Name)), Qt.ItemDataRole.DisplayRole)
 			case NodeAttribute.LocationX:
-				return self._nodeTable.data(node._index.sibling(node._index.row(), GraphModel.NodeDataColumn.LocationX), Qt.ItemDataRole.DisplayRole)
+				return self._nodeTable.data(node._index.sibling(node._index.row(), findColumn(NodeAttribute.LocationX)), Qt.ItemDataRole.DisplayRole)
 			case NodeAttribute.LocationY:
-				return self._nodeTable.data(node._index.sibling(node._index.row(), GraphModel.NodeDataColumn.LocationY), Qt.ItemDataRole.DisplayRole)
+				return self._nodeTable.data(node._index.sibling(node._index.row(), findColumn(NodeAttribute.LocationY)), Qt.ItemDataRole.DisplayRole)
 			case _:
-				attributeLabels = self.getNodeAttributeLabels()
-				try:
-					column = GraphModel.NodeDataColumn.User + attributeLabels.index(attr)
-					return self._nodeTable.data(node._index.sibling(node._index.row(), column), Qt.ItemDataRole.DisplayRole)
-				except ValueError as err:
-					raise ValueError(f"Nodes has node '{attr}' attribute!")
+				column = findColumn(attr)
+				return self._nodeTable.data(node._index.sibling(node._index.row(), column), Qt.ItemDataRole.DisplayRole)
+
 
 	def setNodeData(self, node:NodeRef, value, attr:NodeAttribute|str):
 		assert isinstance(node, NodeRef) and node.isValid(), f"got: {node}"
 
-		def getNodeAttributes():
-			return [self._nodeTable.horizontalHeaderItem(col).text() for col in range(self._nodeTable.columnCount())]
+		def findColumn(label)->int:
+			for column in range(self._nodeTable.columnCount()):
+				if self._nodeTable.horizontalHeaderItem(column).text() == label:
+					return column
+			raise KeyError(f"No '{label}' in node table")
+
 		# self._nodeTable.blockSignals(True)
 		columnsChanged = []
 		match attr:
 			case NodeAttribute.Id: #id
 				assert isinstance(value, str)
-				self._nodeTable.setData(node._index.sibling(node._index.row(), GraphModel.NodeDataColumn.Id), value, Qt.ItemDataRole.DisplayRole)
+				self._nodeTable.setData(node._index.sibling(node._index.row(), findColumn(NodeAttribute.Id)), value, Qt.ItemDataRole.DisplayRole)
 			case NodeAttribute.Name: #name
 				assert isinstance(value, str)
-				self._nodeTable.setData(node._index.sibling(node._index.row(), GraphModel.NodeDataColumn.Name), value, Qt.ItemDataRole.DisplayRole)
+				self._nodeTable.setData(node._index.sibling(node._index.row(), findColumn(NodeAttribute.Name)), value, Qt.ItemDataRole.DisplayRole)
 			case NodeAttribute.LocationX: #"posx":
 				assert isinstance(value, int)
-				self._nodeTable.setData(node._index.sibling(node._index.row(), GraphModel.NodeDataColumn.LocationX), value, Qt.ItemDataRole.DisplayRole)
+				self._nodeTable.setData(node._index.sibling(node._index.row(), findColumn(NodeAttribute.LocationX)), value, Qt.ItemDataRole.DisplayRole)
 			case NodeAttribute.LocationY: #"posy":
 				assert isinstance(value, int)
-				self._nodeTable.setData(node._index.sibling(node._index.row(), GraphModel.NodeDataColumn.LocationY), value, Qt.ItemDataRole.DisplayRole)
+				self._nodeTable.setData(node._index.sibling(node._index.row(), findColumn(NodeAttribute.LocationY)), value, Qt.ItemDataRole.DisplayRole)
 			case _:
-				node_attributes = self.getNodeAttributeLabels()
-				if attr not in node_attributes:
-					print(f"info: create attribute column '{attr}'")
-					attributeLabels = self.getNodeAttributeLabels()
-					new_column = GraphModel.NodeDataColumn.User + attributeLabels.index(attr)
-					self._nodeTable.insertColumn(new_column)
-					self._nodeTable.setHorizontalHeaderItem(new_column, QStandardItem(attr))
-
-				column = getNodeAttributes().index(attr)
+				column = findColumn(attr)
 				self._nodeTable.setData(node._index.sibling(node._index.row(), column), value, Qt.ItemDataRole.DisplayRole)
+
 
 		# self._nodeTable.blockSignals(False)
 		# for start, end in group_consecutive_numbers(columnsChanged):
@@ -615,15 +592,6 @@ class GraphModel(QObject):
 		assert len(source_outlets) == 1
 		return source_outlets[0]
 
-	def setEdgeSource(self, edge:EdgeRef, outlet:OutletRef):
-		assert isinstance(edge, EdgeRef) and edge.isValid()
-
-		if not isinstance(outlet, OutletRef):
-			raise ValueError(f"Value must be an outlet, got: {value}")
-
-		outlet_id:str = self._outletTable.data(outlet._index.sibling(outlet._index.row(), GraphModel.OutletDataColumn.Id), Qt.ItemDataRole.DisplayRole)
-		self._edgeTable.setData(edge._index.sibling(edge._index.row(), GraphModel.EdgeDataColumn.SourceOutlet), outlet_id,  Qt.ItemDataRole.DisplayRole)
-
 	def getEdgeTarget(self, edge:EdgeRef)->InletRef:
 		assert isinstance(edge, EdgeRef)
 
@@ -634,16 +602,6 @@ class GraphModel(QObject):
 		)]
 		assert len(target_inlets) == 1
 		return target_inlets[0]
-
-	def setEdgeTarget(self, edge:EdgeRef, inlet: InletRef):
-		assert isinstance(edge, EdgeRef) and edge.isValid()
-
-		if not isinstance(inlet, InletRef):
-			raise ValueError(f"Value must be an inlet, got: {value}")
-
-		inlet_id:str = self._inletTable.data(inlet._index.sibling(inlet._index.row(), GraphModel.InletDataColumn.Id), Qt.ItemDataRole.DisplayRole)
-		assert isinstance(inlet_id, str)
-		self._edgeTable.setData(edge._index.sibling(edge._index.row(), GraphModel.EdgeDataColumn.TargetInlet), inlet_id, Qt.ItemDataRole.DisplayRole)
 
 	def getSourceNodes(self, node:NodeRef):
 		assert isinstance(node, NodeRef)
@@ -674,8 +632,7 @@ class GraphModel(QObject):
 			assert node.isValid()
 			return len(list(self.getTargetNodes(node))) > 0
 		
-		for row in range(self._nodeTable.rowCount()):
-			node = NodeRef(self._nodeTable.index(row, GraphModel.NodeDataColumn.Id), self)
+		for node in self.getNodes():
 			if not hasTargets(node):
 				yield node
 
@@ -685,8 +642,7 @@ class GraphModel(QObject):
 		def dfs_visit(node:NodeRef):
 			"""Recursive helper function to perform DFS."""
 			assert isinstance(node, NodeRef)
-			assert node._index.model() == self._nodeTable
-			assert node._index.column() == GraphModel.NodeDataColumn.Id
+			assert node.isValid()
 
 			visited.add(node)
 			yield node  # Yield the current node
