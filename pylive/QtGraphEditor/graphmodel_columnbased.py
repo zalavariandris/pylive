@@ -40,6 +40,9 @@ class NodeRef():
 		self._index = QPersistentModelIndex(index)
 		self._graph = graph
 
+	def graph(self):
+		return self._graph
+
 	def __eq__(self, value: object, /) -> bool:
 		if isinstance(value, NodeRef):
 			return self._index == value._index
@@ -54,6 +57,7 @@ class NodeRef():
 
 	def __repr__(self) -> str:
 		return f"{self.__class__.__name__}({self._index.row()},{self._index.column()})"
+
 
 class EdgeRef():
 	def __init__(self, index:QModelIndex, graph:'GraphModel'):
@@ -79,6 +83,7 @@ class EdgeRef():
 
 	def __repr__(self) -> str:
 		return f"{self.__class__.__name__}({self._index.row()},{self._index.column()})"
+
 
 class InletRef():
 	def __init__(self, index:QModelIndex, graph:'GraphModel'):
@@ -112,6 +117,7 @@ class InletRef():
 	def __repr__(self) -> str:
 		return f"{self.__class__.__name__}({self._index.row()},{self._index.column()})"
 
+
 class OutletRef():
 	def __init__(self, index:QModelIndex, graph:'GraphModel'):
 		if not index.isValid():
@@ -136,7 +142,6 @@ class OutletRef():
 
 	def __repr__(self) -> str:
 		return f"{self.__class__.__name__}({self._index.row()},{self._index.column()})"
-
 
 
 class GraphModel(QObject):
@@ -257,6 +262,17 @@ class GraphModel(QObject):
 			)
 		)
 
+	def setNodeAttributeLabels(self, labels: List[str]):
+		base_labels = [name for name, column in self.NodeDataColumn.__members__]
+		self._nodeTable.setHorizontalHeaderLabels(base_labels + labels)
+
+	def getNodeAttributeLabels(self):
+		base_labels = [name for name, column in self.NodeDataColumn.__members__]
+		def getNodeAttributeLabels():
+			return [self._nodeTable.horizontalHeaderItem(col).text() for col in range(self._nodeTable.columnCount())]
+		
+		return getNodeAttributeLabels()[len(base_labels)-1 : ]
+		
 	def getNodes(self)->Iterable[NodeRef]:
 		for row in range(self._nodeTable.rowCount()):
 			yield NodeRef(self._nodeTable.index(row, 0), self)
@@ -454,9 +470,9 @@ class GraphModel(QObject):
 			case NodeAttribute.LocationY:
 				return self._nodeTable.data(node._index.sibling(node._index.row(), GraphModel.NodeDataColumn.LocationY), Qt.ItemDataRole.DisplayRole)
 			case _:
-				attributes = getNodeAttributes()
+				attributeLabels = self.getNodeAttributeLabels()
 				try:
-					column = attributes.index(attr)
+					column = GraphModel.NodeDataColumn.User + attributeLabels.index(attr)
 					return self._nodeTable.data(node._index.sibling(node._index.row(), column), Qt.ItemDataRole.DisplayRole)
 				except ValueError as err:
 					raise ValueError(f"Nodes has node '{attr}' attribute!")
@@ -482,10 +498,11 @@ class GraphModel(QObject):
 				assert isinstance(value, int)
 				self._nodeTable.setData(node._index.sibling(node._index.row(), GraphModel.NodeDataColumn.LocationY), value, Qt.ItemDataRole.DisplayRole)
 			case _:
-				node_attributes = getNodeAttributes()
+				node_attributes = self.getNodeAttributeLabels()
 				if attr not in node_attributes:
 					print(f"info: create attribute column '{attr}'")
-					new_column = self._nodeTable.columnCount()
+					attributeLabels = self.getNodeAttributeLabels()
+					new_column = GraphModel.NodeDataColumn.User + attributeLabels.index(attr)
 					self._nodeTable.insertColumn(new_column)
 					self._nodeTable.setHorizontalHeaderItem(new_column, QStandardItem(attr))
 
