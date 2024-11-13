@@ -173,11 +173,17 @@ class TestGraphModelSignals(unittest.TestCase):
 		self.graph.addNode(name="a new node", posx=0, posy=0)
 		self.assertEqual(spy.count(), 1, "'nodesAdded' Signal was not emitted exactly once.")
 
-	def test_nodes_removed(self):
+	def test_nodes_about_to_be_removed(self):
 		self.setup_graph()
 		spy = QSignalSpy(self.graph.nodesAboutToBeRemoved)
 		self.graph.removeNodes([self.start_node])
 		self.assertEqual(spy.count(), 1, "'nodesAboutToBeRemoved' Signal was not emitted exactly once.")
+
+	def test_nodes_removed(self):
+		self.setup_graph()
+		spy = QSignalSpy(self.graph.nodesRemoved)
+		self.graph.removeNodes([self.start_node])
+		self.assertEqual(spy.count(), 1, "'nodesRemoved' Signal was not emitted exactly once.")
 
 	def test_nodes_changed(self):
 		pass
@@ -188,11 +194,17 @@ class TestGraphModelSignals(unittest.TestCase):
 		self.graph.addInlet(self.start_node, name="inlet")
 		self.assertEqual(spy.count(), 1, "'inletsAdded' Signal was not emitted exactly once.")
 
-	def test_inlets_removed(self):
+	def test_inlets_about_to_be_removed(self):
 		self.setup_graph()
 		spy = QSignalSpy(self.graph.inletsAboutToBeRemoved)
 		self.graph.removeInlets([self.inlet])
 		self.assertEqual(spy.count(), 1, "'inletsAboutToBeRemoved' Signal was not emitted exactly once.")
+
+	def test_inlets_removed(self):
+		self.setup_graph()
+		spy = QSignalSpy(self.graph.inletsRemoved)
+		self.graph.removeInlets([self.inlet])
+		self.assertEqual(spy.count(), 1, "'inletsRemoved' Signal was not emitted exactly once.")
 
 	def test_inlets_changed(self):
 		pass
@@ -203,11 +215,18 @@ class TestGraphModelSignals(unittest.TestCase):
 		self.graph.addOutlet(self.finish_node, name="outlet")
 		self.assertEqual(spy.count(), 1, "'outletsAdded' Signal was not emitted exactly once.")
 
-	def test_outlets_removed(self):
+	def test_outlets_about_to_be_removed(self):
 		self.setup_graph()
 		spy = QSignalSpy(self.graph.outletsAboutToBeRemoved)
 		self.graph.removeOutlets([self.outlet])
 		self.assertEqual(spy.count(), 1, "'outletsAboutToBeRemoved' Signal was not emitted exactly once.")
+
+	def test_outlets_removed(self):
+		self.setup_graph()
+		spy = QSignalSpy(self.graph.outletsRemoved)
+		self.graph.removeOutlets([self.outlet])
+		self.assertEqual(spy.count(), 1, "'outletsRemoved' Signal was not emitted exactly once.")
+
 
 	def test_outlets_changed(self):
 		pass

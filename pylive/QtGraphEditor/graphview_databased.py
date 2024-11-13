@@ -270,7 +270,7 @@ class EditableTextItem(QGraphicsTextItem):
 		self.setTextInteractionFlags(Qt.TextInteractionFlag.TextEditorInteraction)
 		self.setFocus(Qt.FocusReason.MouseFocusReason)
 
-		click = QGraphicsSceneMouseEvent()
+		click = QGraphicsSceneMouseEvent(QEvent.Type.GraphicsSceneMousePress)
 		click.setButton(event.button())
 		click.setPos(event.pos())
 		self.mousePressEvent(click)
@@ -568,7 +568,7 @@ class GraphView(PanAndZoomGraphicsView):
 					self.graph_model.addEdge(outlet, inlet)
 
 				else:
-					raise ValueError(f"Can't connect {endpin} to {start_pin}")
+					raise ValueError(f"Can't connect {end_pin} to {start_pin}")
 
 			else:
 				"""create edge"""
@@ -662,22 +662,10 @@ class GraphView(PanAndZoomGraphicsView):
 		return node_item
 
 	def onNodePropertyChange(self, node:NodeRef, node_item:QGraphicsItem, properties:List[str]|None):
-		graph = self.model()
-		if not graph:
-			return
-		node_item = cast(StandardNodeItem, node_item)
-		new_pos = node_item.pos()
+		raise NotImplementedError("subclasses must implement onNodePropertyChange")
 
-		if not properties or "name" in properties:
-			new_name = graph.getNodeProperty(node, "name")
-			old_name = node_item.nameedit.toPlainText()
-			if old_name != new_name:
-				node_item.nameedit.setPlainText(new_name)
-
-		if not properties or "posx" in properties or "posy" in properties:
-			x = int(graph.getNodeProperty(node, "posx"))
-			y = int(graph.getNodeProperty(node, "posy"))
-			node_item.setPos(x, y)
+	def onNodeEditorChange(self, node:NodeRef, node_item:QGraphicsItem, properties:List[str]|None):
+		raise NotImplementedError("subclasses must implement onNodeEditorChange")
 
 	@Slot(QModelIndex, int, int)
 	def handleNodesRemoved(self, nodes:Iterable[NodeRef]):
@@ -808,6 +796,8 @@ class GraphView(PanAndZoomGraphicsView):
 			return
 
 		# TODO: HANDLE ALL PROPERTIES CHANGED !!!!!!!!
+		# this is probably shoudl be an abstract method,
+		# and implement it in the standard, example versions
 
 		for outlet in outlets:
 			outlet_item = cast(OutletItem, self.index_to_item_map[outlet])
@@ -821,15 +811,15 @@ class GraphView(PanAndZoomGraphicsView):
 			return
 
 		# TODO: HANDLE ALL PROPERTIES CHANGED !!!!!!!!
+		# this is probably shoudl be an abstract method,
+		# and implement it in the standard, example versions
 
 		for inlet in inlets:
 			inlet_item = cast(InletItem, self.index_to_item_map[inlet])
-			for prop in properties:
-				match prop:
-					case "name":
-						new_name = self.graph_model.getInletProperty(inlet, prop)
-						if inlet_item.label.text() != new_name:
-							inlet_item.label.setText(new_name)
+			if not properties or 'name' in properties: 
+				new_name = self.graph_model.getInletProperty(inlet, 'name')
+				if inlet_item.label.text() != new_name:
+					inlet_item.label.setText(new_name)
 
 	# Selection
 	def setNodesSelectionModel(self, nodes_selectionmodel:QItemSelectionModel):
@@ -898,18 +888,18 @@ class StandardNodeItem(NodeGraphicsItem):
 			self.rect = QRect(0,0,300,300)
 			main_widget.resize(self.rect.width(), self.rect.height())
 
-		# def mouseDoubleClickEvent(self, event: QMouseEvent):
-		# 	# Enable editing subitems on double-click
-		# 	"""parent node must manually cal the double click event,
-		# 	because an item nor slectable nor movable will not receive press events"""
+		def mouseDoubleClickEvent(self, event: QGraphicsSceneMouseEvent):
+			# Enable editing subitems on double-click
+			"""parent node must manually cal the double click event,
+			because an item nor slectable nor movable will not receive press events"""
 
-		# 	# Check if double-click is within the text item’s bounding box
-		# 	if self.nameedit.contains(self.mapFromScene(event.scenePos())):
-		# 		# Forward the event to nameedit if clicked inside it
-		# 		self.nameedit.mouseDoubleClickEvent(event)
-		# 	else:
-		# 		print("NodeItem->mouseDoubleClickEvent")
-		# 		super().mouseDoubleClickEvent(event)
+			# Check if double-click is within the text item’s bounding box
+			if self.nameedit.contains(self.mapFromScene(event.scenePos())):
+				# Forward the event to nameedit if clicked inside it
+				self.nameedit.mouseDoubleClickEvent(event)
+			else:
+				print("NodeItem->mouseDoubleClickEvent")
+				super().mouseDoubleClickEvent(event)
 
 		# def boundingRect(self) -> QRectF:
 		# 	return 
@@ -957,7 +947,8 @@ class StandardGraphView(GraphView):
 			y = int(node.graph().getNodeProperty(node, "posy"))
 			node_item.setPos(x,y)
 
-	def onNodeEditorChange(self, node:NodeRef, node_item:QGraphicsItem, properties:List[str]):
+	@override
+	def onNodeEditorChange(self, node:NodeRef, node_item:QGraphicsItem, properties:List[str]|None):
 		graph = self.model()
 		node_item = cast(StandardNodeItem, self.index_to_item_map[node])
 		if not graph:
@@ -972,6 +963,7 @@ class StandardGraphView(GraphView):
 			graph.setNodeProperty(node, posy=int(node_item.y()))
 			graph.blockSignals(False)
 			graph.nodesPropertyChanged.emit([node], ["posx", "posy"])
+
 
 if __name__ == "__main__":
 	from tableview_columnbased import GraphTableView
