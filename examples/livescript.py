@@ -19,7 +19,7 @@ import sys
 
 from pylive.utils import getWidgetByName
 from pylive.unique import make_unique_id
-
+from pylive.logwindow import LogWindow
 # A_GLOBAL_VAR = 4
 
 class AppWidget(QWidget):
@@ -44,16 +44,9 @@ class AppWidget(QWidget):
 		self.previewScrollArea.setWidget(self.previewFrame)
 		self.previewScrollArea.setWidgetResizable(True)
 
-		self.loggingLabel = QLabel()
-		self.loggingScrollArea = QScrollArea()
-		self.loggingScrollArea.setWidget(self.loggingLabel)
-		self.loggingScrollArea.setWidgetResizable(True)
-		self.loggingScrollArea.setContentsMargins(0,0,0,0)
-
 		self.setLayout(QVBoxLayout())
 		self.layout().setContentsMargins(0,0,0,0)
 		self.layout().addWidget(self.previewScrollArea, 1)
-		self.layout().addWidget(self.loggingScrollArea, 0)
 
 	@classmethod
 	def current(cls):
@@ -91,9 +84,6 @@ class AppWidget(QWidget):
 		
 		global_vars = self.createContext()
 
-		old_stdout = sys.stdout # route standard output
-		sys.stdout = mystdout = StringIO()
-
 		# clear output
 		print("\033c") # clear text
 		try:
@@ -113,17 +103,7 @@ class AppWidget(QWidget):
 			print(err)
 		finally:
 			self._stack.pop()
-			sys.stdout = old_stdout # restore standard output
 
-
-
-		# display message on the logging label
-		message = mystdout.getvalue()
-		if "\033c" in message:
-			result = message.split("\033c")[-1].strip()
-			self.loggingLabel.setText(result)
-		else:
-			self.loggingLabel.setText(self.loggingLabel.text()+"\n"+message)
 
 import traceback
 import sys
@@ -142,6 +122,7 @@ class LiveScript(QWidget):
 		self.splitter = QSplitter(self)
 		self.script_edit = ScriptEdit()
 		self.app_widget = AppWidget()
+		self.logWindow = LogWindow()
 
 		self.script_edit.textChanged.connect(lambda: self.app_widget.evaluate(self.script_edit.toPlainText()))
 
@@ -149,8 +130,9 @@ class LiveScript(QWidget):
 		self.layout().addWidget(self.splitter)
 
 		self.splitter.addWidget(self.script_edit)
+		self.splitter.addWidget(self.logWindow)
 		self.splitter.addWidget(self.app_widget)
-		self.splitter.setSizes([self.width()//2,self.width()//2])
+		self.splitter.setSizes([self.width()//self.splitter.count() for i in range(self.splitter.count())])
 
 		self.setScript("print('hello')")
 		
@@ -164,7 +146,7 @@ if __name__ == "__main__":
 	import sys
 	import subprocess
 	app = QApplication(sys.argv)
-	window = pylive.livescript.LiveScript()
+	window = LiveScript()
 
 	window.setScript(dedent("""\
 		from PySide6.QtGui import *

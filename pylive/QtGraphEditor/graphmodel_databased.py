@@ -221,6 +221,9 @@ class GraphModel(QObject):
 		unique_id = unique.make_unique_id()
 		inlet = InletRef(unique_id, self)
 
+		if inlet in self._inlets: #change guard
+			return inlet
+
 		# setup relations
 		self._inlets_owner[inlet] = node
 		self._nodes_inlets[node].append(inlet)
@@ -236,6 +239,9 @@ class GraphModel(QObject):
 
 		unique_id = unique.make_unique_id()
 		outlet = OutletRef(unique_id, self)
+
+		if outlet in self._outlets: #change guard
+			return outlet
 
 		# setup relations
 		self._outlets_owner[outlet] = node
@@ -256,6 +262,9 @@ class GraphModel(QObject):
 
 		unique_id = unique.make_unique_id()
 		edge = EdgeRef(unique_id, self)
+
+		if edge in self._edges: #change guard
+			return edge
 
 		# setup relations
 		self._edges_source[edge] = outlet
@@ -457,8 +466,14 @@ class GraphModel(QObject):
 		assert isinstance(node, NodeRef)
 		assert node.isValid()
 
-		self._nodes[node].update(props)
-		self.nodesPropertyChanged.emit([node], props)
+		# change guard
+		change = {}
+		for key, val in props.items():
+			if key not in self._nodes[node] or val != self._nodes[node][key]:
+				change[key] = val
+
+		self._nodes[node].update(change)
+		self.nodesPropertyChanged.emit([node], list(change.keys()))
 
 	def getInletProperty(self, inlet:InletRef, /, prop:str)->Any:
 		assert isinstance(inlet, InletRef)
@@ -470,8 +485,14 @@ class GraphModel(QObject):
 		assert isinstance(inlet, InletRef)
 		assert inlet.isValid()
 
-		self.inletsPropertyChanged.emit([inlet], props)
-		self._inlets[inlet].update(props)
+		# change guard
+		change = {}
+		for key, val in props.items():
+			if key not in self._inlets[inlet] or val != self._inlets[inlet][key]:
+				change[key] = val
+
+		self._inlets[inlet].update(change)
+		self.inletsPropertyChanged.emit([inlet], list(change.keys()))
 
 	def getOutletProperty(self, outlet:OutletRef, /, prop:str)->Any:
 		assert isinstance(outlet, OutletRef)
@@ -483,8 +504,14 @@ class GraphModel(QObject):
 		assert isinstance(outlet, OutletRef)
 		assert outlet.isValid()
 
-		self._outlets[outlet].update(props)
-		self.outletsPropertyChanged.emit([outlet], props)
+		# change guard
+		change = {}
+		for key, val in props.items():
+			if key not in self._outlets[outlet] or val != self._outlets[outlet][key]:
+				change[key] = val
+
+		self._outlets[outlet].update(change)
+		self.outletsPropertyChanged.emit([outlet], list(change.keys()))
 
 	def getEdgeProperty(self, edge:EdgeRef, /, prop:str)->Any:
 		assert isinstance(edge, EdgeRef)
@@ -496,5 +523,11 @@ class GraphModel(QObject):
 		assert isinstance(edge, EdgeRef)
 		assert edge.isValid()
 
-		self._edges[edge].update(props)
-		self.edgesPropertyChanged.emit([edge], props)
+		# change guard
+		change = {}
+		for key, val in props.items():
+			if key not in self._edges[edge] or val != self._edges[edge][key]:
+				change[key] = val
+
+		self._edges[edge].update(change)
+		self.edgesPropertyChanged.emit([edge], list(change.keys()))

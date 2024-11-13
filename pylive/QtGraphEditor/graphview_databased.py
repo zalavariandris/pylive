@@ -644,22 +644,7 @@ class GraphView(PanAndZoomGraphicsView):
 			self.scene().addItem(node_item)
 
 	def nodeFactory(self, node:NodeRef)->QGraphicsItem:
-		node_item = StandardNodeItem(parent_graph=self)
-
-		# bind events to model
-		graph = node._graph
-		node_item.nameedit.document().contentsChanged.connect(lambda node=node, node_item=node_item: (
-			graph.setNodeProperty(node, name=node_item.nameedit.toPlainText()) if graph else None
-		))
-		node_item.positionChanged.connect(lambda node=node, node_item=node_item: (
-			graph.blockSignals(True),
-			graph.setNodeProperty(node, posx=int(node_item.x())),
-			graph.setNodeProperty(node, posy=int(node_item.y())),
-			graph.blockSignals(False),
-			graph.nodesPropertyChanged.emit([node], ["posx", "posy"])
-		) if graph else None )
-
-		return node_item
+		return NodeGraphicsItem(self)
 
 	def onNodePropertyChange(self, node:NodeRef, node_item:QGraphicsItem, properties:List[str]|None):
 		raise NotImplementedError("subclasses must implement onNodePropertyChange")

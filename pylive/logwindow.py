@@ -32,7 +32,12 @@ class LogWindow(QPlainTextEdit):
 		self.captured_output.messaged.connect(self.appendMessage)
 
 	def appendMessage(self, text:str):
-		self.insertPlainText(text)
+		if "\033c" in text:
+			result = text.split("\033c")[-1].strip()
+			self.insertPlainText(result)
+		else:
+			self.insertPlainText(text)
+		
 		self.verticalScrollBar().setValue(self.verticalScrollBar().maximum())
 
 if __name__ == "__self__":

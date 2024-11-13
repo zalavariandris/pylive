@@ -20,6 +20,10 @@ from PySide6.QtWidgets import *
 from datetime import datetime
 import inspect
 
+from typing import *
+def sample_function(a: int, b: str, c: float = 5.0, props:List=[]) -> bool:
+	return True
+
 class ExpressionNodeItem(NodeGraphicsItem):
 		def __init__(self, parent_graph: "GraphView"):
 			# model reference
@@ -31,9 +35,10 @@ class ExpressionNodeItem(NodeGraphicsItem):
 			self.expressioneditor.setPos(0,0)
 			self.expressioneditor.setTextWidth(self.rect.width()-10)
 
-			self.outputlabel = QGraphicsTextItem()
+			self.outputlabel = QGraphicsTextItem(self)
 			self.outputlabel.setPos(0,30)
-			self.outputlabel.setTextWidth(self.rect.width()-10)
+			# self.outputlabel.setTextWidth(self.rect.width()*2)
+			self.outputlabel.setPlainText("outputlabel")
 
 		@override
 		def mouseDoubleClickEvent(self, event: QGraphicsSceneMouseEvent):
@@ -67,12 +72,35 @@ class ExpressionsGraphView(GraphView):
 
 	@override
 	def mouseDoubleClickEvent(self, event: QMouseEvent) -> None:
+		color = QColorDialog.getColor()
+		
 		graph = self.model()
 		if graph and not self.itemAt(event.position().toPoint()):
 			clickpos = self.mapToScene(event.position().toPoint())
-			node = graph.addNode(expression="""print""", posx=int(clickpos.x()), posy=int(clickpos.y()))
-			graph.addInlet(node, name="in")
-			graph.addOutlet(node, name="out")
+			node = graph.addNode(expression="""sample_function""", posx=int(clickpos.x()), posy=int(clickpos.y()))
+			expression = graph.getNodeProperty(node, 'expression')
+			try:
+				result = eval(expression)
+				params = list(inspect.signature(result).parameters.values())
+
+				# update output label
+				content = f"{result}"
+				graph.setNodeProperty(node, output=str(result))
+
+				# setup inlets
+				for param in params:
+					graph.addInlet(node, name=param.name)
+
+				# setup outlets
+				graph.addOutlet(node, name="out")
+
+			except Exception as err:
+				graph.setNodeProperty(node, output=f"Error: {err}")
+				print(f"Error in node: {node}: {err}")
+
+
+			# graph.addInlet(node, name="in")
+			# graph.addOutlet(node, name="out")
 		else:
 			return super().mouseDoubleClickEvent(event)
 
@@ -93,7 +121,7 @@ class ExpressionsGraphView(GraphView):
 			new_output = node.graph().getNodeProperty(node, 'output')
 			old_output = node_item.outputlabel.toPlainText()
 			if new_output != old_output:
-				node_item.outputlabel.setPlainText(new_output)
+				node_item.outputlabel.setPlainText(f"{new_output}")
 
 		if not properties or 'posx' in properties or 'posy' in properties:
 			x = int(node.graph().getNodeProperty(node, 'posx'))
@@ -134,7 +162,7 @@ class MainWindow(QWidget):
 		# setup models
 		self.graph = GraphModel()
 		self.graph.nodesAdded.connect(self.onModelChanged)
-		self.graph.nodesPropertyChanged.connect(self.onNodesPopertyChanged)
+		# self.graph.nodesPropertyChanged.connect(self.onNodesPopertyChanged)
 		self.graph.nodesPropertyChanged.connect(self.onModelChanged)
 		self.graph.nodesRemoved.connect(self.onModelChanged)
 		self.graph.edgesAdded.connect(self.onModelChanged)
@@ -199,20 +227,55 @@ class MainWindow(QWidget):
 		self.resize(width, height)
 		self.move( (screen.availableSize().width()-width)//2, (screen.availableSize().height()-height)//2-height//16)
 
-	def onNodesPopertyChanged(self, nodes:List[NodeRef], properties:List[str]):
-		for node in nodes:
-			if not properties or 'expression' in properties:
-				expression = self.graph.getNodeProperty(node, 'expression')
-				print("expression changed", expression)
+	# def patchInlets(self, node, function):
+	# 	raise NotImplementedError()
+	# 	# patch inlets
+	# 	params = list(inspect.signature(result).parameters.values())
+	# 	inlets = list(self.graph.getNodeInlets(node))
+	# 	# if param_names != inlet_names:
+	# 	# 	self.graph.removeInlets()
+	# 	print(f"patch node inlets: {inlets}=>{params}")
+
+	# 	change = {
+	# 		'added':[],
+	# 		'removed':[],
+	# 		'changed': []
+	# 	}
+	# 	for param, inlet in reversed(list(zip_longest(params, inlets, fillvalue=None))):
+	# 		if param is None and inlet is not None:
+	# 			change['removed'].append(inlet)
+	# 		elif inlet is None and param is not None:
+	# 			change['added'].append(param.name)
+	# 		elif param is not None and inlet is not None and self.graph.getInletProperty(inlet, 'name') != param.name:
+	# 			change['changed'].append((inlet, param.name))
+
+	# 		print(" +", change['added'])
+	# 		print(" -", change['removed'])
+	# 		print("!=", change['changed'])
+
+
+	# def onNodesPopertyChanged(self, nodes:List[NodeRef], properties:List[str]):
+	# 	...
+	# 	from itertools import zip_longest
+	# 	sentinel = object()
+
+	# 	for node in nodes:
+	# 		if not properties or 'expression' in properties:
+	# 			expression = self.graph.getNodeProperty(node, 'expression')
+	# 			print("expression changed", expression)
 				
-				try:
-					result = eval(expression)
-					self.graph.setNodeProperty(node, output=str(result))
-					print(f"{result} = {expression}")
-				except Exception as err:
-					print(err)
-				# global_vars = globals()
-				# print(global_vars)
+	# 			try:
+	# 				result = eval(expression)
+	# 				content = f"{result}"
+	# 				for param in inspect.signature(result).parameters.values():
+	# 					content+=f"\n {param.name}:{param.annotation}={param.default}"
+
+	# 				self.graph.setNodeProperty(node, output=str(result)+f"\n{content}")
+	# 				print(f"{result} = {expression}")
+
+	# 			except Exception as err:
+	# 				self.graph.setNodeProperty(node, output=f"Error: {err}")
+	# 				print(f"Error in node: {node}: {err}")
 			
 	def onModelChanged(self):
 		self.compose()
