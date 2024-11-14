@@ -12,3 +12,10 @@ class Panel(QWidget):
 
         for child in children:
             self.layout().addWidget(child)
+
+
+if __name__ == "__main__":
+	from pylive import livescript
+	label = QLabel("MyLabel")
+	livescript.display(label)
+	livescript.display("hello")

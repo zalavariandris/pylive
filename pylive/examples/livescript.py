@@ -13,12 +13,9 @@ from typing import *
 from io import StringIO
 import sys
 
-
-
 from pylive.utils import getWidgetByName
 from pylive.unique import make_unique_id
 from pylive.logwindow import LogWindow
-
 
 def display(data:Any):
 	"""TODO: 
@@ -30,6 +27,17 @@ def display(data:Any):
 	from pylive.utils import getWidgetByName
 	preview_widget = cast(PreviewWidget, getWidgetByName('PREVIEW_WINDOW_ID'))
 	preview_widget.display(data)
+
+def clear():
+	"""TODO: 
+	Use PreviewWidget.current()
+	current does not seem to work, probably because
+	the PreviewWidget is redifined when imported in the live script?
+	"""
+
+	from pylive.utils import getWidgetByName
+	preview_widget = cast(PreviewWidget, getWidgetByName('PREVIEW_WINDOW_ID'))
+	preview_widget.clear()
 
 class PreviewWidget(QWidget):
 	_stack = []
@@ -83,7 +91,10 @@ class PreviewWidget(QWidget):
 			layout.itemAt(i).widget().deleteLater()
 
 	def createContext(self):
-		return {'__builtins__': globals()["__builtins__"]}
+		return {
+			'__name__': "__main__",
+			'__builtins__': globals()["__builtins__"]
+		}
 
 	def evaluate(self, source:str):
 		self.clear()
@@ -97,8 +108,8 @@ class PreviewWidget(QWidget):
 			
 			start_time = time.perf_counter()
 			
-			# compiled = compile(source, "<string>", mode="exec")
-			exec(source, global_vars)
+			compiled = compile(source, "__main__", mode="exec")
+			exec(compiled, global_vars)
 			end_time = time.perf_counter()
 			duration_ms = (end_time - start_time) * 1000
 
@@ -140,10 +151,8 @@ class LiveScript(QWidget):
 		self.layout().addWidget(self.splitter)
 		
 
-		# setup menubar
-		self.setupMenuBar()
-
 		# setup watch file
+		self.filepath = None
 		def on_file_change(self, path):
 			if self.script_modified_in_memory:
 				result = self.prompt_disk_change()
@@ -164,6 +173,32 @@ class LiveScript(QWidget):
 		self.watcher.fileChanged.connect(on_file_change)
 		self.script_modified_in_memory = False
 		self.script_edit.textChanged.connect(setScriptModified)
+
+		# load config
+		self.loadConfig()
+
+		# setup menubar
+		self.setupMenuBar()
+
+	def saveConfig(self):
+		import json
+		with open("./livescript.init", 'w') as file:
+			file.write(json.dumps(self.config, indent=2))
+			
+	def loadConfig(self):
+		import json
+		try:
+			with open("./livescript.init", 'r') as file:
+				self.config = json.loads(file.read())
+		except FileNotFoundError as err:
+			self.config = {
+				"recent": [],
+				"live": True
+			}
+
+		# setup from config
+		if recent:=self.config['recent']:
+			self.openFile(recent[-1])
 		
 	def setupMenuBar(self):
 		self.menu_bar = QMenuBar()
@@ -176,8 +211,8 @@ class LiveScript(QWidget):
 			}
 		""")
 
+		"""setup file menu"""
 		file_menu  = self.menu_bar.addMenu("File")
-		# Add actions to the File menu
 		open_action = QAction("Open", self)
 		open_action.triggered.connect(self.open)
 		open_action.setShortcut(QKeySequence(Qt.Key.Key_Control | Qt.Key.Key_O))
@@ -185,12 +220,18 @@ class LiveScript(QWidget):
 		save_action.triggered.connect(self.save)
 		save_action.setShortcut(QKeySequence(Qt.Key.Key_Control | Qt.Key.Key_S))
 
-		# Add actions to File menu
 		file_menu.addAction(open_action)
 		file_menu.addAction(save_action)
+		file_menu.addSeparator()
 
+		print(self.config)
+		for recent in self.config['recent']:
+			open_recent_action = QAction(f"{recent}", self)
+			open_recent_action.triggered.connect(lambda path=recent: self.openFile(path))
+			file_menu.addAction(open_recent_action)
+
+		"""setup edit menu"""
 		edit_menu  = self.menu_bar.addMenu("Edit")
-		# Add actions to the File menu
 		copy_action = QAction("Copy", self)
 		copy_action.triggered.connect(self.script_edit.copy)
 		copy_action.setShortcut(QKeySequence(Qt.Key.Key_Control | Qt.Key.Key_C))
@@ -213,7 +254,21 @@ class LiveScript(QWidget):
 
 	def setScript(self, script:str):
 		self.script_edit.setPlainText(script)
-		
+
+	def closeEvent(self, event):
+		if self.script_modified_in_memory and self.filepath:
+			msg_box = QMessageBox(self)
+			msg_box.setWindowTitle("Save changes?")
+			msg_box.setText(f"{Path(self.filepath).name} has been modified, save changes?") 
+			msg_box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel)
+			result = msg_box.exec()
+
+			
+			if result == QMessageBox.StandardButton.Yes:
+				self.save()
+			elif result == QMessageBox.StandardButton.Cancel:
+				event.ignore()
+
 	def openFile(self, filepath:str):
 		print("opening file", filepath)
 		self.watcher.removePaths(self.watcher.files())
@@ -224,6 +279,12 @@ class LiveScript(QWidget):
 			self.script_modified_in_memory = False
 			self.filepath = filepath
 			self.setWindowTitle(f"{self.filepath} - WatchCode")
+
+			if filepath in self.config['recent']:
+				self.config['recent'] = [path for path in self.config['recent'] if path!=filepath]
+
+			self.config['recent'].append(filepath)
+			self.saveConfig()
 
 	def saveFile(self, filepath:str):
 		print("saving file", filepath)
@@ -250,6 +311,18 @@ class LiveScript(QWidget):
 		if filename != '':
 			self.openFile(filename)
 
+	def prompt_disk_change(self):
+		msg_box = QMessageBox(self)
+		msg_box.setWindowTitle("File has changed on Disk.")
+		msg_box.setText("Do you want to reload?")
+		msg_box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+		# temporary block _file change_ signals, to ignore multiple changes when
+		# the messagebox is already open
+		self.watcher.blockSignals(True) 
+		result = msg_box.exec()
+		self.watcher.blockSignals(False)
+		return result
+
 	def save(self):
 		if self.filepath:
 			self.saveFile(self.filepath)
@@ -267,19 +340,19 @@ if __name__ == "__main__":
 	app = QApplication(sys.argv)
 	window = LiveScript()
 
-	window.setScript(dedent("""\
-		from PySide6.QtGui import *
-		from PySide6.QtCore import *
-		from PySide6.QtWidgets import *
-		import numpy as np
-		def random_image(width=8, height=8):
-			img = np.random.randint(0, 255, (height, width, 3), dtype=np.uint8)
-			# Convert to QImage
-			return QImage(img.data, width, height, 3 * width, QImage.Format_RGB888)
+	# window.setScript(dedent("""\
+	# 	from PySide6.QtGui import *
+	# 	from PySide6.QtCore import *
+	# 	from PySide6.QtWidgets import *
+	# 	import numpy as np
+	# 	def random_image(width=8, height=8):
+	# 		img = np.random.randint(0, 255, (height, width, 3), dtype=np.uint8)
+	# 		# Convert to QImage
+	# 		return QImage(img.data, width, height, 3 * width, QImage.Format_RGB888)
 
-		from pylive import livescript
-		livescript.display("HELLO")
-	"""))
+	# 	from pylive import livescript
+	# 	livescript.display("HELLO")
+	# """))
 
 	# with open("./test_script.py", 'r') as file:
 	# 	window.setScript(file.read())

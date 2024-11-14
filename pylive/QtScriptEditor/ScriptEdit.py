@@ -28,9 +28,15 @@ class ScriptEdit(QPlainTextEdit):
 		self.setTabStopDistance(QFontMetricsF(self.font()).horizontalAdvance(' ') * 4)
 
 		# set a monospace font
-		font = QFont("Operator Mono", 11)
+		font = self.font()
+
+		
+		font.setFamilies(["monospace", "Operator Mono Book"])
+		font.setPointSize(10)
+		font.setWeight(QFont.Weight.Medium)
+		font.setStyleStrategy(QFont.StyleStrategy.PreferAntialias)
 		self.setFont(font)
-		self.font().setStyleHint(QFont.StyleHint.TypeWriter)
+		
 
 		# # show whitespace
 		# options = QTextOption()

@@ -4,7 +4,7 @@ from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 from typing import *
 
-from pylive.Panel import Panel
+from pylive.declerative_widgets import Panel
 from pylive.QtGraphEditor.graphmodel_columnbased import (
 	GraphModel, 
 	NodeRef, InletRef, OutletRef, EdgeRef, 

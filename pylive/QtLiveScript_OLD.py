@@ -75,6 +75,13 @@ class QLiveScript(QWidget):
 		# evaluate on start
 		self.evaluate()
 
+	def closeEvent(self, event):
+		if self.script_modified_in_memory:
+			msg_box = QMessageBox(self)
+			result = msg_box.exec()
+			if result == QMessageBox.Yes:
+				self.save()
+
 	def prompt_disk_change(self):
 		msg_box = QMessageBox(self)
 		msg_box.setWindowTitle("File has changed on Disk.")
@@ -247,8 +254,6 @@ if __name__ == "__main__":
 	from pylive.QtLiveScript import display
 
 	display(f"hello{datetime.now()}")
-
-	a
 	""")
 
 	window.openFile("./test_script.py")
