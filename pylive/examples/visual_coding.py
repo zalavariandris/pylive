@@ -53,7 +53,81 @@ class ExpressionNodeItem(NodeGraphicsItem):
 			else:
 				print("NodeItem->mouseDoubleClickEvent")
 				super().mouseDoubleClickEvent(event)
-			
+
+
+
+class OptionDialog(QDialog):
+	def __init__(self, parent=None):
+		super().__init__(parent)
+		self.setWindowTitle("Choose an Option")
+		self.setModal(True)  # Set dialog to be modal
+
+		# Create layout
+		layout = QVBoxLayout()
+
+		# Instruction label
+		label = QLabel("Please choose one of the following options:")
+		layout.addWidget(label)
+
+		options = [
+			"print", "Path.read_text", "Path.write_text", "sample_function"
+		]
+
+		# Button group for options
+		self.button_group = QButtonGroup(self)
+		for option in options:
+			radio_button = QRadioButton(option)
+			self.button_group.addButton(radio_button)
+			layout.addWidget(radio_button)
+
+		# OK and Cancel buttons
+		button_layout = QHBoxLayout()
+		ok_button = QPushButton("OK")
+		cancel_button = QPushButton("Cancel")
+		button_layout.addWidget(ok_button)
+		button_layout.addWidget(cancel_button)
+
+		# Connect buttons
+		ok_button.clicked.connect(self.accept)
+		cancel_button.clicked.connect(self.reject)
+
+		self.nodelist_model = QStringListModel(options)
+		self.selectionmodel = QItemSelectionModel(self.nodelist_model)
+
+		self.filtered_model = QSortFilterProxyModel(self)
+		self.filtered_model.setSourceModel(self.nodelist_model)
+
+		self.lineedit = QLineEdit()
+		self.listview = QListView()
+		self.listview.setModel(self.nodelist_model)
+		self.listview.setSelectionModel(self.selectionmodel)
+		self.lineedit.textChanged.connect(self.filter_items)
+
+		layout.addWidget(self.lineedit)
+		layout.addWidget(self.listview)
+		layout.addLayout(button_layout)
+
+		self.setLayout(layout)
+
+	def filter_items(self):
+		# Get the current text from the lineedit
+		filter_text = self.lineedit.text()
+		
+		# Apply the filter on the source model
+		self.filtered_model.setFilterFixedString(filter_text)
+
+	def get_selected_option(self):
+		"""Return the selected option text or None if no option is selected."""
+		if self.selectionmodel.hasSelection():
+			return self.selectionmodel.currentIndex().data()
+		return None
+
+	@staticmethod
+	def getOption(parent=None):
+		"""Static method to open dialog and return selected option."""
+		dialog = OptionDialog(parent)
+		result = dialog.exec()
+		return dialog.get_selected_option() if result == QDialog.DialogCode.Accepted else None
 
 class ExpressionsGraphView(GraphView):
 	@override
@@ -72,12 +146,14 @@ class ExpressionsGraphView(GraphView):
 
 	@override
 	def mouseDoubleClickEvent(self, event: QMouseEvent) -> None:
-		color = QColorDialog.getColor()
-		
+		selected_expression = OptionDialog.getOption()
+		if not selected_expression:
+			return
+
 		graph = self.model()
 		if graph and not self.itemAt(event.position().toPoint()):
 			clickpos = self.mapToScene(event.position().toPoint())
-			node = graph.addNode(expression="""sample_function""", posx=int(clickpos.x()), posy=int(clickpos.y()))
+			node = graph.addNode(expression=selected_expression, posx=int(clickpos.x()), posy=int(clickpos.y()))
 			expression = graph.getNodeProperty(node, 'expression')
 			try:
 				result = eval(expression)
@@ -144,8 +220,6 @@ class ExpressionsGraphView(GraphView):
 			graph.setNodeProperty(node, posy=int(node_item.y()))
 			graph.blockSignals(False)
 			graph.nodesPropertyChanged.emit([node], ['posx', 'posy'])
-
-
 
 
 from textwrap import dedent

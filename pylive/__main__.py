@@ -6,8 +6,7 @@ def open_livescript(filepath=None):
 	app = QApplication(sys.argv)
 	window = livescript.LiveScript()
 	if filepath:
-		with open(filepath, 'r') as file:
-			window.setScript(file.read())
+		window.openFile(filepath)
 	window.show()
 	sys.exit(app.exec())
 

@@ -224,7 +224,6 @@ class LiveScript(QWidget):
 		file_menu.addAction(save_action)
 		file_menu.addSeparator()
 
-		print(self.config)
 		for recent in self.config['recent']:
 			open_recent_action = QAction(f"{recent}", self)
 			open_recent_action.triggered.connect(lambda path=recent: self.openFile(path))
@@ -271,7 +270,8 @@ class LiveScript(QWidget):
 
 	def openFile(self, filepath:str):
 		print("opening file", filepath)
-		self.watcher.removePaths(self.watcher.files())
+		if self.watcher.files():
+			self.watcher.removePaths(self.watcher.files())
 		self.watcher.addPath(filepath)
 		with open(filepath, 'r') as file:
 			text = file.read()
@@ -315,7 +315,7 @@ class LiveScript(QWidget):
 		msg_box = QMessageBox(self)
 		msg_box.setWindowTitle("File has changed on Disk.")
 		msg_box.setText("Do you want to reload?")
-		msg_box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+		msg_box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
 		# temporary block _file change_ signals, to ignore multiple changes when
 		# the messagebox is already open
 		self.watcher.blockSignals(True) 
@@ -333,29 +333,9 @@ class LiveScript(QWidget):
 
 
 if __name__ == "__main__":
-	from textwrap import dedent
-	import pylive
+	from pylive import livescript
 	import sys
-	import subprocess
 	app = QApplication(sys.argv)
-	window = LiveScript()
-
-	# window.setScript(dedent("""\
-	# 	from PySide6.QtGui import *
-	# 	from PySide6.QtCore import *
-	# 	from PySide6.QtWidgets import *
-	# 	import numpy as np
-	# 	def random_image(width=8, height=8):
-	# 		img = np.random.randint(0, 255, (height, width, 3), dtype=np.uint8)
-	# 		# Convert to QImage
-	# 		return QImage(img.data, width, height, 3 * width, QImage.Format_RGB888)
-
-	# 	from pylive import livescript
-	# 	livescript.display("HELLO")
-	# """))
-
-	# with open("./test_script.py", 'r') as file:
-	# 	window.setScript(file.read())
-
+	window = livescript.LiveScript()
 	window.show()
 	sys.exit(app.exec())
