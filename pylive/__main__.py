@@ -1,10 +1,10 @@
 def open_livescript(filepath=None):
-	from pylive.LiveScript import LiveScript
+	from pylive import livescript
 	from PySide6.QtWidgets import QApplication
 
 	import sys
 	app = QApplication(sys.argv)
-	window = LiveScript()
+	window = livescript.LiveScript()
 	if filepath:
 		with open(filepath, 'r') as file:
 			window.setScript(file.read())

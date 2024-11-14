@@ -3,7 +3,7 @@ from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
 class Panel(QWidget):
-    def __init__(self, direction=QBoxLayout.LeftToRight, children=[], menuBar=None, parent=None):
+    def __init__(self, direction=QBoxLayout.Direction.LeftToRight, children=[], menuBar=None, parent=None):
         super().__init__(parent)
         self.setLayout(QBoxLayout(direction))
         self.layout().setContentsMargins(0,0,0,0)
