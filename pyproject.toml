@@ -25,5 +25,6 @@ dependencies = [
     "IPython ~= 8.29.0",
     "numpy ~= 2.1.0",
     "humanize ~= 4.11.0",
-    "NodeGraphQt@git+https://github.com/C3RV1/NodeGraphQt-PySide6"
+    "NodeGraphQt@git+https://github.com/C3RV1/NodeGraphQt-PySide6",
+    "PyOpenGL ~= 3.1"
 ]

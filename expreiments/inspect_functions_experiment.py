@@ -6,6 +6,11 @@ def sample_function(a: int, b: str, c: float = 5.0, props:List=[]) -> bool:
 # Get the signature of the function
 sig = inspect.signature(sample_function)
 
+def form
+
+def format_signature(fn):
+    pass
+
 # Print argument details
 print("Arguments:")
 for param in sig.parameters.values():

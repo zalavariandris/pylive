@@ -54,6 +54,125 @@ class ExpressionNodeItem(NodeGraphicsItem):
 				print("NodeItem->mouseDoubleClickEvent")
 				super().mouseDoubleClickEvent(event)
 
+class SearchDialog(QDialog):
+	def __init__(self, options, parent=None):
+		super().__init__(parent)
+		self.setWindowTitle("Search and Navigate Options")
+		self.setModal(True)
+		# self.setWindowFlags(Qt.FramelessWindowHint)
+		# Set border radius and background color with Qt Style Sheet
+		self.setStyleSheet("""
+			SearchDialog {
+				border-radius: 15px;  /* Rounded corners */
+			}
+			QLineEdit {
+				border-radius: 5px;
+				padding: 5px;
+			}
+			QListWidget {
+				border: none;
+				border-radius: 5px;
+				padding: 5px;
+			}
+		""")
+		# Store the options
+		self.options = options
+
+		# Set up layout
+		layout = QVBoxLayout(self)
+		layout.setContentsMargins(5, 5, 5, 5)
+		layout.setSpacing(10)
+
+		self.move(QCursor.pos().x() - self.size().width() // 2, QCursor.pos().y() - 10)
+
+		# Create search input field
+		self.line_edit = QLineEdit(self)
+		self.line_edit.setPlaceholderText("Search...")
+		self.line_edit.textChanged.connect(self.update_list)  # Connect search to list update
+
+		# Create list widget for displaying options
+		self.list_widget = QListWidget(self)
+		self.list_widget.addItems(self.options)  # Initially add all options
+		self.list_widget.itemActivated.connect(self.item_selected)  # Connect item selection
+
+		# Set size policy for automatic resizing
+		self.list_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.MinimumExpanding)
+		self.list_widget.setMaximumHeight(200)  # Cap max height at 200
+
+		# Add widgets to layout
+		layout.addWidget(self.line_edit)
+		layout.addWidget(self.list_widget)
+
+		# Focus on the line edit when the dialog opens
+		self.line_edit.setFocus()
+		self.update_list_widget_height()
+
+	def update_list(self):
+		"""Filter and display items based on search text."""
+		search_text = self.line_edit.text().lower()
+		self.list_widget.clear()  # Clear current items
+
+		# Add items that match the search text
+		for option in self.options:
+			if search_text in option.lower():
+				item = QListWidgetItem(option)
+				self.list_widget.addItem(item)
+
+		# Select the first item automatically if there are any results
+		if self.list_widget.count() > 0:
+			self.list_widget.setCurrentRow(0)
+		
+		# Update dialog height to fit content
+		self.update_list_widget_height()
+
+	def update_list_widget_height(self):
+		"""Adjust dialog height to fit content based on list items."""
+		# Calculate height needed for list items, up to a max of 200px
+		item_height = self.list_widget.sizeHintForRow(0)  # Approximate height of a single item
+		list_height = min(item_height * self.list_widget.count(), 200)
+		
+		# Set the QListWidget's height to show only necessary items
+		# self.list_widget.setFixedHeight(list_height)
+		
+		# Adjust the dialog's height to fit updated contents
+		self.adjustSize()
+
+	def item_selected(self, item):
+		"""Handle item selection."""
+		selected_option = item.text()
+		print(f"Selected: {selected_option}")
+		self.accept()  # Close the dialog
+
+	def keyPressEvent(self, event):
+		"""Handle Enter key for item selection."""
+		if event.key() == Qt.Key.Key_Down:
+			row = self.list_widget.currentRow() + 1
+			if row >= self.list_widget.count():
+				row = 0
+			self.list_widget.setCurrentRow(row)
+
+		elif event.key() == Qt.Key.Key_Up:
+			row = self.list_widget.currentRow() - 1
+			if row < 0:
+				row = self.list_widget.count() - 1
+			self.list_widget.setCurrentRow(row)
+
+		elif event.key() == Qt.Key.Key_Return or event.key() == Qt.Key.Key_Enter:
+			if current_item := self.list_widget.currentItem():
+				self.item_selected(current_item)  # Select the current item
+		else:
+			super().keyPressEvent(event)  # Pass other events to the base class
+
+	@staticmethod
+	def getItem(options):
+		"""Show the search dialog and return selected option."""
+		dialog = SearchDialog(options)
+		if dialog.exec_() == QDialog.Accepted:
+			current_item = dialog.list_widget.currentItem()
+			if current_item:
+				return current_item.text()
+		return None
+
 
 
 class OptionDialog(QDialog):
@@ -146,7 +265,8 @@ class ExpressionsGraphView(GraphView):
 
 	@override
 	def mouseDoubleClickEvent(self, event: QMouseEvent) -> None:
-		selected_expression = OptionDialog.getOption()
+		expressions = ["print", "Path.read_text", "Path.write_text", "sample_function"]
+		selected_expression = SearchDialog.getItem(expressions)
 		if not selected_expression:
 			return
 
