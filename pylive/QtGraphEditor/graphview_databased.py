@@ -13,11 +13,46 @@ from pylive.QtGraphEditor.graphmodel_databased import (
 )
 
 from enum import Enum
+
+
+class EditableTextItem(QGraphicsTextItem):
+	def __init__(self, text, parent=None):
+		super().__init__(text, parent)
+		self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsFocusable)  # Allow focus events
+		self.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)  # Initially non-editable
+		# self.setFlag(QGraphicsItem.ItemIsSelectable, True)
+
+		# Center-align the text within the item
+		text_option = QTextOption()
+		text_option.setAlignment(Qt.AlignmentFlag.AlignCenter)
+		self.document().setDefaultTextOption(text_option)
+
+		# Remove the default margins
+		self.document().setDocumentMargin(0)
+
+	def mouseDoubleClickEvent(self, event):
+		# Enable editing on double-click
+		"""parent node must manually cal the double click event,
+		because an item nor slectable nor movable will not receive press events"""
+		self.setTextInteractionFlags(Qt.TextInteractionFlag.TextEditorInteraction)
+		self.setFocus(Qt.FocusReason.MouseFocusReason)
+
+		click = QGraphicsSceneMouseEvent(QEvent.Type.GraphicsSceneMousePress)
+		click.setButton(event.button())
+		click.setPos(event.pos())
+		self.mousePressEvent(click)
+		# super().mouseDoubleClickEvent(event)
+
+	def focusOutEvent(self, event: QFocusEvent):
+		# When the item loses focus, disable editing
+		self.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
+		super().focusOutEvent(event)
+
 class PinType(Enum):
 	INLET = "INLET"
 	OUTLET = "OUTLET"
 
-class PinItem(QGraphicsItem):
+class PinGraphicsItem(QGraphicsItem):
 	"""Graphics item representing a pin (either inlet or outlet)."""
 	def __init__(self, parent=None):
 		super().__init__(parent=parent)
@@ -26,8 +61,9 @@ class PinItem(QGraphicsItem):
 
 		self.label = QGraphicsSimpleTextItem(parent=self)
 		self.label.setBrush(QApplication.palette().text().color())
-		self.label.setY(-QFontMetrics(self.label.font()).height())
+		self.label.setY(-QFontMetrics(self.label.font()).height()-5)
 		self.label.hide()
+		self.label.setZValue(2)
 
 		# Size of the pin and space for the name text
 		self.pin_radius = 4
@@ -91,23 +127,32 @@ class PinItem(QGraphicsItem):
 			pin = graphview.pinAt(graphview.mapFromScene(event.scenePos()))
 			graphview.finishConnection(pin)
 
+
+
+
+class OutletGraphicsItem(PinGraphicsItem):
 	def destroy(self):
-		for edge in self.edges:
+		for edge in reversed(self.edges):
+			edge.destroy()
+		self.edges = []
+
+		if self.parent_node:
+			self.parent_node.removeOutlet(self)
+			self.parent_node.updatePinPositions()
+		self.scene().removeItem(self)
+
+
+class InletGraphicsItem(PinGraphicsItem):
+	def destroy(self):
+		for edge in reversed(self.edges):
 			edge.destroy()
 		self.edges = []
 
 		if self.parent_node:
 			self.parent_node.removeInlet(self)
 			self.parent_node.updatePinPositions()
+		self.parentNode = None
 		self.scene().removeItem(self)
-
-
-class OutletItem(PinItem):
-	pass
-
-
-class InletItem(PinItem):
-	pass
 
 
 class NodeGraphicsItem(QGraphicsObject):
@@ -130,34 +175,35 @@ class NodeGraphicsItem(QGraphicsObject):
 		self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
 		self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges)
 		self.setAcceptHoverEvents(True)
-		self.setZValue(2)
 
 		self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges)
 
 	def destroy(self):
-		for inlet in self.inlets:
-			inlet.destroy()
-		for outlet in self.outlets:
-			outlet.destroy()
+		while self.inlets:
+			self.inlets[0].destroy() # Always remove first
+
+		while self.outlets:
+			self.outlets[0].destroy() # Always remove first
+		
 		self.scene().removeItem(self)
 
-	def addOutlet(self, outlet:PinItem):
+	def addOutlet(self, outlet:PinGraphicsItem):
 		outlet.parent_node = self
 		outlet.setParentItem(self)
 		self.outlets.append(outlet)
 		self.updatePinPositions()
 
-	def removeOutlet(self, outlet:PinItem):
+	def removeOutlet(self, outlet:PinGraphicsItem):
 		self.outlets.remove(outlet)
 		self.updatePinPositions()
 
-	def addInlet(self, inlet:PinItem):
+	def addInlet(self, inlet:PinGraphicsItem):
 		inlet.parent_node = self
 		inlet.setParentItem(self)
 		self.inlets.append(inlet)
 		self.updatePinPositions()
 
-	def removeInlet(self, inlet:PinItem):
+	def removeInlet(self, inlet:PinGraphicsItem):
 		self.inlets.remove(inlet)
 		self.updatePinPositions()
 
@@ -171,6 +217,7 @@ class NodeGraphicsItem(QGraphicsObject):
 		rect_width = self.rect.width()
 		rect_height = self.rect.height()
 
+		# adjust pin positions
 		if vertical_mode:
 			# Place inlets on the left side and outlets on the right side
 			num_inlets = len(self.inlets)
@@ -248,47 +295,15 @@ class NodeGraphicsItem(QGraphicsObject):
 		return super().itemChange(change, value)
 
 
-class EditableTextItem(QGraphicsTextItem):
-	def __init__(self, text, parent=None):
-		super().__init__(text, parent)
-		self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsFocusable)  # Allow focus events
-		self.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)  # Initially non-editable
-		# self.setFlag(QGraphicsItem.ItemIsSelectable, True)
-
-		# Center-align the text within the item
-		text_option = QTextOption()
-		text_option.setAlignment(Qt.AlignmentFlag.AlignCenter)
-		self.document().setDefaultTextOption(text_option)
-
-		# Remove the default margins
-		self.document().setDocumentMargin(0)
-
-	def mouseDoubleClickEvent(self, event):
-		# Enable editing on double-click
-		"""parent node must manually cal the double click event,
-		because an item nor slectable nor movable will not receive press events"""
-		self.setTextInteractionFlags(Qt.TextInteractionFlag.TextEditorInteraction)
-		self.setFocus(Qt.FocusReason.MouseFocusReason)
-
-		click = QGraphicsSceneMouseEvent(QEvent.Type.GraphicsSceneMousePress)
-		click.setButton(event.button())
-		click.setPos(event.pos())
-		self.mousePressEvent(click)
-		# super().mouseDoubleClickEvent(event)
-
-	def focusOutEvent(self, event: QFocusEvent):
-		# When the item loses focus, disable editing
-		self.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
-		super().focusOutEvent(event)
 
 
-class EdgeItem(QGraphicsLineItem):
+class EdgeGraphicsItem(QGraphicsLineItem):
 	"""Graphics item representing an edge (connection)."""
 	GrabThreshold = 15
-	def __init__(self, source_pin_item:OutletItem|None, target_pin_item:InletItem|None, parent_graph:"GraphView"):
+	def __init__(self, source_pin_item:OutletGraphicsItem|None, target_pin_item:InletGraphicsItem|None, parent_graph:"GraphView"):
 		super().__init__(parent=None)
-		assert source_pin_item is None or isinstance(source_pin_item, OutletItem)
-		assert target_pin_item is None or isinstance(target_pin_item, InletItem)
+		assert source_pin_item is None or isinstance(source_pin_item, OutletGraphicsItem)
+		assert target_pin_item is None or isinstance(target_pin_item, InletGraphicsItem)
 		self._source_pin_item = source_pin_item
 		self._target_pin_item = target_pin_item
 		self.parent_graph = parent_graph
@@ -297,7 +312,6 @@ class EdgeItem(QGraphicsLineItem):
 			source_pin_item.edges.append(self)
 		if target_pin_item:
 			target_pin_item.edges.append(self)
-		# self.persistent_edge_index:Optional[EdgeRef] = None
 
 		self.setPen(QPen(Qt.GlobalColor.black, 2))
 		self.updatePosition()
@@ -312,17 +326,34 @@ class EdgeItem(QGraphicsLineItem):
 		self.is_moving_endpoint = False
 
 	def destroy(self):
+		# Safely remove from source pin
 		if self._source_pin_item:
-			self._source_pin_item.edges.remove(self)
-		if self._target_pin_item:
-			self._target_pin_item.edges.remove(self)
-		self.scene().removeItem(self)
+			try:
+				self._source_pin_item.edges.remove(self)
+			except ValueError:
+				pass  # Already removed
+			self._source_pin_item = None
 
-	def sourcePin(self)->OutletItem|None:
+		# Safely remove from target pin
+		if self._target_pin_item:
+			try:
+				self._target_pin_item.edges.remove(self)
+			except ValueError:
+				pass  # Already removed
+			self._target_pin_item = None
+
+		# Clear parent reference
+		self.parent_graph = None
+
+		# Safely remove from scene
+		if self.scene():
+			self.scene().removeItem(self)
+
+	def sourcePin(self)->OutletGraphicsItem|None:
 		return self._source_pin_item
 
-	def setSourcePin(self, pin: OutletItem|None):
-		assert pin is None or isinstance(pin, OutletItem)
+	def setSourcePin(self, pin: OutletGraphicsItem|None):
+		assert pin is None or isinstance(pin, OutletGraphicsItem)
 
 		# add or remove edge to pin edges for position update
 		if pin:
@@ -336,8 +367,8 @@ class EdgeItem(QGraphicsLineItem):
 	def targetPin(self):
 		return self._target_pin_item
 
-	def setTargetPin(self, pin: InletItem|None):
-		assert pin is None or isinstance(pin, InletItem)
+	def setTargetPin(self, pin: InletGraphicsItem|None):
+		assert pin is None or isinstance(pin, InletGraphicsItem)
 
 		# add or remove edge to pin edges for position update
 		if pin:
@@ -456,7 +487,7 @@ class GraphView(PanAndZoomGraphicsView):
 		# 				node = item.persistent_node_index
 		# 				if node:
 		# 					node_selection.append(node)
-		# 		if isinstance(item, EdgeItem):
+		# 		if isinstance(item, EdgeGraphicsItem):
 		# 			if item.persistent_edge_index:
 		# 				edge = item.persistent_edge_index
 		# 				if edge:
@@ -487,21 +518,21 @@ class GraphView(PanAndZoomGraphicsView):
 	def pinAt(self, pos:QPoint):
 		"""Returns the topmost pin at position pos, which is in viewport coordinates."""
 		for item in self.items(pos):
-			if isinstance(item, PinItem):
+			if isinstance(item, PinGraphicsItem):
 				return item
 		return None
 
 	def initiateConnection(self, pin):
-		if isinstance(pin, OutletItem):
-			self.interactive_edge = EdgeItem(source_pin_item=pin, target_pin_item=None, parent_graph=self)
+		if isinstance(pin, OutletGraphicsItem):
+			self.interactive_edge = EdgeGraphicsItem(source_pin_item=pin, target_pin_item=None, parent_graph=self)
 			self.interactive_edge_start_pin = pin
-		elif isinstance(pin, InletItem):
-			self.interactive_edge = EdgeItem(source_pin_item=None, target_pin_item=pin, parent_graph=self)
+		elif isinstance(pin, InletGraphicsItem):
+			self.interactive_edge = EdgeGraphicsItem(source_pin_item=None, target_pin_item=pin, parent_graph=self)
 			self.interactive_edge_start_pin = pin
 		self.interactive_edge.updatePosition()
 		self.scene().addItem(self.interactive_edge)
 
-	def modifyConnection(self, edge:EdgeItem, endpoint:PinType):
+	def modifyConnection(self, edge:EdgeGraphicsItem, endpoint:PinType):
 		print("modify connection", endpoint)
 		if endpoint == PinType.OUTLET:
 			self.interactive_edge = edge
@@ -516,33 +547,33 @@ class GraphView(PanAndZoomGraphicsView):
 		assert isinstance(pos, QPoint), f"got: {pos}"
 		# move free endpoint
 		line = self.interactive_edge.line()
-		if isinstance(self.interactive_edge_start_pin, OutletItem):
+		if isinstance(self.interactive_edge_start_pin, OutletGraphicsItem):
 			line.setP2(self.mapToScene(pos))
-		elif isinstance(self.interactive_edge_start_pin, InletItem):
+		elif isinstance(self.interactive_edge_start_pin, InletGraphicsItem):
 			line.setP1(self.mapToScene(pos))
 		self.interactive_edge.setLine(line)
 
 		# attach free endpoint to closeby pin
 		pinUnderMouse = self.pinAt(pos)
-		if isinstance(self.interactive_edge_start_pin, OutletItem) and isinstance(pinUnderMouse, InletItem):
+		if isinstance(self.interactive_edge_start_pin, OutletGraphicsItem) and isinstance(pinUnderMouse, InletGraphicsItem):
 			self.interactive_edge.setTargetPin(pinUnderMouse)
 			self.interactive_edge.updatePosition()
-		elif isinstance(self.interactive_edge_start_pin, InletItem) and isinstance(pinUnderMouse, OutletItem):
+		elif isinstance(self.interactive_edge_start_pin, InletGraphicsItem) and isinstance(pinUnderMouse, OutletGraphicsItem):
 			self.interactive_edge.setSourcePin(pinUnderMouse)
 			self.interactive_edge.updatePosition()
 
-	def finishConnection(self, pin:PinItem|None):
+	def finishConnection(self, pin:PinGraphicsItem|None):
 		assert self.interactive_edge_start_pin
-		start_pin:InletItem|OutletItem = self.interactive_edge_start_pin
+		start_pin:InletGraphicsItem|OutletGraphicsItem = self.interactive_edge_start_pin
 		end_pin = pin
 		persistent_edge_index = cast(EdgeRef|None, self.item_to_index_map.get(self.interactive_edge))
 
 		CanConnectPins = (
-			isinstance(start_pin, InletItem) 
-			and isinstance(end_pin, OutletItem)
+			isinstance(start_pin, InletGraphicsItem) 
+			and isinstance(end_pin, OutletGraphicsItem)
 		) or (
-			isinstance(start_pin, OutletItem) 
-			and isinstance(end_pin, InletItem)
+			isinstance(start_pin, OutletGraphicsItem) 
+			and isinstance(end_pin, InletGraphicsItem)
 		)
 
 		IsEdgeExists = (
@@ -557,12 +588,12 @@ class GraphView(PanAndZoomGraphicsView):
 				edge_index:EdgeRef = persistent_edge_index
 				self.graph_model.removeEdges([edge_index])
 
-				if isinstance(end_pin, OutletItem) and isinstance(start_pin, InletItem):
+				if isinstance(end_pin, OutletGraphicsItem) and isinstance(start_pin, InletGraphicsItem):
 					outlet = cast(OutletRef, self.item_to_index_map[end_pin])
 					inlet = cast(InletRef, self.item_to_index_map[start_pin])
 					self.graph_model.addEdge(outlet, inlet)
 
-				elif isinstance(end_pin, InletItem) and isinstance(start_pin, OutletItem):
+				elif isinstance(end_pin, InletGraphicsItem) and isinstance(start_pin, OutletGraphicsItem):
 					outlet = cast(OutletRef, self.item_to_index_map[start_pin])
 					inlet = cast(InletRef, self.item_to_index_map[end_pin])
 					self.graph_model.addEdge(outlet, inlet)
@@ -572,9 +603,9 @@ class GraphView(PanAndZoomGraphicsView):
 
 			else:
 				"""create edge"""
-				inlet_item = cast(InletItem, end_pin)
-				outlet_item = cast(OutletItem, start_pin)
-				if isinstance(end_pin, OutletItem) and isinstance(start_pin, InletItem):
+				inlet_item = cast(InletGraphicsItem, end_pin)
+				outlet_item = cast(OutletGraphicsItem, start_pin)
+				if isinstance(end_pin, OutletGraphicsItem) and isinstance(start_pin, InletGraphicsItem):
 					outlet_item, inlet_item = inlet_item, outlet_item
 
 				if (
@@ -667,19 +698,19 @@ class GraphView(PanAndZoomGraphicsView):
 
 		for edge in edges:
 			try:
-				edge_item = cast(EdgeItem, self.index_to_item_map[edge])
+				edge_item = cast(EdgeGraphicsItem, self.index_to_item_map[edge])
 			except KeyError:
-				edge_item = EdgeItem(source_pin_item=None, target_pin_item=None, parent_graph=self)
+				edge_item = EdgeGraphicsItem(source_pin_item=None, target_pin_item=None, parent_graph=self)
 				self.scene().addItem(edge_item)
 				self.item_to_index_map[edge_item] = edge
 				self.index_to_item_map[edge] = edge_item
 
 			outlet = self.graph_model.getEdgeSource(edge)
-			source_pin_item = cast(OutletItem, self.index_to_item_map[outlet])
+			source_pin_item = cast(OutletGraphicsItem, self.index_to_item_map[outlet])
 			edge_item.setSourcePin( source_pin_item )
 
 			inlet = self.graph_model.getEdgeTarget(edge)
-			target_pin_item = cast(InletItem, self.index_to_item_map[inlet])
+			target_pin_item = cast(InletGraphicsItem, self.index_to_item_map[inlet])
 			edge_item.setTargetPin( target_pin_item )
 
 			# update gaphics item
@@ -688,7 +719,7 @@ class GraphView(PanAndZoomGraphicsView):
 	def handleEdgesRemoved(self, edges:Iterable[EdgeRef]):
 		assert all(isinstance(edge, EdgeRef) for edge in edges), f"got: {edges}"
 		for edge in edges:
-			edge_item = cast(EdgeItem, self.index_to_item_map[edge])
+			edge_item = cast(EdgeGraphicsItem, self.index_to_item_map[edge])
 			edge_item.destroy()
 			del self.index_to_item_map[edge]
 			del self.item_to_index_map[edge_item]
@@ -702,7 +733,7 @@ class GraphView(PanAndZoomGraphicsView):
 
 			# create outlet graphics item
 			parent_node_item = cast(NodeGraphicsItem, self.index_to_item_map[parent_node]) # get the node graphics item
-			outlet_item = OutletItem()
+			outlet_item = OutletGraphicsItem()
 			parent_node_item.addOutlet(outlet_item)
 
 			# map inlet to graphics item
@@ -720,7 +751,7 @@ class GraphView(PanAndZoomGraphicsView):
 			parent_node = self.graph_model.getOutletOwner(outlet) # get the node reference
 
 			# remove outlet graphics item
-			outlet_item = cast(OutletItem, self.index_to_item_map[outlet])
+			outlet_item = cast(OutletGraphicsItem, self.index_to_item_map[outlet])
 			outlet_item.destroy()
 
 			# remove mapping
@@ -734,7 +765,7 @@ class GraphView(PanAndZoomGraphicsView):
 		for inlet in inlets:
 			parent_node = self.graph_model.getInletOwner(inlet) # get the node reference
 			parent_node_item = cast(NodeGraphicsItem, self.index_to_item_map[parent_node]) # get the node graphics item
-			inlet_item = InletItem()
+			inlet_item = InletGraphicsItem()
 			parent_node_item.addInlet(inlet_item)
 
 			# map inlet to graphics item
@@ -742,6 +773,7 @@ class GraphView(PanAndZoomGraphicsView):
 			self.index_to_item_map[inlet] = inlet_item
 
 			# update graphics item and add to scene
+			print("handle inlets added", inlet)
 		self.handleInletsPropertiesChanged(inlets)
 
 	@Slot(QModelIndex, int, int)
@@ -751,7 +783,7 @@ class GraphView(PanAndZoomGraphicsView):
 
 		for inlet in inlets:
 			persistent_index = inlet
-			inlet_item = cast(InletItem, self.index_to_item_map[persistent_index])
+			inlet_item = cast(InletGraphicsItem, self.index_to_item_map[persistent_index])
 			inlet_item.destroy()
 			del self.index_to_item_map[persistent_index]
 			del self.item_to_index_map[inlet_item]
@@ -763,7 +795,6 @@ class GraphView(PanAndZoomGraphicsView):
 			return
 
 		# TODO: HANDLE ALL PROPERTIES CHANGED !!!!!!!!
-
 		for node in nodes:
 			node_item = cast(NodeGraphicsItem, self.index_to_item_map[node])
 			self.onNodePropertyChange(node, node_item, properties)
@@ -773,7 +804,7 @@ class GraphView(PanAndZoomGraphicsView):
 			return
 
 		for edge in edges:
-			edge_item = cast(EdgeItem, self.index_to_item_map[edge])
+			edge_item = cast(EdgeGraphicsItem, self.index_to_item_map[edge])
 			... #TODO: 
 
 	def handleOutletsPropertiesChanged(self, outlets:Iterable[OutletRef], properties:List[str]|None=None):
@@ -785,7 +816,7 @@ class GraphView(PanAndZoomGraphicsView):
 		# and implement it in the standard, example versions
 
 		for outlet in outlets:
-			outlet_item = cast(OutletItem, self.index_to_item_map[outlet])
+			outlet_item = cast(OutletGraphicsItem, self.index_to_item_map[outlet])
 			if not properties or "name" in properties:
 				new_name = self.graph_model.getOutletProperty(outlet, "name")
 				if outlet_item.label.text() != new_name:
@@ -800,7 +831,7 @@ class GraphView(PanAndZoomGraphicsView):
 		# and implement it in the standard, example versions
 
 		for inlet in inlets:
-			inlet_item = cast(InletItem, self.index_to_item_map[inlet])
+			inlet_item = cast(InletGraphicsItem, self.index_to_item_map[inlet])
 			if not properties or 'name' in properties: 
 				new_name = self.graph_model.getInletProperty(inlet, 'name')
 				if inlet_item.label.text() != new_name:
@@ -836,11 +867,11 @@ class GraphView(PanAndZoomGraphicsView):
 
 		self.scene().blockSignals(True)
 		for edge in [EdgeRef(index, self.graph_model) for index in selected.indexes() if index.column()==0]:
-			item = cast(EdgeItem, self.index_to_item_map[edge])
+			item = cast(EdgeGraphicsItem, self.index_to_item_map[edge])
 			item.setSelected(True)
 
 		for edge in [EdgeRef(index, self.graph_model) for index in deselected.indexes() if index.column()==0]:
-			item = cast(EdgeItem, self.index_to_item_map[edge])
+			item = cast(EdgeGraphicsItem, self.index_to_item_map[edge])
 			item.setSelected(False)
 		self.scene().blockSignals(False)
 
@@ -852,26 +883,9 @@ class StandardNodeItem(NodeGraphicsItem):
 			super().__init__(parent_graph)
 
 			# # widgets
-			# self.nameedit = EditableTextItem(self)
-			# self.nameedit.setPos(0,0)
-			# self.nameedit.setTextWidth(self.rect.width()-10)
-
-			# Create the QPushButton widget
-			main_widget = QWidget()
-			layout = QVBoxLayout()
-			main_widget.setLayout(layout)
-			self.nameedit = QLineEdit()
-			layout.addWidget(self.nameedit)
-			self.bodyedit = QPlainTextEdit()
-			layout.addWidget(self.bodyedit)
-
-
-			# Create a QGraphicsProxyWidget to hold the QPushButton
-			proxy_widget = QGraphicsProxyWidget(self)  # Parent it to rect_item
-			proxy_widget.setWidget(main_widget)
-
-			self.rect = QRect(0,0,300,300)
-			main_widget.resize(self.rect.width(), self.rect.height())
+			self.nameedit = EditableTextItem(self)
+			self.nameedit.setPos(0,0)
+			self.nameedit.setTextWidth(self.rect.width()-10)
 
 		def mouseDoubleClickEvent(self, event: QGraphicsSceneMouseEvent):
 			# Enable editing subitems on double-click
@@ -885,29 +899,34 @@ class StandardNodeItem(NodeGraphicsItem):
 			else:
 				print("NodeItem->mouseDoubleClickEvent")
 				super().mouseDoubleClickEvent(event)
-
-		# def boundingRect(self) -> QRectF:
-		# 	return 
 			
 
 class StandardGraphView(GraphView):
+	@override
 	def nodeFactory(self, node:NodeRef)->QGraphicsItem:
 		node_item = StandardNodeItem(parent_graph=self)
 		
-		node_item.nameedit.textChanged.connect(lambda: 
-			self.onNodeEditorChange(node, node_item, ["name"])
-		)
-
-		node_item.bodyedit.textChanged.connect(lambda: 
-			self.onNodeEditorChange(node, node_item, ["body"])
+		node_item.nameedit.document().contentsChanged.connect(lambda: 
+			self.onNodeEditorChange(node, node_item, ['name'])
 		)
 
 		node_item.positionChanged.connect(lambda: 
-			self.onNodeEditorChange(node, node_item, ["posx", "posy"])
+			self.onNodeEditorChange(node, node_item, ['posx', 'posy'])
 		)
 
 		return node_item
 
+	@override
+	def mouseDoubleClickEvent(self, event: QMouseEvent) -> None:
+		graph = self.model()
+		if not graph or self.itemAt(event.position().toPoint()):
+			return super().mouseDoubleClickEvent(event)
+
+		clickpos = self.mapToScene(event.position().toPoint())
+		node = graph.addNode(name="new node", posx=int(clickpos.x()), posy=int(clickpos.y()))
+		graph.addInlet(node, name="in")
+		graph.addOutlet(node, name="out")
+			
 	@override
 	def onNodePropertyChange(self, node:NodeRef, node_item:QGraphicsItem, properties:List[str]|None):
 		graph = self.model()
@@ -915,21 +934,15 @@ class StandardGraphView(GraphView):
 		if not graph:
 			return
 
-		if not properties or "name" in properties:
-			new_name = node.graph().getNodeProperty(node, "name")
-			old_name = node_item.nameedit.text()
-			if old_name != new_name:
-				node_item.nameedit.setText(new_name)
+		if not properties or 'name' in properties:
+			new_expression = node.graph().getNodeProperty(node, 'name')
+			old_expression = node_item.nameedit.toPlainText()
+			if new_expression != old_expression:
+				node_item.nameedit.setPlainText(new_expression)
 
-		if not properties or "body" in properties:
-			new_name = node.graph().getNodeProperty(node, "body")
-			old_name = node_item.bodyedit.toPlainText()
-			if old_name != new_name:
-				node_item.bodyedit.setPlainText(new_name)
-
-		if not properties or "posx" in properties or "posy" in properties:
-			x = int(node.graph().getNodeProperty(node, "posx"))
-			y = int(node.graph().getNodeProperty(node, "posy"))
+		if not properties or 'posx' in properties or 'posy' in properties:
+			x = int(node.graph().getNodeProperty(node, 'posx'))
+			y = int(node.graph().getNodeProperty(node, 'posy'))
 			node_item.setPos(x,y)
 
 	@override
@@ -939,16 +952,15 @@ class StandardGraphView(GraphView):
 		if not graph:
 			return
 
-		if "name" in properties:
-			graph.setNodeProperty(node, name=node_item.nameedit.text())
+		if not properties or "name" in properties:
+			graph.setNodeProperty(node, name=node_item.nameedit.toPlainText())
 
-		if "posx" in properties or "posy" in properties:
+		if not properties or 'posx' in properties or 'posy' in properties:
 			graph.blockSignals(True)
 			graph.setNodeProperty(node, posx=int(node_item.x()))
 			graph.setNodeProperty(node, posy=int(node_item.y()))
 			graph.blockSignals(False)
-			graph.nodesPropertyChanged.emit([node], ["posx", "posy"])
-
+			graph.nodesPropertyChanged.emit([node], ['posx', 'posy'])
 
 if __name__ == "__main__":
 	from tableview_columnbased import GraphTableView

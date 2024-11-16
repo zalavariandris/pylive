@@ -17,6 +17,8 @@ from pylive.utils import getWidgetByName
 from pylive.unique import make_unique_id
 from pylive.logwindow import LogWindow
 
+import traceback
+
 def display(data:Any):
 	"""TODO: 
 	Use PreviewWidget.current()
@@ -48,6 +50,7 @@ class PreviewWidget(QWidget):
 		self.statusLabel = QLabel()
 
 		self.previewFrame = QWidget()
+		self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 		
 		self.previewFrame.setLayout(QVBoxLayout())
 		self.previewFrame.layout().setContentsMargins(0,0,0,0)
@@ -115,11 +118,15 @@ class PreviewWidget(QWidget):
 
 			print(f"exec took {duration_ms:.3f} ms")
 
-		except Exception as err:
-			print(err)
+		except Exception as e:
+			tb = traceback.TracebackException.from_exception(e)
+			print("Formatted Traceback:")
+			print(''.join(tb.format()))  # Produces a nicely formatted traceback as a string
 		finally:
 			...
 		PreviewWidget._stack.pop()
+
+		self.layout().addStretch()
 
 class LiveScript(QWidget):
 	def __init__(self, parent=None):
@@ -153,24 +160,12 @@ class LiveScript(QWidget):
 
 		# setup watch file
 		self.filepath = None
-		def on_file_change(self, path):
-			if self.script_modified_in_memory:
-				result = self.prompt_disk_change()
-				if result == QMessageBox.StandardButton.Yes:
-					pass
-				else:
-					return
-
-			with open(path, 'r') as file:
-				data = file.read()
-				self.scripteditor.setPlainText(data)
-				self.script_modified_in_memory = False
 
 		def setScriptModified():
 			self.script_modified_in_memory = True
 
 		self.watcher = QFileSystemWatcher()
-		self.watcher.fileChanged.connect(on_file_change)
+		self.watcher.fileChanged.connect(lambda: self.on_file_change(self.filepath))
 		self.script_modified_in_memory = False
 		self.script_edit.textChanged.connect(setScriptModified)
 
@@ -179,6 +174,19 @@ class LiveScript(QWidget):
 
 		# setup menubar
 		self.setupMenuBar()
+
+	def on_file_change(self, path):
+		if self.script_modified_in_memory:
+			result = self.prompt_disk_change()
+			if result == QMessageBox.StandardButton.Yes:
+				pass
+			else:
+				return
+
+		with open(path, 'r') as file:
+			data = file.read()
+			self.script_edit.setPlainText(data)
+			self.script_modified_in_memory = False
 
 	def saveConfig(self):
 		import json
@@ -272,25 +280,32 @@ class LiveScript(QWidget):
 		print("opening file", filepath)
 		if self.watcher.files():
 			self.watcher.removePaths(self.watcher.files())
-		self.watcher.addPath(filepath)
-		with open(filepath, 'r') as file:
-			text = file.read()
-			self.setScript(text)
-			self.script_modified_in_memory = False
-			self.filepath = filepath
-			self.setWindowTitle(f"{self.filepath} - WatchCode")
+		
+		try:
+			with open(filepath, 'r') as file:
+				text = file.read()
+				self.setScript(text)
+				self.script_modified_in_memory = False
+				self.filepath = filepath
+				self.setWindowTitle(f"{self.filepath} - WatchCode")
 
-			if filepath in self.config['recent']:
-				self.config['recent'] = [path for path in self.config['recent'] if path!=filepath]
+				if filepath in self.config['recent']:
+					self.config['recent'] = [path for path in self.config['recent'] if path!=filepath]
 
-			self.config['recent'].append(filepath)
-			self.saveConfig()
+				self.config['recent'].append(filepath)
+				self.saveConfig()
+				self.watcher.addPath(filepath)
+		except FileNotFoundError:
+			self.config['recent'].remove(filepath)
+
 
 	def saveFile(self, filepath:str):
 		print("saving file", filepath)
+		self.watcher.blockSignals(True)
 		with open(filepath, 'w') as file:
 			file.write(self.script_edit.toPlainText())
 			self.script_modified_in_memory = False
+		self.watcher.blockSignals(False)
 		self.filepath = filepath
 
 	def open(self):
@@ -330,6 +345,30 @@ class LiveScript(QWidget):
 			filename, filter_used = QFileDialog.getSaveFileName(self, "Save", ".py", "Python Script (*.py);;Any File (*)")
 			if filename != '':
 				self.saveFile(filename)
+
+
+class Value:
+	pass
+
+class Operator:
+	pass
+
+class Effect:
+	pass
+
+class Component:
+	def __init__(self):
+		pass
+
+	def onCreate(self):
+		pass
+
+	def onUpdate(self):
+		pass
+
+	def onDestroy(self):
+		pass
+
 
 
 if __name__ == "__main__":

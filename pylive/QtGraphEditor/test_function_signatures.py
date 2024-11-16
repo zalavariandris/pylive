@@ -51,6 +51,10 @@ def format_signature(fn):
 	return text
 	
 
-from pylive import livescript
-livescript.display(format_signature(sample_function))
-livescript.display(format_signature(print))
+import unittest
+class TestBuiltIns(unittest.TestCase):
+	def test_print_function(self):
+		pass
+
+class TestSimplefunctions(unittest.TestCase):
+	...

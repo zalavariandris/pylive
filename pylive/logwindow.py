@@ -31,6 +31,11 @@ class LogWindow(QPlainTextEdit):
 		self.captured_output = CaptureStdOut(self)
 		self.captured_output.messaged.connect(self.appendMessage)
 
+	def contextMenuEvent(self, e:QContextMenuEvent):
+		menu = QMenu() # self.createStandardContextMenu()
+		menu.addAction("Clear").triggered.connect(self.clear)
+		menu.exec(e.globalPos())
+
 	def appendMessage(self, text:str):
 		if "\033c" in text:
 			result = text.split("\033c")[-1].strip()

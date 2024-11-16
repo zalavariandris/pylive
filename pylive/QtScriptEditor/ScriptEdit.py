@@ -10,7 +10,23 @@ from pylive.QtScriptEditor.components.PygmentsSyntaxHighlighter import PygmentsS
 from pylive.QtScriptEditor.components.KeywordsCompleter import KeywordsCompleter
 from pylive.QtScriptEditor.components.RopeCompleter import RopeCompleter
 import rope.base.project
-		
+
+
+
+class LineNumberArea(QWidget):
+	def __init__(self, codeEditor: 'ScriptEdit') -> None:
+		super().__init__(codeEditor)
+		self.codeEditor = codeEditor
+
+	@override
+	def sizeHint()->QSize:
+		return QSize(self.codeEditor.lineNumberAreaWidth(), 0)
+
+	def paintEvent(self, event:QPaintEvent):
+		self.codeEditor.lineNumberAreaPaintEvent(event)
+
+
+
 class ScriptEdit(QPlainTextEdit):
 	def __init__(self, parent=None):
 		super().__init__(parent)
@@ -20,6 +36,12 @@ class ScriptEdit(QPlainTextEdit):
 		self.setupSyntaxHighlighting()
 		self.setupAutocomplete()
 		self.setupInlineNotifications()
+
+		# setup linenumber area
+		self.lineNumberArea = LineNumberArea(self)
+		self.blockCountChanged.connect(self.updateLineNumberArea)
+		self.updateRequest.connect(self.updateLineNumberArea)
+		self.updateLineNumberAreaWidth(0)
 
 	def setupTextEdit(self):
 		self.setWindowTitle("ScriptTextEdit")
@@ -276,6 +298,62 @@ class ScriptEdit(QPlainTextEdit):
 		cursor = ScriptCursor(self.textCursor())
 		cursor.unindentSelection()
 		self.setTextCursor(cursor)
+
+	def lineNumberAreaPaintEvent(self, event:QPaintEvent):
+		painter = QPainter(self.lineNumberArea);
+		# painter.fillRect(event.rect(), Qt.lightGray)
+		palette = self.palette()
+		text_color = palette.color(QPalette.ColorRole.PlaceholderText)
+
+		block = self.firstVisibleBlock()
+		block_number = block.blockNumber()
+		top = round(self.blockBoundingGeometry(block).translated(self.contentOffset()).top())
+		bottom = top + round(self.blockBoundingRect(block).height())
+
+		while block.isValid() and top <= event.rect().bottom():
+			if block.isVisible() and bottom >= event.rect().top():
+				number = str(block_number + 1)
+				painter.setPen(text_color)
+				painter.drawText(0, top, self.lineNumberArea.width(), self.fontMetrics().height(),
+								 Qt.AlignRight, number)
+			
+			block = block.next()
+			top = bottom
+			bottom = top + round(self.blockBoundingRect(block).height())
+			block_number += 1
+
+
+	def lineNumberAreaWidth(self):
+		digits = 1;
+		line_count = max(1, self.blockCount())
+		while line_count >= 10:
+			line_count /= 10
+			digits+=1
+
+
+		space = 3 + self.fontMetrics().horizontalAdvance('9') * digits;
+
+		return space;
+
+	@Slot(int)
+	def updateLineNumberAreaWidth(self, newBlockCount:int):
+		self.setViewportMargins(self.lineNumberAreaWidth(), 0, 0, 0)
+
+
+	@Slot(QRect, int)
+	def updateLineNumberArea(self, rect:QRect, dy:int):
+		if dy:
+			self.lineNumberArea.scroll(0, dy)
+		else:
+			self.lineNumberArea.update(0, rect.y(), self.lineNumberArea.width(), rect.height())
+
+		if rect.contains(self.viewport().rect()):
+			self.updateLineNumberAreaWidth(0)
+
+	def resizeEvent(self, e: QResizeEvent) -> None:
+		super().resizeEvent(e)
+		cr = self.contentsRect()
+		self.lineNumberArea.setGeometry(QRect(cr.left(), cr.top(), self.lineNumberAreaWidth(), cr.height()));
 
 if __name__ == "__main__":
 	import sys
