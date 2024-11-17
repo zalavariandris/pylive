@@ -53,7 +53,6 @@ class TextWidget(GWidget):
 
 	def setGeometry(self, rect):
 		# Called by the layout to assign size and position
-		print("set geo", rect)
 		super().setGeometry(rect)
 		self._rect = rect
 
@@ -87,6 +86,7 @@ class PinWidget(QGraphicsWidget):
 		self.setLayout(self.main_layout)
 
 		self._edges = []
+		self.geometryChanged.connect(lambda: [edge.updatePosition for edge in self._edges])
 		self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges)
 
 	def itemChange(self, change, value):
@@ -95,9 +95,6 @@ class PinWidget(QGraphicsWidget):
 				for edge_item in self._edges:
 					edge_item.updatePosition()
 		return super().itemChange(change, value)
-
-	def getConnectionPoint(self):
-		return self.circle_item.sceneBoundingRect().center()
 
 	def shape(self):
 		shape = QPainterPath()
@@ -386,6 +383,8 @@ class GraphScene(QGraphicsScene):
 		return None
 
 	def mousePressEvent(self, event):
+		self.mousePressScenePos = event.scenePos()
+
 		if pin:=self.pinAt(event.scenePos()):
 			print(pin)
 			self.initiateConnection(pin)
@@ -409,6 +408,7 @@ class GraphScene(QGraphicsScene):
 			self.interactive_edge = edge
 			self.is_dragging_edge = True
 		else:
+
 			super().mousePressEvent(event)
 
 	def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent) -> None:
