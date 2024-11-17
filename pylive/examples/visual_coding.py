@@ -88,7 +88,7 @@ class ExpressionsGraphView(StandardGraphView):
 			return super().mouseDoubleClickEvent(event)
 
 		clickpos = self.mapToScene(event.position().toPoint())
-		node = graph.addNode(name="new node", posx=int(clickpos.x()), posy=int(clickpos.y()))
+		node = graph.addNode(name="operator", posx=int(clickpos.x()), posy=int(clickpos.y()))
 		graph.addInlet(node, name="in")
 		graph.addOutlet(node, name="out")
 			
