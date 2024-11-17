@@ -129,7 +129,6 @@ class PinGraphicsItem(QGraphicsItem):
 
 
 
-
 class OutletGraphicsItem(PinGraphicsItem):
 	def destroy(self):
 		for edge in reversed(self.edges):
@@ -677,11 +676,11 @@ class GraphView(PanAndZoomGraphicsView):
 	def nodeFactory(self, node:NodeRef)->QGraphicsItem:
 		return NodeGraphicsItem(self)
 
-	def onNodePropertyChange(self, node:NodeRef, node_item:QGraphicsItem, properties:List[str]|None):
-		raise NotImplementedError("subclasses must implement onNodePropertyChange")
+	# def onNodePropertyChange(self, node:NodeRef, node_item:QGraphicsItem, properties:List[str]|None):
+	# 	raise NotImplementedError("subclasses must implement onNodePropertyChange")
 
-	def onNodeEditorChange(self, node:NodeRef, node_item:QGraphicsItem, properties:List[str]|None):
-		raise NotImplementedError("subclasses must implement onNodeEditorChange")
+	# def onNodeEditorChange(self, node:NodeRef, node_item:QGraphicsItem, properties:List[str]|None):
+	# 	raise NotImplementedError("subclasses must implement onNodeEditorChange")
 
 	@Slot(QModelIndex, int, int)
 	def handleNodesRemoved(self, nodes:Iterable[NodeRef]):
@@ -906,13 +905,17 @@ class StandardGraphView(GraphView):
 	def nodeFactory(self, node:NodeRef)->QGraphicsItem:
 		node_item = StandardNodeItem(parent_graph=self)
 		
-		node_item.nameedit.document().contentsChanged.connect(lambda: 
-			self.onNodeEditorChange(node, node_item, ['name'])
-		)
+		node_item.nameedit.document().contentsChanged.connect(lambda: (
+			self.model().setNodeProperty(node, name=node_item.nameedit.toPlainText())
+		) if self.model() else None)
 
-		node_item.positionChanged.connect(lambda: 
-			self.onNodeEditorChange(node, node_item, ['posx', 'posy'])
-		)
+		node_item.positionChanged.connect(lambda: (
+			self.model().blockSignals(True),
+			self.model().setNodeProperty(node, posx=int(node_item.x())),
+			self.model().setNodeProperty(node, posy=int(node_item.y())),
+			self.model().blockSignals(False),
+			self.model().nodesPropertyChanged.emit([node], ['posx', 'posy'])
+		) if self.model() else None)
 
 		return node_item
 
@@ -926,41 +929,25 @@ class StandardGraphView(GraphView):
 		node = graph.addNode(name="new node", posx=int(clickpos.x()), posy=int(clickpos.y()))
 		graph.addInlet(node, name="in")
 		graph.addOutlet(node, name="out")
-			
-	@override
-	def onNodePropertyChange(self, node:NodeRef, node_item:QGraphicsItem, properties:List[str]|None):
-		graph = self.model()
-		node_item = cast(StandardNodeItem, node_item)
-		if not graph:
-			return
-
-		if not properties or 'name' in properties:
-			new_expression = node.graph().getNodeProperty(node, 'name')
-			old_expression = node_item.nameedit.toPlainText()
-			if new_expression != old_expression:
-				node_item.nameedit.setPlainText(new_expression)
-
-		if not properties or 'posx' in properties or 'posy' in properties:
-			x = int(node.graph().getNodeProperty(node, 'posx'))
-			y = int(node.graph().getNodeProperty(node, 'posy'))
-			node_item.setPos(x,y)
 
 	@override
-	def onNodeEditorChange(self, node:NodeRef, node_item:QGraphicsItem, properties:List[str]|None):
+	def handleNodesPropertiesChanged(self, nodes: List[NodeRef], properties: List[str] = None):
 		graph = self.model()
-		node_item = cast(StandardNodeItem, self.index_to_item_map[node])
-		if not graph:
-			return
+		for node in nodes:
+			node_item = cast(StandardNodeItem, self.index_to_item_map[node])
+			if not graph:
+				return
 
-		if not properties or "name" in properties:
-			graph.setNodeProperty(node, name=node_item.nameedit.toPlainText())
+			if not properties or 'name' in properties:
+				new_expression = graph.getNodeProperty(node, 'name')
+				old_expression = node_item.nameedit.toPlainText()
+				if new_expression != old_expression:
+					node_item.nameedit.setPlainText(new_expression)
 
-		if not properties or 'posx' in properties or 'posy' in properties:
-			graph.blockSignals(True)
-			graph.setNodeProperty(node, posx=int(node_item.x()))
-			graph.setNodeProperty(node, posy=int(node_item.y()))
-			graph.blockSignals(False)
-			graph.nodesPropertyChanged.emit([node], ['posx', 'posy'])
+			if not properties or 'posx' in properties or 'posy' in properties:
+				x = int(graph.getNodeProperty(node, 'posx'))
+				y = int(graph.getNodeProperty(node, 'posy'))
+				node_item.setPos(x,y)
 
 if __name__ == "__main__":
 	from tableview_columnbased import GraphTableView

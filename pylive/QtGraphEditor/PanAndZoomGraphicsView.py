@@ -149,7 +149,7 @@ class PanAndZoomGraphicsView(QGraphicsView):
         drawDots(20, radius=1)
 
     def fitItems(self):
-        if self.scene() and self.scene().items():
+        if self.scene() and self.scene().items() and self.scene().itemsBoundingRect():
             self.blockSignals(True)
             brect = QRectF(0,0,1,1)
             for item in self.scene().items():

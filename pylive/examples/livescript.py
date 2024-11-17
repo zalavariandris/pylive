@@ -41,6 +41,28 @@ def clear():
 	preview_widget = cast(PreviewWidget, getWidgetByName('PREVIEW_WINDOW_ID'))
 	preview_widget.clear()
 
+TEMPLATE_SCRIPT = """\
+from PySide6.QtGui import *
+from PySide6.QtCore import *
+from PySide6.QtWidgets import *
+from pylive import livescript
+from typing import *
+
+
+class MyWidget(QWidget):
+	def __init__(self, parent=None):
+		super().__init__(parent=parent)
+		mainLayout = QVBoxLayout()
+		self.setLayout(mainLayout)
+
+		label = QLabel("MyWidget")
+		mainLayout.addWidget(label)
+
+widget = MyWidget(QWidget)
+livescript.display(widget)
+
+"""
+
 class PreviewWidget(QWidget):
 	_stack = []
 
@@ -219,7 +241,7 @@ class LiveScript(QWidget):
 			}
 		""")
 
-		"""setup file menu"""
+		"""File menu"""
 		file_menu  = self.menu_bar.addMenu("File")
 		open_action = QAction("Open", self)
 		open_action.triggered.connect(self.open)
@@ -237,7 +259,7 @@ class LiveScript(QWidget):
 			open_recent_action.triggered.connect(lambda path=recent: self.openFile(path))
 			file_menu.addAction(open_recent_action)
 
-		"""setup edit menu"""
+		"""Edit menu"""
 		edit_menu  = self.menu_bar.addMenu("Edit")
 		copy_action = QAction("Copy", self)
 		copy_action.triggered.connect(self.script_edit.copy)
@@ -252,10 +274,18 @@ class LiveScript(QWidget):
 		toggle_comments_action.setShortcut(QKeySequence(Qt.Key.Key_Control | Qt.Key.Key_Slash))
 		toggle_comments_action.triggered.connect(self.script_edit.toggleCommentSelection)
 
-		# Add actions to File menu
+		# Add actions to Edit menu
 		edit_menu.addAction(cut_action)
 		edit_menu.addAction(paste_action)
 		edit_menu.addAction(toggle_comments_action)
+
+		"""Template menu"""
+		template_menu  = self.menu_bar.addMenu("Templates")
+		insert_template_action = QAction("insert template", self)
+		insert_template_action.triggered.connect(lambda: self.script_edit.insertPlainText(TEMPLATE_SCRIPT))
+
+		# Add actions to Edit menu
+		template_menu.addAction(insert_template_action)
 
 		self.layout().setMenuBar(self.menu_bar)
 
@@ -347,27 +377,6 @@ class LiveScript(QWidget):
 				self.saveFile(filename)
 
 
-class Value:
-	pass
-
-class Operator:
-	pass
-
-class Effect:
-	pass
-
-class Component:
-	def __init__(self):
-		pass
-
-	def onCreate(self):
-		pass
-
-	def onUpdate(self):
-		pass
-
-	def onDestroy(self):
-		pass
 
 
 
