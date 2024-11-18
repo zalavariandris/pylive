@@ -41,7 +41,6 @@ class RopeCompleter(QCompleter):
 		import humanize
 		print("completer took", humanize.naturaldelta(timeend-timebegin, minimum_unit="milliseconds"))
 
-
 		
 class CompleterTextEdit(QPlainTextEdit):
 	def __init__(self, parent=None):
@@ -160,10 +159,13 @@ class CompleterTextEdit(QPlainTextEdit):
 
 
 if __name__ == "__main__":
+	from pylive.logwindow import LogWindow
 	import sys
 	from textwrap import dedent
 
 	app = QApplication(sys.argv)
+	
+
 	script_edit = CompleterTextEdit()
 
 	script = dedent("""\
@@ -173,11 +175,16 @@ if __name__ == "__main__":
 		x = 42
 		return x
 	""")
-
-	with open("../../test_script.py") as file:
-		script = file.read()
 		
 	script_edit.setPlainText(script)
+
 	# show app
-	script_edit.show()
+	window = QWidget()
+	window.setWindowTitle("RopeCompleter")
+	layout = QVBoxLayout()
+	layout.addWidget(script_edit)
+	logwindow = LogWindow()
+	layout.addWidget(logwindow)
+	window.setLayout(layout)
+	window.show()
 	sys.exit(app.exec())

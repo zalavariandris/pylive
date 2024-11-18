@@ -6,7 +6,7 @@ from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
-from pylive.QtGraphEditor.PanAndZoomGraphicsView import PanAndZoomGraphicsView
+from pylive.QtGraphEditor.pan_and_zoom_graphicsview_optimized import PanAndZoomGraphicsView
 from pylive.QtGraphEditor.graphmodel_databased import (
 	GraphModel,
 	NodeRef, EdgeRef, InletRef, OutletRef,

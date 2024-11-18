@@ -4,7 +4,7 @@ from PySide6.QtWidgets import *
 from pylive import livescript
 from typing import *
 
-from pylive.QtGraphEditor.PanAndZoomGraphicsView import PanAndZoomGraphicsView
+from pylive.QtGraphEditor.pan_and_zoom_graphicsview_optimized import PanAndZoomGraphicsView
 
 
 
@@ -15,8 +15,8 @@ class TextWidget(QGraphicsWidget):
 		# Create the text item
 		self.text_item = QGraphicsTextItem(text, self)
 		self.text_item.document().setDocumentMargin(0)
-		self.text_item.setTextInteractionFlags(Qt.TextEditorInteraction)
-		self.text_item.setAcceptedMouseButtons(Qt.NoButton)  # Transparent to mouse events
+		self.text_item.setTextInteractionFlags(Qt.TextInteractionFlag.TextEditorInteraction)
+		self.text_item.setAcceptedMouseButtons(Qt.MouseButton.NoButton)  # Transparent to mouse events
 		self.text_item.setEnabled(False)
 
 		self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges)
@@ -25,7 +25,7 @@ class TextWidget(QGraphicsWidget):
 	def set_line_height(self, line_height):
 		"""Set the line height for the text."""
 		cursor = QTextCursor(self.text_item.document())
-		cursor.select(QTextCursor.Document)
+		cursor.select(QTextCursor.SelectionType.Document)
 
 		# Configure block format
 		block_format = QTextBlockFormat()
@@ -41,8 +41,8 @@ class CircleWidget(QGraphicsWidget):
 	def __init__(self, radius:float, parent=None):
 		super().__init__()
 		self.circle_item = QGraphicsEllipseItem(QRectF(0,0,radius*2, radius*2), self)
-		text_color = self.palette().color(QPalette.Text)
-		self.circle_item.setBrush(Qt.NoBrush)
+		text_color = self.palette().color(QPalette.ColorRole.Text)
+		self.circle_item.setBrush(Qt.BrushStyle.NoBrush)
 		self.circle_item.setPen(QPen(text_color, 1.4))
 
 	def sizeHint(self, which, constraint=QSizeF()):
@@ -51,65 +51,33 @@ class CircleWidget(QGraphicsWidget):
 
 
 class PinWidget(QGraphicsWidget):
-	def __init__(self, text):
+	def __init__(self, text, orientation=Qt.Orientation.Horizontal):
 		super().__init__()
-		self._parent_node = None
-
-		# Create the text item
+		# store relations
+		self._parent_node:NodeWidget|None = None
+		self._edges = []
+		
+		# Setup widgets
+		self.setAcceptHoverEvents(True)
 		self.circle_item = CircleWidget(radius=3)
 		self.text_widget = TextWidget(text)
 		font = self.text_widget.text_item.document().defaultFont()
 		font.setPointSize(6)
 		self.text_widget.text_item.document().setDefaultFont(font)
 
-		self.main_layout = QGraphicsLinearLayout(Qt.Horizontal)
+		# layout
+		self.main_layout = QGraphicsLinearLayout(Qt.Orientation.Horizontal)
 		self.main_layout.setContentsMargins(0,0,0,0)
 		self.main_layout.setSpacing(3)
-		
 		self.setLayout(self.main_layout)
+		self.setOrientation(orientation)
 
-		self._edges = []
+		# update edge on scenepos or geometry change
+		
 		self.geometryChanged.connect(self.updateEdges)
 		self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges)
-		self.setAcceptHoverEvents(True)
-
-	def setHighlight(self, value):
-		if value:
-			accent_color = self.palette().color(QPalette.ColorRole.Accent)
-			self.circle_item.circle_item.setPen(QPen(accent_color, 2))
-		else:
-			text_color = self.palette().color(QPalette.ColorRole.Text)
-			self.circle_item.circle_item.setPen(QPen(text_color, 2))
-
-	
-
-	def updateEdges(self):
-		for edge_item in list(self._edges):
-			edge_item.updatePosition()
-
-	def itemChange(self, change, value):
-		match change:
-			case QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
-				self.updateEdges()
-
-		return super().itemChange(change, value)
-
-	def shape(self):
-		shape = QPainterPath()
-		circle_rect = self.circle_item.rect()
-		circle_rect.adjust(-5,-5,5,5)
-		circle_rect.translate(self.circle_item.pos())
-		shape.addRect( circle_rect )
-		return shape
-
-	def boundingRect(self) -> QRectF:
-		return self.shape().boundingRect()
-
-	def orientation(self):
-		return self._orientation
 
 	def setOrientation(self, orientation:Qt.Orientation):
-		print("set orientation", orientation)
 		match orientation:
 			case Qt.Orientation.Vertical:
 				self.main_layout.setOrientation(orientation)
@@ -135,6 +103,39 @@ class PinWidget(QGraphicsWidget):
 
 		self.updateGeometry()
 		self.adjustSize()
+
+	def setHighlight(self, value):
+		if value:
+			accent_color = self.palette().color(QPalette.ColorRole.Accent)
+			self.circle_item.circle_item.setPen(QPen(accent_color, 2))
+		else:
+			text_color = self.palette().color(QPalette.ColorRole.Text)
+			self.circle_item.circle_item.setPen(QPen(text_color, 2))
+
+	def updateEdges(self):
+		for edge_item in list(self._edges):
+			edge_item.updatePosition()
+
+	def itemChange(self, change, value):
+		match change:
+			case QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
+				self.updateEdges()
+
+		return super().itemChange(change, value)
+
+	def shape(self):
+		shape = QPainterPath()
+		circle_rect = self.circle_item.rect()
+		circle_rect.adjust(-5,-5,5,5)
+		circle_rect.translate(self.circle_item.pos())
+		shape.addRect( circle_rect )
+		return shape
+
+	def boundingRect(self) -> QRectF:
+		return self.shape().boundingRect()
+
+	def orientation(self):
+		return self._orientation
 
 	def hoverEnterEvent(self, event: QGraphicsSceneHoverEvent) -> None:
 		self.setHighlight(True)
@@ -171,7 +172,6 @@ class OutletWidget(PinWidget):
 
 		if self._parent_node:
 			self._parent_node.removeOutlet(self)
-			self._parent_node.updatePinPositions()
 		self.scene().removeItem(self)
 
 
@@ -189,7 +189,6 @@ class InletWidget(PinWidget):
 
 		if self._parent_node:
 			self._parent_node.removeInlet(self)
-			self._parent_node.updatePinPositions()
 		self._parent_node = None
 		self.scene().removeItem(self)
 
@@ -197,18 +196,18 @@ class InletWidget(PinWidget):
 class NodeWidget(QGraphicsWidget):
 	"""A widget that holds multiple TextWidgets arranged in a vertical layout."""
 
-	def __init__(self, title="Node", parent=None):
+	def __init__(self, title="Node", orientation=Qt.Orientation.Horizontal, parent=None):
 		super().__init__(parent)
 
 		# Enable selection and movement
-		self.setFlag(QGraphicsWidget.ItemIsSelectable, True)
-		self.setFlag(QGraphicsWidget.ItemIsMovable, True)
-		self.setFlag(QGraphicsWidget.ItemIsFocusable, True)
+		self.setFlag(QGraphicsWidget.GraphicsItemFlag.ItemIsSelectable, True)
+		self.setFlag(QGraphicsWidget.GraphicsItemFlag.ItemIsMovable, True)
+		self.setFlag(QGraphicsWidget.GraphicsItemFlag.ItemIsFocusable, True)
 
 		self._orientation = Qt.Orientation.Horizontal
 
 		# Create a layout
-		self.main_layout = QGraphicsLinearLayout(Qt.Vertical)
+		self.main_layout = QGraphicsLinearLayout(Qt.Orientation.Vertical)
 		self.main_layout.setContentsMargins(8,3,8,3)
 		self.main_layout.setSpacing(0)
 
@@ -217,21 +216,22 @@ class NodeWidget(QGraphicsWidget):
 		self.main_layout.addItem(self.header)
 
 		# Create inlets layout
-		self.inlets_layout = QGraphicsLinearLayout(Qt.Vertical)
+		self.inlets_layout = QGraphicsLinearLayout(Qt.Orientation.Vertical)
 		self.main_layout.addItem(self.inlets_layout)
 
 		# create outlets layout
-		self.outlets_layout = QGraphicsLinearLayout(Qt.Vertical)
+		self.outlets_layout = QGraphicsLinearLayout(Qt.Orientation.Vertical)
 		self.main_layout.addItem(self.outlets_layout)
 		self.main_layout.setAlignment(self.outlets_layout, Qt.AlignmentFlag.AlignRight)
 
 		# Set the layout for the widget
 		self.setLayout(self.main_layout)
+		self.setOrientation(orientation)
 
 		# Define the bounding geometry
 		# self.setGeometry(QRectF(-75, -59, 150, 100))
-		self.inlets = []
-		self.outlets = []
+		self._inlets = []
+		self._outlets = []
 
 	def orientation(self):
 		return self._orientation
@@ -306,14 +306,27 @@ class NodeWidget(QGraphicsWidget):
 
 	def addInlet(self, inlet:InletWidget):
 		self.inlets_layout.addItem(inlet)
+		self.inlets_layout.setAlignment(inlet, Qt.AlignmentFlag.AlignLeft)
+		inlet._parent_node = self
 		inlet.setParentItem(self)
-		self.inlets.append(inlet)
+		self._inlets.append(inlet)
+
+	def removeInlet(self, inlet:InletWidget):
+		self.inlets_layout.removeItem(inlet)
+		inlet._parent_node = None
+		self._inlets.remove(inlet)
 
 	def addOutlet(self, outlet:OutletWidget):
 		self.outlets_layout.addItem(outlet)
-		self.outlets_layout.setAlignment(outlet, Qt.AlignRight)
+		self.outlets_layout.setAlignment(outlet, Qt.AlignmentFlag.AlignRight)
 		outlet._parent_node = self
 		outlet.setParentItem(self)
+		self._outlets.append(outlet)
+
+	def removeOutlet(self, outlet:OutletWidget):
+		self.outlets_layout.removeItem(outlet)
+		outlet._parent_node = None
+		self._outlets.remove(outlet)
 
 	def paint(self, painter:QPainter, option:QStyleOptionGraphicsItem, widget=None):
 		# Draw the node rectangle
@@ -332,6 +345,15 @@ class NodeWidget(QGraphicsWidget):
 
 		# painter.setPen(palette.window().color())
 		painter.drawRoundedRect(QRectF(QPointF(), self.size()), 3, 3)
+
+	def destroy(self):
+		while self._inlets:
+			self._inlets[0].destroy() # Always remove first
+
+		while self._outlets:
+			self._outlets[0].destroy() # Always remove first
+		
+		self.scene().removeItem(self)
 
 
 class EdgeWidget(QGraphicsLineItem):
@@ -490,7 +512,7 @@ class EdgeWidget(QGraphicsLineItem):
 		painter.drawLine(self.line())
 
 
-class GraphScene(QGraphicsScene):
+class DAGScene(QGraphicsScene):
 	def __init__(self, parent=None):
 		super().__init__(parent)
 
@@ -505,22 +527,25 @@ class GraphScene(QGraphicsScene):
 	def addNode(self, node: NodeWidget):
 		self.addItem(node)
 
+	def removeNodes(self, node:NodeWidget):
+		node.destroy()
+
 	def addEdge(self, edge: EdgeWidget):
 		self.addItem(edge)
 
-	def pinAt(self, pos:QPoint|QPointF)->PinWidget:
+	def pinAt(self, pos:QPoint|QPointF)->PinWidget|None:
 		for item in self.items(pos, deviceTransform=QTransform()):
 			if isinstance(item, PinWidget):
 				return item
 		return None
 
-	def nodeAt(self, pos:QPoint|QPointF)->NodeWidget:
+	def nodeAt(self, pos:QPoint|QPointF)->NodeWidget|None:
 		for item in self.items(pos, deviceTransform=QTransform()):
 			if isinstance(item, NodeWidget):
 				return item
 		return None
 
-	def edgeAt(self, pos:QPoint|QPointF)->EdgeWidget:
+	def edgeAt(self, pos:QPoint|QPointF)->EdgeWidget|None:
 		for item in self.items(pos, deviceTransform=QTransform()):
 			if isinstance(item, EdgeWidget):
 				return item
@@ -530,7 +555,6 @@ class GraphScene(QGraphicsScene):
 		self.mousePressScenePos = event.scenePos()
 
 		if pin:=self.pinAt(event.scenePos()):
-			print(pin)
 			self.initiateConnection(pin)
 			event.accept()
 			return
@@ -540,8 +564,6 @@ class GraphScene(QGraphicsScene):
 			d1 = delta1.manhattanLength()
 			delta2 = edge.line().p2() - event.scenePos()
 			d2 = delta2.manhattanLength()
-
-			# print("closest end:", closest_pin)
 
 			if d1<d2:
 				self.interactive_edge_fixed_pin = edge._target_inlet
@@ -620,7 +642,6 @@ class GraphScene(QGraphicsScene):
 			current_outlet.setHighlight(False)
 
 		if isinstance(self.interactive_edge_fixed_pin, OutletWidget) and isinstance(pinUnderMouse, InletWidget):
-			
 			self.interactive_edge.setTargetInlet(pinUnderMouse)
 			pinUnderMouse.setHighlight(True)
 			self.interactive_edge.updatePosition()
@@ -643,6 +664,17 @@ class GraphScene(QGraphicsScene):
 			self.interactive_edge.destroy()
 			#remove cancelled edge creation
 
+	def canConnect(self, start_pin: PinWidget, end_pin: PinWidget) -> bool:
+		# Check if start_pin is an OutletWidget and end_pin is an InletWidget, or vice versa
+		if isinstance(start_pin, OutletWidget) and isinstance(end_pin, InletWidget):
+			return True
+		elif isinstance(start_pin, InletWidget) and isinstance(end_pin, OutletWidget):
+			return True
+
+		# You can add additional checks here (e.g., same node, already connected, etc.)
+		
+		return False
+
 	def finishConnection(self, pin:PinWidget|None):
 		assert self.interactive_edge_fixed_pin
 		assert self.interactive_edge
@@ -650,15 +682,7 @@ class GraphScene(QGraphicsScene):
 		start_pin:PinWidget = self.interactive_edge_fixed_pin
 		end_pin = pin
 
-		CanConnectPins = (
-			isinstance(start_pin, InletWidget) 
-			and isinstance(end_pin, OutletWidget)
-		) or (
-			isinstance(start_pin, OutletWidget) 
-			and isinstance(end_pin, InletWidget)
-		)
-
-		if CanConnectPins and pin:
+		if pin and self.canConnect(start_pin, pin):
 			"""establish connection"""
 			if isinstance(self.interactive_edge_fixed_pin, InletWidget):
 				outlet = cast(OutletWidget, pin)
@@ -675,58 +699,77 @@ class GraphScene(QGraphicsScene):
 		self.interactive_edge_fixed_pin = None
 
 
-
-
 if __name__ == "__main__":
 	class GraphView(QGraphicsView):
 		def __init__(self):
 			super().__init__()
 			self.setRenderHint(QPainter.RenderHint.Antialiasing)
+			self.setInteractive(True)
+			self.setDragMode(QGraphicsView.DragMode.RubberBandDrag) # optional, default mouse behaviour
 
 		def contextMenuEvent(self, event: QContextMenuEvent) -> None:
-
 			# Create the context menu
 			context_menu = QMenu(self)
 			
 			# Add actions to the context menu
-			action1 = QAction("delete selection", self)
-			context_menu.addAction(action1)
+			delete_selection_action = QAction("delete selection", self)
+			context_menu.addAction(delete_selection_action)
+			delete_selection_action.triggered.connect(self.deleteSelectedNodes)
 			
-			action2 = QAction("create node", self)
-			context_menu.addAction(action2)
+			create_node_action = QAction("create node", self)
+			context_menu.addAction(create_node_action)
+			clickpos = self.mapToScene(event.pos())
+			create_node_action.triggered.connect(lambda: self.createNode(clickpos) )
 
-			action3 = QAction(f"flip orientation", self)
-			context_menu.addAction(action3)
-			action3.triggered.connect(self.flipOrientation)
+			horizontal_orientation_action = QAction(f"horizontal orientation", self)
+			context_menu.addAction(horizontal_orientation_action)
+			horizontal_orientation_action.triggered.connect(self.flipOrientation)
+
+			flip_orientation_action = QAction(f"flip orientation", self)
+			context_menu.addAction(flip_orientation_action)
+			flip_orientation_action.triggered.connect(self.flipOrientation)
 			
 			# Show the context menu at the position of the mouse event
 			context_menu.exec(event.globalPos())
 
-		def flipOrientation(self):
-			graphscene = cast(GraphScene, self.scene())
+		def setOrientation(self):
+			graphscene = cast(DAGScene, self.scene())
 			for item in graphscene.items():
 				if isinstance(item, NodeWidget):
 					node = cast(NodeWidget, item)
-					if node.orientation() == Qt.Vertical:
-						node.setOrientation(Qt.Horizontal)
-					elif node.orientation() == Qt.Horizontal:
-						node.setOrientation(Qt.Vertical)
+					if node.orientation() == Qt.Orientation.Vertical:
+						node.setOrientation(Qt.Orientation.Horizontal)
+					elif node.orientation() == Qt.Orientation.Horizontal:
+						node.setOrientation(Qt.Orientation.Vertical)
 
-		def mouseDoubleClickEvent(self, event: QMouseEvent) -> None:
-			graphscene = cast(GraphScene, self.scene())
+		def flipOrientation(self):
+			graphscene = cast(DAGScene, self.scene())
+			for item in graphscene.items():
+				if isinstance(item, NodeWidget):
+					node = cast(NodeWidget, item)
+					if node.orientation() == Qt.Orientation.Vertical:
+						node.setOrientation(Qt.Orientation.Horizontal)
+					elif node.orientation() == Qt.Orientation.Horizontal:
+						node.setOrientation(Qt.Orientation.Vertical)
+
+		def createNode(self, scenepos=QPointF(0,0),/):
+			graphscene = cast(DAGScene, self.scene())
 			node = NodeWidget("<new node>")
-			clickpos = self.mapToScene(event.position().toPoint())
-			node.setPos(clickpos)
+			node.setPos(scenepos)
 			graphscene.addNode(node)
+			node.addInlet(InletWidget("in"))
+			node.addOutlet(OutletWidget("out"))
 
-			return super().mouseDoubleClickEvent(event)
-
-
+		def deleteSelectedNodes(self):
+			for node in (item for item in self.scene().selectedItems() if isinstance(item, NodeWidget)):
+				node.destroy()
 
 
 	from pylive import livescript
 	import sys
 	app = QApplication(sys.argv)
+
+	# setup main window
 	window = QWidget()
 	mainLayout = QVBoxLayout()
 	mainLayout.setContentsMargins(0,0,0,0)
@@ -734,18 +777,18 @@ if __name__ == "__main__":
 	graphview = GraphView()
 	mainLayout.addWidget(graphview)
 
-	graphscene = GraphScene()
+	# create graph scene
+	graphscene = DAGScene()
 	graphscene.setSceneRect(QRectF(-400, -400, 800, 800))
 	graphview.setScene(graphscene)
 
-	# Read
+	# Create nodes
 	read_text_node = NodeWidget("Read Text")
 	outlet = OutletWidget("text out")
 	read_text_node.addOutlet(outlet)
 	graphscene.addNode(read_text_node)
 	read_text_node.moveBy(-70, -70)
 
-	# Convert
 	convert_node = NodeWidget("Markdown2Html")
 	inlet  =InletWidget("Markdown in")
 	convert_node.addInlet(inlet)
@@ -753,7 +796,6 @@ if __name__ == "__main__":
 	graphscene.addNode(convert_node)
 	convert_node.moveBy(0, 0)
 
-	# Write
 	write_text_node = NodeWidget("Write Text")
 	write_text_node.addInlet(InletWidget("text in"))
 	graphscene.addNode(write_text_node)
@@ -763,7 +805,10 @@ if __name__ == "__main__":
 	edge1 = EdgeWidget(outlet, inlet)
 	graphscene.addEdge(edge1)
 
-	
-	# scene.addItem(QGraphicsRectItem(0,0,100,100))
+	# set nodes orientation
+	for node in (item for item in graphscene.items() if isinstance(item, NodeWidget)):
+		node.setOrientation(Qt.Orientation.Vertical)
+
+	# show window
 	window.show()
 	sys.exit(app.exec())

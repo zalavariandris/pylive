@@ -68,15 +68,10 @@ class CompleterTextEdit(QPlainTextEdit):
 		text_cursor = self.textCursor()
 		# # Get word under cursor
 		# # when using a simple QCompleter it needs a word instead of the whole text
-		# text_cursor.select(QTextCursor.SelectionType.WordUnderCursor)
-		# word_under_cursor = text_cursor.selection().toPlainText()
+		text_cursor.select(QTextCursor.SelectionType.WordUnderCursor)
+		word_under_cursor = text_cursor.selection().toPlainText()
 
-		# Get text until position
-		# when using a code completion it actually needs the cursor offset. So this is too much.
-		text_cursor.setPosition(0, QTextCursor.MoveMode.KeepAnchor)
-		text_until_position = text_cursor.selection().toPlainText()
-
-		self.completer.setCompletionPrefix(text_until_position)
+		self.completer.setCompletionPrefix(word_under_cursor)
 
 	@Slot()
 	def toggleCompleterVisibility(self):
@@ -138,7 +133,7 @@ class CompleterTextEdit(QPlainTextEdit):
 if __name__ == "__main__":
 	import sys
 	from textwrap import dedent
-
+	from pylive.logwindow import LogWindow
 	app = QApplication(sys.argv)
 	script_edit = CompleterTextEdit()
 
@@ -149,11 +144,16 @@ if __name__ == "__main__":
 		x = 42
 		return x
 	""")
-
-	with open("../../test_script.py") as file:
-		script = file.read()
 		
 	script_edit.setPlainText(script)
+
 	# show app
-	script_edit.show()
+	window = QWidget()
+	window.setWindowTitle("RopeCompleter")
+	layout = QVBoxLayout()
+	layout.addWidget(script_edit)
+	logwindow = LogWindow()
+	layout.addWidget(logwindow)
+	window.setLayout(layout)
+	window.show()
 	sys.exit(app.exec())

@@ -39,8 +39,22 @@ class ScriptEdit(QPlainTextEdit):
 
 		# setup linenumber area
 		self.lineNumberArea = LineNumberArea(self)
-		self.blockCountChanged.connect(self.updateLineNumberArea)
-		self.updateRequest.connect(self.updateLineNumberArea)
+		def onBlockCountChanged(newBlockCount:int):
+			self.updateLineNumberAreaWidth(newBlockCount)
+
+		self.blockCountChanged.connect(onBlockCountChanged)
+
+		def onUpdateRequest(rect:QRect, dy:int):
+			if dy:
+				self.lineNumberArea.scroll(0, dy)
+			else:
+				self.lineNumberArea.update(0, rect.y(), self.lineNumberArea.width(), rect.height())
+
+			if rect.contains(self.viewport().rect()):
+				self.updateLineNumberAreaWidth(0)
+
+		self.updateRequest.connect(onUpdateRequest)
+
 		self.updateLineNumberAreaWidth(0)
 
 	def setupTextEdit(self):
@@ -339,16 +353,6 @@ class ScriptEdit(QPlainTextEdit):
 	def updateLineNumberAreaWidth(self, newBlockCount:int):
 		self.setViewportMargins(self.lineNumberAreaWidth(), 0, 0, 0)
 
-
-	@Slot(QRect, int)
-	def updateLineNumberArea(self, rect:QRect, dy:int):
-		if dy:
-			self.lineNumberArea.scroll(0, dy)
-		else:
-			self.lineNumberArea.update(0, rect.y(), self.lineNumberArea.width(), rect.height())
-
-		if rect.contains(self.viewport().rect()):
-			self.updateLineNumberAreaWidth(0)
 
 	def resizeEvent(self, e: QResizeEvent) -> None:
 		super().resizeEvent(e)
