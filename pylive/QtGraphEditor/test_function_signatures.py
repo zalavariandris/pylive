@@ -5,12 +5,6 @@ def sample_function(a: int, b: str, c: float = 5.0, props:List=[]) -> bool:
 
 
 
-
-# Print argument details
-print("Arguments:")
-for param in sig.parameters.values():
-    print(f"- Name: {param.name}, Default: {param.default}, Annotation: {param.annotation}")
-
 def format_type(annotation):
 	"""Helper function to format type annotations as readable strings."""
 	if hasattr(annotation, '__name__'):  # For built-in types like int, float
@@ -57,6 +51,10 @@ def format_signature(fn):
 	return text
 	
 
-from pylive import livescript
-livescript.display(format_signature(sample_function))
-livescript.display(format_signature(print))
+import unittest
+class TestBuiltIns(unittest.TestCase):
+	def test_print_function(self):
+		pass
+
+class TestSimplefunctions(unittest.TestCase):
+	...

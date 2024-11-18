@@ -11,6 +11,7 @@ from pylive.QtGraphEditor.graphview_databased import (
 
 from pylive.QtScriptEditor.ScriptEdit import ScriptEdit
 from pylive.logwindow import LogWindow
+from pylive.QtGraphEditor.option_dialog import OptionDialog
 
 from typing import *
 from PySide6.QtCore import *
@@ -20,39 +21,34 @@ from PySide6.QtWidgets import *
 from datetime import datetime
 import inspect
 
+from pylive.QtScriptEditor.components.PygmentsSyntaxHighlighter import PygmentsSyntaxHighlighter
+
+class Read:
+	pass
+
+class Write:
+	pass
+
+
 from typing import *
 def sample_function(a: int, b: str, c: float = 5.0, props:List=[]) -> bool:
 	return True
 
-class ExpressionNodeItem(NodeGraphicsItem):
-		def __init__(self, parent_graph: "GraphView"):
-			# model reference
-			# self.persistent_node_index:Optional[NodeRef] = None
-			super().__init__(parent_graph)
 
-			# widgets
-			self.expressioneditor = EditableTextItem(self)
-			self.expressioneditor.setPos(0,0)
-			self.expressioneditor.setTextWidth(self.rect.width()-10)
+class ExpressionNodeItem(StandardNodeItem):
+	def __init__(self, parent_graph: "GraphView"):
+		# model reference
+		# self.persistent_node_index:Optional[NodeRef] = None
+		super().__init__(parent_graph)
 
-			self.outputlabel = QGraphicsTextItem(self)
-			self.outputlabel.setPos(0,30)
-			# self.outputlabel.setTextWidth(self.rect.width()*2)
-			self.outputlabel.setPlainText("outputlabel")
+		# widgets
+		self.expressioneditor = EditableTextItem(self)
+		self.highlighter = PygmentsSyntaxHighlighter(self.expressioneditor.document())
+		self.expressioneditor.setPos(0,0)
+		self.expressioneditor.setTextWidth(self.rect.width()-10)
 
-		@override
-		def mouseDoubleClickEvent(self, event: QGraphicsSceneMouseEvent):
-			# Enable editing subitems on double-click
-			"""parent node must manually cal the double click event,
-			because an item nor slectable nor movable will not receive press events"""
-
-			# Check if double-click is within the text item’s bounding box
-			if self.expressioneditor.contains(self.mapFromScene(event.scenePos())):
-				# Forward the event to nameedit if clicked inside it
-				self.expressioneditor.mouseDoubleClickEvent(event)
-			else:
-				print("NodeItem->mouseDoubleClickEvent")
-				super().mouseDoubleClickEvent(event)
+		self.outputlabel = QGraphicsTextItem(self)
+		self.outputlabel.setPos(0,30)
 
 class SearchDialog(QDialog):
 	def __init__(self, options, parent=None):
@@ -174,87 +170,27 @@ class SearchDialog(QDialog):
 		return None
 
 
+	@override
+	def mouseDoubleClickEvent(self, event: QGraphicsSceneMouseEvent):
+		# Enable editing subitems on double-click
+		"""parent node must manually cal the double click event,
+		because an item nor slectable nor movable will not receive press events"""
 
-class OptionDialog(QDialog):
-	def __init__(self, parent=None):
-		super().__init__(parent)
-		self.setWindowTitle("Choose an Option")
-		self.setModal(True)  # Set dialog to be modal
+		# Check if double-click is within the text item’s bounding box
+		if self.expressioneditor.contains(self.mapFromScene(event.scenePos())):
+			# Forward the event to nameedit if clicked inside it
+			self.expressioneditor.mouseDoubleClickEvent(event)
+		else:
+			print("NodeItem->mouseDoubleClickEvent")
+			super().mouseDoubleClickEvent(event)
 
-		# Create layout
-		layout = QVBoxLayout()
-
-		# Instruction label
-		label = QLabel("Please choose one of the following options:")
-		layout.addWidget(label)
-
-		options = [
-			"print", "Path.read_text", "Path.write_text", "sample_function"
-		]
-
-		# Button group for options
-		self.button_group = QButtonGroup(self)
-		for option in options:
-			radio_button = QRadioButton(option)
-			self.button_group.addButton(radio_button)
-			layout.addWidget(radio_button)
-
-		# OK and Cancel buttons
-		button_layout = QHBoxLayout()
-		ok_button = QPushButton("OK")
-		cancel_button = QPushButton("Cancel")
-		button_layout.addWidget(ok_button)
-		button_layout.addWidget(cancel_button)
-
-		# Connect buttons
-		ok_button.clicked.connect(self.accept)
-		cancel_button.clicked.connect(self.reject)
-
-		self.nodelist_model = QStringListModel(options)
-		self.selectionmodel = QItemSelectionModel(self.nodelist_model)
-
-		self.filtered_model = QSortFilterProxyModel(self)
-		self.filtered_model.setSourceModel(self.nodelist_model)
-
-		self.lineedit = QLineEdit()
-		self.listview = QListView()
-		self.listview.setModel(self.nodelist_model)
-		self.listview.setSelectionModel(self.selectionmodel)
-		self.lineedit.textChanged.connect(self.filter_items)
-
-		layout.addWidget(self.lineedit)
-		layout.addWidget(self.listview)
-		layout.addLayout(button_layout)
-
-		self.setLayout(layout)
-
-	def filter_items(self):
-		# Get the current text from the lineedit
-		filter_text = self.lineedit.text()
-		
-		# Apply the filter on the source model
-		self.filtered_model.setFilterFixedString(filter_text)
-
-	def get_selected_option(self):
-		"""Return the selected option text or None if no option is selected."""
-		if self.selectionmodel.hasSelection():
-			return self.selectionmodel.currentIndex().data()
-		return None
-
-	@staticmethod
-	def getOption(parent=None):
-		"""Static method to open dialog and return selected option."""
-		dialog = OptionDialog(parent)
-		result = dialog.exec()
-		return dialog.get_selected_option() if result == QDialog.DialogCode.Accepted else None
-
-class ExpressionsGraphView(GraphView):
+class ExpressionsGraphView(StandardGraphView):
 	@override
 	def nodeFactory(self, node:NodeRef)->QGraphicsItem:
 		node_item = ExpressionNodeItem(parent_graph=self)
 		
 		node_item.expressioneditor.document().contentsChanged.connect(lambda: 
-			self.onNodeEditorChange(node, node_item, ['expression'])
+			self.onNodeEditorChange(node, node_item, ['name'])
 		)
 
 		node_item.positionChanged.connect(lambda: 
@@ -271,53 +207,30 @@ class ExpressionsGraphView(GraphView):
 			return
 
 		graph = self.model()
-		if graph and not self.itemAt(event.position().toPoint()):
-			clickpos = self.mapToScene(event.position().toPoint())
-			node = graph.addNode(expression=selected_expression, posx=int(clickpos.x()), posy=int(clickpos.y()))
-			expression = graph.getNodeProperty(node, 'expression')
-			try:
-				result = eval(expression)
-				params = list(inspect.signature(result).parameters.values())
-
-				# update output label
-				content = f"{result}"
-				graph.setNodeProperty(node, output=str(result))
-
-				# setup inlets
-				for param in params:
-					graph.addInlet(node, name=param.name)
-
-				# setup outlets
-				graph.addOutlet(node, name="out")
-
-			except Exception as err:
-				graph.setNodeProperty(node, output=f"Error: {err}")
-				print(f"Error in node: {node}: {err}")
-
-
-			# graph.addInlet(node, name="in")
-			# graph.addOutlet(node, name="out")
-		else:
+		if not graph or self.itemAt(event.position().toPoint()):
 			return super().mouseDoubleClickEvent(event)
 
+		clickpos = self.mapToScene(event.position().toPoint())
+		node = graph.addNode(name="operator", posx=int(clickpos.x()), posy=int(clickpos.y()))
+		graph.addInlet(node, name="in")
+		graph.addOutlet(node, name="out")
+			
 	@override
 	def onNodePropertyChange(self, node:NodeRef, node_item:QGraphicsItem, properties:List[str]|None):
 		graph = self.model()
-		node_item = cast(ExpressionNodeItem, node_item)
+		node_item = cast(StandardNodeItem, node_item)
 		if not graph:
 			return
 
-		if not properties or 'expression' in properties:
-			new_expression = node.graph().getNodeProperty(node, 'expression')
+		if not properties or 'name' in properties:
+			new_expression = node.graph().getNodeProperty(node, 'name')
 			old_expression = node_item.expressioneditor.toPlainText()
 			if new_expression != old_expression:
 				node_item.expressioneditor.setPlainText(new_expression)
 
 		if not properties or 'output' in properties:
-			new_output = node.graph().getNodeProperty(node, 'output')
-			old_output = node_item.outputlabel.toPlainText()
-			if new_output != old_output:
-				node_item.outputlabel.setPlainText(f"{new_output}")
+			new_expression = node.graph().getNodeProperty(node, 'output')
+			node_item.outputlabel.setPlainText(new_expression)
 
 		if not properties or 'posx' in properties or 'posy' in properties:
 			x = int(node.graph().getNodeProperty(node, 'posx'))
@@ -327,12 +240,12 @@ class ExpressionsGraphView(GraphView):
 	@override
 	def onNodeEditorChange(self, node:NodeRef, node_item:QGraphicsItem, properties:List[str]|None):
 		graph = self.model()
-		node_item = cast(ExpressionNodeItem, self.index_to_item_map[node])
+		node_item = cast(StandardNodeItem, self.index_to_item_map[node])
 		if not graph:
 			return
 
-		if not properties or "expression" in properties:
-			graph.setNodeProperty(node, expression=node_item.expressioneditor.toPlainText())
+		if not properties or "name" in properties:
+			graph.setNodeProperty(node, name=node_item.expressioneditor.toPlainText())
 
 		if not properties or 'posx' in properties or 'posy' in properties:
 			graph.blockSignals(True)
@@ -356,7 +269,7 @@ class MainWindow(QWidget):
 		# setup models
 		self.graph = GraphModel()
 		self.graph.nodesAdded.connect(self.onModelChanged)
-		# self.graph.nodesPropertyChanged.connect(self.onNodesPopertyChanged)
+		self.graph.nodesPropertyChanged.connect(self.updateNodeBasedOnExpression)
 		self.graph.nodesPropertyChanged.connect(self.onModelChanged)
 		self.graph.nodesRemoved.connect(self.onModelChanged)
 		self.graph.edgesAdded.connect(self.onModelChanged)
@@ -385,6 +298,8 @@ class MainWindow(QWidget):
 		self.definition_list_view.setModel(self.definitions)
 		self.graphview = ExpressionsGraphView()
 		self.graphview.setModel(self.graph)
+		# self.graphview.installEventFilter(self)
+
 		self.exportscript_view = QPlainTextEdit()
 		doc = self.exportscript_view.document()
 		font = doc.defaultFont();
@@ -421,66 +336,76 @@ class MainWindow(QWidget):
 		self.resize(width, height)
 		self.move( (screen.availableSize().width()-width)//2, (screen.availableSize().height()-height)//2-height//16)
 
-	# def patchInlets(self, node, function):
-	# 	raise NotImplementedError()
-	# 	# patch inlets
-	# 	params = list(inspect.signature(result).parameters.values())
-	# 	inlets = list(self.graph.getNodeInlets(node))
-	# 	# if param_names != inlet_names:
-	# 	# 	self.graph.removeInlets()
-	# 	print(f"patch node inlets: {inlets}=>{params}")
 
-	# 	change = {
-	# 		'added':[],
-	# 		'removed':[],
-	# 		'changed': []
-	# 	}
-	# 	for param, inlet in reversed(list(zip_longest(params, inlets, fillvalue=None))):
-	# 		if param is None and inlet is not None:
-	# 			change['removed'].append(inlet)
-	# 		elif inlet is None and param is not None:
-	# 			change['added'].append(param.name)
-	# 		elif param is not None and inlet is not None and self.graph.getInletProperty(inlet, 'name') != param.name:
-	# 			change['changed'].append((inlet, param.name))
+	# def eventFilter(self, watched, event:QEvent)->bool:
+	# 	IsGraphView = watched == self.graphview
+	# 	IsDoubleClick = event.type() == 4
+	# 	if IsGraphView:
+	# 		print("capture event")
+	# 	return False
 
-	# 		print(" +", change['added'])
-	# 		print(" -", change['removed'])
-	# 		print("!=", change['changed'])
+	def updateNodeBasedOnExpression(self, nodes:List[NodeRef], properties:List[str]|None=None):
+		graph = self.graph
+		if not graph:
+			return
 
+		for node in nodes:
+			if not properties or 'name' in properties:
+				new_expression = node.graph().getNodeProperty(node, 'name')
+				print("name changed")
+				try:
+					result = eval(new_expression)
+				except Exception as e:
+					result = e
 
-	# def onNodesPopertyChanged(self, nodes:List[NodeRef], properties:List[str]):
-	# 	...
-	# 	from itertools import zip_longest
-	# 	sentinel = object()
+				if isinstance(result, Exception):
+					#update_inlets
+					self.graph.removeInlets( list(self.graph.getNodeInlets(node) ))
 
-	# 	for node in nodes:
-	# 		if not properties or 'expression' in properties:
-	# 			expression = self.graph.getNodeProperty(node, 'expression')
-	# 			print("expression changed", expression)
+					# update output
+					import traceback
+					tb = traceback.TracebackException.from_exception(result)
+					graph.setNodeProperty(node, output=''.join(tb.format()))
+				else:
+					#update_inlets
+					self.graph.removeInlets( list(self.graph.getNodeInlets(node) ))
+					if callable(result):
+						params = list(inspect.signature(result).parameters.values())
+						for param in params:
+							self.graph.addInlet(node, name=param.name)
+
+					# update output
+					content = str(result)
+					if callable(result):
+						params = list(inspect.signature(result).parameters.values())
+						for param in params:
+							content += f"\n{param.name}, {param.kind}"
+					
+					graph.setNodeProperty(node, output=content)
+
 				
-	# 			try:
-	# 				result = eval(expression)
-	# 				content = f"{result}"
-	# 				for param in inspect.signature(result).parameters.values():
-	# 					content+=f"\n {param.name}:{param.annotation}={param.default}"
 
-	# 				self.graph.setNodeProperty(node, output=str(result)+f"\n{content}")
-	# 				print(f"{result} = {expression}")
-
-	# 			except Exception as err:
-	# 				self.graph.setNodeProperty(node, output=f"Error: {err}")
-	# 				print(f"Error in node: {node}: {err}")
 			
 	def onModelChanged(self):
 		self.compose()
 		self.execute()
+		...
 
 	def compose(self):
 		lines:List[str] = []
 		for node in reversed(list(self.graph.dfs())):
-			name = str(node._index)
-			expression = self.graph.getNodeProperty(node, 'expression')
-			lines.append( f"{name} = {expression}" )
+			node_id = str(node._index)
+			expression = self.graph.getNodeProperty(node, 'name')
+			arguments = dict()
+			for inlet in self.graph.getNodeInlets(node):
+				arg_name = self.graph.getInletProperty(inlet, 'name')
+				edges = list(self.graph.getInletEdges(inlet))
+				if edges:
+					source_node = self.graph.getEdgeSource(edges[-1])
+					arguments[arg_name] = source_node._index
+
+
+			lines.append( f"{node_id} = {expression}({", ".join(f"{key}={value}" for key, value in arguments.items())})" )
 		script = "\n".join(lines)
 		self.exportscript_view.setPlainText(script)
 

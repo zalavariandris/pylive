@@ -3,44 +3,45 @@ from PySide6.QtCore import *
 from PySide6.QtGui import *
 import math
 
-
 class RectItem(QGraphicsRectItem):
     def __init__(self, x, y, w, h, view):
         super().__init__(x, y, w, h)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
-
         self.setBrush(Qt.GlobalColor.green)
-
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges)
         self._view = view
-
-
-    # def itemChange(self, change, value):
-    #     if change == QGraphicsItem.GraphicsItemChange.ItemPositionHasChanged:
-    #         print("pos changed", self._view.fitItems())
-    #     else:
-    #         print("item change")
-    #         return super().itemChange(change, value)
 
 class PanAndZoomGraphicsView(QGraphicsView):
     def __init__(self, parent=None):
         super().__init__(parent)
-
+        
+        # Optimize viewport updates
+        self.setViewportUpdateMode(QGraphicsView.ViewportUpdateMode.MinimalViewportUpdate)
+        self.setOptimizationFlags(
+            QGraphicsView.OptimizationFlag.DontAdjustForAntialiasing
+        )
+        
+        # Setup view properties
         self.setInteractive(True)
-        self.setDragMode(QGraphicsView.DragMode.RubberBandDrag) # optional, default mouse behaviour
-        self.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
-        self.setRenderHint(QPainter.RenderHint.Antialiasing, True)
-        self.setTransformationAnchor(QGraphicsView.ViewportAnchor.NoAnchor) # important for panning and zooming
+        self.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
+        self.setRenderHint(QPainter.RenderHint.Antialiasing)
+        self.setTransformationAnchor(QGraphicsView.ViewportAnchor.NoAnchor)
         self.setCacheMode(QGraphicsView.CacheModeFlag.CacheNone)
-        self.setViewportUpdateMode(QGraphicsView.ViewportUpdateMode.FullViewportUpdate)
-
-        max_size = 32767
-        self.setSceneRect(-max_size, -max_size, max_size * 2, max_size * 2) # important for infinite canvas
-
+        
+        # Set scene rect
+        max_size = 10000
+        self.setSceneRect(-max_size, -max_size, max_size * 2, max_size * 2)
+        
         self.mouseMode = "DEFAULT"
         self.mousePressPos = None
         self._zoom_with_mousewheel = True
+        
+        # Update timer for smooth panning
+        self._update_timer = QTimer(self)
+        self._update_timer.setSingleShot(True)
+        self._update_timer.setInterval(16)
+        self._update_timer.timeout.connect(self.viewport().update)
 
     def setZoomWithMouswheel(self, value):
         self._zoom_with_mousewheel = value
@@ -51,155 +52,139 @@ class PanAndZoomGraphicsView(QGraphicsView):
     def getScale(self):
         return self.transform().m11()
 
-    def wheelEvent(self, event:QWheelEvent):
-        ModifierDown = event.modifiers() == Qt.KeyboardModifier.MetaModifier or event.modifiers() == Qt.KeyboardModifier.ControlModifier
-        if ModifierDown or self.zoomWithMouswheel()==True:
+    def wheelEvent(self, event: QWheelEvent):
+        ModifierDown = event.modifiers() in (Qt.KeyboardModifier.MetaModifier, Qt.KeyboardModifier.ControlModifier)
+        if ModifierDown or self.zoomWithMouswheel():
             delta = event.angleDelta()
             if delta.y() == 0:
                 event.ignore()
                 return
 
-            d = delta.y() / abs(delta.y())
-            factor = math.pow(1.3, delta.y()/100)
-            if self.getScale() * factor < 10 and self.getScale() * factor > 0.3:
-                oldPos = self.mapToScene(event.position().toPoint())
+            factor = math.pow(1.3, delta.y() / 120.0)
+            if 0.3 <= self.getScale() * factor <= 10:
+                pos = event.position()
+                oldPos = self.mapToScene(pos.toPoint())
                 self.scale(factor, factor)
-                newPos = self.mapToScene(event.position().toPoint())
-                delta = newPos-oldPos
+                newPos = self.mapToScene(pos.toPoint())
+                delta = newPos - oldPos
                 self.translate(delta.x(), delta.y())
         else:
-            return super().wheelEvent(event)
+            super().wheelEvent(event)
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
-        IsMiddleButton =      event.buttons() == Qt.MouseButton.MiddleButton
-        IsLeftButtonWithAlt = event.modifiers() == Qt.KeyboardModifier.AltModifier and event.buttons() == Qt.MouseButton.LeftButton
+        IsMiddleButton = event.buttons() == Qt.MouseButton.MiddleButton
+        IsLeftButtonWithAlt = (event.modifiers() == Qt.KeyboardModifier.AltModifier and 
+                             event.buttons() == Qt.MouseButton.LeftButton)
+        
         if IsMiddleButton or IsLeftButtonWithAlt:
             self.mouseMode = "PAN"
             self.mousePressTransform = self.transform()
             self.mousePressPos = event.position()
+            self.viewport().setMouseTracking(True)
         else:
-            return super().mousePressEvent(event)
+            super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
         if self.mouseMode == "PAN" and self.mousePressPos is not None:
-            delta = self.mapToScene(event.position().toPoint()) - self.mapToScene(self.mousePressPos.toPoint())
-
+            delta = (self.mapToScene(event.position().toPoint()) - 
+                    self.mapToScene(self.mousePressPos.toPoint()))
+            
             transform = QTransform(self.mousePressTransform).translate(delta.x(), delta.y())
             self.setTransform(transform)
+            self._update_timer.start()
         else:
-            return super().mouseMoveEvent(event)
+            super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
         if self.mouseMode == "PAN":
             self.mouseMode = None
+            self.viewport().setMouseTracking(False)
         else:
-            return super().mouseReleaseEvent(event)
+            super().mouseReleaseEvent(event)
 
-    def drawBackground(self, painter: QPainter, rect:QRectF | QRect):
-        super().drawBackground(painter, rect);
-
-        def drawGrid(gridStep:int):
-            windowRect:QRect = self.rect()
-            tl:QPointF = self.mapToScene(windowRect.topLeft())
-            br:QPointF = self.mapToScene(windowRect.bottomRight())
-
-            left = math.floor(tl.x() / gridStep - 0.5)
-            right = math.floor(br.x() / gridStep + 1.0)
-            bottom = math.floor(tl.y() / gridStep - 0.5)
-            top = math.floor(br.y() / gridStep + 1.0)
-
-            # vertical lines
-            for xi in range(left, right):
-                line = QLineF(xi * gridStep, bottom * gridStep, xi * gridStep, top * gridStep);
-                painter.drawLine(line)
-
-            # horizontal lines
-            for yi in range(bottom, top):
-                line = QLineF(left * gridStep, yi * gridStep, right * gridStep, yi * gridStep);
-                painter.drawLine(line)
-
-        def drawDots(gridStep:int, radius=2):
-            windowRect:QRect = self.rect()
-            tl:QPointF = self.mapToScene(windowRect.topLeft())
-            br:QPointF = self.mapToScene(windowRect.bottomRight())
-
-            left = math.floor(tl.x() / gridStep - 0.5)
-            right = math.floor(br.x() / gridStep + 1.0)
-            bottom = math.floor(tl.y() / gridStep - 0.5)
-            top = math.floor(br.y() / gridStep + 1.0)
-
-            for xi in range(left, right):
-                for yi in range(bottom, top):
-                    painter.drawEllipse(QPoint(xi*gridStep, yi*gridStep), radius,radius)
-
-        fineGridColor = self.palette().text().color()
-        fineGridColor.setAlpha(5)
-        pFine = QPen(fineGridColor, 1.0)
-
-        coarseGridColor = self.palette().text().color()
-        coarseGridColor.setAlpha(10)
-        pCoarse = QPen(coarseGridColor, 1.0)
-
-        # painter.setPen(pFine)
-        # drawGrid(10)
-        # painter.setPen(pCoarse)
-        # drawGrid(100)
+    def drawBackground(self, painter: QPainter, rect: QRectF):
+        """Draw background grid directly without caching."""
+        super().drawBackground(painter, rect)
+        
+        # Save painter state
+        painter.save()
+        
+        # Get visible scene rect in scene coordinates
+        visible_rect = self.mapToScene(self.viewport().rect()).boundingRect()
+        
+        # Calculate grid size based on scale
+        scale = self.getScale()
+        if scale > 2:
+            grid_size = 20
+            dot_radius = 1
+            alpha = 15
+        elif scale > 0.5:
+            grid_size = 40
+            dot_radius = 2
+            alpha = 12
+        else:
+            grid_size = 80
+            dot_radius = 2
+            alpha = 10
+            
+        # Set up painter
+        color = self.palette().text().color()
+        color.setAlpha(alpha)
         painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(coarseGridColor)
-        drawDots(20, radius=1)
+        painter.setBrush(color)
+        
+        # Calculate grid bounds
+        left = math.floor(visible_rect.left() / grid_size)
+        right = math.ceil(visible_rect.right() / grid_size)
+        top = math.floor(visible_rect.top() / grid_size)
+        bottom = math.ceil(visible_rect.bottom() / grid_size)
+        
+        # Draw dots
+        for x in range(left, right + 1):
+            for y in range(top, bottom + 1):
+                point = QPointF(x * grid_size, y * grid_size)
+                # Only draw if point is in visible rect (optimization)
+                if visible_rect.contains(point):
+                    painter.drawEllipse(point, dot_radius, dot_radius)
+        
+        # Restore painter state
+        painter.restore()
 
     def fitItems(self):
-        if self.scene() and self.scene().items():
-            self.blockSignals(True)
-            brect = QRectF(0,0,1,1)
-            for item in self.scene().items():
-                bbox = item.boundingRect()
-                brect = brect.united(bbox)
-            boundingRect = self.scene().itemsBoundingRect()
-            self.centerOn(boundingRect.center())
-            rect_in_viewport_coords = self.viewport().rect()   # This gets the rectangle in viewport coordinates.
-            rect_in_scene_coords = self.mapToScene(rect_in_viewport_coords).boundingRect()
-            zoom = rect_in_scene_coords.width() / boundingRect.width()
-            # self.scale(zoom, zoom)
-            # print(zoom)
-            # print(boundingRect)
-            # self.view
-            # print("brect:", brect)
-            # print("fit items")
-            # self.fitInView(brect, Qt.AspectRatioMode.KeepAspectRatio)
-            # self.blockSignals(False)
-        else:
-            self.centerOn(0,0)
+        if not self.scene() or not self.scene().items():
+            self.centerOn(0, 0)
+            return
+            
+        brect = self.scene().itemsBoundingRect()
+        self.centerOn(brect.center())
+        
+        viewport_rect = self.viewport().rect()
+        scene_rect = self.mapToScene(viewport_rect).boundingRect()
+        zoom = min(scene_rect.width() / brect.width(),
+                  scene_rect.height() / brect.height())
+        
+        if 0.3 <= zoom <= 10:
+            self.scale(zoom, zoom)
 
     def centerItems(self):
         if self.scene():
-            boundingRect = self.scene().itemsBoundingRect()
-            self.centerOn(boundingRect.center())
+            self.centerOn(self.scene().itemsBoundingRect().center())
 
     def showEvent(self, event: QShowEvent) -> None:
         self.fitItems()
-        return super().showEvent(event)
-
-        
-
+        super().showEvent(event)
 
 if __name__ == "__main__":
     import sys
     app = QApplication(sys.argv)
     window = PanAndZoomGraphicsView()
     scene = QGraphicsScene()
-    # scene.setSceneRect(QRect(-9999//2,-9999//2, 9999, 9999))
-
     window.setScene(scene)
-    # max_size = 32767
-    # window.setSceneRect(-max_size, -max_size, max_size * 2, max_size * 2)
     
-    rect = RectItem(0,0,50,50, window)
-    window.scene().addItem(rect)
-    rect = RectItem(100,0,50,50, window)
-    window.scene().addItem(rect)
-    rect = RectItem(0,100,50,50, window)
-    window.scene().addItem(rect)
+    # Add test items
+    for x, y in [(0, 0), (100, 0), (0, 100)]:
+        rect = RectItem(x, y, 50, 50, window)
+        scene.addItem(rect)
+    
     window.show()
-    # window.fitInView(scene.sceneRect())
     sys.exit(app.exec())
