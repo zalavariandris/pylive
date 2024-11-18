@@ -3,7 +3,11 @@
     "C:/dev/src/pylive/pylive/declerative_widgets.py",
     "C:/dev/src/pylive/expreiments/inspect_available_functions.py",
     "C:/dev/src/pylive/expreiments/inspect_functions_experiment.py",
-    "C:/dev/src/pylive/expreiments/layout_with_qgraphics_items.py"
+    "C:/dev/src/pylive/expreiments/live_code_minitest.py",
+    "C:/dev/src/pylive/pylive/examples/visual_coding.py",
+    "C:/dev/src/pylive/pylive/examples/livescript.py",
+    "C:/dev/src/pylive/pylive/examples/live_paint_qwidget.py",
+    "C:/dev/src/pylive/pylive/logwindow.py"
   ],
   "live": true
 }
