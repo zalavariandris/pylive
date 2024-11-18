@@ -14,12 +14,31 @@ class CaptureStdOut(QObject):
 		sys.stdout = self
 
 	def write(self, message):
-		self.stdout.write(message)
+		# self.stdout.write(message)
 		self.messaged.emit(message)
-		self.stdout.flush()  # Ensure the output is written immediately
+		# self.stdout.flush()  # Ensure the output is written immediately
 		
 	def flush(self):
+		...
 		self.stdout.flush()  # Ensure the output is written immediately
+
+class CaptureStdErr(QObject):
+	messaged = Signal(str)
+	def __init__(self, parent: Optional[QObject]=None) -> None:
+		super().__init__(parent)
+		self.stderr = sys.stderr
+		sys.stderr = self
+
+	def write(self, message):
+		# self.stderr.write(message)
+		self.messaged.emit(message)
+		# self.stderr.flush()  # Ensure the output is written immediately
+		
+	def flush(self):
+		...
+		# self.stderr.flush()  # Ensure the output is written immediately
+
+
 
 class LogWindow(QPlainTextEdit):
 	def __init__(self, parent=None):
@@ -30,6 +49,10 @@ class LogWindow(QPlainTextEdit):
 		# Redirect stdout to both the original stdout and the in-memory buffer
 		self.captured_output = CaptureStdOut(self)
 		self.captured_output.messaged.connect(self.appendMessage)
+		# self.captured_errors = CaptureStdErr(self)
+		# self.captured_errors.messaged.connect(self.appendMessage)
+		self.setReadOnly(True)
+
 
 	def contextMenuEvent(self, e:QContextMenuEvent):
 		menu = QMenu() # self.createStandardContextMenu()

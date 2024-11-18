@@ -10,7 +10,7 @@ from pylive.QtScriptEditor.components.PygmentsSyntaxHighlighter import PygmentsS
 from pylive.QtScriptEditor.components.KeywordsCompleter import KeywordsCompleter
 from pylive.QtScriptEditor.components.RopeCompleter import RopeCompleter
 import rope.base.project
-
+from pylive.QtScriptEditor.components.number_editor import NumberEditor
 
 
 class LineNumberArea(QWidget):
@@ -35,6 +35,7 @@ class ScriptEdit(QPlainTextEdit):
 		self.setupSyntaxHighlighting()
 		self.setupAutocomplete()
 		self.setupInlineNotifications()
+		self.number_editor = NumberEditor(self)
 
 		# setup linenumber area
 		self.lineNumberArea = LineNumberArea(self)

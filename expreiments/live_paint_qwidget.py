@@ -20,7 +20,7 @@ class MyWidget(QWidget):
 
 		# Set up the painter (e.g., pen and brush)
 		painter.setPen(QPen(QColor("blue"), 3, Qt.SolidLine))
-		painter.setBrush(QColor(200, 200, 255))
+		painter.setBrush(QColor(200, 100, 255))
 
 		# Draw a rectangle
 		painter.drawRect(50, 50, 300, 200)

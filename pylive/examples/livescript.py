@@ -115,7 +115,7 @@ class LiveScript(QWidget):
 		self.preview_widget.contentChanged.connect(lambda: self.preview_widget.show())
 
 	def updateWindowTitle(self):
-		self.setWindowTitle(f"{Path(self.filepath).name if self.filepath else "new file"} {'*' if self.script_edit.document().isModified() else ''} - LiveScript")
+		self.setWindowTitle(f"{Path(self.filepath).name if self.filepath else "untitled"} {'*' if self.script_edit.document().isModified() else ''} - LiveScript")
 
 	def createContext(self):
 		return {
@@ -124,7 +124,10 @@ class LiveScript(QWidget):
 		}
 
 	def evaluate(self):
-		source = self.script_edit.toPlainText()
+		# if hasattr(self, '_sourcecode') and self._sourcecode == self.script_edit.toPlainText().strip():
+		# 	return
+
+		self._sourcecode = self.script_edit.toPlainText()
 		self.preview_widget.clear()
 		self.log_window.clear()
 		global_vars = self.createContext()
@@ -132,7 +135,7 @@ class LiveScript(QWidget):
 		self.preview_widget.hide()
 		try:
 			start_time = time.perf_counter()
-			compiled = compile(source, "__main__", mode="exec")
+			compiled = compile(self._sourcecode, "__main__", mode="exec")
 			exec(compiled, global_vars)
 			end_time = time.perf_counter()
 			duration_ms = (end_time - start_time) * 1000
@@ -146,7 +149,7 @@ class LiveScript(QWidget):
 			...
 
 	def on_file_change(self, path):
-		if self.script_modified_in_memory:
+		if self.script_edit.document().isModified():
 			result = self.prompt_disk_change()
 			if result == QMessageBox.StandardButton.Yes:
 				pass
@@ -252,7 +255,6 @@ class LiveScript(QWidget):
 			# prompt user if file has changed
 			msg_box = QMessageBox(self)
 			msg_box.setWindowTitle("Save changes?")
-			msg_box.setText(f"{Path(self.filepath).name if self.filepath else 'New file'} has been modified, save changes?") 
 			msg_box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel)
 			result = msg_box.exec()
 
@@ -267,6 +269,10 @@ class LiveScript(QWidget):
 		if AcceptClose:
 			if self.watcher.files():
 				self.watcher.removePaths(self.watcher.files())
+			self.filepath = None
+			self.script_edit.setPlainText("")
+			self.script_edit.document().setModified(False)
+			self.updateWindowTitle()
 
 		return AcceptClose
 
@@ -305,14 +311,10 @@ class LiveScript(QWidget):
 		# close current file
 		self.closeFile()
 
-		if not filepath and self.filepath:
+		if not filepath:
 			# if not filepath is specified open file doalog
 			choosen_filepath, filter_used = QFileDialog.getOpenFileName(self, "Open", ".py", "Python Script (*.py);;Any File (*)")
 			filepath = choosen_filepath
-		elif self.filepath:
-			filepath = self.filepath
-
-		
 
 		# open filepath
 		if not filepath:
