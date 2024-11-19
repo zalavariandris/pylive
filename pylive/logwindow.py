@@ -14,12 +14,11 @@ class CaptureStdOut(QObject):
 		sys.stdout = self
 
 	def write(self, message):
-		# self.stdout.write(message)
+		self.stdout.write(message)
 		self.messaged.emit(message)
-		# self.stdout.flush()  # Ensure the output is written immediately
+		self.stdout.flush()  # Ensure the output is written immediately
 		
 	def flush(self):
-		...
 		self.stdout.flush()  # Ensure the output is written immediately
 
 class CaptureStdErr(QObject):
@@ -30,13 +29,12 @@ class CaptureStdErr(QObject):
 		sys.stderr = self
 
 	def write(self, message):
-		# self.stderr.write(message)
+		self.stderr.write(message)
 		self.messaged.emit(message)
-		# self.stderr.flush()  # Ensure the output is written immediately
+		self.stderr.flush()  # Ensure the output is written immediately
 		
 	def flush(self):
-		...
-		# self.stderr.flush()  # Ensure the output is written immediately
+		self.stderr.flush()  # Ensure the output is written immediately
 
 
 
@@ -49,8 +47,8 @@ class LogWindow(QPlainTextEdit):
 		# Redirect stdout to both the original stdout and the in-memory buffer
 		self.captured_output = CaptureStdOut(self)
 		self.captured_output.messaged.connect(self.appendMessage)
-		# self.captured_errors = CaptureStdErr(self)
-		# self.captured_errors.messaged.connect(self.appendMessage)
+		self.captured_errors = CaptureStdErr(self)
+		self.captured_errors.messaged.connect(self.appendError)
 		self.setReadOnly(True)
 
 
@@ -58,6 +56,15 @@ class LogWindow(QPlainTextEdit):
 		menu = QMenu() # self.createStandardContextMenu()
 		menu.addAction("Clear").triggered.connect(self.clear)
 		menu.exec(e.globalPos())
+
+	def appendError(self, text:str):
+		if "\033c" in text:
+			result = text.split("\033c")[-1].strip()
+			self.insertPlainText(result)
+		else:
+			self.insertPlainText(text)
+		
+		self.verticalScrollBar().setValue(self.verticalScrollBar().maximum())
 
 	def appendMessage(self, text:str):
 		if "\033c" in text:

@@ -107,18 +107,22 @@ class NumberEditor(QObject):
 
         return super().eventFilter(obj, event)
 
-    def applyHighlight(self, cursor):
+    def applyHighlight(self, cursor:QTextCursor):
         """Highlight the current hovered word."""
+        self.textedit.blockSignals(True)
         cursor.setCharFormat(self.highlight_format)
         self.hovered_cursor = QTextCursor(cursor)
+        self.textedit.blockSignals(False)
 
     def clearHoverHighlight(self):
         """Remove the highlight from the previously hovered word."""
         if self.hovered_cursor:
+            self.textedit.blockSignals(True)
             cursor = self.hovered_cursor
             cursor.select(QTextCursor.SelectionType.WordUnderCursor)
             cursor.setCharFormat(self.default_format)
             self.hovered_cursor = None
+            self.textedit.blockSignals(False)
 
 
 if __name__ == "__main__":

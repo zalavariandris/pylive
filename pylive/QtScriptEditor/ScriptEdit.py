@@ -215,22 +215,23 @@ class ScriptEdit(QPlainTextEdit):
 			notification_label.setFont(self.font())
 			notification_label.setAlignment(Qt.AlignmentFlag.AlignBaseline)
 
-			error_palette = QPalette()
-			error_palette.setColor(QPalette.ColorRole.Window, QColor(255,0,0,180))
-			error_palette.setColor(QPalette.ColorRole.WindowText, Qt.GlobalColor.white)
+			# error_palette = QPalette()
+			# error_palette.setColor(QPalette.ColorRole.Window, QColor(200,20,20,180))
+			# error_palette.setColor(QPalette.ColorRole.WindowText, error_palette.color(QPalette.ColorRole.PlaceholderText))
 
 			notification_label.setAutoFillBackground(True)
-			notification_label.setPalette(error_palette)
-			# notification_label.setStyleSheet("""QLabel{
-			# 	padding: 0 2;
-			# 	border-radius: 3;
-			# 	background-color:rgba(200,0,0,200);
-			# 	maring: 0;
-			# 	color: white;
-			# }""")
+			# notification_label.setPalette(error_palette)
+			notification_label.setStyleSheet("""QLabel{
+				padding: 0 2;
+				border-radius: 3;
+				background-color:rgba(200,0,0,100);
+				maring: 0;
+				color: rgba(255,255,255,220);
+			}""")
+			notification_label.setWindowOpacity(0.5)
 
 			# Calculate the x position with a little padding
-			notification_x = int(rect.left() + block_text_width+5)
+			notification_x = int(rect.left() + block_text_width+5) + self.lineNumberAreaWidth() + font_metrics.horizontalAdvance(" ")
 			notification_y = int(rect.bottom() - ascent+1)
 			notification_label.move(notification_x, notification_y)  # Adjust x and y position
 			notification_label.show()
@@ -375,10 +376,14 @@ if __name__ == "__main__":
 		return x
 	"""))
 
+	def updateNotifications():
+		script_edit.clearNotifications()
+		script_edit.insertNotification(5, "new placeholder error message")
+	script_edit.textChanged.connect(updateNotifications)
+
 	# show app
 	script_edit.show()
 	script_edit.insertNotification(2, "placeholder error message")
 	script_edit.insertNotification(3, "msg 2")
-	script_edit.clearNotifications()
-	script_edit.insertNotification(5, "new placeholder error message")
+
 	sys.exit(app.exec())
