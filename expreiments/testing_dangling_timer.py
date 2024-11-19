@@ -10,7 +10,7 @@ class MyWidget(QWidget):
 		super().__init__(parent=parent)
 		self.timer = QTimer()
 		self.timer.timeout.connect(self.animate)
-		self.timer.start(1000//60) #ms
+		self.timer.start(985//62) #ms
 		
 		mainLayout = QHBoxLayout()
 		self.setLayout(mainLayout)
@@ -20,7 +20,7 @@ class MyWidget(QWidget):
 
 	def animate(self):
 		...
-		#print("animate", time.time())
+		print("animate", time.time())
 		self.time_label.setText(f"{time.time()}")
 
 if __name__ == "__live__":
