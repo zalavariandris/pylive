@@ -19,8 +19,8 @@ from pylive.unique import make_unique_id
 from pylive.logwindow import LogWindow
 
 import traceback
-
-
+import ast
+import gc
 
 from textwrap import dedent
 TEMPLATE_SCRIPT = dedent("""\
@@ -54,53 +54,6 @@ if __name__ == "__main__":
 from pylive.preview_widget import PreviewWidget
 
 
-import gc
-class GarbageCollectorWidget(QWidget):
-	def __init__(self, parent=None):
-		super().__init__(parent=parent)
-		layout = QVBoxLayout()
-		self.setLayout(layout)
-		self.object_list = QStringListModel(self)
-		listview = QListView(self)
-		listview.setModel(self.object_list)
-		layout.addWidget(listview)
-
-		gc.callbacks.append(self.on_garbage_collect)
-
-	def on_garbage_collect(self, phase,info):
-		if phase == "start":
-			...
-			# print("Collected:", info.get("collected", 0), "unreachable objects.")
-			# print("Generation:", info.get("generation", 0))
-		elif phase == "stop":
-			# generation = info.get('generation')
-			# collected = info.get('collected')
-			uncollectable = info.get('uncollectable')
-
-			self.object_list.setStringList([f"{uncollectable}"])
-
-
-	# def updateObjectList(self):
-	# 	object_names = []
-	# 	for obj in gc.get_objects():
-	# 		obj_string = f"{obj}"
-	# 		object_names.append(obj_string)
-	# 	self.object_list.setStringList(object_names)
-
-	def get_top_level_qobjects():
-		"""
-		Returns a list of all QObject instances without a parent.
-		"""
-		top_level_objects = []
-		for obj in gc.get_objects():  # Get all objects tracked by the garbage collector
-			try:
-				if isinstance(obj, QObject) and obj.parent() is None:
-					top_level_objects.append(obj)
-			except ReferenceError:
-				# Handle cases where the object is no longer valid
-				pass
-		return top_level_objects
-
 class LiveScript(QWidget):
 	def __init__(self, parent=None):
 		super().__init__(parent=parent)
@@ -110,18 +63,24 @@ class LiveScript(QWidget):
 		self.resize(1240,800)
 
 		"""setup UI"""
+		mainLayout = QVBoxLayout()
+		self.setLayout(mainLayout)
+		self.layout().setContentsMargins(0,0,0,0)
+		# layout widgets
+		self.main_splitter = QSplitter(Qt.Orientation.Horizontal, self)
+		mainLayout.addWidget(self.main_splitter)
+		self.setupStatusBar()
+		
+		
 		self.script_edit = ScriptEdit()
 		self.script_edit.textChanged.connect(lambda: self.evaluate())
 
 		self.preview_widget = PreviewWidget.instance()
-		self.garbage_widget = GarbageCollectorWidget(self)
 
 		self.log_window = LogWindow()
 	
 		# setup watch file
 		self.filepath = None
-
-
 		self.watcher = QFileSystemWatcher()
 		self.watcher.fileChanged.connect(lambda: self.on_file_change(self.filepath))
 
@@ -132,18 +91,11 @@ class LiveScript(QWidget):
 			self.openFile(recent[-1])
 
 		# setup menubar
-		
 		self.script_edit.document().modificationChanged.connect(self.updateWindowTitle)
 		if not self.filepath:
 			self.script_edit.setPlainText(TEMPLATE_SCRIPT)
 
-		# layout widgets
-		mainLayout = QHBoxLayout()
-		self.setLayout(mainLayout)
-		self.layout().setContentsMargins(0,0,0,0)
 
-		self.main_splitter = QSplitter(Qt.Orientation.Horizontal, self)
-		mainLayout.addWidget(self.main_splitter)
 		self.main_splitter.addWidget(self.script_edit)
 
 		self.right_panel = QSplitter(Qt.Orientation.Vertical, self)
@@ -153,8 +105,6 @@ class LiveScript(QWidget):
 		self.right_panel.setStretchFactor(1,0)
 
 		self.main_splitter.addWidget(self.right_panel)
-
-		self.main_splitter.addWidget(self.garbage_widget)
 
 		if self.main_splitter.count()>0:
 			self.main_splitter.setSizes([self.width()//self.main_splitter.count() for i in range(self.main_splitter.count())])
@@ -170,20 +120,22 @@ class LiveScript(QWidget):
 
 	def handle_uncaught_exceptions(self, exc_type, exc_value, exc_tb):
 		# Extract the line number and other details
-		tb = traceback.extract_tb(exc_tb)
-		last_call = tb[-1]  # The last call in the traceback will be where the exception occurred
-		filename, lineno, funcname, text = last_call
+		# tb = traceback.extract_tb(exc_tb)
+		# last_call = tb[-1]  # The last call in the traceback will be where the exception occurred
+		# filename, lineno, funcname, text = last_call
 
-		# Logging or displaying exception details
-		# print(f"Exception occurred in {filename} at line {lineno}")
-		# print(f"Function: {funcname}")
-		# print(f"Code: {text}")
+		# # Logging or displaying exception details
+		# # print(f"Exception occurred in {filename} at line {lineno}")
+		# # print(f"Function: {funcname}")
+		# # print(f"Code: {text}")
 		
-		# You can also format the exception in a user-friendly way
-		formatted_traceback = ''.join(traceback.format_exception(exc_type, exc_value, exc_tb))
-		msg = f"Error occurred at {filename} line {lineno}"
-		print(msg)
-		self.script_edit.insertNotification(lineno, f"Error occurred at {filename} line {lineno}")
+		# # You can also format the exception in a user-friendly way
+		# formatted_traceback = ''.join(traceback.format_exception(exc_type, exc_value, exc_tb))
+		# msg = f"Error occurred at {filename} line {lineno}"
+		# print(msg)
+		# self.script_edit.insertNotification(lineno, f"Error occurred at {filename} line {lineno}")
+
+		self.display_exception(exc_value)
 
 
 
@@ -196,6 +148,31 @@ class LiveScript(QWidget):
 			'__builtins__': globals()["__builtins__"]
 		}
 
+	def display_exception(self, e, prefix="", postfix=""):
+		if isinstance(e, SyntaxError):
+			text = " ".join([prefix, str(e.msg), postfix])
+			if e.lineno:
+				text = str(e.msg)
+				if hasattr(e, 'offset'):
+					text+= f" (offset: {e.offset})"
+				if hasattr(e, 'start'):
+					text+= f" (start: {e.start})"
+				self.script_edit.insertNotification(e.lineno, text)
+			self.log_window.appendError(text)
+		else:
+			tb = traceback.TracebackException.from_exception(e)
+			last_frame = tb.stack[-1]
+			if last_frame.lineno:
+				self.script_edit.insertNotification(last_frame.lineno, str(e))
+
+			formatted_traceback = ''.join(tb.format())
+			text = " ".join([prefix, formatted_traceback, postfix])
+			if hasattr(e, 'offset'):
+				text+= f" (offset: {e.offset})"
+			if hasattr(e, 'start'):
+				text+= f" (start: {e.start})"
+			self.log_window.appendError(text)
+
 	def evaluate(self):
 		if hasattr(self, '_sourcecode') and self._sourcecode == self.script_edit.toPlainText().strip():
 			return
@@ -207,38 +184,28 @@ class LiveScript(QWidget):
 
 		self.preview_widget.hide()
 		self.script_edit.clearNotifications()
+		
+
 		try:
 			start_time = time.perf_counter()
-			compiled = compile(self._sourcecode, "__main__", mode="exec")
-			exec(compiled, global_vars)
-			end_time = time.perf_counter()
-			duration_ms = (end_time - start_time) * 1000
-			self.log_window.appendMessage(f"exec took {duration_ms:.3f} ms")
-			# self.script_edit.insertNotification(1, "hello")
-		except SyntaxError as e:
-			lineno = e.lineno
-			if lineno:
-				self.script_edit.insertNotification(lineno, f"{e}")
-		except Exception as e:
-			# Create a TracebackException from the exception
-			tb = traceback.TracebackException.from_exception(e)
-			formatted_traceback = ''.join(tb.format())
+			the_ast = ast.parse(self._sourcecode, filename="<script>", type_comments=True)
+			try:
+				compiled = compile(the_ast, filename="<script>", mode="exec")
+				exec(compiled, global_vars)
+				end_time = time.perf_counter()
+				duration_ms = (end_time - start_time) * 1000
+				# self.log_window.appendMessage()
+				self.statusbar.showMessage(f"exec took {duration_ms:.3f} ms")
+			except SyntaxError as e: #compile syntax error
+				self.display_exception(e, prefix="Syntax error while compiling:\n")
+			except Exception as e: # compile exception
+				self.display_exception(e, prefix="Error while compiling:\n")
+		except SyntaxError as e: # parse syntax error
+			self.display_exception(e, prefix="Syntax error while parsing:\n")
+		except Exception as e:  # parse exception
+			self.display_exception(e, prefix="Error while parsing:\n")
 
-			# Loop through the stack to print the filename, line number, function name, and code
-			for frame in tb.stack:
-				print(f"File: {frame.filename}, Line: {frame.lineno}, Function: {frame.name}, Code: {frame.line}")
-
-			# Alternatively, get just the line number from the last frame (where the exception was raised)
-			last_frame = tb.stack[-1]  # The last frame is where the exception occurred
-			print(f"Line number of the exception: {last_frame.lineno}")
-
-			self.log_window.appendError(formatted_traceback)
-			if last_frame.lineno:
-				self.script_edit.insertNotification(last_frame.lineno, f"{e}")
-
-		finally:
-			#cleanup
-			gc.collect()
+		gc.collect()
 
 	def on_file_change(self, path):
 		if self.script_edit.document().isModified():
@@ -268,6 +235,12 @@ class LiveScript(QWidget):
 				"recent": [],
 				"live": True
 			}
+
+	def setupStatusBar(self):
+		self.statusbar = QStatusBar()
+		self.layout().addWidget(self.statusbar)
+		self.statusbar.showMessage("started")
+		self.statusbar.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
 		
 	def setupMenuBar(self):
 		self.menu_bar = QMenuBar()
@@ -351,7 +324,7 @@ class LiveScript(QWidget):
 			# prompt user if file has changed
 			msg_box = QMessageBox(self)
 			msg_box.setWindowTitle("Save changes?")
-			msg_box.setText(f"{Path(self.filepath).name or "Script"} has benn modified, save changes?")
+			msg_box.setText(f"{Path(self.filepath).name if self.filepath else "Script"} has benn modified, save changes?")
 			msg_box.setIcon(QMessageBox.Icon.Warning)
 			msg_box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel)
 			result = msg_box.exec()

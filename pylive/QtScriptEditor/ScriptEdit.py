@@ -172,6 +172,7 @@ class ScriptEdit(QPlainTextEdit):
 		self.notifications_model.rowsRemoved.connect(self.handleNotificationsRemoved)
 
 	def insertNotification(self, lineno:int, message:str, type:str="info"):
+		import html
 		self.notifications_model.appendRow([
 			QStandardItem(message), 
 			QStandardItem(type), 
@@ -211,7 +212,7 @@ class ScriptEdit(QPlainTextEdit):
 
 			# Create and position the notification label
 			notification_label = QLabel(parent=self)
-			notification_label.setText(f"{message}, line: {lineno}")  # Use the retrieved message
+			notification_label.setText(f"{message}")  # Use the retrieved message
 			notification_label.setFont(self.font())
 			notification_label.setAlignment(Qt.AlignmentFlag.AlignBaseline)
 
