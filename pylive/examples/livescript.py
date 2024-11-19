@@ -138,7 +138,6 @@ class LiveScript(QWidget):
 		self.display_exception(exc_value)
 
 
-
 	def updateWindowTitle(self):
 		self.setWindowTitle(f"{Path(self.filepath).name if self.filepath else "untitled"} {'*' if self.script_edit.document().isModified() else ''} - LiveScript")
 

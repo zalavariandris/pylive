@@ -26,22 +26,53 @@ class LineNumberArea(QWidget):
 		self.codeEditor.lineNumberAreaPaintEvent(event)
 
 
+class ScriptCompleter(QCompleter):
+	def __init__(self, textedit:QTextEdit):
+		# completion model
+		keywords = [
+			'and', 'as', 'assert', 'async', 'await', 'break', 'class', 'continue',
+			'def', 'del', 'elif', 'else', 'except', 'False', 'finally', 'for',
+			'from', 'global', 'if', 'import', 'in', 'is', 'lambda', 'None', 'nonlocal',
+			'not', 'or', 'pass', 'raise', 'return', 'True', 'try', 'while', 'with', 'yield'
+		]
+		self.completions_model = QStringListModel(keywords)
+		super().__init__(self.completions_model, parent=textedit)
+		self.textedit = textedit
+		# self.textedit.installEventFilter(self)
+		
+
+		# completion view
+		self.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+
+	def eventFilter(self, o: QObject, e: QEvent) -> bool:
+		if o == self.textedit:
+			match e.type():
+				case QEvent.Type.KeyPress:
+					print("key pressed")
+					return False
+		return super().eventFilter(o, e)
+
+
 class ScriptEdit(QPlainTextEdit):
 	def __init__(self, parent=None):
 		super().__init__(parent)
 		""" Setup Textedit """
 		######################
 		self.setupTextEdit()
-		self.setupSyntaxHighlighting()
-		self.setupAutocomplete()
+		self.highlighter = PygmentsSyntaxHighlighter(self.document())
+
+		""" Autocomplete """
+		completer = KeywordsCompleter()
+		self.setCompleter(completer)
+
+		""" Inline Notifications """
 		self.setupInlineNotifications()
 		self.number_editor = NumberEditor(self)
 
-		# setup linenumber area
+		""" Line numbers """
 		self.lineNumberArea = LineNumberArea(self)
 		def onBlockCountChanged(newBlockCount:int):
 			self.updateLineNumberAreaWidth(newBlockCount)
-
 		self.blockCountChanged.connect(onBlockCountChanged)
 
 		def onUpdateRequest(rect:QRect, dy:int):
@@ -49,12 +80,10 @@ class ScriptEdit(QPlainTextEdit):
 				self.lineNumberArea.scroll(0, dy)
 			else:
 				self.lineNumberArea.update(0, rect.y(), self.lineNumberArea.width(), rect.height())
-
 			if rect.contains(self.viewport().rect()):
 				self.updateLineNumberAreaWidth(0)
 
 		self.updateRequest.connect(onUpdateRequest)
-
 		self.updateLineNumberAreaWidth(0)
 
 	def setupTextEdit(self):
@@ -83,22 +112,12 @@ class ScriptEdit(QPlainTextEdit):
 		width = QFontMetrics(font).horizontalAdvance('O') * 70
 		self.resize(width, int(width*4/3))
 
-	def setupSyntaxHighlighting(self):
-		""" Setup Syntax Highlighting """
-		# # Show whitespace characterstext_color
-		# option = QTextOption(self.document().defaultTextOption())
-		# option.setFlags(QTextOption.Flag.ShowTabsAndSpaces)
-		# self.document().setDefaultTextOption(option)
-		# WhitespaceHighlighter(self.document())
-		PygmentsSyntaxHighlighter(self.document())
-
-	def setupAutocomplete(self):
-		""" Setup autocomplete """
-		completer = KeywordsCompleter()
-		# self.rope_project = rope.base.project.Project('.')
-		# completer = RopeCompleter(self.rope_project, self.document())
-		self.setCompleter(completer)
+	def setFont(self, font:QFont):
+		super().setFont(font)
+		# set tab width to 4 spaces
+		self.setTabStopDistance(QFontMetricsF(self.font()).horizontalAdvance(' ') * 4)
 		
+	### Completer Support ###
 	def setCompleter(self, completer:QCompleter):
 		completer.setWidget(self)
 		completer.activated.connect(self.insertCompletion)
@@ -118,18 +137,14 @@ class ScriptEdit(QPlainTextEdit):
 		text_cursor = self.textCursor()
 		# # Get word under cursor
 		# # when using a simple QCompleter it needs a word instead of the whole text
-		# text_cursor.select(QTextCursor.SelectionType.WordUnderCursor)
-		# word_under_cursor = text_cursor.selection().toPlainText()
+		text_cursor.select(QTextCursor.SelectionType.WordUnderCursor)
+		word_under_cursor = text_cursor.selection().toPlainText()
 
-		# Get text until position
-		# when using a code completion it actually needs the cursor offset. So this is too much.
-		text_cursor.setPosition(0, QTextCursor.MoveMode.KeepAnchor)
-		text_until_position = text_cursor.selection().toPlainText()
-
-		self.completer.setCompletionPrefix(text_until_position)
+		self.completer.setCompletionPrefix(word_under_cursor)
 
 	@Slot()
 	def toggleCompleterVisibility(self):
+		print("toggle toggleCompleterVisibility")
 		### Show Hide Completer ###
 		###########################
 		# get line under cursor
@@ -161,6 +176,7 @@ class ScriptEdit(QPlainTextEdit):
 		else:
 			self.completer.popup().hide()
 
+	### Inline Notifications ###
 	def setupInlineNotifications(self):
 		""" Setup error widgets """
 		# error model
@@ -178,6 +194,30 @@ class ScriptEdit(QPlainTextEdit):
 			QStandardItem(type), 
 			QStandardItem(str(lineno))
 		])
+
+	def showException(self, e:Exception, prefix="", postfix=""):
+		import traceback
+		if isinstance(e, SyntaxError):
+			text = " ".join([prefix, str(e.msg), postfix])
+			if e.lineno:
+				text = str(e.msg)
+				if hasattr(e, 'offset'):
+					text+= f" (offset: {e.offset})"
+				if hasattr(e, 'start'):
+					text+= f" (start: {e.start})"
+				self.insertNotification(e.lineno, text)
+		else:
+			tb = traceback.TracebackException.from_exception(e)
+			last_frame = tb.stack[-1]
+			if last_frame.lineno:
+				self.insertNotification(last_frame.lineno, str(e))
+
+			formatted_traceback = ''.join(tb.format())
+			text = " ".join([prefix, formatted_traceback, postfix])
+			if hasattr(e, 'offset'):
+				text+= f" (offset: {e.offset})"
+			if hasattr(e, 'start'):
+				text+= f" (start: {e.start})"
 
 	def clearNotifications(self):
 		self.notifications_model.clear()
@@ -252,13 +292,9 @@ class ScriptEdit(QPlainTextEdit):
 				# Remove the label from the list of notifications
 				del self.notifications_labels[row]
 
-	def setFont(self, font:QFont):
-		super().setFont(font)
-		self.setTabStopDistance(QFontMetricsF(self.font()).horizontalAdvance(' ') * 4)
-
+	### Event handling ###
 	def keyPressEvent(self, e: QKeyEvent) -> None:
-		### Handle autocomplete ###
-		###########################
+		### Completer ###
 		# If completer popup is open. Give it exclusive use of specific keys
 		if self.completer.popup().isVisible() and e.key() in [
 			# Navigate popup
@@ -273,7 +309,7 @@ class ScriptEdit(QPlainTextEdit):
 			e.ignore()
 			return
 
-		### Insert Text, and Handle text editing features ### 
+		### Script Text Editing features ### 
 		# - mulitline -indenting, unindent,
 		# - automatic indent of new lines,
 		# - and toggle comments for multiple lines
@@ -299,7 +335,7 @@ class ScriptEdit(QPlainTextEdit):
 		# update proposals
 		# self.updateCompleterPrefix()
 
-
+	### Script Cursor support ###
 	def toggleCommentSelection(self):
 		cursor = ScriptCursor(self.textCursor())
 		cursor.toggleCommentSelection(comment="# ")
@@ -315,6 +351,7 @@ class ScriptEdit(QPlainTextEdit):
 		cursor.unindentSelection()
 		self.setTextCursor(cursor)
 
+	### Line Numbers ###
 	def lineNumberAreaPaintEvent(self, event:QPaintEvent):
 		painter = QPainter(self.lineNumberArea);
 		# painter.fillRect(event.rect(), Qt.lightGray)
@@ -338,7 +375,6 @@ class ScriptEdit(QPlainTextEdit):
 			bottom = top + round(self.blockBoundingRect(block).height())
 			block_number += 1
 
-
 	def lineNumberAreaWidth(self):
 		digits = 1;
 		line_count = max(1, self.blockCount())
@@ -355,7 +391,6 @@ class ScriptEdit(QPlainTextEdit):
 	def updateLineNumberAreaWidth(self, newBlockCount:int):
 		self.setViewportMargins(self.lineNumberAreaWidth(), 0, 0, 0)
 
-
 	def resizeEvent(self, e: QResizeEvent) -> None:
 		super().resizeEvent(e)
 		cr = self.contentsRect()
@@ -365,13 +400,14 @@ if __name__ == "__main__":
 	import sys
 	from textwrap import dedent
 	from components.WhitespaceHighlighter import WhitespaceHighlighter
+	import ast
 
 	app = QApplication(sys.argv)
 	script_edit = ScriptEdit()
 
 	script_edit.setPlainText(dedent("""\
 	def hello_world():
-		print("Hello, World!")
+		print("Hello, World!"
 		# This is a comment
 		x = 42
 		return x
@@ -379,12 +415,18 @@ if __name__ == "__main__":
 
 	def updateNotifications():
 		script_edit.clearNotifications()
-		script_edit.insertNotification(5, "new placeholder error message")
+		try:
+			source = script_edit.toPlainText()
+			ast.parse(source)
+		except SyntaxError as e:
+			script_edit.showException(e)
+		except Exception as e:
+			script_edit.showException(e)
+
 	script_edit.textChanged.connect(updateNotifications)
 
 	# show app
 	script_edit.show()
-	script_edit.insertNotification(2, "placeholder error message")
-	script_edit.insertNotification(3, "msg 2")
+	updateNotifications()
 
 	sys.exit(app.exec())

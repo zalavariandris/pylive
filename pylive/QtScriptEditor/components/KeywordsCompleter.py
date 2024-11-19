@@ -4,6 +4,17 @@ from PySide6.QtWidgets import *
 from PySide6.QtGui import *
 from PySide6.QtCore import *
 
+class WordsCompleter(QCompleter):
+	def __init__(self, words):
+
+		# completion model
+		self.completions_model = QStringListModel(words)
+		super().__init__(self.completions_model)
+
+		# completion view
+		self.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+
+
 class KeywordsCompleter(QCompleter):
 	def __init__(self):
 
@@ -14,7 +25,7 @@ class KeywordsCompleter(QCompleter):
 			'from', 'global', 'if', 'import', 'in', 'is', 'lambda', 'None', 'nonlocal',
 			'not', 'or', 'pass', 'raise', 'return', 'True', 'try', 'while', 'with', 'yield'
 		]
-		self.completions_model = QStringListModel(keywords)
+		self.completions_model = QStringListModel(words)
 		super().__init__(self.completions_model)
 
 		# completion view
@@ -46,7 +57,14 @@ class CompleterTextEdit(QPlainTextEdit):
 
 	def setupAutocomplete(self):
 		""" Setup autocomplete """
-		completer = KeywordsCompleter()
+		keywords = [
+			"apple", "ananas" "banana", "cherry", "date", "elderberry", "fig", "grape", "honeydew", "kiwi", "lemon",
+			'and', 'as', 'assert', 'async', 'await', 'break', 'class', 'continue',
+			'def', 'del', 'elif', 'else', 'except', 'False', 'finally', 'for',
+			'from', 'global', 'if', 'import', 'in', 'is', 'lambda', 'None', 'nonlocal',
+			'not', 'or', 'pass', 'raise', 'return', 'True', 'try', 'while', 'with', 'yield'
+		]
+		completer = WordsCompleter(keywords)
 		self.setCompleter(completer)
 		
 	def setCompleter(self, completer:QCompleter):
