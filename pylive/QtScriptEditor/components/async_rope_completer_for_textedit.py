@@ -1,55 +1,62 @@
-import typing
-from concurrent.futures import ThreadPoolExecutor, Future, TimeoutError
-from typing import List, Optional, Tuple
 
-from PySide6.QtCore import Signal, QStringListModel, Qt, QObject
-from PySide6.QtWidgets import QTextEdit, QApplication
+from PySide6.QtCore import *
+from PySide6.QtGui import *
+from PySide6.QtWidgets import *
+from typing import *
 
 import rope.base.project
 from rope.contrib import codeassist
 from pylive.QtScriptEditor.components.completer_for_textedit import TextEditCompleter
+import threading
 
-
-class RopeWorkerTask:
-    """Encapsulates the rope task for the ThreadPoolExecutor."""
-    def __init__(self, project, source_code: str, offset: int):
+class RopeWorkerTask(QRunnable):
+    """Encapsulates the rope task for the QThreadPool."""
+    def __init__(self, project, source_code: str, offset: int, callback):
+        super().__init__()
         self.project = project
         self.source_code = source_code
         self.offset = offset
+        self.callback = callback
 
     def run(self):
-        """Perform the rope code assist task."""
-        proposals = codeassist.code_assist(
-            self.project,
-            source_code=self.source_code,
-            offset=self.offset
-        )
-        return codeassist.sorted_proposals(proposals)
+        """Perform the rope code assist task and invoke the callback."""
+        # Check and print the thread details
+
+        # make sure the current 
+        app = QCoreApplication.instance()
+        IsSeperateThread = app and QThread.currentThread() != app.thread()
+        if not IsSeperateThread:
+            print("warning: RopeTask does not run in a seperate thread")
+
+        try:
+            proposals = codeassist.code_assist(
+                self.project,
+                source_code=self.source_code,
+                offset=self.offset
+            )
+            sorted_proposals = codeassist.sorted_proposals(proposals)
+            self.callback(sorted_proposals)
+        except Exception as e:
+            print(e)
+            self.callback([], error=e)
 
 
 class AsyncRopeCompleter(TextEditCompleter):
     def __init__(self, textedit: QTextEdit, rope_project):
         super().__init__(textedit)
         self.rope_project = rope_project
-        self._thread_pool = ThreadPoolExecutor(max_workers=2)
-        self._active_futures: List[Future] = []
+        self._thread_pool = QThreadPool.globalInstance()
+        self._active_tasks: List[RopeWorkerTask] = []
 
         # Cleanup on widget destruction
         self.destroyed.connect(self.cleanup_workers)
 
     def cancelAllTasks(self):
-        """Cancel all running tasks in the thread pool."""
-        for future in self._active_futures:
-            if not future.done():
-                future.cancel()
-
-        # Clear completed or canceled futures
-        self._active_futures = [
-            future for future in self._active_futures if not future.done()
-        ]
+        """Cancel all running tasks by tracking task status."""
+        self._active_tasks.clear()  # Clear the list of active tasks
 
     def requestCompletions(self):
-        """Request completions using a thread pool."""
+        """Request completions using QThreadPool."""
         # Cancel previous tasks
         self.cancelAllTasks()
 
@@ -57,25 +64,17 @@ class AsyncRopeCompleter(TextEditCompleter):
         source_code = self.text_edit.toPlainText()
         offset = self.text_edit.textCursor().position()
 
-        rope_task = RopeWorkerTask(self.rope_project, source_code, offset)
+        def completion_callback(proposals, error=None):
+            if error:
+                self._handle_worker_error(error)
+            else:
+                self._update_completion_model(proposals)
 
-        # Submit task to the thread pool
-        future = self._thread_pool.submit(rope_task.run)
-        self._active_futures.append(future)
+        rope_task = RopeWorkerTask(self.rope_project, source_code, offset, completion_callback)
+        self._active_tasks.append(rope_task)
 
-        # Attach callback
-        future.add_done_callback(self._handle_completion)
-
-    def _handle_completion(self, future: Future):
-        """Handle the result of a completed task."""
-        if future.cancelled():
-            return  # Ignore canceled tasks
-
-        try:
-            proposals = future.result()  # Get the result
-            self._update_completion_model(proposals)
-        except Exception as e:
-            self._handle_worker_error(e)
+        # Start the task in the thread pool
+        self._thread_pool.start(rope_task)
 
     def _update_completion_model(self, new_proposals):
         """Update completion model with new proposals."""
@@ -84,7 +83,7 @@ class AsyncRopeCompleter(TextEditCompleter):
             return
 
         try:
-            completion_model = typing.cast(QStringListModel, self.model())
+            completion_model = cast(QStringListModel, self.model())
             completion_model.setStringList([proposal.name for proposal in new_proposals])
         except Exception as e:
             print(f"Error updating completion model: {e}")
@@ -94,10 +93,8 @@ class AsyncRopeCompleter(TextEditCompleter):
         print(f"Rope worker error: {error}")
 
     def cleanup_workers(self):
-        """Clean up all running tasks and the thread pool."""
+        """Clean up all running tasks."""
         self.cancelAllTasks()
-        if hasattr(self, '_thread_pool'):
-            self._thread_pool.shutdown(wait=True)
 
 
 def main():
