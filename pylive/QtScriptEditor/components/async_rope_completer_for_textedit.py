@@ -6,117 +6,141 @@ from typing import *
 
 import rope.base.project
 from rope.contrib import codeassist
-from pylive.QtScriptEditor.components.completer_for_textedit import TextEditCompleter
+from pylive.QtScriptEditor.components.textedit_completer import TextEditCompleter
 import threading
 
-class RopeWorkerTask(QRunnable):
-    """Encapsulates the rope task for the QThreadPool."""
-    def __init__(self, project, source_code: str, offset: int, callback):
-        super().__init__()
-        self.project = project
-        self.source_code = source_code
-        self.offset = offset
-        self.callback = callback
+class RopeWorkerTask(QObject, QRunnable):
+	"""Encapsulates the rope task for the QThreadPool."""
+	finished = Signal(list)
+	def __init__(self, project, source_code: str, offset: int):
+		QObject.__init__(self)
+		QRunnable.__init__(self)
+		self.project = project
+		self.source_code = source_code
+		self.offset = offset
 
-    def run(self):
-        """Perform the rope code assist task and invoke the callback."""
-        # Check and print the thread details
-        # make sure the current 
-        app = QCoreApplication.instance()
-        IsSeperateThread = app and QThread.currentThread() != app.thread()
-        if not IsSeperateThread:
-            print("warning: RopeTask does not run in a seperate thread")
+	def run(self):
+		"""Perform the rope code assist task and invoke the callback."""
+		# Check and print the thread details
+		# make sure the current 
+		app = QCoreApplication.instance()
+		IsSeperateThread = app and QThread.currentThread() != app.thread()
+		if not IsSeperateThread:
+			print("warning: RopeTask does not run in a seperate thread")
 
-        try:
-            proposals = codeassist.code_assist(
-                self.project,
-                source_code=self.source_code,
-                offset=self.offset
-            )
-            sorted_proposals = codeassist.sorted_proposals(proposals)
-            self.callback(sorted_proposals)
-        except Exception as e:
-            print(e)
-            self.callback([], error=e)
+		try:
+			proposals = codeassist.code_assist(
+				self.project,
+				source_code=self.source_code,
+				offset=self.offset
+			)
+			sorted_proposals = codeassist.sorted_proposals(proposals)
+			self.finished.emit(sorted_proposals)
+		except Exception as e:
+			print(e)
+			# self.finished.emit([])
+			# self.callback([], error=e)
 
 
 class AsyncRopeCompleter(TextEditCompleter):
-    def __init__(self, textedit: QTextEdit, rope_project):
-        super().__init__(textedit)
-        self.rope_project = rope_project
-        self._thread_pool = QThreadPool.globalInstance()
-        self._active_tasks: List[RopeWorkerTask] = []
+	def __init__(self, textedit: QTextEdit|QPlainTextEdit, rope_project):
+		super().__init__(textedit)
+		self.rope_project = rope_project
+		self._thread_pool = QThreadPool.globalInstance()
+		self._active_tasks: List[RopeWorkerTask] = []
 
-        # Cleanup on widget destruction
-        self.destroyed.connect(self.cleanup_workers)
+		# Cleanup on widget destruction
+		self.destroyed.connect(self.cleanup_workers)
 
-    def cancelAllTasks(self):
-        """Cancel all running tasks by tracking task status."""
-        self._active_tasks.clear()  # Clear the list of active tasks
+	def cancelAllTasks(self):
+		"""Cancel all running tasks by tracking task status."""
+		self._active_tasks.clear()  # Clear the list of active tasks
 
-    def requestCompletions(self):
-        """Request completions using QThreadPool."""
-        # Cancel previous tasks
-        self.cancelAllTasks()
+	def requestCompletions(self):
+		"""Request completions using QThreadPool."""
+		# Cancel previous tasks
+		self.cancelAllTasks()
 
-        # Prepare a new task
-        source_code = self.text_edit.toPlainText()
-        offset = self.text_edit.textCursor().position()
+		# Prepare a new task
+		source_code = self.text_edit.toPlainText()
+		offset = self.text_edit.textCursor().position()
+		
+		rope_task = RopeWorkerTask(self.rope_project, source_code, offset)
+		rope_task.finished.connect(lambda proposals: self._update_completion_model(proposals))
+		self._active_tasks.append(rope_task)
 
-        def completion_callback(proposals, error=None):
-            if error:
-                self._handle_worker_error(error)
-            else:
-                self._update_completion_model(proposals)
+		# Start the task in the thread pool
+		self._thread_pool.start(rope_task)
 
-        rope_task = RopeWorkerTask(self.rope_project, source_code, offset, completion_callback)
-        self._active_tasks.append(rope_task)
+	def _update_completion_model(self, new_proposals):
+		"""Update completion model with new proposals."""
+		if not isinstance(self.model(), QStringListModel):
+			print("Error: Completion model is not of type QStringListModel")
+			return
 
-        # Start the task in the thread pool
-        self._thread_pool.start(rope_task)
+		try:
+			completion_model = cast(QStringListModel, self.model())
+			completion_model.setStringList([proposal.name for proposal in new_proposals])
+		except Exception as e:
+			print(f"Error updating completion model: {e}")
 
-    def _update_completion_model(self, new_proposals):
-        """Update completion model with new proposals."""
-        if not isinstance(self.model(), QStringListModel):
-            print("Error: Completion model is not of type QStringListModel")
-            return
+	def _handle_worker_error(self, error: Exception):
+		"""Handle errors from workers."""
+		print(f"Rope worker error: {error}")
 
-        try:
-            completion_model = cast(QStringListModel, self.model())
-            completion_model.setStringList([proposal.name for proposal in new_proposals])
-        except Exception as e:
-            print(f"Error updating completion model: {e}")
-
-    def _handle_worker_error(self, error: Exception):
-        """Handle errors from workers."""
-        print(f"Rope worker error: {error}")
-
-    def cleanup_workers(self):
-        """Clean up all running tasks."""
-        self.cancelAllTasks()
+	def cleanup_workers(self):
+		"""Clean up all running tasks."""
+		self.cancelAllTasks()
 
 
 def main():
-    from pylive.thread_pool_tracker import ThreadPoolCounterWidget
-    app = QApplication([])
-    editor = QTextEdit()
+	from pylive.thread_pool_tracker import ThreadPoolCounterWidget
+	
+	from pylive.QtScriptEditor.components.PygmentsSyntaxHighlighter import PygmentsSyntaxHighlighter
+	class Editor(QPlainTextEdit):
+		def __init__(self, parent=None) -> None:
+			super().__init__(parent)
+			# set a monospace font
+			font = self.font()
 
-    rope_project = rope.base.project.Project('.')
-    window = QWidget()
-    mainLayout = QVBoxLayout()
-    mainLayout.setContentsMargins(0,0,0,0)
-    window.setLayout(mainLayout)
+			font.setFamilies(["monospace", "Operator Mono Book"])
+			font.setPointSize(10)
+			font.setWeight(QFont.Weight.Medium)
+			font.setStyleStrategy(QFont.StyleStrategy.PreferAntialias)
+			self.setFont(font)
+			self.setTabStopDistance(QFontMetricsF(self.font()).horizontalAdvance(' ') * 4)
 
-    completer = AsyncRopeCompleter(editor, rope_project)
+			self.highlighter = PygmentsSyntaxHighlighter(self.document())
 
-    mainLayout.addWidget(editor)
-    mainLayout.addWidget(ThreadPoolCounterWidget())
-    window.setWindowTitle("QTextEdit with Non-Blocking Rope Assist Completer")
-    window.resize(600, 400)
-    window.show()
+			""" Autocomplete """
+			self.rope_project = rope.base.project.Project('.')
+			self.completer = AsyncRopeCompleter(self, self.rope_project)
 
-    app.exec()
+	app = QApplication([])
+	window = QWidget()
+	mainLayout = QVBoxLayout()
+	mainLayout.setContentsMargins(0,0,0,0)
+	window.setLayout(mainLayout)
+
+	editor = Editor()
+	from textwrap import dedent
+	editor.setPlainText(dedent("""\
+	def hello_world():
+		print("Hello, World!")
+		# This is a comment
+		x = 42
+		return x
+	"""))
+
+
+	mainLayout.addWidget(editor)
+	mainLayout.addWidget(ThreadPoolCounterWidget())
+	window.setWindowTitle("QTextEdit with Non-Blocking Rope Assist Completer")
+	window.resize(600, 400)
+	window.show()
+
+	app.exec()
 
 
 if __name__ == "__main__":
-    main()
+	main()

@@ -4,7 +4,7 @@ from PySide6.QtWidgets import *
 from typing import *
 
 class TextEditCompleter(QCompleter):
-	def __init__(self, textedit:QTextEdit, words:List[str]=[]):
+	def __init__(self, textedit:QTextEdit|QPlainTextEdit, words:List[str]=[]):
 		super().__init__(words, parent=textedit)
 		self.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
 		self.setCompletionMode(QCompleter.CompletionMode.PopupCompletion)
@@ -16,7 +16,7 @@ class TextEditCompleter(QCompleter):
 		self.text_edit.installEventFilter(self)
 			
 		# update built-in Filter when typing, or cursor position has changed
-		self.text_edit.cursorPositionChanged.connect(lambda: (
+		self.text_edit.textChanged.connect(lambda: (
 			self.popup().hide(), 
 			self.requestCompletions()
 		))
@@ -37,7 +37,8 @@ class TextEditCompleter(QCompleter):
 		"""this will be called, when the textedit wants completions
 		set the model string ot the completion prefix to trigger an update
 		"""
-		self.setCompletionPrefix(self.textUnderCursor())
+		print("requestCompletions", self.getWordUntilCursor())
+		self.setCompletionPrefix(self.getWordUntilCursor())
 
 	def insertCompletion(self, completion:str):
 		"""
@@ -45,18 +46,23 @@ class TextEditCompleter(QCompleter):
 		"""
 		tc = self.text_edit.textCursor()
 		tc.select(QTextCursor.SelectionType.WordUnderCursor)
-		extra = len(completion) - len(tc.selectedText())
-		tc.movePosition(QTextCursor.MoveOperation.Left)
-		tc.movePosition(QTextCursor.MoveOperation.EndOfWord)
-		tc.insertText(completion[-extra:])
+		# extra = len(completion) - len(tc.selectedText())
+		# tc.movePosition(QTextCursor.MoveOperation.Left)
+		# tc.movePosition(QTextCursor.MoveOperation.EndOfWord)
+		tc.insertText(completion)
 		self.text_edit.setTextCursor(tc)
 
-	def textUnderCursor(self):
+	def getWordUntilCursor(self):
 		"""
 		Returns the word under the cursor in the QTextEdit.
 		"""
+		
 		cursor = self.text_edit.textCursor()
+		original_position = cursor.position()
+		original_anchor = cursor.anchor()
 		cursor.select(QTextCursor.SelectionType.WordUnderCursor)
+		cursor.setPosition(cursor.anchor(), QTextCursor.MoveMode.MoveAnchor)
+		cursor.setPosition(original_position, QTextCursor.MoveMode.KeepAnchor)
 		return cursor.selectedText()
 
 	def eventFilter(self, o:QObject, e:QEvent):
@@ -71,8 +77,8 @@ class TextEditCompleter(QCompleter):
 			e = cast(QKeyEvent, e)
 			# print("currentCompletion:", self.currentCompletion())
 			if o is self.text_edit or o is self.popup():
-			
 				# Handle key events for autocompletion
+				
 				if e.key() in {Qt.Key.Key_Enter, Qt.Key.Key_Return} and self.popup().isVisible():
 					# Get the currently selected completion from the popup
 					current_index = self.popup().currentIndex()
@@ -89,6 +95,15 @@ class TextEditCompleter(QCompleter):
 					# Let the popup handle up/down keys for selection
 					return False
 
+		# if e.type() == QEvent.Type.KeyRelease:
+		# 	self.popup().hide()
+		# 	e = cast(QKeyEvent, e)
+		# 	if e.key() in {Qt.Key.Key_Enter, Qt.Key.Key_Return, Qt.Key.Key_Escape}:
+		# 		return True
+
+		# 	if e.text():
+		# 		self.requestCompletions()
+
 		return super().eventFilter(o, e)
 
 	def updatePopupVisibility(self):
@@ -97,7 +112,9 @@ class TextEditCompleter(QCompleter):
 		"""
 		# prefix = self.textUnderCursor()
 
-		if len(self.textUnderCursor())>0 and self.textUnderCursor() != self.currentCompletion():
+
+		if len(self.getWordUntilCursor())>0 and self.getWordUntilCursor() != self.currentCompletion():
+			print(self.getWordUntilCursor())
 			popup = self.popup()
 			popup.setCurrentIndex(self.completionModel().index(0, 0))
 

@@ -95,14 +95,12 @@ class ScriptEdit(QPlainTextEdit):
 		# set a monospace font
 		font = self.font()
 
-		
 		font.setFamilies(["monospace", "Operator Mono Book"])
 		font.setPointSize(10)
 		font.setWeight(QFont.Weight.Medium)
 		font.setStyleStrategy(QFont.StyleStrategy.PreferAntialias)
 		self.setFont(font)
 		
-
 		# # show whitespace
 		# options = QTextOption()
 		# options.setFlags(QTextOption.ShowTabsAndSpaces)
