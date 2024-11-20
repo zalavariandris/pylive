@@ -21,7 +21,6 @@ class RopeWorkerTask(QRunnable):
     def run(self):
         """Perform the rope code assist task and invoke the callback."""
         # Check and print the thread details
-
         # make sure the current 
         app = QCoreApplication.instance()
         IsSeperateThread = app and QThread.currentThread() != app.thread()
@@ -98,15 +97,23 @@ class AsyncRopeCompleter(TextEditCompleter):
 
 
 def main():
+    from pylive.thread_pool_tracker import ThreadPoolCounterWidget
     app = QApplication([])
     editor = QTextEdit()
 
     rope_project = rope.base.project.Project('.')
+    window = QWidget()
+    mainLayout = QVBoxLayout()
+    mainLayout.setContentsMargins(0,0,0,0)
+    window.setLayout(mainLayout)
+
     completer = AsyncRopeCompleter(editor, rope_project)
 
-    editor.setWindowTitle("QTextEdit with Non-Blocking Rope Assist Completer")
-    editor.resize(600, 400)
-    editor.show()
+    mainLayout.addWidget(editor)
+    mainLayout.addWidget(ThreadPoolCounterWidget())
+    window.setWindowTitle("QTextEdit with Non-Blocking Rope Assist Completer")
+    window.resize(600, 400)
+    window.show()
 
     app.exec()
 

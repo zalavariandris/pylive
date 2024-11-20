@@ -7,7 +7,7 @@ from PySide6.QtCore import *
 from pylive.QtScriptEditor.components.ScriptCursor import ScriptCursor
 from pylive.QtScriptEditor.components.PygmentsSyntaxHighlighter import PygmentsSyntaxHighlighter
 
-from pylive.QtScriptEditor.components.KeywordsCompleter import KeywordsCompleter
+from pylive.QtScriptEditor.components.KeywordsCompleter_OLD import KeywordsCompleter
 from pylive.QtScriptEditor.components.RopeCompleter import RopeCompleter
 import rope.base.project
 from pylive.QtScriptEditor.components.number_editor import NumberEditor

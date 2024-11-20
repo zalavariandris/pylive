@@ -25,7 +25,7 @@ class KeywordsCompleter(QCompleter):
 			'from', 'global', 'if', 'import', 'in', 'is', 'lambda', 'None', 'nonlocal',
 			'not', 'or', 'pass', 'raise', 'return', 'True', 'try', 'while', 'with', 'yield'
 		]
-		self.completions_model = QStringListModel(words)
+		self.completions_model = QStringListModel(keywords)
 		super().__init__(self.completions_model)
 
 		# completion view
