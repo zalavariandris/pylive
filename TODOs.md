@@ -14,3 +14,8 @@
 - Add GarbageCollector widget
 
 - TEST, TEST...
+
+
+# Known hickups
+- RopeCompleter, will replace the "WordUnderCursor", instead of using the startingoffset, and offset positions... 
+  - Fix: We need to update the QCompleter's model from a simple StringListModel to something that is able to hold these offsets, and call `insertCompletion` with these values as well.

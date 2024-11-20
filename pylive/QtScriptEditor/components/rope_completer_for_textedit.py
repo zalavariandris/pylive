@@ -3,51 +3,48 @@ from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 from typing import *
 
-from pylive.QtScriptEditor.components.completer_for_textedit import WordCompleter
+from pylive.QtScriptEditor.components.completer_for_textedit import TextEditCompleter
 
 import rope.base.project
 from rope.base import libutils
 import rope.base.project
 from rope.contrib import codeassist
 
-class RopeAssistStringModel(QStringListModel):
-	def __init__(self, project, parent=None):
-		super().__init__(parent=parent)
-		self.rope_project = project
 
-	def starting_offset(self, source_code:str, offset:int):
-		return codeassist.starting_offset(source_code, offset)
-
-	def updateProposals(self, source_code:str, offset:int):
-		"""update proposals based on current offset"""
-		if offset > len(source_code):
-			raise IndexError(f"Offset {offset} is greater than text length {len(source_code)}")
-
-		try:
-			# fetch proposal
-			proposals = codeassist.code_assist(self.rope_project, source_code=source_code, offset=offset)
-			proposals = codeassist.sorted_proposals(proposals) # Sorting proposals; for changing the order see pydoc
-
-			# update proposals
-			self.setStringList([proposal.name for proposal in proposals])
-		except Exception as err:
-			self.setStringList([])
-
-class RopeCompleter(WordCompleter):
-	def __init__(self, textedit:QTextEdit, project:rope.base.project.Project):
+class RopeCompleter(TextEditCompleter):
+	def __init__(self, textedit: QTextEdit, rope_project):
 		super().__init__(textedit)
-		self.rope_project = project
-		self.rope_assist_model = RopeAssistStringModel(self.rope_project)
-		self.setModel(self.rope_assist_model)
+		self.rope_project = rope_project
 
 	@override
-	def updateCompletionList(self):
-		self.rope_assist_model.updateProposals(
-			self.text_edit.toPlainText(), 
-			self.text_edit.textCursor().position()
+	def requestCompletions(self):
+		source_code = self.text_edit.toPlainText()
+		offset = self.text_edit.textCursor().position()
+
+		proposals = codeassist.code_assist(
+			self.rope_project, 
+			source_code=source_code, 
+			offset=offset
 		)
+		proposals = codeassist.sorted_proposals(proposals) # Sorting proposals; for changing the order see pydoc
+		starting_offset = codeassist.starting_offset(source_code, offset)
 
+		# update proposals
+		string_list_model = cast(QStringListModel, self.model())
+		string_list_model.setStringList([proposal.name for proposal in proposals])
 
+	@override
+	def insertCompletion(self, completion):
+		"""
+		Inserts the selected completion into the text at the cursor position.
+		"""
+		tc = self.text_edit.textCursor()
+		tc.select(QTextCursor.SelectionType.WordUnderCursor)
+		extra = len(completion) - len(tc.selectedText())
+		tc.movePosition(QTextCursor.MoveOperation.Left)
+		tc.movePosition(QTextCursor.MoveOperation.EndOfWord)
+		tc.insertText(completion[-extra:])
+		self.text_edit.setTextCursor(tc)
 
 
 if __name__ == "__main__":
@@ -58,7 +55,7 @@ if __name__ == "__main__":
 	editor = QTextEdit()
 	rope_project = rope.base.project.Project('.')
 	completer = RopeCompleter(editor, rope_project)
-	editor.setWindowTitle("QTextEdit with Custom Completer")
+	editor.setWindowTitle("QTextEdit with a non-blocking Rope Assist Completer")
 	editor.resize(600, 400)
 
 	# placeholder

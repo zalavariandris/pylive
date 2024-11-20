@@ -3,7 +3,7 @@ from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 from typing import *
 
-class WordCompleter(QCompleter):
+class TextEditCompleter(QCompleter):
 	def __init__(self, textedit:QTextEdit, words:List[str]=[]):
 		super().__init__(words, parent=textedit)
 		self.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
@@ -16,7 +16,10 @@ class WordCompleter(QCompleter):
 		self.text_edit.installEventFilter(self)
 			
 		# update built-in Filter when typing, or cursor position has changed
-		self.text_edit.cursorPositionChanged.connect(lambda: self.updateCompletionList())
+		self.text_edit.cursorPositionChanged.connect(lambda: (
+			self.popup().hide(), 
+			self.requestCompletions()
+		))
 
 		# Use QTimer to show popup notes: this is both a 'feature' and a workaround.
 		# - Feature: Because now we can easily delay the popup visibility, which could be less distracting for some users.
@@ -26,20 +29,23 @@ class WordCompleter(QCompleter):
 		self.timer.timeout.connect(lambda: self.updatePopupVisibility())
 
 		self.completionModel().modelReset.connect(lambda: (
-			self.popup().hide(),
 			self.timer.stop(),
 			self.timer.start(0)
 		))
 
-	def updateCompletionList(self):
+	def requestCompletions(self):
+		"""this will be called, when the textedit wants completions
+		set the model string ot the completion prefix to trigger an update
+		"""
 		self.setCompletionPrefix(self.textUnderCursor())
 
-	def insertCompletion(self, completion):
+	def insertCompletion(self, completion:str):
 		"""
-		Inserts the selected completion into the text at the cursor position.
+		Replace "WordUnderCursor" with completion
 		"""
 		tc = self.text_edit.textCursor()
-		extra = len(completion) - len(self.completionPrefix())
+		tc.select(QTextCursor.SelectionType.WordUnderCursor)
+		extra = len(completion) - len(tc.selectedText())
 		tc.movePosition(QTextCursor.MoveOperation.Left)
 		tc.movePosition(QTextCursor.MoveOperation.EndOfWord)
 		tc.insertText(completion[-extra:])
@@ -121,7 +127,7 @@ class WordCompleter(QCompleter):
 			self.popup().hide()
 
 
-class PythonKeywordsCompleter(WordCompleter):
+class PythonKeywordsCompleter(TextEditCompleter):
 	def __init__(self, textedit:QTextEdit, additional_keywords=[]) -> None:
 		keywords_list = [
 			"and", "as", "assert", "break", "class", "continue", 
