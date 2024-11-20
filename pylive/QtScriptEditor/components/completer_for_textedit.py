@@ -14,10 +14,25 @@ class WordCompleter(QCompleter):
 
 		# Install event filter on the text edit
 		self.text_edit.installEventFilter(self)
-		self.text_edit.textChanged.connect(lambda: self.updateCompletion())
-		# self.popup().installEventFilter(self)
-		# self.text_edit.viewport().installEventFilter(self)
-		# self.text_edit.viewport().setMouseTracking(True)
+			
+		# update built-in Filter when typing, or cursor position has changed
+		self.text_edit.cursorPositionChanged.connect(lambda: self.updateCompletionList())
+
+		# Use QTimer to show popup notes: this is both a 'feature' and a workaround.
+		# - Feature: Because now we can easily delay the popup visibility, which could be less distracting for some users.
+		# - Workaround: Because the initial selection cannot be set immediately after the modelReset signal emits - for some reason. TODO: Figure out why.
+		self.timer = QTimer()
+		self.timer.setSingleShot(True)
+		self.timer.timeout.connect(lambda: self.updatePopupVisibility())
+
+		self.completionModel().modelReset.connect(lambda: (
+			self.popup().hide(),
+			self.timer.stop(),
+			self.timer.start(0)
+		))
+
+	def updateCompletionList(self):
+		self.setCompletionPrefix(self.textUnderCursor())
 
 	def insertCompletion(self, completion):
 		"""
@@ -42,13 +57,13 @@ class WordCompleter(QCompleter):
 		"""
 		Filters events for the QTextEdit and the completer popup.
 		"""
-		if e.type() == QEvent.Type.KeyRelease:
-			print(f"text under cursor: '{self.textUnderCursor()}'")
+		# if e.type() == QEvent.Type.KeyRelease:
+		# 	print(f"text under cursor: '{self.textUnderCursor()}'")
 
 		#superclass already installed an eventfilter on the popup() ListView
 		if e.type() == QEvent.Type.KeyPress:
 			e = cast(QKeyEvent, e)
-			print("currentCompletion:", self.currentCompletion())
+			# print("currentCompletion:", self.currentCompletion())
 			if o is self.text_edit or o is self.popup():
 			
 				# Handle key events for autocompletion
@@ -61,7 +76,7 @@ class WordCompleter(QCompleter):
 					self.popup().hide()
 					return True
 				elif e.key() == Qt.Key.Key_Escape and self.popup().isVisible():
-					print("Escape pressed")
+					# print("Escape pressed")
 					self.popup().hide()
 					return True
 				elif e.key() in {Qt.Key.Key_Up, Qt.Key.Key_Down} and self.popup().isVisible():
@@ -70,13 +85,13 @@ class WordCompleter(QCompleter):
 
 		return super().eventFilter(o, e)
 
-	def updateCompletion(self):
+	def updatePopupVisibility(self):
 		"""
 		Updates the completion prefix and shows the popup if necessary.
 		"""
-		prefix = self.textUnderCursor()
-		if prefix and len(prefix) > 0 and prefix != self.currentCompletion():
-			self.setCompletionPrefix(prefix)
+		# prefix = self.textUnderCursor()
+
+		if len(self.textUnderCursor())>0 and self.textUnderCursor() != self.currentCompletion():
 			popup = self.popup()
 			popup.setCurrentIndex(self.completionModel().index(0, 0))
 
@@ -139,7 +154,6 @@ class PythonKeywordsCompleter(WordCompleter):
 			"zip"
 		]
 		
-
 		super().__init__(textedit)
 		self.setModel(QStringListModel(keywords_list + builtins_list))
 
