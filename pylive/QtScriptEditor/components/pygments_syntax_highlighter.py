@@ -6,6 +6,7 @@ from PySide6.QtCore import *
 from pygments import highlight
 from pygments.lexers import PythonLexer
 from pygments.formatter import Formatter
+from pygments.token import Token
 
 def complement(color:QColor):
     h, s, l, a = color.getHsl()
@@ -52,41 +53,46 @@ class QtFormatter(Formatter):
             length = len(value)
             if length > 0:
                 # Create a QTextCharFormat based on the token type
-                format = QTextCharFormat()
+                fmt = QTextCharFormat()
 
                 # Apply basic styles from Pygments tokens
                 if 'Keyword' in str(ttype):
                     # Blue for keywords
-                    format.setForeground(complement(palette.color(QPalette.ColorRole.Highlight)))
+                    fmt.setForeground(complement(palette.color(QPalette.ColorRole.Highlight)))
                 elif 'String' in str(ttype):
                     # Green for strings
-                    format.setForeground(QColor("darkGreen"))
+                    fmt.setForeground(QColor("darkGreen"))
                 elif 'Comment' in str(ttype):
                     # Gray for comments
-                    format.setForeground(dim( palette.color(QPalette.ColorRole.Text), 150 )) 
-                    format.setFontItalic(True)
+                    fmt.setForeground(dim( palette.color(QPalette.ColorRole.Text), 150 )) 
+                    fmt.setFontItalic(True)
                 elif 'Name.Function' in str(ttype):
                     # Purple for function names
-                    format.setForeground(QColor("darkcyan"))
-                    format.setFontWeight(QFont.Bold)
+                    fmt.setForeground(QColor("darkcyan"))
+                    fmt.setFontWeight(QFont.Bold)
                 elif 'Number' in str(ttype):
-                    # Red for numbers
-                    format.setForeground(QColor("darkGreen"))
+                    fmt.setForeground(QColor("darkGreen"))
+
+                elif ttype == Token.Operator:
+                    fmt.setForeground(QColor("green"))
+
+                # Whitespace
                 elif re.match(r'[ \t]+', value):
                     text_color = palette.color(QPalette.ColorRole.Text)
                     text_color.setAlpha(30)
-                    format.setForeground(text_color)
+                    fmt.setForeground(text_color)
                 elif "Text.Whitespace" in str(ttype):
                     text_color = palette.color(QPalette.ColorRole.Text)
                     text_color.setAlpha(100)
-                    format.setForeground(QColor("darkcyan"))
+                    fmt.setForeground(QColor("darkcyan"))
                 else:
+                    print(ttype, value)
                     # Default to black for others
-                    format.setForeground(palette.color(QPalette.ColorRole.Text))
+                    fmt.setForeground(palette.color(QPalette.ColorRole.Text))
 
                 # Append the format with the
                 # start position and length
-                self.formats.append((current_pos, length, format))
+                self.formats.append((current_pos, length, fmt))
 
             # Update the current position
             current_pos += length

@@ -6,7 +6,7 @@ from PySide6.QtCore import *
 
 from textwrap import dedent
 
-class NumberEditor(QObject):
+class TextEditNumberEditor(QObject):
     def __init__(self, textedit:QTextEdit):
         super().__init__(parent=textedit)
         
@@ -53,34 +53,6 @@ class NumberEditor(QObject):
         else:
             return None
 
-
-    # def getNumberCursor(self, cursor: QTextCursor) -> QTextCursor|None:
-    #     text = self.textedit.toPlainText()  # Get the entire text from the editor
-    #     offset = cursor.position()  # Get the current position of the cursor
-
-    #     # Ensure the cursor is at a valid position
-    #     if not (0 <= offset < len(text)) or not (text[offset].isdigit() or text[offset] == '-'):
-    #         return None
-    #         raise ValueError(f"No number found at cursor position {offset}")
-
-    #     # Move the cursor to the start of the number
-    #     cursor.setPosition(offset, QTextCursor.MoveAnchor)
-
-    #     # Move backward to the start of the number
-    #     while cursor.position() > 0 and (text[cursor.position() - 1].isdigit() or text[cursor.position() - 1] == '-'):
-    #         cursor.movePosition(QTextCursor.PreviousCharacter, QTextCursor.KeepAnchor)
-
-    #     # Now, move forward to find the end of the number
-    #     end_position = cursor.position()
-    #     while end_position < len(text) and text[end_position].isdigit():
-    #         end_position += 1
-
-    #     # Create a new cursor that spans the number
-    #     new_cursor = QTextCursor(cursor.document())
-    #     new_cursor.setPosition(cursor.position(), QTextCursor.MoveAnchor)
-    #     new_cursor.setPosition(end_position, QTextCursor.KeepAnchor)
-
-    #     return new_cursor
 
     def eventFilter(self, obj, event): #type: ignore
         if event.type() == QEvent.Type.MouseMove and not self.dragging:
@@ -147,21 +119,21 @@ class NumberEditor(QObject):
 
                     # note: insert text will move the cursor to the end of the number.
                     # find the newly inserted text
-                    self.number_cursor = self.getNumberCursor(self.number_cursor)                
+                    self.number_cursor = self.getNumberCursor(self.number_cursor)
+                    return True        
 
         elif event.type() == QEvent.Type.MouseButtonRelease and self.dragging:
             # Stop dragging
             self.dragging = False
             obj.setCursor(Qt.CursorShape.IBeamCursor)
             self.clearHoverHighlight()
-            self.drag_cursor = None
             return True
         else:
             ...
 
-        # THIS IS FOR DEBUG ONLY !!!!!!!!!!
-        if event.type() == QEvent.Type.MouseMove:
-            return True
+        # # THIS IS FOR DEBUG ONLY !!!!!!!!!!
+        # if event.type() == QEvent.Type.MouseMove:
+        #     return True
 
         return super().eventFilter(obj, event)
 
@@ -175,11 +147,11 @@ class NumberEditor(QObject):
 
     def clearHoverHighlight(self):
         """Remove the highlight from the previously hovered word."""
-        if self.hovered_cursor:
+        if self.number_cursor:
             self.textedit.blockSignals(True)
-            self.hovered_cursor.setCharFormat(self.default_format)
+            self.number_cursor.setCharFormat(self.default_format)
             self.textedit.blockSignals(False)
-            self.hovered_cursor = None
+            self.number_cursor = None
 
 
 if __name__ == "__main__":
@@ -188,6 +160,6 @@ if __name__ == "__main__":
     editor.textChanged.connect(lambda: print("text changed!"))
     editor.setWindowTitle("Edit numbers with mouse inside a QTextEdit")
     editor.setPlainText("Hover over numbers like -40 or (10, 250) to highlight, and drag to edit them.")
-    number_editor = NumberEditor(editor)
+    number_editor = TextEditNumberEditor(editor)
     editor.show()
     app.exec()

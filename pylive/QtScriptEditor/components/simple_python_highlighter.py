@@ -41,6 +41,10 @@ class SimplePythonHighlighter(QSyntaxHighlighter):
 		self.number_format = QTextCharFormat()
 		self.number_format.setForeground(numbers_color)
 
+		operator_color = QColor('green')
+		self.operator_format = QTextCharFormat()
+		self.operator_format.setForeground(operator_color)
+
 		function_name_color = QColor("darkcyan")
 		self.function_format = QTextCharFormat()
 		self.function_format.setForeground(function_name_color)
@@ -63,6 +67,7 @@ class SimplePythonHighlighter(QSyntaxHighlighter):
 			(QRegularExpression(r'\".*\"'),			self.string_format,		0),	# Simple string pattern
 			(QRegularExpression(r'\'.*\''),			self.string_format,		0),	# Single quote strings
 			(QRegularExpression(r'\b[0-9]+\b'),		self.number_format,		0),	# Numbers
+			(QRegularExpression(r'[+\-*/%&|^=<>!]+'), 	self.operator_format, 0),  # Operators
 			(QRegularExpression(r'\b(\w+)\s*\('),	self.function_format,	1)	# Functions
 		]
 
@@ -124,7 +129,8 @@ if __name__ == '__main__':
 	# This is a Python example
 	def foo():
 		if True:
-			print("Hello, World! 55")  # This is a comment
+			x = -55
+			print(f"Hello, World! {x}")  # This is a comment
 	'''))
 	editor.show()
 	sys.exit(app.exec_())

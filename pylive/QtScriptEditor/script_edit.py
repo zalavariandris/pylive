@@ -8,7 +8,7 @@ from typing import *
 from pylive.QtScriptEditor.components.pygments_syntax_highlighter import PygmentsSyntaxHighlighter
 from pylive.QtScriptEditor.components.simple_python_highlighter import SimplePythonHighlighter
 from pylive.QtScriptEditor.components.script_cursor import ScriptCursor
-from pylive.QtScriptEditor.components.number_editor import NumberEditor
+from pylive.QtScriptEditor.components.textedit_number_editor import TextEditNumberEditor
 
 # code assist
 import rope.base.project
@@ -47,7 +47,7 @@ class ScriptEdit(QPlainTextEdit):
 		self.resize(width, int(width*4/3))
 
 		""" edit numbers """
-		self.number_editor = NumberEditor(self)
+		self.number_editor = TextEditNumberEditor(self)
 
 		""" script editor behaviour """
 		self.installEventFilter(self)
