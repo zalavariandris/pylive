@@ -5,6 +5,7 @@ from PySide6.QtGui import *
 from PySide6.QtCore import *
 
 from textwrap import dedent
+import math
 
 class TextEditNumberEditor(QObject):
     def __init__(self, textedit:QTextEdit):
@@ -56,7 +57,7 @@ class TextEditNumberEditor(QObject):
 
     def eventFilter(self, obj, event): #type: ignore
         if event.type() == QEvent.Type.MouseMove and not self.dragging:
-            self.number_cursor = self.getNumberCursor(
+            number_cursor = self.getNumberCursor(
                 self.textedit.cursorForPosition(
                     event.position().toPoint()
                 )
@@ -75,9 +76,10 @@ class TextEditNumberEditor(QObject):
             #     - no number cursor -
 
             #     """))
-            if self.number_cursor:
-                self.applyHighlight(self.number_cursor)
+            if number_cursor:
+                self.applyHighlight(number_cursor)
                 obj.setCursor(Qt.CursorShape.SizeHorCursor)
+                self.number_cursor = number_cursor
             else:
                 self.clearHoverHighlight()
                 obj.setCursor(Qt.CursorShape.IBeamCursor)
@@ -99,10 +101,12 @@ class TextEditNumberEditor(QObject):
                 return False
 
         elif event.type() == QEvent.Type.MouseMove and self.dragging:
+            assert self.original_value
             if self.number_cursor:
                 # Calculate drag distance and compute the new value
-                drag_distance = event.position().toPoint() - self.drag_start
-                new_value = self.original_value + (drag_distance.x() - drag_distance.y()) // 5
+                mouse_delta = event.position().toPoint() - self.drag_start
+                delta_value = (mouse_delta.x() - mouse_delta.y()) * abs(self.original_value)//100
+                new_value = self.original_value + delta_value
 
                 # Ensure we replace the entire number
                 if self.number_cursor:
@@ -139,8 +143,7 @@ class TextEditNumberEditor(QObject):
 
     def applyHighlight(self, cursor:QTextCursor):
         """Highlight the current hovered word."""
-        if self.hovered_cursor!=cursor:
-            self.hovered_cursor = cursor
+        if self.number_cursor!=cursor:
             self.textedit.blockSignals(True)
             cursor.setCharFormat(self.highlight_format)
             self.textedit.blockSignals(False)
