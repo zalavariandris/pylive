@@ -3,16 +3,16 @@ from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 from typing import *
 
-from pylive.QtScriptEditor.components.completer_for_textedit import TextEditCompleter
+from pylive.QtScriptEditor.components.textedit_completer import TextEditCompleter
 
 import rope.base.project
 from rope.base import libutils
 import rope.base.project
 from rope.contrib import codeassist
-
+import rope
 
 class RopeCompleter(TextEditCompleter):
-	def __init__(self, textedit: QTextEdit, rope_project):
+	def __init__(self, textedit: QTextEdit|QPlainTextEdit, rope_project):
 		super().__init__(textedit)
 		self.rope_project = rope_project
 
@@ -21,17 +21,26 @@ class RopeCompleter(TextEditCompleter):
 		source_code = self.text_edit.toPlainText()
 		offset = self.text_edit.textCursor().position()
 
-		proposals = codeassist.code_assist(
-			self.rope_project, 
-			source_code=source_code, 
-			offset=offset
-		)
-		proposals = codeassist.sorted_proposals(proposals) # Sorting proposals; for changing the order see pydoc
-		starting_offset = codeassist.starting_offset(source_code, offset)
+		try:
+			proposals = codeassist.code_assist(
+				self.rope_project, 
+				source_code=source_code, 
+				offset=offset,
+				maxfixes=10
+			)
 
-		# update proposals
-		string_list_model = cast(QStringListModel, self.model())
-		string_list_model.setStringList([proposal.name for proposal in proposals])
+			proposals = codeassist.sorted_proposals(proposals) # Sorting proposals; for changing the order see pydoc
+			starting_offset = codeassist.starting_offset(source_code, offset)
+
+			# update proposals
+			string_list_model = cast(QStringListModel, self.model())
+			string_list_model.setStringList([proposal.name for proposal in proposals])
+		except TabError:
+			string_list_model = cast(QStringListModel, self.model())
+			string_list_model.setStringList([])
+		except rope.base.exceptions.ModuleSyntaxError:
+			string_list_model = cast(QStringListModel, self.model())
+			string_list_model.setStringList([])
 
 	@override
 	def insertCompletion(self, completion):

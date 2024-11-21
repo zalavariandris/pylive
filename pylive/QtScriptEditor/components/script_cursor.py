@@ -2,6 +2,7 @@ from PySide6.QtWidgets import *
 from PySide6.QtGui import *
 from PySide6.QtCore import *
 from typing import *
+
 def indent_text(text, indent="\t"):
 	lines = text.split("\n")
 	indented_lines = []
@@ -209,6 +210,8 @@ class ScriptCursor(QTextCursor):
 			new_line_indentation+=indentation
 		self.insertText("\n"+new_line_indentation)
 
+
+
 if __name__ == "__main__":
 	class ScriptTextEdit(QPlainTextEdit):
 		def __init__(self, parent=None):
@@ -263,7 +266,7 @@ if __name__ == "__main__":
 
 	import sys
 	from textwrap import dedent
-	from WhitespaceHighlighter import WhitespaceHighlighter
+	from pylive.QtScriptEditor.components.WhitespaceHighlighter import WhitespaceHighlighter
 
 	app = QApplication(sys.argv)
 	window = ScriptTextEdit()
@@ -280,7 +283,6 @@ if __name__ == "__main__":
 
 	# Dim whitespace characters
 	WhitespaceHighlighter(window.document())
-
 	
 	window.setPlainText(dedent("""\
 	class Person:

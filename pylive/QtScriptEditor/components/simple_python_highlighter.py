@@ -47,10 +47,12 @@ class SimplePythonHighlighter(QSyntaxHighlighter):
 
 		# Define Python keywords
 		keywords = [
-			'and', 'as', 'assert', 'async', 'await', 'break', 'class', 'continue',
-			'def', 'del', 'elif', 'else', 'except', 'False', 'finally', 'for',
-			'from', 'global', 'if', 'import', 'in', 'is', 'lambda', 'None', 'nonlocal',
-			'not', 'or', 'pass', 'raise', 'return', 'True', 'try', 'while', 'with', 'yield'
+			"and", "as", "assert", "break", "class", "continue", 
+			"def", "del", "elif", "else", "except", "False", 
+			"finally", "for", "from", "global", "if", "import", 
+			"in", "is", "lambda", "None", "nonlocal", "not", 
+			"or", "pass", "raise", "return", "True", "try", 
+			"while", "with", "yield"
 		]
 		keyword_pattern = '|'.join([r'\b' + word + r'\b' for word in keywords])
 
@@ -118,10 +120,11 @@ if __name__ == '__main__':
 	highlighter = SimplePythonHighlighter(editor.document())
 
 	from textwrap import dedent
-	editor.setPlainText(dedent('''# This is a Python example
+	editor.setPlainText(dedent('''\
+	# This is a Python example
 	def foo():
 		if True:
-			print("Hello, World!")  # This is a comment
+			print("Hello, World! 55")  # This is a comment
 	'''))
 	editor.show()
 	sys.exit(app.exec_())
