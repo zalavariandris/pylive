@@ -74,7 +74,7 @@ class ScriptCursor(QTextCursor):
 		start = self.selectionStart()
 		end = self.selectionEnd()
 
-		if self.hasSelection() and len(self.selection().toPlainText().split("\n")) > 1:
+		if True: #self.hasSelection():# and len(self.selection().toPlainText().split("\n")) > 1:
 			self.beginEditBlock()
 
 			# extend selection to lines
@@ -116,7 +116,7 @@ class ScriptCursor(QTextCursor):
 		start = self.selectionStart()
 		end = self.selectionEnd()
 
-		if self.hasSelection() and len(self.selection().toPlainText().split("\n")) > 1:
+		if True: #self.hasSelection() and len(self.selection().toPlainText().split("\n")) > 1:
 			self.beginEditBlock()
 
 			# extend selection to lines
@@ -156,7 +156,7 @@ class ScriptCursor(QTextCursor):
 		start = self.selectionStart()
 		end = self.selectionEnd()
 
-		if self.hasSelection() and len(self.selection().toPlainText().split("\n")) > 1:
+		if True: #self.hasSelection() and len(self.selection().toPlainText().split("\n")) > 1:
 			self.beginEditBlock()
 
 			# extend selection to lines

@@ -35,12 +35,14 @@ class RopeCompleter(TextEditCompleter):
 			# update proposals
 			string_list_model = cast(QStringListModel, self.model())
 			string_list_model.setStringList([proposal.name for proposal in proposals])
-		except TabError:
+		except (SyntaxError, TabError, IndentationError):
 			string_list_model = cast(QStringListModel, self.model())
 			string_list_model.setStringList([])
-		except rope.base.exceptions.ModuleSyntaxError:
+		except (rope.base.exceptions.RopeError):
 			string_list_model = cast(QStringListModel, self.model())
 			string_list_model.setStringList([])
+		except Exception as e:
+			print(f"Handle these kind of errors in requestCompletions: {e.__class__}")
 
 	@override
 	def insertCompletion(self, completion):

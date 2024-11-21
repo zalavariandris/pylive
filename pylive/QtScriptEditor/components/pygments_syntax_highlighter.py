@@ -86,7 +86,7 @@ class QtFormatter(Formatter):
                     text_color.setAlpha(100)
                     fmt.setForeground(QColor("darkcyan"))
                 else:
-                    print(ttype, value)
+                    # print(ttype, value)
                     # Default to black for others
                     fmt.setForeground(palette.color(QPalette.ColorRole.Text))
 

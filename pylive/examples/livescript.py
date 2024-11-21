@@ -9,7 +9,7 @@ from datetime import datetime
 import time
 import humanize
 
-from pylive.QtScriptEditor.simple_script_editor import ScriptEdit
+from pylive.QtScriptEditor.script_edit import ScriptEdit
 from typing import *
 
 from io import StringIO

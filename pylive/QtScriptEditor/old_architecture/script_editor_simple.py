@@ -4,8 +4,8 @@ from PySide6.QtWidgets import *
 from PySide6.QtGui import *
 from PySide6.QtCore import *
 
-from pylive.QtScriptEditor.components.PygmentsSyntaxHighlighter import PygmentsSyntaxHighlighter
-from pylive.QtScriptEditor.components.number_editor import NumberEditor
+from pylive.QtScriptEditor.components.pygments_syntax_highlighter import PygmentsSyntaxHighlighter
+from pylive.QtScriptEditor.components.textedit_number_editor import TextEditNumberEditor
 from pylive.QtScriptEditor.old_architecture.KeywordsCompleter_OLD import KeywordsCompleter
 import rope.base.project
 
@@ -65,7 +65,7 @@ class ScriptEdit(QPlainTextEdit):
 
 		""" Inline Notifications """
 		self.setupInlineNotifications()
-		self.number_editor = NumberEditor(self)
+		self.number_editor = TextEditNumberEditor(self)
 
 		""" Line numbers """
 		self.lineNumberArea = LineNumberArea(self)
@@ -249,7 +249,7 @@ class ScriptEdit(QPlainTextEdit):
 			descent = font_metrics.descent()
 
 			# Create and position the notification label
-			notification_label = QLabel(parent=self)
+			notification_label = QLabel(parent=self.viewport())
 			notification_label.setText(f"{message}")  # Use the retrieved message
 			notification_label.setFont(self.font())
 			notification_label.setAlignment(Qt.AlignmentFlag.AlignBaseline)
@@ -270,7 +270,7 @@ class ScriptEdit(QPlainTextEdit):
 			notification_label.setWindowOpacity(0.5)
 
 			# Calculate the x position with a little padding
-			notification_x = int(rect.left() + block_text_width+5) + self.lineNumberAreaWidth() + font_metrics.horizontalAdvance(" ")
+			notification_x = int(rect.left() + block_text_width+5)
 			notification_y = int(rect.bottom() - ascent+1)
 			notification_label.move(notification_x, notification_y)  # Adjust x and y position
 			notification_label.show()
@@ -397,7 +397,7 @@ class ScriptEdit(QPlainTextEdit):
 if __name__ == "__main__":
 	import sys
 	from textwrap import dedent
-	from components.WhitespaceHighlighter import WhitespaceHighlighter
+	# from components.WhitespaceHighlighter import WhitespaceHighlighter
 	import ast
 
 	app = QApplication(sys.argv)

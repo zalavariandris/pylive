@@ -8,7 +8,7 @@ from textwrap import dedent
 import math
 
 class TextEditNumberEditor(QObject):
-    def __init__(self, textedit:QTextEdit):
+    def __init__(self, textedit:QTextEdit|QPlainTextEdit):
         super().__init__(parent=textedit)
         
         self.hovered_cursor = None  # Store the currently hovered cursor
