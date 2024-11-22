@@ -1,3 +1,9 @@
+from PySide6.QtGui import *
+from PySide6.QtCore import *
+from PySide6.QtWidgets import *
+from pylive.examples import livescript
+from typing import *
+
 import sys
 from PySide6.QtWidgets import *
 from PySide6.QtGui import *
@@ -6,7 +12,7 @@ from PySide6.QtCore import *
 from pygments import highlight
 from pygments.lexers import PythonLexer
 from pygments.formatter import Formatter
-from pygments import token
+from pygments.token import Token
 
 def complement(color:QColor):
     h, s, l, a = color.getHsl()
@@ -19,8 +25,7 @@ def shift(color:QColor, offset=180):
 def dim(color:QColor, a=128):
     r,g,b,_ = color.getRgb()
     return QColor.fromRgb( r,g,b,a )
-
-
+    
 black =       QColor.fromHsl(0, 0*255/100, 0*255/100)
 blue =        QColor.fromHsl(210, 50*255/100, 60*255/100)
 blueVibrant = QColor.fromHsl(210, 60*255/100, 60*255/100)
@@ -39,7 +44,7 @@ red =         QColor.fromHsl(357, 79*255/100, 65*255/100)
 red2 =        QColor.fromHsl(13, 93*255/100, 66*255/100)
 white =       QColor.fromHsl(0, 0*255/100, 100*255/100)
 white2 =      QColor.fromHsl(0, 0*255/100, 97*255/100)
-white3 =      QColor.fromHsl(219, 28*255/100, 88*255/100)
+white3 =      QColor.fromHsl(219, 28*255/100, 82*255/100)
 
 class PygmentsSyntaxHighlighter(QSyntaxHighlighter):
     def __init__(self, document):
@@ -87,9 +92,9 @@ class QtFormatter(Formatter):
                     fmt.setForeground(blue5)
                 elif 'Keyword' in str(ttype):
                     # Blue for keywords
-                    fmt.setForeground(pink)
+                    fmt.setForeground(complement(palette.color(QPalette.ColorRole.Highlight)))
                 elif 'Number' in str(ttype):
-                    fmt.setForeground(orange)
+                    fmt.setForeground(pink)
                 elif 'Number Suffix' in str(ttype): # this is not a pygment constant
                     fmt.setForeground(pink)
                 elif 'Built-in constant' in str(ttype):  # this is not a pygment constant
@@ -101,9 +106,7 @@ class QtFormatter(Formatter):
                     # Purple for function names
                     fmt.setForeground(blue5)
                     fmt.setFontWeight(QFont.Bold)
-                elif ttype == token.Operator:
-                    fmt.setForeground(red2)
-                elif ttype == token.Literal:
+                elif ttype == Token.Operator:
                     fmt.setForeground(red2)
 
                 # Whitespace
@@ -128,24 +131,29 @@ class QtFormatter(Formatter):
             # Update the current position
             current_pos += length
 
-### Main Application ###
+
+if __name__ == "__live__":
+	from pylive.QtScriptEditor.script_edit import ScriptEdit
+	editor = ScriptEdit()
+	from pylive.preview_widget import PreviewWidget
+	preview = PreviewWidget.instance()
+	preview.display(editor)
+	
+	from textwrap import dedent
+	editor.setPlainText(dedent("""\
+		def hello():
+		    print("hello")
+	"""))
+
+	
+	editor.highlighter = PygmentsSyntaxHighlighter(editor.document())
+	bgcolor = QColor()
+	bgcolor.setHsl(192,31,49)
+	palette = editor.palette()
+	palette.setColor(QPalette.Base, blue3)  # Light yellow color
+	editor.setPalette(palette)
+	
+
 if __name__ == "__main__":
-    app = QApplication(sys.argv)
+	...
 
-    # Create a QTextEdit and apply the highlighter
-    editor = QTextEdit()
-    editor.setWindowTitle("PygmentsSyntaxHighlighter component example")
-    editor.setTabStopDistance(QFontMetricsF(editor.font()).horizontalAdvance(' ') * 4)
-    highlighter = PygmentsSyntaxHighlighter(editor.document())
-
-    # Set some Python code to highlight
-    sample_code = """def hello_world():
-    print("Hello, World!")
-    # This is a comment
-    x = 42
-    return x
-    """
-    editor.setPlainText(sample_code)
-    editor.show()
-
-    sys.exit(app.exec())

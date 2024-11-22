@@ -1,8 +1,9 @@
+from typing import *
 from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
-def createElement(widgetType, layout=None, children=None, stretch=0):
+def createWidget(widgetType, layout=None, children=None, stretch=0):
 	"""
 	A helper function to create PySide widgets with layouts and children.
 
@@ -29,6 +30,26 @@ def createElement(widgetType, layout=None, children=None, stretch=0):
 	
 	return widget
 
+def createAction(label:str, callback:Callable|None=None):
+	action = QAction(label)
+	if callback:
+		action.triggered.connect(lambda: callback())
+	else:
+		action.setEnabled(False)
+	return action
+
+def createSeparator():
+	separator = QAction()
+	separator.setSeparator(True)
+	return separator
+
+def createMenu(label:str, actions:List[QAction]):
+	menu = QMenu(label)
+	for action in actions:
+		action.setParent(menu)
+		menu.addAction(action)
+	return menu
+
 class Panel(QWidget):
 	def __init__(self, direction=QBoxLayout.Direction.LeftToRight, children=[], menuBar=None):
 		super().__init__(parent=None)
@@ -49,23 +70,23 @@ class Splitter(QSplitter):
 		self.setSizes([self.width()//self.count() for i in range(self.count())])		
 		self.setStyleSheet("QSplitter::handle{background: palette(window);}");
 
-# if __name__ == "__main__":
-# 	import sys
-# 	app = QApplication(sys.argv)
+if __name__ == "__main__":
+	import sys
+	app = QApplication(sys.argv)
 
-# 	from pylive import livescript
-# 	main_widget = Splitter(orientation=Qt.Orientation.Horizontal, children=[
-# 		QLabel("split1"),
-# 		QLabel("split2")
-# 	])
-# 	# livescript.display(main_widget)
+	from pylive import livescript
+	main_widget = Splitter(orientation=Qt.Orientation.Horizontal, children=[
+		QLabel("split1"),
+		QLabel("split2")
+	])
+	# livescript.display(main_widget)
 	
-# 	h = createElement
-# 	window = h(QWidget, layout=QHBoxLayout(), children=[
-# 		(h(QLabel, text="hello"), 1),
-# 		(h(QLabel, text="hello2"), 1)
-# 	])
+	h = createWidget
+	window = h(QWidget, layout=QHBoxLayout(), children=[
+		(h(QLabel, text="hello"), 1),
+		(h(QLabel, text="hello2"), 1)
+	])
 
 	
-# 	window.show()
-# 	sys.exit(app.exec())
+	window.show()
+	sys.exit(app.exec())
