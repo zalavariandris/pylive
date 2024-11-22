@@ -523,13 +523,10 @@
 			"file": "pylive/QtScriptEditor/script_edit.py",
 			"settings":
 			{
-				"buffer_size": 11031,
+				"buffer_size": 15027,
 				"encoding": "UTF-8",
 				"line_ending": "Windows"
-			},
-			"undo_stack":
-			[
-			]
+			}
 		}
 	],
 	"build_system": "Packages/Python/Python.sublime-build",
@@ -982,15 +979,15 @@
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 11031,
+						"buffer_size": 15027,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								1479,
-								1418
+								0,
+								0
 							]
 						],
 						"settings":

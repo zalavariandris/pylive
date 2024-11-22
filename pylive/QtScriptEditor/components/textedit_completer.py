@@ -3,20 +3,23 @@ from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 from typing import *
 
+import weakref
+
 class TextEditCompleter(QCompleter):
 	def __init__(self, textedit:QTextEdit|QPlainTextEdit, words:List[str]=[]):
 		super().__init__(words, parent=textedit)
 		self.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
 		self.setCompletionMode(QCompleter.CompletionMode.PopupCompletion)
-		self.text_edit = textedit  # The QTextEdit instance
-		self.setWidget(self.text_edit)
+		self.text_edit = weakref.ref(textedit)
+
+		self.setWidget(textedit)
 		self.activated.connect(self.insertCompletion)
 
 		# Install event filter on the text edit
-		self.text_edit.installEventFilter(self)
+		textedit.installEventFilter(self)
 			
 		# update built-in Filter when typing, or cursor position has changed
-		self.text_edit.textChanged.connect(lambda: (
+		textedit.textChanged.connect(lambda: (
 			self.popup().hide(), 
 			self.requestCompletions()
 		))
@@ -33,31 +36,34 @@ class TextEditCompleter(QCompleter):
 			self.timer.start(0)
 		))
 
+	def closeEvent(self):
+		print("CloseEvent")
+
 	def requestCompletions(self):
 		"""this will be called, when the textedit wants completions
 		set the model string ot the completion prefix to trigger an update
 		"""
-		print("requestCompletions", self.getWordUntilCursor())
 		self.setCompletionPrefix(self.getWordUntilCursor())
 
 	def insertCompletion(self, completion:str):
 		"""
 		Replace "WordUnderCursor" with completion
 		"""
-		tc = self.text_edit.textCursor()
+		textedit = cast(QPlainTextEdit, self.widget())
+		tc = textedit.textCursor()
 		tc.select(QTextCursor.SelectionType.WordUnderCursor)
 		# extra = len(completion) - len(tc.selectedText())
 		# tc.movePosition(QTextCursor.MoveOperation.Left)
 		# tc.movePosition(QTextCursor.MoveOperation.EndOfWord)
 		tc.insertText(completion)
-		self.text_edit.setTextCursor(tc)
+		textedit.setTextCursor(tc)
 
 	def getWordUntilCursor(self):
 		"""
 		Returns the word under the cursor in the QTextEdit.
 		"""
-		
-		cursor = self.text_edit.textCursor()
+		textedit = cast(QPlainTextEdit, self.widget())
+		cursor = textedit.textCursor()
 		original_position = cursor.position()
 		original_anchor = cursor.anchor()
 		cursor.select(QTextCursor.SelectionType.WordUnderCursor)
@@ -119,7 +125,8 @@ class TextEditCompleter(QCompleter):
 			popup.setCurrentIndex(self.completionModel().index(0, 0))
 
 			# Calculate the required width for the popup
-			rect = self.text_edit.cursorRect()
+			textedit = cast(QPlainTextEdit, self.widget())
+			rect = textedit.cursorRect()
 			# Get the width needed for the longest completion
 			model = self.completionModel()
 			max_width = 0
@@ -135,7 +142,7 @@ class TextEditCompleter(QCompleter):
 			
 			# Ensure the popup isn't too narrow or too wide
 			min_width = 5
-			max_width = self.text_edit.width()
+			max_width = textedit.width()
 			total_width = max(min_width, min(total_width, max_width))
 			
 			rect.setWidth(total_width)

@@ -1,5 +1,5 @@
 def open_livescript(filepath=None):
-	from pylive import livescript
+	from pylive.examples import livescript
 	from PySide6.QtWidgets import QApplication
 
 	import sys

@@ -3,8 +3,10 @@ from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
+
 class SingletonException(Exception):
 	...
+
 
 class PreviewWidget(QWidget):
 	_instance: Optional['PreviewWidget'] = None
@@ -74,14 +76,15 @@ class PreviewWidget(QWidget):
 
 	def clear(self):
 		layout = self.previewFrame.layout()
-		for i in reversed(range(layout.count())): 
-			layout.itemAt(i).widget().deleteLater()
+		while item:=layout.itemAt(0):
+			layout.removeItem(item)
+			# item.widget().deleteLater()
 
 		self.contentChanged.emit()
 
 
 if __name__ == "__main__":
-	from pylive import livescript
+	from pylive.examples import livescript
 	import sys
 	app = QApplication(sys.argv)
 	window = QWidget()

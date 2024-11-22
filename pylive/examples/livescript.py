@@ -27,7 +27,7 @@ TEMPLATE_SCRIPT = dedent("""\
 from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
-from pylive import livescript
+from pylive.examples import livescript
 from typing import *
 
 print("Hello World")
@@ -82,19 +82,21 @@ class LiveScript(QWidget):
 		# setup watch file
 		self.filepath = None
 		self.watcher = QFileSystemWatcher()
-		self.watcher.fileChanged.connect(lambda: self.on_file_change(self.filepath))
+		self.watcher.fileChanged.connect(lambda: 
+			self.on_file_change(self.filepath)
+		)
 
-		# load config
-		self.loadConfig()
+		
 		# setup from config
-		if recent:=self.config['recent']:
-			self.openFile(recent[-1])
+		self.loadConfig()
+		if self.config()['open_recent_file']:
+			if recent:=self.config()['recent']:
+				self.openFile(recent[-1])
 
 		# setup menubar
-		self.script_edit.document().modificationChanged.connect(self.updateWindowTitle)
-		if not self.filepath:
-			self.script_edit.setPlainText(TEMPLATE_SCRIPT)
-
+		self.script_edit.document().modificationChanged.connect(
+			lambda: self.updateWindowTitle()
+		)
 
 		self.main_splitter.addWidget(self.script_edit)
 
@@ -107,39 +109,53 @@ class LiveScript(QWidget):
 		self.main_splitter.addWidget(self.right_panel)
 
 		if self.main_splitter.count()>0:
-			self.main_splitter.setSizes([self.width()//self.main_splitter.count() for i in range(self.main_splitter.count())])
+			self.main_splitter.setSizes([
+				self.width()//self.main_splitter.count() 
+				for i in range(self.main_splitter.count())
+			])
 
 		self.setupMenuBar()
 
 		self.preview_widget.hide()
-		self.preview_widget.contentChanged.connect(lambda: self.preview_widget.show())
+		self.preview_widget.contentChanged.connect(
+			lambda: self.preview_widget.show()
+		)
 
 
 		# Set the custom exception handler
 		sys.excepthook = self.handle_uncaught_exceptions
 
+	def config(self):
+
+		config = {
+			"open_recent_file":False,
+			"recent": [],
+			"live": True
+		}
+		config.update(self._config)
+		return config
+
+
+	def saveConfig(self):
+		import json
+		with open("./livescript.init", 'w') as file:
+			file.write(json.dumps(self.config(), indent=2))
+			
+	def loadConfig(self):
+		import json
+		try:
+			with open("./livescript.init", 'r') as file:
+				self._config = json.loads(file.read())
+		except FileNotFoundError as err:
+			...
+
 	def handle_uncaught_exceptions(self, exc_type, exc_value, exc_tb):
-		# Extract the line number and other details
-		# tb = traceback.extract_tb(exc_tb)
-		# last_call = tb[-1]  # The last call in the traceback will be where the exception occurred
-		# filename, lineno, funcname, text = last_call
-
-		# # Logging or displaying exception details
-		# # print(f"Exception occurred in {filename} at line {lineno}")
-		# # print(f"Function: {funcname}")
-		# # print(f"Code: {text}")
-		
-		# # You can also format the exception in a user-friendly way
-		# formatted_traceback = ''.join(traceback.format_exception(exc_type, exc_value, exc_tb))
-		# msg = f"Error occurred at {filename} line {lineno}"
-		# print(msg)
-		# self.script_edit.insertNotification(lineno, f"Error occurred at {filename} line {lineno}")
-
 		self.display_exception(exc_value)
 
-
 	def updateWindowTitle(self):
-		self.setWindowTitle(f"{Path(self.filepath).name if self.filepath else "untitled"} {'*' if self.script_edit.document().isModified() else ''} - LiveScript")
+		filename = Path(self.filepath).name if self.filepath else "untitled"
+		modified_mark = '*' if self.script_edit.document().isModified() else ''
+		self.setWindowTitle(f"{filename} {modified_mark} - LiveScript")
 
 	def createContext(self):
 		return {
@@ -173,23 +189,28 @@ class LiveScript(QWidget):
 			self.log_window.appendError(text)
 
 	def evaluate(self):
-		if hasattr(self, '_sourcecode') and self._sourcecode == self.script_edit.toPlainText().strip():
+		CachedSource = getattr(self, '_sourcecode', "").strip()
+		CurrentSource = self.script_edit.toPlainText().strip()
+		if CurrentSource == CachedSource:
 			return
 
-		self._sourcecode = self.script_edit.toPlainText().strip()
+		self._sourcecode = self.script_edit.toPlainText()
 		self.preview_widget.clear()
 		self.log_window.clear()
 		global_vars = self.createContext()
 
 		self.preview_widget.hide()
 		self.script_edit.clearNotifications()
-		
 
 		try:
 			start_time = time.perf_counter()
-			the_ast = ast.parse(self._sourcecode, filename="<script>", type_comments=True)
+			the_ast = ast.parse(self._sourcecode, 
+				filename="<script>", 
+				type_comments=True)
 			try:
-				compiled = compile(the_ast, filename="<script>", mode="exec")
+				compiled = compile(the_ast, 
+					filename="<script>", 
+					mode="exec")
 				exec(compiled, global_vars)
 				end_time = time.perf_counter()
 				duration_ms = (end_time - start_time) * 1000
@@ -207,39 +228,52 @@ class LiveScript(QWidget):
 		gc.collect()
 
 	def on_file_change(self, path):
-		if self.script_edit.document().isModified():
-			result = self.prompt_disk_change()
+		print("on file change", path)
+
+		def reload_script():
+			# reload the file changed on disk
+			assert self.filepath
+			with open(self.filepath, 'r') as file:
+				data = file.read()
+				self.script_edit.setPlainText(data)
+				self.script_edit.document().setModified(False)
+
+		if not self.script_edit.document().isModified():
+			"""
+			When the script is not modified in the editor,
+			silently reload the file changed on disk!
+			"""
+			reload_script()
+		else:
+			"""
+			Notify the user that the file haschanged on disk,
+			and ask if they want to reload it?
+			"""
+			msg_box = QMessageBox(self)
+			msg_box.setWindowTitle("File has changed on Disk.")
+			msg_box.setText("Do you want to reload?")
+			msg_box.setIcon(QMessageBox.Icon.Question)
+			msg_box.setStandardButtons(
+				QMessageBox.StandardButton.Yes |
+				QMessageBox.StandardButton.No
+			)
+			"""
+			Temporary block _file change_ signals, to ignore multiple changes
+			when the messagebox is already open
+			"""
+			self.watcher.blockSignals(True) 
+			result = msg_box.exec()
+			self.watcher.blockSignals(False)
+
 			if result == QMessageBox.StandardButton.Yes:
-				pass
-			else:
-				return
-
-		with open(path, 'r') as file:
-			data = file.read()
-			self.script_edit.setPlainText(data)
-			self.script_edit.document().setModified(False)
-
-	def saveConfig(self):
-		import json
-		with open("./livescript.init", 'w') as file:
-			file.write(json.dumps(self.config, indent=2))
-			
-	def loadConfig(self):
-		import json
-		try:
-			with open("./livescript.init", 'r') as file:
-				self.config = json.loads(file.read())
-		except FileNotFoundError as err:
-			self.config = {
-				"recent": [],
-				"live": True
-			}
+				reload_script()
 
 	def setupStatusBar(self):
 		self.statusbar = QStatusBar()
 		self.layout().addWidget(self.statusbar)
 		self.statusbar.showMessage("started")
-		self.statusbar.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
+		self.statusbar.setSizePolicy(QSizePolicy.Policy.Expanding,
+			QSizePolicy.Policy.Maximum)
 		
 	def setupMenuBar(self):
 		self.menu_bar = QMenuBar()
@@ -256,18 +290,19 @@ class LiveScript(QWidget):
 		file_menu  = self.menu_bar.addMenu("File")
 		new_file_action = QAction("New File", self)
 		new_file_action.triggered.connect(lambda: self.newFile())
-		new_file_action.setShortcut(QKeySequence(Qt.Key.Key_Control | Qt.Key.Key_N))
+		new_file_action.setShortcut(QKeySequence.StandardKey.New)
 
 		ope_file_action = QAction("Open File", self)
 		ope_file_action.triggered.connect(lambda: self.openFile())
-		ope_file_action.setShortcut(QKeySequence(Qt.Key.Key_Control | Qt.Key.Key_O))
+		ope_file_action.setShortcut(QKeySequence.StandardKey.Open)
 
 		save_file_action = QAction("Save File", self)
 		save_file_action.triggered.connect(lambda: self.saveFile())
-		save_file_action.setShortcut(QKeySequence(Qt.Key.Key_Control | Qt.Key.Key_S))
+		save_file_action.setShortcut(QKeySequence.StandardKey.Save)
 
 		restart_action = QAction("Restart", self)
 		restart_action.triggered.connect(lambda: self.restart())
+		restart_action.setShortcut(QKeySequence.StandardKey.Refresh)
 
 		file_menu.addAction(new_file_action)
 		file_menu.addAction(ope_file_action)
@@ -275,46 +310,76 @@ class LiveScript(QWidget):
 		file_menu.addAction(restart_action)
 		file_menu.addSeparator()
 
-		for recent in self.config['recent']:
+		for recent in self.config()['recent']:
 			open_recent_action = QAction(f"{recent}", self)
-			open_recent_action.triggered.connect(lambda recent=recent: self.openFile(recent))
+			open_recent_action.triggered.connect(
+				lambda recent=recent: self.openFile(recent)
+			)
 			file_menu.addAction(open_recent_action)
 
 		"""Edit menu"""
 		edit_menu  = self.menu_bar.addMenu("Edit")
 		copy_action = QAction("Copy", self)
 		copy_action.triggered.connect(self.script_edit.copy)
-		copy_action.setShortcut(QKeySequence(Qt.Key.Key_Control | Qt.Key.Key_C))
+		copy_action.setShortcut(QKeySequence.StandardKey.Copy)
 		cut_action = QAction("Cut", self)
 		cut_action.triggered.connect(self.script_edit.cut)
-		cut_action.setShortcut(QKeySequence(Qt.Key.Key_Control | Qt.Key.Key_X))
+		cut_action.setShortcut(QKeySequence.StandardKey.Cut)
 		paste_action = QAction("Paste", self)
 		paste_action.triggered.connect(self.script_edit.paste)
-		paste_action.setShortcut(QKeySequence(Qt.Key.Key_Control | Qt.Key.Key_V))
+		paste_action.setShortcut(QKeySequence.StandardKey.Paste)
 		toggle_comments_action = QAction("toggle comments", self)
-		toggle_comments_action.setShortcut(QKeySequence(Qt.Key.Key_Control | Qt.Key.Key_Slash))
-		toggle_comments_action.triggered.connect(self.script_edit.toggleCommentSelection)
+		toggle_comments_action.setShortcut("Ctrl+/")
+		toggle_comments_action.triggered.connect(self.script_edit.toggleComment)
 
-		# Add actions to Edit menu
 		edit_menu.addAction(cut_action)
 		edit_menu.addAction(paste_action)
 		edit_menu.addAction(toggle_comments_action)
 
+		""" View menu """
+		view_menu = self.menu_bar.addMenu("View")
+		zoom_in_action = QAction("Zoom In", self)
+		zoom_in_action.setShortcut(QKeySequence.StandardKey.ZoomIn)
+		zoom_in_action.triggered.connect(lambda:
+			self.increaseFontSize()
+		)
+		zoom_out_action = QAction("Zoom Out", self)
+		zoom_out_action.triggered.connect(lambda:
+			self.decreaseFontSize()
+		)
+		zoom_out_action.setShortcut(QKeySequence.StandardKey.ZoomOut)
+
+		view_menu.addAction(zoom_in_action)
+		view_menu.addAction(zoom_out_action)
+
 		"""Template menu"""
 		template_menu  = self.menu_bar.addMenu("Templates")
 		insert_template_action = QAction("insert template", self)
-		insert_template_action.triggered.connect(lambda: self.script_edit.insertPlainText(TEMPLATE_SCRIPT))
+		insert_template_action.triggered.connect(lambda: 
+			self.script_edit.insertPlainText(TEMPLATE_SCRIPT)
+		)
 
 		# Add actions to Edit menu
 		template_menu.addAction(insert_template_action)
 
 		self.layout().setMenuBar(self.menu_bar)
 
+	def increaseFontSize(self):
+		font = QApplication.font()
+		font.setPointSize(font.pointSize()+2)
+		QApplication.setFont(font)
+
+	def decreaseFontSize(self):
+		font = QApplication.font()
+		font.setPointSize(font.pointSize()-2)
+		QApplication.setFont(font)
+
 	def closeEvent(self, event):
 		DoCloseFile = self.closeFile()
 		if not DoCloseFile:
 			event.ignore()
 			return
+
 		event.accept()
 
 	def closeFile(self)->bool:
@@ -323,9 +388,14 @@ class LiveScript(QWidget):
 			# prompt user if file has changed
 			msg_box = QMessageBox(self)
 			msg_box.setWindowTitle("Save changes?")
-			msg_box.setText(f"{Path(self.filepath).name if self.filepath else "Script"} has benn modified, save changes?")
+			filename = Path(self.filepath).name if self.filepath else "Script"
+			msg_box.setText(f"{filename} has been modified, save changes?")
 			msg_box.setIcon(QMessageBox.Icon.Warning)
-			msg_box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel)
+			msg_box.setStandardButtons(
+				QMessageBox.StandardButton.Yes | 
+				QMessageBox.StandardButton.No | 
+				QMessageBox.StandardButton.Cancel
+			)
 			result = msg_box.exec()
 
 			match result:
@@ -343,6 +413,7 @@ class LiveScript(QWidget):
 			self.script_edit.setPlainText("")
 			self.script_edit.document().setModified(False)
 			self.updateWindowTitle()
+			self._config['open_recent_file'] = False
 
 		return AcceptClose
 
@@ -356,7 +427,8 @@ class LiveScript(QWidget):
 			...
 		
 		if not self.filepath or filepath:
-			choosen_filepath, filter_used = QFileDialog.getSaveFileName(self, "Save", ".py", "Python Script (*.py);;Any File (*)")
+			choosen_filepath, filter_used = QFileDialog.getSaveFileName(self, 
+				"Save", ".py", "Python Script (*.py);;Any File (*)")
 			if not choosen_filepath:
 				return # if no filepath was choosen cancel saving
 			filepath = choosen_filepath
@@ -366,16 +438,21 @@ class LiveScript(QWidget):
 		if not filepath:
 			return
 
-		self.watcher.blockSignals(True)
+		""" note
+		We must stop watching this file, otherwise it will silently reload the
+		script. It reloads silently, because if the document is not modified,
+		and the file has been changed, it will silently reload the script.
+		"""
+		self.watcher.removePath(filepath) 
 		try:
 			with open(filepath, 'w') as file:
 				file.write(self.script_edit.toPlainText())
-				self.script_modified_in_memory = False
-			self.config['recent'].append(filepath)
+				self.script_edit.document().setModified(False)
+			self._config['recent'].append(filepath)
 			self.saveConfig()
 		except FileNotFoundError:
 			pass
-		self.watcher.blockSignals(False)
+		self.watcher.addPath(filepath)
 		self.filepath = filepath
 		self.updateWindowTitle()
 
@@ -385,7 +462,8 @@ class LiveScript(QWidget):
 
 		if not filepath:
 			# if not filepath is specified open file doalog
-			choosen_filepath, filter_used = QFileDialog.getOpenFileName(self, "Open", ".py", "Python Script (*.py);;Any File (*)")
+			choosen_filepath, filter_used = QFileDialog.getOpenFileName(self, 
+				"Open", ".py", "Python Script (*.py);;Any File (*)")
 			filepath = choosen_filepath
 
 		# open filepath
@@ -399,30 +477,21 @@ class LiveScript(QWidget):
 				self.script_edit.document().setModified(False)
 				self.filepath = filepath
 
-				if filepath in self.config['recent']:
-					self.config['recent'] = [path for path in self.config['recent'] if path!=filepath]
+				if filepath in self.config()['recent']:
+					self._config['recent'] = [path for path
+						in self.config()['recent'] 
+						if path!=filepath]
 
-				self.config['recent'].append(filepath)
+				self._config['recent'].append(filepath)
+				self._config['open_recent_file'] = True
 				self.saveConfig()
 				self.watcher.addPath(filepath)
 		except FileNotFoundError:
-			self.config['recent'].remove(filepath)
+			self._config['recent'].remove(filepath)
 
 		self.filepath = filepath
 		self.updateWindowTitle()
 
-	def prompt_disk_change(self):
-		msg_box = QMessageBox(self)
-		msg_box.setWindowTitle("File has changed on Disk.")
-		msg_box.setText("Do you want to reload?")
-		msg_box.setIcon(QMessageBox.Icon.Question)
-		msg_box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-		# temporary block _file change_ signals, to ignore multiple changes when
-		# the messagebox is already open
-		self.watcher.blockSignals(True) 
-		result = msg_box.exec()
-		self.watcher.blockSignals(False)
-		return result
 
 	def restart(self):
 		self.closeFile()

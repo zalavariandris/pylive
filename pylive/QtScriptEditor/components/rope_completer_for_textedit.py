@@ -18,8 +18,9 @@ class RopeCompleter(TextEditCompleter):
 
 	@override
 	def requestCompletions(self):
-		source_code = self.text_edit.toPlainText()
-		offset = self.text_edit.textCursor().position()
+		textedit = cast(QPlainTextEdit, self.widget())
+		source_code = textedit.toPlainText()
+		offset = textedit.textCursor().position()
 
 		try:
 			proposals = codeassist.code_assist(
@@ -49,13 +50,14 @@ class RopeCompleter(TextEditCompleter):
 		"""
 		Inserts the selected completion into the text at the cursor position.
 		"""
-		tc = self.text_edit.textCursor()
+		textedit = cast(QPlainTextEdit, self.widget())
+		tc = textedit.textCursor()
 		tc.select(QTextCursor.SelectionType.WordUnderCursor)
 		extra = len(completion) - len(tc.selectedText())
 		tc.movePosition(QTextCursor.MoveOperation.Left)
 		tc.movePosition(QTextCursor.MoveOperation.EndOfWord)
 		tc.insertText(completion[-extra:])
-		self.text_edit.setTextCursor(tc)
+		textedit.setTextCursor(tc)
 
 
 if __name__ == "__main__":
