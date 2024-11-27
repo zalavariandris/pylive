@@ -118,9 +118,11 @@ class TextEditCompleter(QCompleter):
 		"""
 		# prefix = self.textUnderCursor()
 
+		textedit = cast(QPlainTextEdit, self.widget())
+		cursor = textedit.textCursor()
 
-		if len(self.getWordUntilCursor())>0 and self.getWordUntilCursor() != self.currentCompletion():
-			print(self.getWordUntilCursor())
+		if len(cursor.block().text().strip())>0 and self.getWordUntilCursor() != self.currentCompletion():
+			
 			popup = self.popup()
 			popup.setCurrentIndex(self.completionModel().index(0, 0))
 

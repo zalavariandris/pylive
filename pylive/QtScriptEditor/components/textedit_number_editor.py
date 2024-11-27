@@ -101,11 +101,12 @@ class TextEditNumberEditor(QObject):
                 return False
 
         elif event.type() == QEvent.Type.MouseMove and self.dragging:
-            assert self.original_value
+            assert self.original_value is not None
             if self.number_cursor:
                 # Calculate drag distance and compute the new value
                 mouse_delta = event.position().toPoint() - self.drag_start
-                delta_value = (mouse_delta.x() - mouse_delta.y()) * abs(self.original_value)//100
+
+                delta_value = (mouse_delta.x() - mouse_delta.y()) * abs(self.original_value or 1)//100
                 new_value = self.original_value + delta_value
 
                 # Ensure we replace the entire number

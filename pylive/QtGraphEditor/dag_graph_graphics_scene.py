@@ -1,7 +1,7 @@
 from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
-from pylive import livescript
+
 from typing import *
 
 from pylive.QtGraphEditor.pan_and_zoom_graphicsview_optimized import PanAndZoomGraphicsView
@@ -764,8 +764,8 @@ if __name__ == "__main__":
 			for node in (item for item in self.scene().selectedItems() if isinstance(item, NodeWidget)):
 				node.destroy()
 
-
-	from pylive import livescript
+if __name__ == "__main__":
+	from pylive.examples import livescript
 	import sys
 	app = QApplication(sys.argv)
 
@@ -774,7 +774,7 @@ if __name__ == "__main__":
 	mainLayout = QVBoxLayout()
 	mainLayout.setContentsMargins(0,0,0,0)
 	window.setLayout(mainLayout)
-	graphview = GraphView()
+	graphview = QGraphicsView()
 	mainLayout.addWidget(graphview)
 
 	# create graph scene

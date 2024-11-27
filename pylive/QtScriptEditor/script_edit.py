@@ -14,8 +14,8 @@ from pylive.QtScriptEditor.components.textedit_number_editor import TextEditNumb
 import rope.base.project
 from rope.contrib import codeassist
 from pylive.QtScriptEditor.components.rope_completer_for_textedit import RopeCompleter
+from pylive.QtScriptEditor.components.jedi_completer import JediCompleter
 from pylive.QtScriptEditor.components.textedit_completer import PythonKeywordsCompleter
-
 
 class ScriptEdit(QPlainTextEdit):
     def __init__(self, parent=None):
@@ -39,18 +39,17 @@ class ScriptEdit(QPlainTextEdit):
         self.installEventFilter(self)
 
         """ Syntax Highlighter """
-        options = self.document().defaultTextOption()
+        options = self.document().defaultTextOption() 
         options.setFlags(QTextOption.Flag.ShowTabsAndSpaces)
         self.document().setDefaultTextOption(options)
         self.highlighter = PygmentsSyntaxHighlighter(self.document())
-        blue3 = QColor.fromHsl(210, 15*255/100, 22*255/100)
+        blue3 = QColor.fromHsl(210, 15*255//100, 22*255//100)
         palette = self.palette()
         palette.setColor(QPalette.ColorRole.Base, blue3)  # Light yellow color
         self.setPalette(palette)
 
         ### Autocomplete ###
-        self.rope_project = rope.base.project.Project('.')
-        self.completer = PythonKeywordsCompleter(self, self.rope_project)
+        self.completer = JediCompleter(self)
 
         ### Setup Textedit ###
         self.setWindowTitle("ScriptTextEdit")
@@ -115,6 +114,7 @@ class ScriptEdit(QPlainTextEdit):
         menu.exec(e.globalPos());
         del menu # i am not sure if we need this here in python
 
+    ### TEXT EDITING ###
     def indentUsingSpaces(self):
         return self._indent_using_spaces
 
@@ -126,9 +126,8 @@ class ScriptEdit(QPlainTextEdit):
 
     def setTabSize(self, tabsize:int):
         self._tabsize = tabsize
-        self.setTabStopDistance(
-            self.fontMetrics().horizontalAdvance(' ') * tabsize
-        )
+        spacesize = self.fontMetrics().horizontalAdvance(' ')
+        self.setTabStopDistance(spacesize * tabsize)
     
     def convertIndentationToTabs(self):
         text = self.toPlainText()
@@ -157,7 +156,7 @@ class ScriptEdit(QPlainTextEdit):
         cursor.unindentSelection()
         self.setTextCursor(cursor)
         
-    """Script Cursor"""
+    ### Script Cursor ###
     def eventFilter(self, o: QObject, e: QEvent) -> bool: #type: ignore
         if e.type() == QEvent.Type.KeyPress:
             cursor = ScriptCursor(self.textCursor())
@@ -168,7 +167,6 @@ class ScriptEdit(QPlainTextEdit):
                     cursor.indentSelection()
                     editor.setTextCursor(cursor)
                     return True
-
                 else:
                     if self.indentUsingSpaces():
                         cursor.insertText(" "*self.tabSize())
@@ -189,9 +187,47 @@ class ScriptEdit(QPlainTextEdit):
 
             elif e.key() == Qt.Key.Key_Return:
                 cursor.insertNewLine(indentation=" "*self.tabSize() if self.indentUsingSpaces() else "\t")
+                cursor.MoveMode
                 return True
 
         return super().eventFilter(o, e)
+
+    ### Underline Exceptions ###
+    def underlineError(self, lineno: int, message: str, level:Literal["info", "warning", "error"]="info"):
+        """Underline a specific line to indicate an error."""
+        block = self.document().findBlockByLineNumber(lineno - 1)  # Line numbers are 1-based.
+        if not block.isValid():
+            return
+
+        
+        self.document().blockSignals(True)
+        fmt = QTextCharFormat()
+        fmt.setUnderlineStyle(QTextCharFormat.UnderlineStyle.SpellCheckUnderline)
+        fmt.setUnderlineColor(QColor(200, 0, 0))
+        fmt.setToolTip(message)
+
+        # Apply formatting to the entire block (line)
+        cursor = QTextCursor(block)
+        # if offset is None:
+        #     cursor.select(QTextCursor.SelectionType.LineUnderCursor)
+        # else:
+            # underline single charater
+        cursor.select(QTextCursor.SelectionType.LineUnderCursor)
+        # cursor.movePosition(QTextCursor.MoveOperation.Right, QTextCursor.MoveMode.MoveAnchor, offset-1)
+        # cursor.movePosition(QTextCursor.MoveOperation.Right, QTextCursor.MoveMode.KeepAnchor, 1)
+        # cursor.movePosition(QTextCursor.MoveOperation.EndOfLine, QTextCursor.MoveMode.KeepAnchor)
+        cursor.setCharFormat(fmt)
+
+        self.document().blockSignals(False)
+
+    def clearUnderlinedErrors(self):
+        """Clear all underlined errors."""
+        self.document().blockSignals(True)
+        cursor = QTextCursor(self.document())
+        cursor.select(QTextCursor.SelectionType.Document)
+        format = QTextCharFormat()
+        cursor.setCharFormat(format)
+        self.document().blockSignals(False)
 
     ### Inline Notifications ###
     def setupInlineNotifications(self):
@@ -218,15 +254,13 @@ class ScriptEdit(QPlainTextEdit):
             text = " ".join([prefix, str(e.msg), postfix])
             if e.lineno:
                 text = str(e.msg)
-                if offset:=getattr(e, 'offset', None):
-                    text+= f" (offset: {offset})"
-                if start:=getattr(e, 'start', None):
-                    text+= f" (start: {start})"
-                self.insertNotification(e.lineno, text)
+                # self.insertNotification(e.lineno, e.msg)
+                self.underlineError(e.lineno, e.msg)
         else:
             tb = traceback.TracebackException.from_exception(e)
             last_frame = tb.stack[-1]
             if last_frame.lineno:
+                self.underlineError(last_frame.lineno, str(e), level="error")
                 self.insertNotification(last_frame.lineno, str(e), level="error")
 
             formatted_traceback = ''.join(tb.format())
@@ -339,6 +373,7 @@ def main():
         import ast
         try:
             editor.clearNotifications()
+            editor.clearUnderlinedErrors()
             ast.parse(script)
         except SyntaxError as e:
             editor.showException(e)
