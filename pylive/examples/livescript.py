@@ -71,7 +71,6 @@ class LiveScript(QWidget):
 		mainLayout.addWidget(self.main_splitter)
 		self.setupStatusBar()
 		
-		
 		self.script_edit = ScriptEdit()
 		self.script_edit.textChanged.connect(lambda: self.evaluate())
 
@@ -86,7 +85,6 @@ class LiveScript(QWidget):
 			self.on_file_change(self.filepath)
 		)
 
-		
 		# setup from config
 		self.loadConfig()
 		if self.config()['open_recent_file']:
@@ -168,17 +166,13 @@ class LiveScript(QWidget):
 			text = " ".join([prefix, str(e.msg), postfix])
 			if e.lineno:
 				text = str(e.msg)
-				if hasattr(e, 'offset'):
-					text+= f" (offset: {e.offset})"
-				if hasattr(e, 'start'):
-					text+= f" (start: {e.start})"
-				self.script_edit.insertNotification(e.lineno, text)
+				self.script_edit.linter.underline(e.lineno, text)
 			self.log_window.appendError(text)
 		else:
 			tb = traceback.TracebackException.from_exception(e)
 			last_frame = tb.stack[-1]
 			if last_frame.lineno:
-				self.script_edit.insertNotification(last_frame.lineno, str(e))
+				self.script_edit.linter.underline(last_frame.lineno, str(e))
 
 			formatted_traceback = ''.join(tb.format())
 			text = " ".join([prefix, formatted_traceback, postfix])
@@ -200,7 +194,7 @@ class LiveScript(QWidget):
 		global_vars = self.createContext()
 
 		self.preview_widget.hide()
-		self.script_edit.clearNotifications()
+		self.script_edit.linter.clear()
 
 		try:
 			start_time = time.perf_counter()

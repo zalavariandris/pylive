@@ -195,7 +195,6 @@ class ScriptCursor(QTextCursor):
 		# select from line start adn retrive indentation
 		self.movePosition(QTextCursor.MoveOperation.StartOfLine, QTextCursor.MoveMode.MoveAnchor)
 		self.movePosition(QTextCursor.MoveOperation.EndOfLine, QTextCursor.MoveMode.KeepAnchor)
-		print(self.anchor(), self.position())
 		line = self.selection().toPlainText()
 
 		current_line_indentation = line[:-len(line.lstrip())] if line.lstrip() else line

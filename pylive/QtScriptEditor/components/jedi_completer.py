@@ -12,7 +12,8 @@ class JediCompleter(TextEditCompleter):
 	def __init__(self, textedit: QTextEdit | QPlainTextEdit):
 		super().__init__(textedit)
 		self.hint_label = QLineEdit()  # Label for showing argument hints
-		self.hint_label.setEnabled(False)
+		self.hint_label.setReadOnly(True)
+		self.hint_label.setFrame(False)
 		self.hint_label.setWindowFlags(Qt.ToolTip)  # Make it look like a tooltip
 		# self.hint_label.setStyleSheet("background-color: #FFFFCC; padding: 4px;")
 		self.hint_label.hide()  # Initially hidden
@@ -21,36 +22,40 @@ class JediCompleter(TextEditCompleter):
 	def requestCompletions(self):
 		textedit = cast(QPlainTextEdit, self.widget())
 		source_code = textedit.toPlainText()
-		cursor = textedit.textCursor()
+		cursor = QTextCursor(textedit.textCursor())
 		
 		# Get the line and column for Jedi
 		line = cursor.blockNumber() + 1  # PySide6 line numbers are 0-based
 		column = cursor.columnNumber()  # Current position within the line
 
+		cursor.movePosition(QTextCursor.MoveOperation.StartOfLine, QTextCursor.MoveMode.KeepAnchor)
+		line_text = cursor.selectedText()
+		
 		script = jedi.Script(code=source_code, path="<string>")
 		if self.showArgumentHints(script, line, column):
 			return
 
-		try:
-			# Use Jedi to get completions
-			script = jedi.Script(code=source_code, path="<string>")
-			completions = script.complete(line=line, column=column)
-			context = script.get_context(line=line, column=column)
-			script.infer(line=line, column=column)
-			script.help()
+		if line_text.split(" ")[-1].isidentifier() or line_text.endswith("."):
+			try:
+				# Use Jedi to get completions
+				script = jedi.Script(code=source_code, path="<string>")
+				completions = script.complete(line=line, column=column)
+				context = script.get_context(line=line, column=column)
+				script.infer(line=line, column=column)
+				script.help()
 
-			# Update proposals in the model
-			string_list_model = cast(QStringListModel, self.model())
-			string_list_model.setStringList([completion.name for completion in completions])
+				# Update proposals in the model
+				string_list_model = cast(QStringListModel, self.model())
+				string_list_model.setStringList([completion.name for completion in completions])
 
-			# Show function signature hints if inside a function call
-			
+				# Show function signature hints if inside a function call
+				
 
-		except Exception as e:
-			print(f"Error in requestCompletions: {e}")
-			string_list_model = cast(QStringListModel, self.model())
-			string_list_model.setStringList([])
-			self.hint_label.hide()
+			except Exception as e:
+				print(f"Error in requestCompletions: {e}")
+				string_list_model = cast(QStringListModel, self.model())
+				string_list_model.setStringList([])
+				self.hint_label.hide()
 
 	def showArgumentHints(self, script: jedi.Script, line: int, column: int)->bool:
 		try:
@@ -103,28 +108,29 @@ if __name__ == "__main__":
 	app = QApplication([])
 
 	window = QWidget()
-	mainLayout = QVBoxLayout()
+	mainLayout = QHBoxLayout()
 	window.setLayout(mainLayout)
 
 	# Create completing editor
 	editor = QTextEdit()
+	editor.setTabStopDistance(editor.fontMetrics().horizontalAdvance(' ')*4)
 	mainLayout.addWidget(editor)
 	completer = JediCompleter(editor)
 	editor.setWindowTitle("QTextEdit with a non-blocking Jedi Assist Completer")
-	editor.resize(600, 400)
+	editor.resize(800, 800)
 
 	editor.setPlainText(dedent("""\
-    class Dog:
-    	def __init__(self, name, height=1):
-    		self.name = name
-    		self.height = height
+	class Dog:
+		def __init__(self, name, height=1):
+			self.name = name
+			self.height = height
 
-    mydog = Dog("buksi")
-    """))
+	mydog = Dog("buksi")
+	"""))
 
 	# COMPLETER INFO
-	label = QLabel()
-	label.setWordWrap(True)
+	label = QTextEdit()
+	label.setReadOnly(True)
 	label.setText("jedi info at x,y")
 	mainLayout.addWidget(label)
 
