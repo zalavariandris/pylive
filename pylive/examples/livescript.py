@@ -66,7 +66,8 @@ class LiveScript(QWidget):
 		mainLayout = QVBoxLayout()
 		self.setLayout(mainLayout)
 		self.layout().setContentsMargins(0,0,0,0)
-		# layout widgets
+
+		""" layout widgets """
 		self.main_splitter = QSplitter(Qt.Orientation.Horizontal, self)
 		mainLayout.addWidget(self.main_splitter)
 		self.setupStatusBar()
@@ -124,7 +125,6 @@ class LiveScript(QWidget):
 		sys.excepthook = self.handle_uncaught_exceptions
 
 	def config(self):
-
 		config = {
 			"open_recent_file":False,
 			"recent": [],
@@ -132,7 +132,6 @@ class LiveScript(QWidget):
 		}
 		config.update(self._config)
 		return config
-
 
 	def saveConfig(self):
 		import json
@@ -485,7 +484,6 @@ class LiveScript(QWidget):
 
 		self.filepath = filepath
 		self.updateWindowTitle()
-
 
 	def restart(self):
 		self.closeFile()

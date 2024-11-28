@@ -43,7 +43,11 @@ class QtFormatter(Formatter):
 import re
 class PygmentsSyntaxHighlighter(QSyntaxHighlighter):
 	def __init__(self, document, color_scheme:str|Style="dracula"):
+		if not isinstance(document, QTextDocument):
+			raise ValueError("Document must be a QTextDocument, got:{document}")
+			
 		super().__init__(document)
+
 		if isinstance(color_scheme, str):
 			color_scheme = get_style_by_name(color_scheme)
 		self.lexer = PythonLexer()

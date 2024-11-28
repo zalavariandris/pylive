@@ -1,6 +1,5 @@
 from PySide6.QtWidgets import QApplication
 def getWidgetByName(name:str):
-
 	app = QApplication.instance()
 	if not app:
 		raise Exception("No QApplication instance!")
@@ -22,3 +21,13 @@ def group_consecutive_numbers(data):
 		group = list(map(int,group))
 		ranges.append((group[0],group[-1]))
 	return ranges
+
+import json
+from pathlib import Path
+def prettify_json(json_file:Path|str):
+	json_file = Path(json_file)
+	pretty = json.dumps(
+		json.loads(json_file.read_text()),
+		indent=4
+	)
+	json_file.write_text(pretty)

@@ -34,3 +34,10 @@ fits the actual problem.
 
 # TODO:
 [[TODOs.md]]
+
+
+# resources
+
+## live-py-plugin fro Sublime
+https://donkirkby.github.io/live-py-plugin/starting_sublime_text.html
+Has a pyglet preview window!
