@@ -3,7 +3,8 @@ from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 from typing import *
-import jedi  # Import the Jedi library
+import jedi
+from traitlets.utils import text  # Import the Jedi library
 
 from pylive.QtScriptEditor.components.textedit_completer import TextEditCompleter
 
@@ -12,9 +13,9 @@ class JediCompleter(TextEditCompleter):
 	def __init__(self, textedit: QTextEdit | QPlainTextEdit):
 		super().__init__(textedit)
 		self.hint_label = QLineEdit()  # Label for showing argument hints
+		self.hint_label.setParent(textedit)
 		self.hint_label.setReadOnly(True)
 		self.hint_label.setFrame(False)
-		self.hint_label.setWindowFlags(Qt.ToolTip)  # Make it look like a tooltip
 		# self.hint_label.setStyleSheet("background-color: #FFFFCC; padding: 4px;")
 		self.hint_label.hide()  # Initially hidden
 

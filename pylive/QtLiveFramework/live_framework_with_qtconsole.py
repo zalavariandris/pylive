@@ -12,114 +12,111 @@ from ipykernel.zmqshell import ZMQInteractiveShell
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.inprocess import QtInProcessKernelManager
 
-from pylive.declerative_qt import Splitter, Panel
-from pylive.live_preview_widgets.file_textdocument_link import FileTextDocumentLink
-from pylive.QtScriptEditor.components.pygments_syntax_highlighter import PygmentsSyntaxHighlighter
 
+from pylive.QtLiveFramework.live_framework_skeleton import LiveFrameworkWindow
+from pylive.QtScriptEditor.script_edit import ScriptEdit
 
+import logging
+logger = logging.getLogger(__name__)
 
-
-class WidgetPreviewApp(QWidget):
-	def __init__(self, parent=None):
-		super().__init__(parent=parent)
-		self.setLayout(QVBoxLayout())
-		self.layout().setContentsMargins(0,0,0,0)
-
-		# Set up the palette
-		palette = self.palette()
-		brush = QBrush(Qt.yellow)  # You can use other colors or gradients
-		palette.setBrush(QPalette.Window, palette.color(QPalette.ColorGroup.All, QPalette.ColorRole.Base))
-		self.setPalette(palette)
-		self.setAutoFillBackground(True)
-		
 from io import StringIO
-class IPythonWindow(QWidget):
+
+import re
+class IPythonWindow(LiveFrameworkWindow):
+	cellsChanged = Signal(list) # List[int]
 	def __init__(self):
 		super().__init__()
 		self.setWindowTitle("IPython Console in PySide6")
 
-		### create in process kernel
-		self.kernel_manager = QtInProcessKernelManager()
-		self.kernel_manager.start_kernel(show_banner=False)
-		self.kernel_client = self.kernel_manager.client()
-
 		### IPython Console widget ###
-		self.console = RichJupyterWidget(
+		jupyter = RichJupyterWidget(
 			style_sheet='dracula', 
 			syntax_style='dracula',
 			gui_completion = 'droplist', # plain | droplist | ncurses
 			complete_while_typing=True,
 			enable_history_search=False
 		)
-		# self.console.style_sheet = "dracula"
-		# self.console.syntax_style = "dracula"
-		
-		# and connect to the kernel
-		self.console.kernel_manager = self.kernel_manager # Connect the kernel manager to the console widget
-		self.console.kernel_client = self.kernel_client
-		self.console.kernel_client.start_channels() # Start the kernel client channels (this is the communication between the UI and the kernel)
+		self.setTerminal(jupyter)
 
-		### Script Edit ###
-		self.textedit = QPlainTextEdit()
-		font = self.textedit.font()
-		font.setFamilies(["monospace", "Operator Mono Book"])
-		font.setWeight(QFont.Weight.Medium)
-		font.setStyleStrategy(QFont.StyleStrategy.PreferAntialias)
-		self.textedit.setFont(font)
-		self.textedit.setWordWrapMode(QTextOption.WrapMode.NoWrap)
-		highlighter = PygmentsSyntaxHighlighter(self.textedit.document())
-		self.textedit.setTabStopDistance(self.textedit.fontMetrics().horizontalAdvance(" ")*4)
-		self.textedit.setReadOnly(True)
+		self.setEditor(ScriptEdit())
 
-		### Script Edit ###
-		from textwrap import dedent
-		placeholder = QLabel(dedent("""
-		[preview area]
-		use .setAppWidget to show a widget here
-		"""))
+		### Bind Widgets ###
+		### Create in-process kernel
+		self.kernel_manager = QtInProcessKernelManager()
+		self.kernel_manager.start_kernel(show_banner=False)
+		self.kernel_client = self.kernel_manager.client()
 
-		self.preview_area = QWidget()
-		self.preview_area.setLayout(QVBoxLayout())
-		self.preview_area.layout().setContentsMargins(0,0,0,0)
+		# connect qtconsole to the kernel
+		jupyter.kernel_manager = self.kernel_manager # Connect the kernel manager to the console widget
+		jupyter.kernel_client = self.kernel_client
+		jupyter.kernel_client.start_channels() # Start the kernel client channels (this is the communication between the UI and the kernel)
 
-		placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
-		self.app = placeholder
-		self.app.setLayout(QVBoxLayout())
-		# placeholder = QLabel("[preview area]")
-		# placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
-		# self.preview_area.layout().addWidget(placeholder)
+		### expose this widget to the kernel ###
+		self.kernel_manager.kernel.shell.user_ns['app'] = self
 
-		### Layout ###
-		self.console.setFixedHeight(140)
-		main_splitter = Splitter(Qt.Orientation.Horizontal, [
-			Panel(QBoxLayout.Direction.TopToBottom, [
-				self.textedit
-			]),
-			Panel(QBoxLayout.Direction.TopToBottom, [
-				self.preview_area,
-				self.console
-			])
-		])
-		mainLayout = QVBoxLayout()
-		mainLayout.setContentsMargins(0,0,0,0)
-		mainLayout.addWidget(main_splitter)
-		self.setLayout(mainLayout)
+		### bind texteditor to execute ###
+		def get_cell_code(script:str, position:int):
+			# Split the code into cells using the %% delimiter pattern
+			cells = [
+				cell.strip() for cell in 
+				re.split(r"(?=#.*%%)", script, flags=re.MULTILINE)
+			]
+			
+			# Find the cell that contains the current cursor position
+			cell_start = 0
+			for i, cell in enumerate(cells):
+				# Get the start and end positions of each cell
+				cell_end = cell_start + len(cell)
+				if cell_start <= position < cell_end:
+					break
+				cell_start = cell_end + 1  # Update for next cell
+			return script[cell_start:cell_end]
 
-		### access preview area from consol ###
+		def update_cells():
+			script = self.editor().toPlainText()
+			cells = [
+				cell.strip() for cell in 
+				re.split(r"(?=#.*%%)", script, flags=re.MULTILINE)
+			]
 
-	def sizeHint(self):
-		return QSize(1200,700)
+			indexes_changed = []
+			from itertools import zip_longest
+			for i, cell in enumerate(cells):
+				current = self._cells[i] if i<len(self._cells) else None
+				if current!=cell:
+					if current is None or current.strip() != cell.strip():
+						indexes_changed.append(i)
 
-	def execute_code(self, code_str):
-		print("executing code...")
+			self._cells = cells
+			self.cellsChanged.emit(sorted(indexes_changed))
+
+		self.editor().textChanged.connect(lambda: 
+			update_cells()
+		)
+
+		self._cells = []
+		update_cells()
+
+		def execute_cells(indexes):
+			logger.info(f"execute_cells: {indexes}")
+			for idx in indexes:
+				self._execute_code( self.cell(idx) )
+
+		self.cellsChanged.connect(execute_cells)
+					# self._execute_code(
+			# 	get_cell_code(
+			# 		self.editor().toPlainText(), 
+			# 		self.editor().textCursor().position()
+			# 	)
+			# )
+
+	def cell(self, idx:int):
+		return self._cells[idx]
+
+	def _execute_code(self, code_str):
+		logger.info("executing code...")
 		if not code_str.strip():
 			return  # Do nothing if the input is empty
-
-		# Redirect stdout and stderr
-		# old_stdout = sys.stdout
-		# old_stderr = sys.stderr
-		# sys.stdout = StringIO()
-		# sys.stderr = StringIO()
 
 		try:
 			# Execute the code
@@ -129,7 +126,8 @@ class IPythonWindow(QWidget):
 				"""
 				Execute a command in the frame of the console widget
 				"""
-				self.console.execute(code_str, hidden=True)
+				self.terminal().execute(code_str, hidden=True)
+				# self.terminal()._append_plain_text("EXECUTED")
 
 			def run_cell_with_shell()->ExecutionResult:
 				kernel:InProcessKernel = self.kernel_manager.kernel
@@ -137,67 +135,41 @@ class IPythonWindow(QWidget):
 				return shell.run_cell(code_str)
 
 			execute_in_console()
-			self.console._append_plain_text("MINE PLAIN TEXT")
-			# self.console._append_plain_text("HELLO")
-
-			# print("HELLO", result)
-			# stdout_content = sys.stdout.getvalue()
-			# stderr_content = sys.stderr.getvalue()
-
-			# print("result:", result.result )
-
-			# # Display output or errors
-			# if result.error_in_exec is not None:
-				
-			#     print(f"Error:\n{sys.stderr.getvalue()}")
-			# else:
-			#     print("result", sys.stdout.getvalue())
-
+			
 		except Exception as e:
-			print(f"Exception: {str(e)}")
+			logger.error(f"Exception: {str(e)}")
 		finally:
 			...
 
-		print("code executed!") 
-
-	def setApp(self, app:QWidget):
-		# TODO:
-		while self.preview_area.layout().count():
-			item = self.preview_area.layout().takeAt(0)
-			if item.widget():
-				item.widget().deleteLater()
-
-
-		self.preview_area.layout().addWidget(app)
-		self.kernel_manager.kernel.shell.user_ns['app'] = app
-
-		if self.preview_area.layout().count()==0:
-			placeholder = QLabel("[widgets preview area]")
-			placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
-			self.preview_area.layout().addWidget(placeholder)
+		logger.info("code executed!") 
 
 
 def main():
+	import logging
+	log_format = '%(levelname)s: %(message)s'
+	# logging.basicConfig(level=logging.INFO, format=log_format)
 	app = QApplication(sys.argv)
 	
 	window = IPythonWindow()
-	window.setApp(WidgetPreviewApp())
+	# window.setApp(WidgetPreviewApp())
 	window.show()
 	
 	# Execute a string of code using the execute_code method to add a widget
 	from textwrap import dedent
 	code_to_execute = dedent("""\
+	#%% setup
 	from PySide6.QtWidgets import *
 
 	# Create a new QPushButton
 	button = QPushButton("Click Me")
-	app.layout().addWidget(button)
-	""")
-	window.textedit.setPlainText(code_to_execute)
-	
-	window.execute_code(code_to_execute)  # This will add a button to the layout
+	app.setPreview(button)
 
-	help(RichJupyterWidget())
+	# %% update
+	button.setText("hello")
+	""")
+	window.editor().setPlainText(code_to_execute)
+	
+	# window.execute_code(code_to_execute)  # This will add a button to the layout
 
 	sys.exit(app.exec())
 

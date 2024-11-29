@@ -1,154 +1,186 @@
-import sys
-from typing import *
 
 from typing import *
-from IPython.core.interactiveshell import ExecutionResult
+
 from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
-from ipykernel.inprocess.ipkernel import InProcessKernel
-from ipykernel.zmqshell import ZMQInteractiveShell
-from qtconsole.rich_jupyter_widget import RichJupyterWidget
-from qtconsole.inprocess import QtInProcessKernelManager
 
-from pylive.declerative_qt import Splitter, Panel
-from pylive.live_preview_widgets.file_textdocument_link import FileTextDocumentLink
-from pylive.QtScriptEditor.components.pygments_syntax_highlighter import PygmentsSyntaxHighlighter
+class Placeholder(QLabel):
+	def __init__(self, text, parent=None):
+		super().__init__(text, parent=parent)
+		self.setAlignment(Qt.AlignmentFlag.AlignCenter)
+		self.setFrameStyle(QFrame.Shape.StyledPanel)
 
 
-class WidgetPreviewApp(QWidget):
-	def __init__(self, parent=None):
-		super().__init__(parent=parent)
-		self.setLayout(QVBoxLayout())
-		self.layout().setContentsMargins(0,0,0,0)
 
-		# Set up the palette
-		palette = self.palette()
-		brush = QBrush(Qt.yellow)  # You can use other colors or gradients
-		palette.setBrush(QPalette.Window, palette.color(QPalette.ColorGroup.All, QPalette.ColorRole.Base))
-		self.setPalette(palette)
-		self.setAutoFillBackground(True)
-
-# |---------LiveFramework---------|
-# | |--CodeEditor--|---Preview---| |
-# | | cell1        | show widget | |
-# | | cell1        |             | |
-# | | ...          |---Terminal--| |
-# | |              |   log and   | |
-# | |              |   interact  | |
-# | |--------------|-------------| |
-# |--------------------------------|
-
-
-from io import StringIO
-class IPythonWindow(QWidget):
-	def __init__(self):
-		super().__init__()
-		self.setWindowTitle("IPython Console in PySide6")
-
-		### create in process kernel
-		self.kernel_manager = QtInProcessKernelManager()
-		self.kernel_manager.start_kernel(show_banner=False)
-		self.kernel_client = self.kernel_manager.client()
-
-		### IPython Console widget ###
-		self.console = RichJupyterWidget(
-			style_sheet='dracula', 
-			syntax_style='dracula',
-			gui_completion = 'droplist', # plain | droplist | ncurses
-			complete_while_typing=True,
-			enable_history_search=False
-		)
-		# self.console.style_sheet = "dracula"
-		# self.console.syntax_style = "dracula"
-		
-		# and connect to the kernel
-		self.console.kernel_manager = self.kernel_manager # Connect the kernel manager to the console widget
-		self.console.kernel_client = self.kernel_client
-		self.console.kernel_client.start_channels() # Start the kernel client channels (this is the communication between the UI and the kernel)
-
-		### Script Edit ###
-		self.textedit = QPlainTextEdit()
-		font = self.textedit.font()
-		font.setFamilies(["monospace", "Operator Mono Book"])
-		font.setWeight(QFont.Weight.Medium)
-		font.setStyleStrategy(QFont.StyleStrategy.PreferAntialias)
-		self.textedit.setFont(font)
-		self.textedit.setWordWrapMode(QTextOption.WrapMode.NoWrap)
-		highlighter = PygmentsSyntaxHighlighter(self.textedit.document())
-		self.textedit.setTabStopDistance(self.textedit.fontMetrics().horizontalAdvance(" ")*4)
-		self.textedit.setReadOnly(True)
-
-		### Script Edit ###
-		from textwrap import dedent
-		placeholder = QLabel(dedent("""
-		[preview area]
-		use .setAppWidget to show a widget here
-		"""))
-
-		self.preview_area = QWidget()
-		self.preview_area.setLayout(QVBoxLayout())
-		self.preview_area.layout().setContentsMargins(0,0,0,0)
-
-		placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
-		self.app = placeholder
-		self.app.setLayout(QVBoxLayout())
-		# placeholder = QLabel("[preview area]")
-		# placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
-		# self.preview_area.layout().addWidget(placeholder)
-
+class LiveFrameworkWindow(QWidget):
+	# |---------LiveFramework----------|
+	# |--menubar-----------------------|
+	# | |----Editor----|---Preview---| |
+	# | | cell1        | show widget | |
+	# | | cell1        |             | |
+	# | | ...          |---Terminal--| |
+	# | |              |   log and   | |
+	# | |              |   interact  | |
+	# | |--------------|-------------| |
+	# |--statusbar---------------------|
+	def __init__(self, parent: Optional[QWidget] = None) -> None:
+		super().__init__(parent)
+		self.setWindowTitle("Live")
 		### Layout ###
-		self.console.setFixedHeight(140)
-		main_splitter = Splitter(Qt.Orientation.Horizontal, [
-			Panel(QBoxLayout.Direction.TopToBottom, [
-				self.textedit
-			]),
-			Panel(QBoxLayout.Direction.TopToBottom, [
-				self.preview,
-				self.console
-			])
+		self._editor = QPlainTextEdit("[Editor]")
+		self._preview = Placeholder("[Preview]")
+		self._terminal = Placeholder("[Terminal]")
+
+		self.splitter = QSplitter(Qt.Orientation.Horizontal)
+		self.splitter.addWidget(self._editor)
+		self.right_pane = QSplitter(Qt.Orientation.Vertical)
+		self._preview_area = QFrame()
+		self._preview_area_layout = QVBoxLayout()
+		self._preview_area_layout.setContentsMargins(0,0,0,0)
+		self._preview_area.setLayout(self._preview_area_layout)
+		self._preview_area_layout.addWidget(self._preview)
+		self.right_pane.addWidget(self._preview_area)
+		self.right_pane.addWidget(self._terminal)
+		self.setTerminalHeight(120)
+		self.right_pane.setStretchFactor(0,1)
+		self.right_pane.setStretchFactor(1,0)
+		self.splitter.addWidget(self.right_pane)
+		self.splitter.setSizes([
+			self.splitter.width()//self.splitter.count() 
+			for _ in range(self.splitter.count())
 		])
+
 		mainLayout = QVBoxLayout()
 		mainLayout.setContentsMargins(0,0,0,0)
-		mainLayout.addWidget(main_splitter)
+		mainLayout.setSpacing(0)
+		mainLayout.addWidget(self.splitter)
 		self.setLayout(mainLayout)
 
-		### access preview area from consol ###
+		### Statusbar ###
+		statusbar = QStatusBar(self)
+		statusbar.setSizeGripEnabled(False)
+		mainLayout.addWidget(statusbar)
+		statusbar.showMessage("Statusbar")
+		statusbar.setSizePolicy(QSizePolicy.Policy.Minimum, 
+			                    QSizePolicy.Policy.Maximum)
+		statusbar.showMessage("hello")
+		self._statusbar = statusbar
 
-	def sizeHint(self):
-		return QSize(1200,700)
+		### MenuBar ###
+		menubar = self.createDefaultMenuBar()
+		mainLayout.setMenuBar(menubar)
+		self._menubar = menubar
 
-	def execute_code(self, code_str):
-		print("executing code...")
-		if not code_str.strip():
-			return  # Do nothing if the input is empty
+	def createDefaultMenuBar(self)->QMenuBar:
+		menubar = QMenuBar(parent=self)
+		menubar.setStyleSheet("""
+			QMenuBar::item {
+				padding: 0px 8px;  /* Adjust padding for the normal state */
+			}
+			QMenuBar::item:selected {  /* Hover state */
+				padding: 0px 0px;  /* Ensure the same padding applies to the hover state */
+			}
+		""")
 
-		print("code executed!") 
+		""" View menu """
+		view_menu = menubar.addMenu("View")
+		zoom_in_action = QAction("Zoom In", self)
+		zoom_in_action.setShortcut(QKeySequence.StandardKey.ZoomIn)
+
+		def increaseFontSize():
+			font = QApplication.font()
+			font.setPointSize(font.pointSize()+2)
+			QApplication.setFont(font)
+
+		def decreaseFontSize():
+			font = QApplication.font()
+			font.setPointSize(font.pointSize()-2)
+			QApplication.setFont(font)
+
+		zoom_in_action.triggered.connect(lambda: increaseFontSize())
+		zoom_out_action = QAction("Zoom Out", self)
+		zoom_out_action.triggered.connect(lambda: decreaseFontSize())
+		zoom_out_action.setShortcut(QKeySequence.StandardKey.ZoomOut)
+
+		view_menu.addAction(zoom_in_action)
+		view_menu.addAction(zoom_out_action)
+
+		# Create a widget to add to the menu bar (e.g., a button)
+		right_menu = QMenuBar(parent=menubar)
+		live_toggle_action = QAction("live", parent=self)
+		live_toggle_action.setCheckable(True)
+
+		rightwidget = QWidget(parent=menubar)
+		right_layout = QHBoxLayout()
+		right_layout.setContentsMargins(1,0,1,0)
+		rightwidget.setLayout(right_layout)
+		live_toggle = QCheckBox("live", parent=self)
+		live_toggle.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+		rightwidget.layout().addWidget(live_toggle)
+		menubar.setCornerWidget(rightwidget)
+
+		return menubar
+
+	def statusBar(self)->QStatusBar:
+		self._statusbar.show()
+		return self._statusbar
+
+	def setStatusBar(self, statusbar:QStatusBar|QWidget)->QStatusBar|QWidget:
+		statusbar.setSizePolicy(QSizePolicy.Policy.Minimum, 
+			                    QSizePolicy.Policy.Maximum)
+		self.layout().replaceWidget(self._statusbar, statusbar)
+		self._statusbar.show()
+		return self._statusbar
+
+	def menuBar(self)->QMenuBar:
+		self._menubar.show()
+		return self._menubar
+
+	def setMenuBar(self, menubar:QMenuBar):
+		self.layout().setMenuBar(menubar)
+		self._menubar = menubar
+
+	def preview(self)->QWidget:
+		return self._preview
+
+	def setPreview(self, preview:QWidget)->None:
+		while self._preview_area_layout.count():
+			item = self._preview_area_layout.takeAt(0)
+			if widget:=item.widget():
+				widget.deleteLater()
+		self._preview_area_layout.addWidget(preview)
+		self._preview = preview
+
+	def editor(self)->QPlainTextEdit:
+		return self._editor
+
+	def setEditor(self, editor:QPlainTextEdit):
+		self.splitter.replaceWidget(0, editor)
+		self._editor = editor
+
+	def terminal(self)->QWidget:
+		return self._terminal
+
+	def setTerminal(self, terminal:QWidget):
+		self.right_pane.replaceWidget(1, terminal)
+		self._terminal = terminal
+
+	def setTerminalHeight(self, height:int):
+		self.right_pane.setSizes([self.right_pane.height()-height, height])
+
+	def sizeHint(self) -> QSize:
+		return QSize(1200,600)
 
 
 def main():
+	import sys
 	app = QApplication(sys.argv)
-	
-	window = IPythonWindow()
-	window.setApp(WidgetPreviewApp())
+	window = LiveFrameworkWindow()
+		
+	window.statusBar().showMessage("[StatusBar]")
 	window.show()
-	
-	# Execute a string of code using the execute_code method to add a widget
-	from textwrap import dedent
-	code_to_execute = dedent("""\
-	from PySide6.QtWidgets import *
-
-	# Create a new QPushButton
-	button = QPushButton("Click Me")
-	app.layout().addWidget(button)
-	""")
-	window.textedit.setPlainText(code_to_execute)
-	
-	window.execute_code(code_to_execute)  # This will add a button to the layout
-
-	help(RichJupyterWidget())
-
 	sys.exit(app.exec())
 
 if __name__ == "__main__":

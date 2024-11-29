@@ -41,7 +41,7 @@ class TextEditLinterWidget(QObject):
         self.labels = []
         self.underlines = []
 
-    def addLabel(self, lineno, message):
+    def label(self, lineno, message):
         def getLineRect():
             # Check if the block corresponding to the line number is valid
             block = self.textedit.document().findBlockByLineNumber(lineno - 1)  # Use lineno - 1 for 0-based index
@@ -122,3 +122,51 @@ class TextEditLinterWidget(QObject):
         for label in [lbl for lbl in self.labels]:
             label.deleteLater()
         self.labels = []
+
+    def lint(self, lineno:int, message:str, type:Literal['underline', 'label']='underline'):
+        match type:
+            case 'underline':
+                self.underline(lineno, message)
+            case 'label':
+                self.label(lineno, message)
+
+    def lintException(self, e:Exception, type:Literal['underline', 'label']):
+        import traceback
+        if isinstance(e, SyntaxError):
+            text = str(e.msg)
+            if e.lineno:
+                self.lint(e.lineno, e.msg, 'underline')
+        else:
+            tb = traceback.TracebackException.from_exception(e)
+            last_frame = tb.stack[-1]
+            if last_frame.lineno:
+                self.lint(last_frame.lineno, str(e), 'underline')
+
+if __name__ == "__main__":
+    app = QApplication()
+    textedit = QPlainTextEdit()
+    textedit.setWindowTitle("Linter example")
+    textedit.setTabStopDistance(textedit.fontMetrics().horizontalAdvance(" ")*4)
+    font = textedit.font()
+    font.setPointSize(12)
+    font.setWeight(QFont.Weight.Medium)
+    font.setStyleHint(QFont.StyleHint.TypeWriter)
+    font.setFamilies(["monospace", "Operator Mono Book"])
+    font.setStyleStrategy(QFont.StyleStrategy.PreferAntialias)
+    textedit.setFont(font)
+    textedit.resize(600,300)
+    textedit.show()
+
+    linter = TextEditLinterWidget(textedit)
+
+    textedit.textChanged.connect(lambda: (
+        linter.clear(),
+        linter.underline(1, "this is an underline"),
+        linter.label(2, "this is a label")
+    ))
+    from textwrap import dedent
+    textedit.setPlainText(dedent("""\
+    def hello():
+        print("Hey!")
+    """))
+    app.exec()
