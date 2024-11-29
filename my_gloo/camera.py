@@ -15,6 +15,12 @@ class Camera:
 		far_plane = 1000.0  # Far clipping plane
 		self.projection = glm.perspective(glm.radians(fov), aspect_ratio, near_plane, far_plane)
 
+	def setAspectRation(self, aspect:float):
+		fov = 45.0  # Field of view in degrees
+		near_plane = 0.1  # Near clipping plane
+		far_plane = 1000.0  # Far clipping plane
+		self.projection = glm.perspective(glm.radians(fov), aspect, near_plane, far_plane)
+
 	def viewMatrix(self):
 		"""
 		Returns the view matrix by inverting the transform matrix.
