@@ -78,6 +78,9 @@ class Terminal(QWidget):
 		except Exception as err:
 			self.exceptionThrown.emit(err) # underline
 
+	def clear(self):
+		self.output.clear()
+
 	def print(self, msg):
 		...
 
@@ -107,7 +110,6 @@ class FrameworkWindow(LiveFrameworkWindow):
 			self.editor().linter.lintException(exc, 'underline'))
 
 		terminal.setContext({'app': self})
-
 		
 	@override
 	def editor(self)->ScriptEdit:
@@ -119,11 +121,9 @@ class FrameworkWindow(LiveFrameworkWindow):
 			return  # Do nothing if the input is empty
 
 		terminal = cast(Terminal, self.terminal())
-
+		terminal.clear()
 		terminal.execute(source)
-
-
-
+		
 		logger.info("code executed!") 
 
 
