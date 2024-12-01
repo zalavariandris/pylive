@@ -40,7 +40,7 @@ class Camera:
 		position = glm.vec3(position)
 		self.transform[3] = glm.vec4(position, 1.0)  # Update the translation part
 
-	def getPosition(self):
+	def getPosition(self)->glm.vec3:
 		"""
 		Returns the position of the camera by extracting it from the transform matrix.
 		"""
@@ -82,3 +82,9 @@ class Camera:
 		pos = rotate_around_origin(pos, glm.vec3(0,0,0), right_axis, glm.radians(tilt))
 		self.setPosition(pos)
 		self.lookAt(glm.vec3(0,0,0))
+
+	def dolly(self, delta:float):
+		pos = self.getPosition()
+		front_axis = glm.vec3(self.transform[2][0], self.transform[2][1], self.transform[2][2])
+		pos+=front_axis*delta
+		self.setPosition(pos)

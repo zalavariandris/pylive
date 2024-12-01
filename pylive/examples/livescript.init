@@ -1,4 +1,5 @@
 {
+  "open_recent_file": false,
   "recent": [
     "C:/dev/src/pylive/pylive/declerative_widgets.py",
     "C:/dev/src/pylive/expreiments/inspect_available_functions.py",
@@ -10,7 +11,9 @@
     "C:/dev/src/pylive/expreiments/live_paint_qwidget.py",
     "C:/dev/src/pylive/expreiments/live_graphics_scene.py",
     "C:/dev/src/pylive/expreiments/testing_dangling_timer.py",
-    "C:/dev/src/pylive/expreiments/set_scriptedit_highlighter.py"
+    "C:/dev/src/pylive/expreiments/set_scriptedit_highlighter.py",
+    "C:/dev/src/pylive/pylive/render_engine/examples/1 render layers.py",
+    "C:/dev/src/pylive/pylive/render_engine/examples/1 render layers.py"
   ],
   "live": true
 }

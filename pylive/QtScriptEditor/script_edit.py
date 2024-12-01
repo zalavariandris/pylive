@@ -1,8 +1,8 @@
-
+from typing import *
 from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
-from typing import *
+import re
 
 # components
 from pylive.QtScriptEditor.components.pygments_syntax_highlighter import PygmentsSyntaxHighlighter
@@ -20,6 +20,7 @@ from pylive.QtScriptEditor.components.linter_widget import TextEditLinterWidget
 
 
 class ScriptEdit(QPlainTextEdit):
+    cellsChanged = Signal(list) # List[int]
     def __init__(self, parent=None):
         super().__init__(parent)
         ### Font###
@@ -61,6 +62,32 @@ class ScriptEdit(QPlainTextEdit):
 
         ### Edit Numbers ###
         self.number_editor = TextEditNumberEditor(self)
+
+        ### Cells support ###
+        def update_cells():
+            script = self.toPlainText()
+            cells = [
+                cell.strip() for cell in 
+                re.split(r"(?=#.*%%)", script, flags=re.MULTILINE)
+            ]
+
+            indexes_changed = []
+            from itertools import zip_longest
+            for i, cell in enumerate(cells):
+                current = self._cells[i] if i<len(self._cells) else None
+                if current!=cell:
+                    if current is None or current.strip() != cell.strip():
+                        indexes_changed.append(i)
+
+            self._cells = cells
+            self.cellsChanged.emit(sorted(indexes_changed))
+
+        self._cells = []
+        self.textChanged.connect(lambda: update_cells())
+        update_cells()
+
+    def cell(self, idx:int):
+        return self._cells[idx]
 
     def sizeHint(self) -> QSize:
         width = self.fontMetrics().horizontalAdvance('O') * 70

@@ -33,6 +33,7 @@ class LinterLabelItem(QLabel):
         """.format(level_color='rgba(200,0,0,100)'))
         self.setWindowOpacity(0.5)
 
+
 class TextEditLinterWidget(QObject):
     def __init__(self, textedit: QPlainTextEdit):
         super().__init__(textedit)
@@ -123,24 +124,24 @@ class TextEditLinterWidget(QObject):
             label.deleteLater()
         self.labels = []
 
-    def lint(self, lineno:int, message:str, type:Literal['underline', 'label']='underline'):
-        match type:
+    def lint(self, lineno:int, message:str, mode:Literal['underline', 'label']='underline'):
+        match mode:
             case 'underline':
                 self.underline(lineno, message)
             case 'label':
                 self.label(lineno, message)
 
-    def lintException(self, e:Exception, type:Literal['underline', 'label']):
+    def lintException(self, e:Exception, mode:Literal['underline', 'label']):
         import traceback
         if isinstance(e, SyntaxError):
             text = str(e.msg)
             if e.lineno:
-                self.lint(e.lineno, e.msg, 'underline')
+                self.lint(e.lineno, e.msg, mode)
         else:
             tb = traceback.TracebackException.from_exception(e)
             last_frame = tb.stack[-1]
             if last_frame.lineno:
-                self.lint(last_frame.lineno, str(e), 'underline')
+                self.lint(last_frame.lineno, str(e), mode)
 
 if __name__ == "__main__":
     app = QApplication()

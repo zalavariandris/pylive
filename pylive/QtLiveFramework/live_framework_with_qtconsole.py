@@ -21,9 +21,8 @@ logger = logging.getLogger(__name__)
 
 from io import StringIO
 
-import re
+
 class IPythonWindow(LiveFrameworkWindow):
-	cellsChanged = Signal(list) # List[int]
 	def __init__(self):
 		super().__init__()
 		self.setWindowTitle("IPython Console in PySide6")
@@ -55,63 +54,13 @@ class IPythonWindow(LiveFrameworkWindow):
 		self.kernel_manager.kernel.shell.user_ns['app'] = self
 
 		### bind texteditor to execute ###
-		def get_cell_code(script:str, position:int):
-			# Split the code into cells using the %% delimiter pattern
-			cells = [
-				cell.strip() for cell in 
-				re.split(r"(?=#.*%%)", script, flags=re.MULTILINE)
-			]
-			
-			# Find the cell that contains the current cursor position
-			cell_start = 0
-			for i, cell in enumerate(cells):
-				# Get the start and end positions of each cell
-				cell_end = cell_start + len(cell)
-				if cell_start <= position < cell_end:
-					break
-				cell_start = cell_end + 1  # Update for next cell
-			return script[cell_start:cell_end]
-
-		def update_cells():
-			script = self.editor().toPlainText()
-			cells = [
-				cell.strip() for cell in 
-				re.split(r"(?=#.*%%)", script, flags=re.MULTILINE)
-			]
-
-			indexes_changed = []
-			from itertools import zip_longest
-			for i, cell in enumerate(cells):
-				current = self._cells[i] if i<len(self._cells) else None
-				if current!=cell:
-					if current is None or current.strip() != cell.strip():
-						indexes_changed.append(i)
-
-			self._cells = cells
-			self.cellsChanged.emit(sorted(indexes_changed))
-
-		self.editor().textChanged.connect(lambda: 
-			update_cells()
-		)
-
-		self._cells = []
-		update_cells()
-
 		def execute_cells(indexes):
 			logger.info(f"execute_cells: {indexes}")
 			for idx in indexes:
-				self._execute_code( self.cell(idx) )
+				self._execute_code( self.editor().cell(idx) )
 
-		self.cellsChanged.connect(execute_cells)
-					# self._execute_code(
-			# 	get_cell_code(
-			# 		self.editor().toPlainText(), 
-			# 		self.editor().textCursor().position()
-			# 	)
-			# )
-
-	def cell(self, idx:int):
-		return self._cells[idx]
+		self.editor().cellsChanged.connect(execute_cells)
+		
 
 	def _execute_code(self, code_str):
 		logger.info("executing code...")

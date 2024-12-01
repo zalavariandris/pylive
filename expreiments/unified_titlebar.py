@@ -4,6 +4,109 @@ from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
 
+class CloseToolbarButton(QToolButton):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.hovered = False  # Flag to track hover state
+        self.setFixedSize(50, 20)
+
+    def enterEvent(self, event):
+        self.hovered = True  # Set hover state to True
+        self.update()        # Trigger a repaint
+        super().enterEvent(event)
+
+    def leaveEvent(self, event):
+        self.hovered = False  # Set hover state to False
+        self.update()         # Trigger a repaint
+        super().leaveEvent(event)
+
+    def paintEvent(self, event: QPaintEvent):
+        # Call the base class paintEvent
+        # super().paintEvent(event)
+
+        # Create a QPainter object
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+
+        # Draw background on hover
+        if self.hovered:
+            painter.setBrush(QBrush(QColor(200, 200, 200, 150)))  # Light gray with some transparency
+            painter.setPen(Qt.NoPen)  # No border for the background
+            painter.drawRect(self.rect())
+
+        # Set pen for the "X"
+        pen = QPen(QColor(0, 0, 0))  # Black color
+        pen.setWidth(1.5)              # Line width
+        painter.setPen(pen)
+
+        # Calculate coordinates for the "X"
+        rect = self.rect()
+        margin = (11,3)
+        x1, y1 = rect.left() + margin[0], rect.top() + margin[1]
+        x2, y2 = rect.right() - margin[0], rect.bottom() - margin[1]
+        x3, y3 = rect.left() + margin[0], rect.bottom() - margin[1]
+        x4, y4 = rect.right() - margin[0], rect.top() + margin[1]
+
+        # Draw the "X"
+        painter.drawLine(x1, y1, x2, y2)
+        painter.drawLine(x3, y3, x4, y4)
+
+        # End painting
+        painter.end()
+
+
+class MiniToolbarButton(QToolButton):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.hovered = False  # Flag to track hover state
+        self.setFixedSize(50, 20)
+
+    def enterEvent(self, event):
+        self.hovered = True  # Set hover state to True
+        self.update()        # Trigger a repaint
+        super().enterEvent(event)
+
+    def leaveEvent(self, event):
+        self.hovered = False  # Set hover state to False
+        self.update()         # Trigger a repaint
+        super().leaveEvent(event)
+
+    def paintEvent(self, event: QPaintEvent):
+        # Call the base class paintEvent
+        # super().paintEvent(event)
+
+        # Create a QPainter object
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+
+        # Draw background on hover
+        if self.hovered:
+            painter.setBrush(QBrush(QColor(200, 200, 200, 150)))  # Light gray with some transparency
+            painter.setPen(Qt.NoPen)  # No border for the background
+            painter.drawRect(self.rect())
+
+        # Set pen for the "X"
+        pen = QPen(QColor(0, 0, 0))  # Black color
+        pen.setWidth(1.5)              # Line width
+        painter.setPen(pen)
+
+        # Calculate coordinates for the "X"
+        rect = self.rect()
+        margin = (11,3)
+        x1, y1 = rect.left() + margin[0], rect.top() + margin[1]
+        x2, y2 = rect.right() - margin[0], rect.bottom() - margin[1]
+        x3, y3 = rect.left() + margin[0], rect.bottom() - margin[1]
+        x4, y4 = rect.right() - margin[0], rect.top() + margin[1]
+
+        # Draw the "X"
+        painter.drawLine(x1, y1, x2, y2)
+        painter.drawLine(x3, y3, x4, y4)
+
+        # End painting
+        painter.end()
+
+
+
 class CustomTitleBar(QWidget):
     def __init__(self, parent):
         super().__init__(parent)
@@ -11,7 +114,7 @@ class CustomTitleBar(QWidget):
         self._mousePressPosition = None
         title_bar_layout = QHBoxLayout(self)
         title_bar_layout.setContentsMargins(1, 1, 1, 1)
-        title_bar_layout.setSpacing(2)
+        title_bar_layout.setSpacing(10)
         self.title = QLabel(f"{self.__class__.__name__}", self)
         self.title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.title.setStyleSheet(
@@ -66,11 +169,14 @@ class CustomTitleBar(QWidget):
         ]
         for button in buttons:
             button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-            button.setFixedSize(QSize(16, 16))
+            button.setFixedSize(QSize(32, 16))
             button.setStyleSheet(
                 """QToolButton {
                     border: none;
                     padding: 2px;
+                }
+                QToolButton:hover {
+                    background-color: rgba(0, 0, 0, 40%);  /* Dark transparent background on hover */
                 }
                 """
             )
@@ -124,6 +230,12 @@ class WindowUnifiedTitlebar(QWidget):
 
         self.setWindowTitle("Title")
 
+    def changeEvent(self, event):
+        if event.type() == QEvent.Type.WindowStateChange:
+            self._titlebar.window_state_changed(self.windowState())
+        super().changeEvent(event)
+        event.accept()
+
     def sizeHint(self) -> QSize:
         return QSize(640,505)
 
@@ -138,6 +250,6 @@ if __name__ == "__main__":
     window.setStyleSheet("WindowUnifiedTitlebar{background: qlineargradient(x1:0 y1:0, x2:0 y2:1, stop:0 palette(window) stop:1 #44315f);}")
     window.show()
 
-    w = QWidget()
-    w.show()
+    # w = QWidget()
+    # w.show()
     app.exec()

@@ -36,8 +36,6 @@ class CaptureStdErr(QObject):
 	def flush(self):
 		self.stderr.flush()  # Ensure the output is written immediately
 
-
-
 class LogWindow(QPlainTextEdit):
 	def __init__(self, parent=None):
 		super().__init__(parent=parent)

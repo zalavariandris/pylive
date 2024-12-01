@@ -5,8 +5,8 @@ from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 from PySide6.QtOpenGL import *
 
-from camera import Camera
-
+from pylive.render_engine.camera import Camera
+import glm
 class OrbitControl(QObject):
 	def __init__(self, widget:QWidget, camera:Camera):
 		super().__init__(parent=widget)
@@ -39,12 +39,22 @@ class OrbitControl(QObject):
 						# Update the last mouse position
 						self.last_mouse_pos = current_mouse_pos
 						return True
+
 				case QEvent.Type.MouseButtonRelease:
 					event = cast(QMouseEvent, event)
 					if self.is_dragging:
 						self.is_dragging = False
 						self.last_mouse_pos = None  # Reset mouse position when dragging ends
 					return True
+
+				case QEvent.Type.Wheel:
+					event = cast(QWheelEvent, event)
+					distance = glm.distance(self.camera.getPosition(), glm.vec3(0,0,0))
+					print(distance)
+					self.camera.dolly(-event.angleDelta().y()/1000*distance)
+					print("wheel", event.angleDelta())
+
+
 				case QEvent.Type.Resize:
 					widget = cast(QWidget, watched)
 					self.camera.setAspectRation(widget.width()/widget.height())
