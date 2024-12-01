@@ -45,9 +45,6 @@ class Terminal(QWidget):
 
 		self.exceptionThrown.connect(lambda exc: print(f"{exc}"))
 
-	def execute(self, source:str):
-		self._execute(source)
-
 	def context(self):
 		return self._context
 
@@ -78,6 +75,9 @@ class Terminal(QWidget):
 		except Exception as err:
 			self.exceptionThrown.emit(err) # underline
 
+	def execute(self, source:str):
+		self._execute(source, mode='exec')
+
 	def clear(self):
 		self.output.clear()
 
@@ -85,7 +85,7 @@ class Terminal(QWidget):
 		...
 
 	def error(self, exception:Exception):
-		pass
+		...
 
 import ast
 class FrameworkWindow(LiveFrameworkWindow):
