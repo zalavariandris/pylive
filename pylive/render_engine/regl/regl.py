@@ -1,9 +1,11 @@
 from typing import *
 import weakref
+
+from numpy import dtype
 import moderngl
 from pylive.render_engine.resource_manager import ResourceManager
 from pylive.render_engine.camera import Camera
-
+from OpenGL.GL import *
 
 camera = Camera()
 import glm
@@ -23,8 +25,8 @@ class REGL(ResourceManager):
 		""" for animation? """
 		...
 
-
-class Command(ResourceManager):
+from dataclasses import dataclass
+class Command:
 	def __init__(self, vert:str, frag:str, uniforms:Dict, attributes:Dict, count:int):
 		super().__init__()
 		self.vert = vert
@@ -34,43 +36,78 @@ class Command(ResourceManager):
 		self.count = count
 
 		# GL OBJECTS
-		self.vbo = None
 		self.vao = None
+		self.buffers = []
 		self.program:moderngl.Program = None
 
-		# self.program(
-		# 	vertex_shader=vert,
-		# 	fragment_shader=frag,
-		# )
-
-	def setup(self):
+	def _lazy_setup(self):
 		ctx = moderngl.get_context()
 
-		self.prog = ctx.program(self.vert, self.frag)
-		vertices = np.array([
-			[-1,  0, 0],    # Vertex 1
-			[ 0, -1, 0],    # Vertex 2
-			[+1, +1, 0]   # Vertex 3
-		], dtype=np.float32)
-		self.vbo = ctx.buffer(vertices.tobytes())
-		
+		self.program = ctx.program(self.vert, self.frag)
+
+
+		self.buffers = [
+			(
+				ctx.buffer(buffer.tobytes()), 
+				f"{buffer.shape[1]}{buffer.dtype.char}", 
+				name
+			)
+			for name, buffer in self.attributes.items()
+		]
+
+	def __del__(self):
+		for buffer, type_string, name in self.buffers:
+			buffer.release()
+		if vao:=self.vao:
+			vao.release()
+		if program:=self.program:
+			program.release()
+
+	def validate_uniforms(self):
+		for uniform in self.uniforms.values():
+			... #TODO: Validate uniform values. allow tuples, numpy arrays and glm values.
+
+	def validate_attributes(self):
+		if not all(isinstance(buffer, np.ndarray) or isinstance(buffer, list) for buffer in self.attributes.values()):
+			raise ValueError(f"All buffer must be np.ndarray or a List, got:{self.attributes.values()}")
+
+		if not all(len(buffer.shape) == 2 for buffer in self.attributes.values()):
+			# see  opengl docs: https://registry.khronos.org/OpenGL-Refpages/gl4/html/glVertexAttribPointer.xhtml
+			# size must be aither 1,2,3 or 4
+			raise ValueError(f"The buffers must be 2 dimensional.") #TODO: accep 1 or a flat array for 1 dimensional data.
+
+		if not all(buffer.shape[1] in {1,2,3,4} for buffer in self.attributes.values()):
+			# see  opengl docs: https://registry.khronos.org/OpenGL-Refpages/gl4/html/glVertexAttribPointer.xhtml
+			# size must be aither 1,2,3 or 4
+			raise ValueError(f"The number of components per generic vertex attribute. Must be 1, 2, 3, or 4.")
+
+		supported_datatypes = {'f','u'}
+		for buffer in self.attributes.values():
+			if buffer.dtype.char not in supported_datatypes:
+				raise ValueError(f"Datatype '{buffer.dtype}' is not supported.")
 
 	def __call__(self):
 		# lazy setup
-		if not (self.vbo and self.vao and self.prog):
-			self.setup()
+		if not (self.buffers and self.vao and self.program):
+			self._lazy_setup()
 
-		assert self.prog
+		# validate input parameters
+		self.validate_uniforms()
+		self.validate_attributes()
+
+		assert self.program
 		# update uniforms
 		for key, value in self.uniforms.items():
-			self.prog[key].write(value)
+			self.program[key].write(value)
 
 		ctx = moderngl.get_context()
+
+		# reorganize buffers for modenrgl format
+
+		# create vao
 		vao = ctx.vertex_array(
-			self.prog,
-			[
-				(self.vbo, '3f', 'position'),
-			],
+			self.program,
+			self.buffers,
 			mode=moderngl.TRIANGLES
 		)
 		vao.render()
@@ -85,128 +122,108 @@ if __name__ == "__main__":
 	import numpy as np
 	from pylive.render_engine.orbit_control import OrbitControl
 	from textwrap import dedent
+
+	
+
 	class Canvas(QOpenGLWidget):
 		def __init__(self, parent=None):
 			super().__init__(parent=parent)
-		
-		def initializeGL(self):
 			self.regl = REGL()
 
-		def paint_with_moderngl(self):
-			VERTEX_SHADER = dedent('''
-				#version 330 core
-
-				uniform mat4 view;
-				uniform mat4 projection;
-
-
-				layout(location = 0) in vec3 position;
-
-				void main() {
-					gl_Position = projection * view * vec4(position, 1.0);
-				}
-			''')
-
-			FRAGMENT_SHADER = dedent('''
-				#version 330 core
-
-				layout (location = 0) out vec4 out_color;
-				uniform vec4 color;
-				void main() {
-					out_color = color;
-				}
-			''')
-
-			ctx = moderngl.get_context()
-			program = ctx.program(VERTEX_SHADER, FRAGMENT_SHADER)
-			program['projection'].write(glm.ortho(-1,1,-1,1,0,1))
-			program['view'].write(glm.mat4(1))
-			program['color'].write(glm.vec4(1.0, 1.0, 0.3, 1.0))
-			# triangle
-			vertices = np.array([
-				[-1,  0, 0],    # Vertex 1
-				[ 0, -1, 0],    # Vertex 2
-				[+1, +1, 0]   # Vertex 3
-			], dtype=np.float32)
-			vbo = ctx.buffer(vertices.tobytes())
-
-			vao = ctx.vertex_array(
-				program,
-				[
-					(vbo, '3f', 'position'),
-				],
-				mode=moderngl.TRIANGLES
-			)
-
-			ctx.clear(1,.3,1,1)
-			vao.render()
-
-		def paint_with_regl(self):
-			VERTEX_SHADER = dedent('''
-				#version 330 core
-
-				uniform mat4 view;
-				uniform mat4 projection;
-
-
-				layout(location = 0) in vec3 position;
-
-				void main() {
-					gl_Position = projection * view * vec4(position, 1.0);
-				}
-			''')
-
-			FRAGMENT_SHADER = dedent('''
-				#version 330 core
-
-				layout (location = 0) out vec4 out_color;
-				uniform vec4 color;
-				void main() {
-					out_color = color;
-				}
-			''')
-
-			ctx = moderngl.get_context()
-			draw_triangle = self.regl.command(
-				vert=VERTEX_SHADER,
-				frag=FRAGMENT_SHADER,
-
-				uniforms={
-					'projection': glm.ortho(-1,1,-1,1,0,1),
-					'view': glm.mat4(1),
-					'color': glm.vec4(0.0, 1.0, 0.3, 1.0)
-				},
-
-				attributes={
-					'position': [
-						[-1,  0, 0],
-						[ 0, -1, 0],
-						[+1, +1, 0]
-					]
-				},
-
-				count=3
-			)
-
-			self.regl.clear(color=glm.vec4(0, 0.1, 0.26, 1))
-			draw_triangle()
-
+		
+		def initializeGL(self):
+			...
 
 		def paintGL(self):
-			ctx = moderngl.get_context()
-			fbo = ctx.detect_framebuffer() 
-			fbo.use()
+			# ctx = moderngl.get_context()
+			# fbo = ctx.detect_framebuffer() 
+			# print(fbo)
+			# fbo.use()
+			# print("viewport", ctx.viewport)
 
-			
+			# draw_triangle()
+			# self.paint_with_regl()
+			print("painGL")
+			# glClearColor(0.1, 0.1, 0.1, 1.0)  # Dark background
+			# glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
-			self.paint_with_regl()
+		def drawTriangle(self):
+			print("drawTriangle")
+			# Step 1: Make the context current
+			self.makeCurrent()
 
-			
-	
+			try:
+				# Step 2: Set up the ModernGL context
+				ctx = moderngl.get_context()
+
+				# Step 3: Configure the viewport to match widget size
+				# ctx.viewport = (0, 0, self.width(), self.height())
+
+				# Step 4: Bind the default framebuffer
+				fbo_handle = self.defaultFramebufferObject()
+				fbo = ctx.detect_framebuffer()
+				print('fbo.glo', fbo.glo)
+				fbo.use()
+
+				# Step 5: Call the custom render function
+				draw_triangle()
+				
+
+				self.context().swapBuffers(self.context().surface())
+				
+			finally:
+				# Step 6: Release the context
+				self.doneCurrent()
+				...
+			self.update()
+
 
 	app = QApplication(sys.argv)
 
 	canvas = Canvas()
+
+	draw_triangle = canvas.regl.command(
+		vert=dedent('''\
+			#version 330 core
+
+			uniform mat4 view;
+			uniform mat4 projection;
+
+
+			layout(location = 0) in vec3 position;
+
+			void main() {
+				gl_Position = projection * view * vec4(position, 1.0);
+			}
+		'''),
+		frag=dedent('''
+			#version 330 core
+
+			layout (location = 0) out vec4 out_color;
+			uniform vec4 color;
+			void main() {
+				out_color = color;
+			}
+		'''),
+
+		uniforms={
+			'projection': glm.ortho(-1,1,-1,1,0,1),
+			'view': glm.mat4(1),
+			'color': glm.vec4(0.0, 1.0, 0.3, 1.0)
+		},
+
+		attributes={
+			'position': np.array([
+				[-1,  0, 0],
+				[ 0, -1, 0],
+				[+1, +1, 0]
+			], dtype=np.float32)
+		},
+
+		count=3
+	)
+
+
 	# camera = Camera()
 	# camera.setPosition(glm.vec3(0, 1.5, 2.5))
 	# camera.lookAt(glm.vec3(0,0,0), glm.vec3(0.0, 0.0, 1.0))
@@ -214,6 +231,7 @@ if __name__ == "__main__":
 
 	canvas.show()
 
+	canvas.drawTriangle()
 
 
 	sys.exit(app.exec())

@@ -33,12 +33,6 @@ class GLWidget(QOpenGLWidget):
 	def sizeHint(self) -> QSize:
 		return QSize(720, 576)
 
-	def renderLayers(self):
-		return self._layers
-
-	def setRenderLayers(self, layers:List[RenderLayer]):
-		self._layers = layers
-
 	def initializeGL(self) -> None:
 		# fmt = QSurfaceFormat()
 		# fmt.setDepthBufferSize(24);
@@ -55,33 +49,66 @@ class GLWidget(QOpenGLWidget):
 			print(f"OpenGL Version Used by QOpenGLWindow: {version[0]}.{version[1]}")
 		else:
 			print("Failed to retrieve OpenGL context.")
-
-		# create the moderngl context
-		self.ctx = moderngl.get_context()
 		
-		# setup render layers
-		for layer in self._layers:
-			layer.setup(self.ctx)
-
 	def resizeGL(self, w: int, h: int) -> None:
 		# setup render layers
-		for layer in self._layers:
-			layer.resize(self.ctx, w, h)
+		ctx = moderngl.get_context()
+		ctx.viewport = (0,0,w,h)
 		return super().resizeGL(w, h)
 
 	def paintGL(self) -> None:
-		# use the FBO that is currently bound by QT with moderngl
-		fbo_id = self.defaultFramebufferObject() # get framebuffer id this is just for reference
-		fbo = self.ctx.detect_framebuffer() 
+		VERTEX_SHADER = dedent('''
+			#version 330 core
+
+			uniform mat4 view;
+			uniform mat4 projection;
+
+
+			layout(location = 0) in vec3 position;
+
+			void main() {
+				gl_Position = projection * view * vec4(position, 1.0);
+			}
+		''')
+
+		FRAGMENT_SHADER = dedent('''
+			#version 330 core
+
+			layout (location = 0) out vec4 out_color;
+			uniform vec4 color;
+			void main() {
+				out_color = color;
+			}
+		''')
+
+		ctx = moderngl.get_context()
+		ctx.gc_mode = 'context_gc' # MODERNGL CAN GARBAGE COLLECT its GLObjects!
+		fbo = ctx.detect_framebuffer()
 		fbo.use()
+		program = ctx.program(VERTEX_SHADER, FRAGMENT_SHADER)
+		program['projection'].write(glm.ortho(-1,1,-1,1,0,1))
+		program['view'].write(glm.mat4(1))
+		program['color'].write(glm.vec4(1.0, 1.0, 0.3, 1.0))
 
-		self.ctx.enable(self.ctx.DEPTH_TEST)		
-		self.ctx.clear(0.1, 0.2, 0.3, 1.0)  # Clear screen with a color
+		# triangle
+		vertices = np.array([
+			[-1,  0, 0],    # Vertex 1
+			[ 0, -1, 0],    # Vertex 2
+			[+1, +1, 0]   # Vertex 3
+		], dtype=np.float32)
+		vbo = ctx.buffer(vertices.tobytes())
 
-		# setup render layers
-		self.ctx.clear(0.03, 0.03, 0.1, 1.0)  # Clear screen with a color
-		for layer in self._layers:
-			layer.render(self.ctx)
+		vao = ctx.vertex_array(
+			program,
+			[
+				(vbo, '3f', 'position'),
+			],	
+			mode=moderngl.TRIANGLES
+		)
+
+		ctx.clear(1,.3,1,1)
+		vao.render()
+		ctx.gc()
 
 
 if __name__ == "__main__":
@@ -94,25 +121,6 @@ if __name__ == "__main__":
 	camera.setPosition(glm.vec3(0, 1.5, 2.5))
 	camera.lookAt(glm.vec3(0,0,0), glm.vec3(0.0, 0.0, 1.0))
 	orbit_control = OrbitControl(glwidget, camera)
-
-	glwidget.setRenderLayers([
-		# TriangleLayer(camera),
-		# BoxLayer(camera),
-		
-		ArrowLayer(camera,
-			color=glm.vec4(0,1,0,1),
-			model=glm.mat4(1)
-		), # Y
-		ArrowLayer(camera, 
-			model=glm.rotate(90*math.pi/180, glm.vec3(0,0,1)),
-			color=glm.vec4(0,0,1,1)
-		), # Z
-		ArrowLayer(camera, 
-			model=glm.rotate(90*math.pi/180, glm.vec3(1,0,0)),
-			color=glm.vec4(1,0,0,1)
-		), # X
-		GridLayer(camera)
-	])
 	
 	glwidget.show()
 	sys.exit(app.exec())
