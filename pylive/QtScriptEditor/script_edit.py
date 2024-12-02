@@ -68,7 +68,7 @@ class ScriptEdit(QPlainTextEdit):
         def update_cells():
             script = self.toPlainText()
             cells = [
-                cell.strip() for cell in 
+                cell for cell in 
                 re.split(r"(?=#.*%%)", script, flags=re.MULTILINE)
             ]
 

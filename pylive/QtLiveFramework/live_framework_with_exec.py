@@ -1,5 +1,4 @@
 import sys
-from typing import *
 
 from typing import *
 
@@ -16,85 +15,16 @@ import logging
 logger = logging.getLogger(__name__)
 
 from io import StringIO
-from pylive.logwindow import LogWindow
+
 
 from pylive.QtScriptEditor.components.async_jedi_completer import AsyncJediCompleter
+from pylive.QtLiveFramework.terminal_with_exec import Terminal
 
 import logging
 log_format = '%(levelname)s: %(message)s'
 logging.basicConfig(level=logging.INFO, format=log_format)
 logger = logging.getLogger(__name__)
 
-class Terminal(QWidget):
-	exceptionThrown = Signal(Exception)
-	messageSent = Signal(str)
-
-	def __init__(self, parent=None):
-		super().__init__(parent=parent)
-		self.setContext({})
-
-		self.output = LogWindow()
-		self.output.setReadOnly(True)
-		self.input = QLineEdit()
-		self.input.setPlaceholderText("type something...")
-		self.input_completer = AsyncJediCompleter(self.input)
-		self.input.setCompleter(self.input_completer)
-
-		self.input.returnPressed.connect(lambda: (
-			self._execute(self.input.text(), 'single'),
-			self.input.clear(),
-			self.output.verticalScrollBar().setValue(self.output.verticalScrollBar().maximum())
-		))
-
-		layout = QVBoxLayout()
-		layout.setContentsMargins(0,0,0,0)
-		self.setLayout(layout)
-		layout.addWidget(self.output)
-		layout.addWidget(self.input)
-
-		self.exceptionThrown.connect(lambda exc: print(f"{exc}"))
-
-	def context(self):
-		return self._context
-
-	def setContext(self, context:dict):
-		self._context = context
-		self._context['__builtins__'] = __builtins__
-
-	def _execute(self, source:str, mode:Literal["exec","single"]="exec"):
-		try:
-			tree = ast.parse(source)
-			try:
-				code = compile(source, "<script>", mode=mode)
-				try:
-					result = exec(code, self.context())
-					if result:
-						print(result)
-				except SyntaxError as err:
-					self.exceptionThrown.emit(err) #label
-				except Exception as err:
-					self.exceptionThrown.emit(err) #label
-			except SyntaxError as err:
-				self.exceptionThrown.emit(err) # underline
-			except Exception as err:
-				self.exceptionThrown.emit(err) # underline
-
-		except SyntaxError as err:
-			self.exceptionThrown.emit(err) # underline
-		except Exception as err:
-			self.exceptionThrown.emit(err) # underline
-
-	def execute(self, source:str):
-		self._execute(source, mode='exec')
-
-	def clear(self):
-		self.output.clear()
-
-	def print(self, msg):
-		...
-
-	def error(self, exception:Exception):
-		...
 
 import ast
 class FrameworkWindow(LiveFrameworkWindow):
@@ -111,9 +41,16 @@ class FrameworkWindow(LiveFrameworkWindow):
 		### bind texteditor to execute cells ###
 		@self.editor().cellsChanged.connect
 		def execute_cells(indexes):
-			logger.info(f"execute_cells: {indexes}")
 			for idx in indexes:
-				self._execute_code( self.editor().cell(idx) )
+				logger.info(f"execute_cell: {idx}")
+				cell_line_offset = 0
+				for i in range(idx):
+					cell_source = self.editor().cell(idx)
+					line_count = len(cell_source.split("\n"))					
+					cell_line_offset+=line_count
+				cell_source = self.editor().cell(idx)
+				cell_source = "\n"*cell_line_offset + cell_source
+				self._execute_code( cell_source )
 
 		terminal.exceptionThrown.connect(lambda exc: 
 			self.editor().linter.lintException(exc, 'underline'))
@@ -160,6 +97,14 @@ def main():
 	button.setText("hello")
 	""")
 	window.editor().setPlainText(code_to_execute)
+
+	def print_cells():
+		print("==CELLS==")
+		for cell in window.editor()._cells:
+			print("---------")
+			print(cell)
+		print("=========\n")
+	# window.editor().textChanged.connect(print_cells)
 	
 	# window.execute_code(code_to_execute)  # This will add a button to the layout
 
