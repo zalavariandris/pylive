@@ -36,6 +36,9 @@ class RenderLayer:
 	def setup(self, ctx:moderngl.Context):
 		...
 
+	def destroy(self, ctx:moderngl.Context):
+		...
+
 	def resize(self, ctx:moderngl.Context, w:int, h:int):
 		...
 
@@ -104,15 +107,24 @@ class TriangleLayer(RenderLayer):
 			 0.4, 0.0, -0.3    # Vertex 3
 		], dtype=np.float32)
 
-		vbo = ctx.buffer(vertices.tobytes())
+		self.vbo = ctx.buffer(vertices.tobytes())
 
 		self.vao = ctx.vertex_array(
 			self.program,
 			[
-				(vbo, '3f', 'position'),
+				(self.vbo, '3f', 'position'),
 			],
 			mode=moderngl.TRIANGLES
 		)
+
+	@override
+	def destroy(self, ctx:moderngl.Context):
+		if self.program:
+			self.program.release()
+		if self.vbo:
+			self.vbo.release()
+		if self.vao:
+			self.vao.release()
 
 	@override
 	def render(self, ctx:moderngl.Context):

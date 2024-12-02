@@ -6,7 +6,6 @@ from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
-
 from pylive.QtLiveFramework.live_framework_skeleton import LiveFrameworkWindow, Placeholder
 from pylive.QtScriptEditor.components.textedit_completer import TextEditCompleter
 from pylive.QtScriptEditor.script_edit import ScriptEdit
@@ -18,11 +17,9 @@ from io import StringIO
 
 
 from pylive.QtScriptEditor.components.async_jedi_completer import AsyncJediCompleter
-from pylive.QtLiveFramework.terminal_with_exec import Terminal
+from pylive.QtTerminal.terminal_with_exec import Terminal
 
 import logging
-log_format = '%(levelname)s: %(message)s'
-logging.basicConfig(level=logging.INFO, format=log_format)
 logger = logging.getLogger(__name__)
 
 
@@ -63,52 +60,40 @@ class FrameworkWindow(LiveFrameworkWindow):
 
 	def _execute_code(self, source):
 		logger.info("executing code...")
-		if not source.strip():
-			return  # Do nothing if the input is empty
 
 		terminal = cast(Terminal, self.terminal())
 		terminal.clear()
-		terminal.execute(source)
+
+		if source.strip():
+			terminal.execute(source)
 		
 		logger.info("code executed!") 
 
 
-def main():
+if __name__ == "__main__":
+	# configure logging
 	import logging
 	log_format = '%(levelname)s: %(message)s'
-	# logging.basicConfig(level=logging.INFO, format=log_format)
+	logging.basicConfig(level=logging.INFO, format=log_format)
+
+	# create livecsript app
 	app = QApplication(sys.argv)
-	
 	window = FrameworkWindow()
-	# window.setApp(WidgetPreviewApp())
 	window.show()
 	
-	# Execute a string of code using the execute_code method to add a widget
+	# set initial code
 	from textwrap import dedent
-	code_to_execute = dedent("""\
-	#%% setup
-	from PySide6.QtWidgets import *
+	script = dedent("""\
+		#%% setup
+		from PySide6.QtWidgets import *
 
-	# Create a new QPushButton
-	button = QPushButton("Click Me")
-	app.setPreview(button)
+		button = QPushButton("Click Me")
+		app.setPreview(button)
 
-	# %% update
-	button.setText("hello")
+		#%% update
+		button.setText("hello")
 	""")
-	window.editor().setPlainText(code_to_execute)
+	window.editor().setPlainText(script)
 
-	def print_cells():
-		print("==CELLS==")
-		for cell in window.editor()._cells:
-			print("---------")
-			print(cell)
-		print("=========\n")
-	# window.editor().textChanged.connect(print_cells)
-	
-	# window.execute_code(code_to_execute)  # This will add a button to the layout
-
+	# launch QApp
 	sys.exit(app.exec())
-
-if __name__ == "__main__":
-	main()

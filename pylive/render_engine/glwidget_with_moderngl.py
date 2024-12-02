@@ -1,9 +1,8 @@
 from typing import *
-from collections import defaultdict
 from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
-from PySide6.QtOpenGL import *
+# from PySide6.QtOpenGL import *
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
 
 import moderngl
@@ -41,13 +40,13 @@ class GLWidget(QOpenGLWidget):
 		self._layers = layers
 
 	def initializeGL(self) -> None:
-		fmt = QSurfaceFormat()
-		fmt.setDepthBufferSize(24);
-		fmt.setStencilBufferSize(8);
-		fmt.setSwapInterval(1)
-		fmt.setMajorVersion(4)
-		fmt.setMinorVersion(6)
-		self.setFormat(fmt)
+		# fmt = QSurfaceFormat()
+		# fmt.setDepthBufferSize(24);
+		# fmt.setStencilBufferSize(8);
+		# fmt.setSwapInterval(1)
+		# fmt.setMajorVersion(4)
+		# fmt.setMinorVersion(6)
+		# self.setFormat(fmt)
 
 		# print the current OpenGL context
 		context = self.context()

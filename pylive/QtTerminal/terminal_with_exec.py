@@ -4,7 +4,7 @@ from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
-from pylive.logwindow import LogWindow
+from pylive.QtTerminal.logwindow import LogWindow
 from pylive.QtScriptEditor.components.async_jedi_completer import AsyncJediCompleter
 import ast
 class Terminal(QFrame):
@@ -21,12 +21,11 @@ class Terminal(QFrame):
 
 
         self.output.setReadOnly(True)
-        self.input = QLineEdit()
-        self.input.setPlaceholderText(">")
-
         self.output.setFrameStyle(QFrame.Shape.NoFrame)
-        self.input.setFrame(False)
 
+        self.input = QLineEdit()
+        self.input.setPlaceholderText("code...")        
+        self.input.setFrame(False)
 
         self.input_completer = AsyncJediCompleter(self.input)
         self.input.setCompleter(self.input_completer)
@@ -42,6 +41,11 @@ class Terminal(QFrame):
         layout.setSpacing(0)
         self.setLayout(layout)
         layout.addWidget(self.output)
+        bottom_layout = QHBoxLayout()
+        label = QLabel(">", parent=self.input)
+        label.move(2,4)
+        label.setStyleSheet("color: palette(light);")
+
 
         layout.addWidget(self.input)
 
