@@ -4,9 +4,11 @@ from PySide6.QtWidgets import *
 from typing import *
 
 import weakref
+import re
 
+from traitlets.utils import text
 class TextEditCompleter(QCompleter):
-	def __init__(self, textedit:QTextEdit|QPlainTextEdit, words:List[str]=[]):
+	def __init__(self, textedit:QPlainTextEdit|QLineEdit, words:List[str]=[]):
 		super().__init__(words, parent=textedit)
 		self.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
 		self.setCompletionMode(QCompleter.CompletionMode.PopupCompletion)
@@ -14,6 +16,13 @@ class TextEditCompleter(QCompleter):
 
 		self.setWidget(textedit)
 		self.activated.connect(self.insertCompletion)
+
+		if isinstance(self.widget(), QLineEdit):
+			"""
+			the QComleter behaviour will insert text into a QLineEdit, before pressing Enter
+			here we are disconnecting that default behavour to replace with our own.
+			"""
+			self.popup().selectionModel().selectionChanged.disconnect()
 
 		# Install event filter on the text edit
 		textedit.installEventFilter(self)
@@ -36,12 +45,13 @@ class TextEditCompleter(QCompleter):
 			self.timer.start(0)
 		))
 
+
 	def closeEvent(self):
 		print("CloseEvent")
 
 	def requestCompletions(self):
 		"""this will be called, when the textedit wants completions
-		set the model string ot the completion prefix to trigger an update
+		set the model string or the completion prefix to trigger an update
 		"""
 		self.setCompletionPrefix(self.getWordUntilCursor())
 
@@ -49,27 +59,53 @@ class TextEditCompleter(QCompleter):
 		"""
 		Replace "WordUnderCursor" with completion
 		"""
-		textedit = cast(QPlainTextEdit, self.widget())
-		tc = textedit.textCursor()
-		tc.select(QTextCursor.SelectionType.WordUnderCursor)
-		# extra = len(completion) - len(tc.selectedText())
-		# tc.movePosition(QTextCursor.MoveOperation.Left)
-		# tc.movePosition(QTextCursor.MoveOperation.EndOfWord)
-		tc.insertText(completion)
-		textedit.setTextCursor(tc)
+		match self.widget():
+			case QPlainTextEdit():
+				textedit = cast(QPlainTextEdit, self.widget())
+				tc = textedit.textCursor()
+				tc.select(QTextCursor.SelectionType.WordUnderCursor)
+				# extra = len(completion) - len(tc.selectedText())
+				# tc.movePosition(QTextCursor.MoveOperation.Left)
+				# tc.movePosition(QTextCursor.MoveOperation.EndOfWord)
+				tc.insertText(completion)
+				textedit.setTextCursor(tc)
+			case QLineEdit():
+				lineedit = cast(QLineEdit, self.widget())
+				word_pattern = r"[^\W_]+(?:'[^\W_]+)?"
+				# Use regex to replace the last word
+				modified_text = re.sub(rf"{word_pattern}(\s*)$", rf"{completion}\1", lineedit.text())
+				lineedit.setText(modified_text)
 
 	def getWordUntilCursor(self):
 		"""
 		Returns the word under the cursor in the QTextEdit.
 		"""
-		textedit = cast(QPlainTextEdit, self.widget())
-		cursor = textedit.textCursor()
-		original_position = cursor.position()
-		original_anchor = cursor.anchor()
-		cursor.select(QTextCursor.SelectionType.WordUnderCursor)
-		cursor.setPosition(cursor.anchor(), QTextCursor.MoveMode.MoveAnchor)
-		cursor.setPosition(original_position, QTextCursor.MoveMode.KeepAnchor)
-		return cursor.selectedText()
+		match self.widget():
+			case QPlainTextEdit():
+				textedit = cast(QPlainTextEdit, self.widget())
+				cursor = textedit.textCursor()
+				original_position = cursor.position()
+				original_anchor = cursor.anchor()
+				cursor.select(QTextCursor.SelectionType.WordUnderCursor)
+				cursor.setPosition(cursor.anchor(), QTextCursor.MoveMode.MoveAnchor)
+				cursor.setPosition(original_position, QTextCursor.MoveMode.KeepAnchor)
+				return cursor.selectedText()
+			case QLineEdit():
+				lineedit = cast(QLineEdit, self.widget())
+				
+				# Get the current text and cursor position
+				text = lineedit.text()
+				cursor_pos = lineedit.cursorPosition()
+
+				# Find all words and their spans (start and end positions)
+				word_pattern = r"[^\W_]+(?:'[^\W_]+)?"  # Matches sequences of alphanumeric characters and apostrophes
+				matches = [(m.group(), m.start(), m.end()) for m in re.finditer(word_pattern, text)]
+
+				# Determine which word the cursor is in
+				for word, start, end in matches:
+					if start <= cursor_pos <= end:
+						return word
+				return ""
 
 	def eventFilter(self, o:QObject, e:QEvent):
 		"""
@@ -101,7 +137,8 @@ class TextEditCompleter(QCompleter):
 					# Let the popup handle up/down keys for selection
 					return False
 
-		# if e.type() == QEvent.Type.KeyRelease:
+
+
 		# 	self.popup().hide()
 		# 	e = cast(QKeyEvent, e)
 		# 	if e.key() in {Qt.Key.Key_Enter, Qt.Key.Key_Return, Qt.Key.Key_Escape}:
@@ -118,43 +155,61 @@ class TextEditCompleter(QCompleter):
 		"""
 		# prefix = self.textUnderCursor()
 
-		textedit = cast(QPlainTextEdit, self.widget())
-		cursor = textedit.textCursor()
+		def IsLineEmpty():
+			match self.widget():
+				case QPlainTextEdit():
+					textedit = cast(QPlainTextEdit, self.widget())
+					cursor = textedit.textCursor()
+					return len(cursor.block().text().strip())==0
+				case QLineEdit():
+					lineedit = cast(QLineEdit, self.widget())
+					return lineedit.text().strip()==0
 
-		if len(cursor.block().text().strip())>0 and self.getWordUntilCursor() != self.currentCompletion():
-			
+
+		if not IsLineEmpty() and self.getWordUntilCursor() != self.currentCompletion():
 			popup = self.popup()
+
 			popup.setCurrentIndex(self.completionModel().index(0, 0))
 
 			# Calculate the required width for the popup
-			textedit = cast(QPlainTextEdit, self.widget())
-			rect = textedit.cursorRect()
-			# Get the width needed for the longest completion
-			model = self.completionModel()
-			max_width = 0
-			for i in range(model.rowCount()):
-				text = model.data(model.index(i, 0), Qt.ItemDataRole.DisplayRole)
-				width = popup.fontMetrics().horizontalAdvance(text)
-				max_width = max(max_width, width)
-			
-			# Add padding for the scrollbar and item margins
-			scrollbar_width = popup.verticalScrollBar().sizeHint().width()
-			item_margin = 5  # Adjust this value based on your styling
-			total_width = max_width + scrollbar_width + 2 * item_margin
-			
+			def popup_width():
+				model = self.completionModel()
+				max_width = 0
+				for i in range(model.rowCount()):
+					text = model.data(model.index(i, 0), Qt.ItemDataRole.DisplayRole)
+					width = popup.fontMetrics().horizontalAdvance(text)
+					max_width = max(max_width, width)
+				
+				# Add padding for the scrollbar and item margins
+				scrollbar_width = popup.verticalScrollBar().sizeHint().width()
+				item_margin = 5  # Adjust this value based on your styling
+				return max_width + scrollbar_width + 2 * item_margin
+
 			# Ensure the popup isn't too narrow or too wide
+			total_width = popup_width()
 			min_width = 5
-			max_width = textedit.width()
+			max_width = self.widget().width()
 			total_width = max(min_width, min(total_width, max_width))
 			
-			rect.setWidth(total_width)
-			self.complete(rect)
+			# popup with proper geometry
+			match self.widget():
+				case QPlainTextEdit():
+					textedit = cast(QPlainTextEdit, self.widget())
+					rect = textedit.cursorRect()
+					rect.setWidth(total_width)
+					self.complete(rect)
+				case QLineEdit():
+					textedit = cast(QLineEdit, self.widget())
+					rect = textedit.cursorRect()
+					rect.setWidth(total_width)
+					self.complete(rect)
+
 		else:
 			self.popup().hide()
 
 
 class PythonKeywordsCompleter(TextEditCompleter):
-	def __init__(self, textedit:QTextEdit, additional_keywords=[]) -> None:
+	def __init__(self, textedit:QPlainTextEdit|QLineEdit, additional_keywords=[]) -> None:
 		keywords_list = [
 			"and", "as", "assert", "break", "class", "continue", 
 			"def", "del", "elif", "else", "except", "False", 
@@ -194,18 +249,34 @@ if __name__ == "__main__":
 	#create app
 	app = QApplication([])
 
-	# create completing editor
-	editor = QTextEdit()
-	completer = PythonKeywordsCompleter(editor, ["apple", "ananas", "banana", "cherry", "date", "elderberry", "fig", "grape", "honeydew", "kiwi", "lemon"])
-	editor.setWindowTitle("QTextEdit with Custom Completer")
-	editor.resize(600, 400)
+	fruits = ["apple", "ananas", "banana", "cherry", "date", "elderberry", "fig", "grape", "honeydew", "kiwi", "lemon"]
 
-	# placeholder
-	words = [completer.model().index(row,0).data() for row in range(completer.model().rowCount())]
+	# create main window window
+	window = QWidget()
+	layout = QHBoxLayout()
+	window.setLayout(layout)
+
+	# create completing editor
+	editor = QPlainTextEdit()
+	editor_completer = PythonKeywordsCompleter(editor, fruits)
+	editor.setWindowTitle("QTextEdit with Custom Completer")
+	words = [editor_completer.model().index(row,0).data() for row in range(editor_completer.model().rowCount())]
 	editor.setPlaceholderText("Start typing...\n\neg.: " + ", ".join(words))
-	
-	# show window
-	editor.show()
+	layout.addWidget(editor)
+
+	# create completin lineedit
+	lineedit = QLineEdit()
+	lineedit.setPlaceholderText("Start typing fruits...")
+	lineedit_completer = TextEditCompleter(lineedit, fruits)
+	lineedit.setCompleter(lineedit_completer)
+	lineedit_completer.setCompletionMode(QCompleter.CompletionMode.PopupCompletion)
+	layout.addWidget(lineedit)
+
+	lineedit2 = QLineEdit()
+	completer = QCompleter(fruits)
+	lineedit2.setCompleter(completer)
+	layout.addWidget(lineedit2)
 
 	#run app
+	window.show()
 	app.exec()

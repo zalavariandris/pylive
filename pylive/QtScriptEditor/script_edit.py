@@ -13,8 +13,9 @@ from pylive.QtScriptEditor.components.textedit_number_editor import TextEditNumb
 # code assist
 import rope.base.project
 from rope.contrib import codeassist
-from pylive.QtScriptEditor.components.rope_completer_for_textedit import RopeCompleter
+
 from pylive.QtScriptEditor.components.jedi_completer import JediCompleter
+from pylive.QtScriptEditor.components.async_jedi_completer import AsyncJediCompleter
 from pylive.QtScriptEditor.components.textedit_completer import PythonKeywordsCompleter
 from pylive.QtScriptEditor.components.linter_widget import TextEditLinterWidget
 
@@ -52,7 +53,7 @@ class ScriptEdit(QPlainTextEdit):
         self.setPalette(palette)
 
         ### Autocomplete ###
-        self.completer = JediCompleter(self)
+        self.completer = AsyncJediCompleter(self)
 
         ### Linter ###
         self.linter = TextEditLinterWidget(self)

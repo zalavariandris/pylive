@@ -8,6 +8,10 @@ from traitlets.utils import text  # Import the Jedi library
 
 from pylive.QtScriptEditor.components.textedit_completer import TextEditCompleter
 
+import time
+import logging
+logger = logging.getLogger(__name__)
+
 
 class JediCompleter(TextEditCompleter):
 	def __init__(self, textedit: QTextEdit | QPlainTextEdit):
@@ -21,17 +25,19 @@ class JediCompleter(TextEditCompleter):
 
 	@override
 	def requestCompletions(self):
+		logger.info('requestCompletions...')
+		start_time = time.time()
+
+		# get cursor info
 		textedit = cast(QPlainTextEdit, self.widget())
 		source_code = textedit.toPlainText()
 		cursor = QTextCursor(textedit.textCursor())
-		
-		# Get the line and column for Jedi
 		line = cursor.blockNumber() + 1  # PySide6 line numbers are 0-based
 		column = cursor.columnNumber()  # Current position within the line
-
 		cursor.movePosition(QTextCursor.MoveOperation.StartOfLine, QTextCursor.MoveMode.KeepAnchor)
 		line_text = cursor.selectedText()
 		
+		# get completion from jedi
 		script = jedi.Script(code=source_code, path="<string>")
 		if self.showArgumentHints(script, line, column):
 			return
@@ -41,22 +47,17 @@ class JediCompleter(TextEditCompleter):
 				# Use Jedi to get completions
 				script = jedi.Script(code=source_code, path="<string>")
 				completions = script.complete(line=line, column=column)
-				context = script.get_context(line=line, column=column)
-				script.infer(line=line, column=column)
-				script.help()
-
+				
 				# Update proposals in the model
 				string_list_model = cast(QStringListModel, self.model())
 				string_list_model.setStringList([completion.name for completion in completions])
-
-				# Show function signature hints if inside a function call
-				
 
 			except Exception as e:
 				print(f"Error in requestCompletions: {e}")
 				string_list_model = cast(QStringListModel, self.model())
 				string_list_model.setStringList([])
 				self.hint_label.hide()
+		logger.info(f"jedi completion took: {(time.time()-start_time)*1000} milliseconds")
 
 	def showArgumentHints(self, script: jedi.Script, line: int, column: int)->bool:
 		try:
@@ -100,6 +101,79 @@ class JediCompleter(TextEditCompleter):
 		tc.insertText(completion[-extra:])
 		textedit.setTextCursor(tc)
 
+
+class JediWorkerTask(QObject, QRunnable):
+	"""Encapsulates the rope task for the QThreadPool."""
+	finished = Signal(list)
+	exceptionThrown = Signal(Exception)
+
+	def __init__(self, source_code: str, line: int, column:int):
+		QObject.__init__(self)
+		QRunnable.__init__(self)
+		self.source_code = source_code
+		self.line = line
+		self.column = column
+
+	def run(self):
+		"""Perform the jedi code assist task and invoke the callback."""
+		# Check and print the thread details
+		# make sure the current 
+		app = QCoreApplication.instance()
+		IsSeperateThread = app and QThread.currentThread() != app.thread()
+		if not IsSeperateThread:
+			print("warning: RopeTask does not run in a seperate thread")
+
+		try:
+			script = jedi.Script(code=self.source_code, path="<string>")
+			completions = script.complete(line=self.line, column=self.column)
+			self.finished.emit(completions)
+
+		except Exception as e:
+			self.exceptionThrown.emit(e)
+
+class AsyncJediCompleter(JediCompleter):
+	def __init__(self, textedit: QTextEdit | QPlainTextEdit):
+		super().__init__(textedit)
+		self._active_tasks:List[JediWorkerTask] = []
+		self.destroyed.connect(self.cancellAllTasks())
+
+		# self.model().modelReset.connect(lambda: self.updateCompletionWidgets())
+		
+
+	def requestCompletions(self):
+		# cancel previous tasks
+		self.cancellAllTasks()
+
+		# get cursor info
+		textedit = cast(QPlainTextEdit, self.widget())
+		source_code = textedit.toPlainText()
+		cursor = QTextCursor(textedit.textCursor())
+		line = cursor.blockNumber() + 1  # PySide6 line numbers are 0-based
+		column = cursor.columnNumber()  # Current position within the line
+		cursor.movePosition(QTextCursor.MoveOperation.StartOfLine, QTextCursor.MoveMode.KeepAnchor)
+		line_text = cursor.selectedText()
+
+		# get completions ffrom jedi
+		if line_text.split(" ")[-1].isidentifier() or line_text.endswith("."):
+			jedi_task = JediWorkerTask(source_code, line, column)
+			jedi_task.finished.connect(lambda completions:
+				self._update_completion_model(completions))
+
+	def _update_completion_model(self, completions:List[str]):
+		try:
+			# Update proposals in the model
+			string_list_model = cast(QStringListModel, self.model())
+			string_list_model.setStringList([completion for completion in completions])
+
+		except Exception as e:
+			print(f"Error in requestCompletions: {e}")
+			string_list_model = cast(QStringListModel, self.model())
+			string_list_model.setStringList([])
+			self.hint_label.hide()
+
+	def cancellAllTasks(self):
+		"""Cancel all running tasks by tracking task status."""
+		self._active_tasks.clear()  # Clear the list of active tasks
 
 if __name__ == "__main__":
 	def hello(x:int):

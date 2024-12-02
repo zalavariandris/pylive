@@ -9,6 +9,7 @@ from PySide6.QtWidgets import *
 
 
 from pylive.QtLiveFramework.live_framework_skeleton import LiveFrameworkWindow, Placeholder
+from pylive.QtScriptEditor.components.textedit_completer import TextEditCompleter
 from pylive.QtScriptEditor.script_edit import ScriptEdit
 
 import logging
@@ -16,6 +17,13 @@ logger = logging.getLogger(__name__)
 
 from io import StringIO
 from pylive.logwindow import LogWindow
+
+from pylive.QtScriptEditor.components.async_jedi_completer import AsyncJediCompleter
+
+import logging
+log_format = '%(levelname)s: %(message)s'
+logging.basicConfig(level=logging.INFO, format=log_format)
+logger = logging.getLogger(__name__)
 
 class Terminal(QWidget):
 	exceptionThrown = Signal(Exception)
@@ -29,6 +37,8 @@ class Terminal(QWidget):
 		self.output.setReadOnly(True)
 		self.input = QLineEdit()
 		self.input.setPlaceholderText("type something...")
+		self.input_completer = AsyncJediCompleter(self.input)
+		self.input.setCompleter(self.input_completer)
 
 		self.input.returnPressed.connect(lambda: (
 			self._execute(self.input.text(), 'single'),
@@ -41,7 +51,6 @@ class Terminal(QWidget):
 		self.setLayout(layout)
 		layout.addWidget(self.output)
 		layout.addWidget(self.input)
-
 
 		self.exceptionThrown.connect(lambda exc: print(f"{exc}"))
 
