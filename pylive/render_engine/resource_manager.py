@@ -234,7 +234,7 @@ class ResourceManager:
 		reserve: int = 0, 
 		dynamic: bool = False
 	)->moderngl.Buffer:
-		return self.mgl.buffer(data, reserve, dynamic)
+		return self.mgl().buffer(data, reserve, dynamic)
 
 	def program(self, *, 
 		vertex_shader: ShaderSource, 
