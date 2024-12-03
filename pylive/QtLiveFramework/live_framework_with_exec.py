@@ -23,6 +23,9 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+class CellPreviewWidget(QWidget):
+	...
+
 class SupportLiveDisplay(Protocol):
     def _repr_html_(self)->str:
     	...
@@ -33,15 +36,19 @@ class SupportLiveDisplay(Protocol):
     def _repr_widfget_(self)->QWidget:
     	...
 
+
 import ast
+
 
 class SingletonException(Exception):
 	...
+
 
 def display(obj:SupportLiveDisplay):
 	# get current framework
 	window = FrameworkWindow.instance()
 	window.display(obj)
+
 
 class FrameworkWindow(LiveFrameworkWindow):
 	_instance: Optional[Self] = None
@@ -137,8 +144,6 @@ class FrameworkWindow(LiveFrameworkWindow):
 			case _:
 				msg_label = QLabel(f"{data}")
 				self.cell_previews[self._current_cell].addWidget(msg_label)
-
-
 
 
 if __name__ == "__main__":
