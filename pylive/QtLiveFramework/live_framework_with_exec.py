@@ -52,7 +52,7 @@ class FrameworkWindow(LiveFrameworkWindow):
 		terminal.exceptionThrown.connect(lambda exc: 
 			self.editor().linter.lintException(exc, 'underline'))
 
-		terminal.setContext({'app': self})
+		terminal.setContext({'live': self, "__name__": "__live__"})
 		
 	@override
 	def editor(self)->ScriptEdit:
