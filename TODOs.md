@@ -1,6 +1,7 @@
 # TODO
 
 ## livescript
+
 - [x] add restart button
 - Show errors inline in the script editor.
 - refactor QCompleters, to use eventFilter. So they can be used with
@@ -18,10 +19,12 @@
 
 - TEST, TEST...
 
+- FIX JediCompleter not compatible with QLineEdit
 
-# Known hickups
+## Known hickups
+
 - [] RopeCompleter, will replace the "WordUnderCursor", instead of using the
-  startingoffset, and offset positions... 
+  startingoffset, and offset positions...
   - Fix: We need to update the QCompleter's model from a simple StringListModel
   to something that is able to hold these offsets, and call `insertCompletion`
   with these values as well.

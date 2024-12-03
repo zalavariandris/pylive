@@ -1,3 +1,6 @@
+from typing import *
+from PySide6.QtGui import *
+from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 import moderngl
 from pylive.render_engine.GLCanvasWidget_with_painting_signal import GLCanvasWidget
@@ -13,9 +16,9 @@ ctx = None
 
 #%% update
 ### define render function ###
-glcanvas.painting.disconnect()
+
 from pylive.render_engine.utils import draw_triangle_with_moderngl
-speed = 3.0
+speed = 4.0
 def paint():
 	import time
 	# QOpenGLWidget uses an internal FBO for drawing, use that with moderngl
@@ -30,11 +33,16 @@ def paint():
 	import math
 	import time
 	ctx.clear(0.5,.1,0.5,1)
-	draw_triangle_with_moderngl(ctx, size=math.cos(time.time()*1))
+	draw_triangle_with_moderngl(ctx, size=math.cos(time.time()*speed))
 	ctx.gc()
+	# connect continously, and request update
+	glcanvas.painting.connect(paint, Qt.ConnectionType.SingleShotConnection)
 	glcanvas.update() #request repaint continously
 
-glcanvas.painting.connect(paint)
+### set render function ###
+glcanvas.painting.connect(paint, Qt.ConnectionType.SingleShotConnection)
+glcanvas.update()
+	
 import inspect
 print(inspect.getsource(sys.modules[__name__]))
 app.exec()

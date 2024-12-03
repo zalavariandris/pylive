@@ -23,10 +23,49 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+class SupportLiveDisplay(Protocol):
+    def _repr_html_(self)->str:
+    	...
+
+    def _repr_latex_(self)->str:
+    	...
+
+    def _repr_widfget_(self)->QWidget:
+    	...
+
 import ast
+
+class SingletonException(Exception):
+	...
+
+def display(obj:SupportLiveDisplay):
+	# get current framework
+	window = FrameworkWindow.instance()
+	window.display(obj)
+
 class FrameworkWindow(LiveFrameworkWindow):
-	def __init__(self):
-		super().__init__()
+	_instance: Optional[Self] = None
+	contentChanged = Signal()
+
+	@classmethod
+	def instance(cls) -> Self:
+		"""
+		Factory method to get the singleton instance of FrameworkWindow.
+		"""
+		if cls._instance is None:
+			# Create the instance if it doesn't exist
+			cls._instance = cls.__new__(cls)
+			cls._instance._setupUI()
+		return cls._instance
+
+	def __init__(self, parent: Optional[QWidget] = None) -> None:
+		"""
+		Disable direct instantiation. Use instance() method instead.
+		"""
+		raise SingletonException("Singleon can cannot be instantiated directly. Use the 'instance()' static method!")
+
+	def _setupUI(self):
+		super().__init__(parent=None)
 		self.setWindowTitle("IPython Console in PySide6")
 
 		### IPython Console widget ###
@@ -36,38 +75,70 @@ class FrameworkWindow(LiveFrameworkWindow):
 
 		### Bind Widgets ###
 		### bind texteditor to execute cells ###
-		@self.editor().cellsChanged.connect
-		def execute_cells(indexes):
-			for idx in indexes:
-				logger.info(f"execute_cell: {idx}")
-				cell_line_offset = 0
-				for i in range(idx):
-					cell_source = self.editor().cell(idx)
-					line_count = len(cell_source.split("\n"))					
-					cell_line_offset+=line_count
-				cell_source = self.editor().cell(idx)
-				cell_source = "\n"*cell_line_offset + cell_source
-				self._execute_code( cell_source )
+		self.editor().cellsChanged.connect(lambda indexes: 
+			self.execute_cells(indexes))
 
 		terminal.exceptionThrown.connect(lambda exc: 
 			self.editor().linter.lintException(exc, 'underline'))
 
-		terminal.setContext({'live': self, "__name__": "__live__"})
+		terminal.setContext({'display': display, "__name__": "__live__"})
+
+		self.preview_area = QWidget()
+		self.preview_layout = QVBoxLayout()
+		self.preview_area.setLayout(self.preview_layout)
+		self.setPreview(self.preview_area)
+		self.cell_previews:Dict[int, QVBoxLayout] = {}
 		
 	@override
 	def editor(self)->ScriptEdit:
 		return cast(ScriptEdit, super().editor())
 
-	def _execute_code(self, source):
-		logger.info("executing code...")
+	def execute_cells(self, indexes:List[int]):
+		for cell in indexes:
+			logger.info(f"execute_cell: {cell}")
+			if not self.cell_previews.get(cell, None):
+				cell_layout = QVBoxLayout()
+				self.cell_previews[cell] = cell_layout
+				self.preview_layout.addLayout(cell_layout)
+			else:
+				while self.cell_previews[cell].count():
+					item = self.cell_previews[cell].takeAt(0)
+					if widget:=item.widget():
+						widget.deleteLater()
 
-		terminal = cast(Terminal, self.terminal())
-		terminal.clear()
+			first_line = self.editor().cell(cell).split("\n")[0]
+			self.cell_previews[cell].addWidget(QLabel(first_line))
 
-		if source.strip():
-			terminal.execute(source)
-		
-		logger.info("code executed!") 
+			cell_line_offset = 0
+			for i in range(cell):
+				cell_source = self.editor().cell(cell)
+				line_count = len(cell_source.split("\n"))					
+				cell_line_offset+=line_count
+			cell_source = self.editor().cell(cell)
+			cell_source = "\n"*cell_line_offset + cell_source
+
+			logger.info("executing code...")
+
+			terminal = cast(Terminal, self.terminal())
+			terminal.clear()
+
+			if cell_source.strip():
+				self._current_cell = cell
+				terminal.execute(cell_source)
+			
+			logger.info("code executed!") 
+
+	def display(self, data):
+		print("display", data)
+		match data:
+			case QWidget():
+				widget = cast(QWidget, data)
+				self.cell_previews[self._current_cell].addWidget(widget)
+			case _:
+				msg_label = QLabel(f"{data}")
+				self.cell_previews[self._current_cell].addWidget(msg_label)
+
+
 
 
 if __name__ == "__main__":
@@ -78,7 +149,7 @@ if __name__ == "__main__":
 
 	# create livecsript app
 	app = QApplication(sys.argv)
-	window = FrameworkWindow()
+	window = FrameworkWindow.instance()
 	window.show()
 	
 	# set initial code

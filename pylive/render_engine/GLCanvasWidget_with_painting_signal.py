@@ -90,10 +90,13 @@ if __name__ == "__main__":
 		ctx.clear(0.5,.1,0.5,1)
 		draw_triangle_with_moderngl(ctx, size=math.cos(time.time()))
 		ctx.gc()
+		
+		# connect continously, and request update
+		glcanvas.painting.connect(paint, Qt.ConnectionType.SingleShotConnection)
 		glcanvas.update() #request repaint continously
 
 	### set render function ###
-	glcanvas.painting.connect(paint)
+	glcanvas.painting.connect(paint, Qt.ConnectionType.SingleShotConnection)
 
 	
 	# run app
