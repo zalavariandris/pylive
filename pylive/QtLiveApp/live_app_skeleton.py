@@ -13,8 +13,11 @@ class Placeholder(QLabel):
 		self.setFrameStyle(QFrame.Shape.StyledPanel)
 
 
+class SingletonException(Exception):
+	...
 
-class LiveFrameworkWindow(QWidget):
+
+class LiveAppWindow(QWidget):
 	# |---------LiveFramework----------|
 	# |--menubar-----------------------|
 	# | |----Editor----|---Preview---| |
@@ -25,8 +28,27 @@ class LiveFrameworkWindow(QWidget):
 	# | |              |   interact  | |
 	# | |--------------|-------------| |
 	# |--statusbar---------------------|
+
+
+	_instance: Optional[Self] = None
+	@classmethod
+	def instance(cls) -> Self:
+		"""
+		Factory method to get the singleton instance of LiveAppWindow.
+		"""
+		
+		if LiveAppWindow._instance is None:
+			# Create the instance if it doesn't exist
+			LiveAppWindow._instance = cls.__new__(cls)
+			super().__init__(LiveAppWindow._instance, parent=None)
+			LiveAppWindow._instance.setupUI()
+		return LiveAppWindow._instance
+
 	def __init__(self, parent: Optional[QWidget] = None) -> None:
-		super().__init__(parent)
+		"""Disable direct instantiation. Use instance() method instead."""
+		raise SingletonException("Singleon can cannot be instantiated directly. Use the 'instance()' static method!")
+
+	def setupUI(self):
 		self.setWindowTitle("Live")
 		### Layout ###
 		self._editor = QPlainTextEdit("[Editor]")
@@ -146,6 +168,7 @@ class LiveFrameworkWindow(QWidget):
 		return self._preview
 
 	def setPreview(self, preview:QWidget)->None:
+		# clear preview area
 		while self._preview_area_layout.count():
 			item = self._preview_area_layout.takeAt(0)
 			if widget:=item.widget():
@@ -173,11 +196,21 @@ class LiveFrameworkWindow(QWidget):
 	def sizeHint(self) -> QSize:
 		return QSize(1200,600)
 
+	def display(self, data:Any):
+		match data:
+			case QWidget():
+				widget = cast(QWidget, data)
+				self.setPreview(widget)
+			case _:
+				message_label = QLabel(f"{data}")
+				self.setPreview(message_label)
+
+
 
 def main():
 	import sys
 	app = QApplication(sys.argv)
-	window = LiveFrameworkWindow()
+	window = LiveAppWindow.instance()
 		
 	window.statusBar().showMessage("[StatusBar]")
 	window.show()

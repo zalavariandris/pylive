@@ -18,6 +18,7 @@ from pylive.QtScriptEditor.components.jedi_completer import JediCompleter
 from pylive.QtScriptEditor.components.async_jedi_completer import AsyncJediCompleter
 from pylive.QtScriptEditor.components.textedit_completer import PythonKeywordsCompleter
 from pylive.QtScriptEditor.components.linter_widget import TextEditLinterWidget
+from pylive.QtScriptEditor.components.line_number_area import LineNumberArea
 
 
 class ScriptEdit(QPlainTextEdit):
@@ -41,6 +42,9 @@ class ScriptEdit(QPlainTextEdit):
         
         ### script typing behaviour ###
         self.installEventFilter(self)
+
+        """ line numbers """
+        self.lineNumberArea = LineNumberArea(self)
 
         """ Syntax Highlighter """
         options = self.document().defaultTextOption() 
@@ -226,14 +230,11 @@ class ScriptEdit(QPlainTextEdit):
 
 
 def main():
-    from pylive.thread_pool_tracker import ThreadPoolCounterWidget
-    from pylive.declerative_qt import (
-        createWidget, createAction, createMenu
-    )
+    from textwrap import dedent
+
     app = QApplication([])
     editor = ScriptEdit()
-
-    from textwrap import dedent
+    
     editor.setPlainText(dedent("""\
     def hello_world():
         print("Hello, World!")
@@ -252,53 +253,11 @@ def main():
         except Exception as e:
             editor.linter.lintException(e, 'label')
 
-    editor.textChanged.connect(lambda: validate_script(editor.toPlainText()))
-
-
-    # window = QWidget()
-    # menuBar = QMenuBar(window)  
-    
-
-    # edit_menu = createMenu("Edit", [
-    #     createAction("Toggle Comment", 
-    #     lambda: editor.toggleComment()),
-    #     createAction("Indent", 
-    #     lambda: editor.indent()),
-    #     createAction("Unindent", 
-    #     lambda: editor.unindent()),
-    # ])
-    # menuBar.addMenu(edit_menu)
-
-    # indentation_menu = createMenu("Indentation", 
-    #     [
-    #         createAction(
-    #             "Convert Indentation to Tabs", 
-    #             lambda: editor.convertIndentationToTabs()
-    #         ),
-    #         createAction(
-    #             "Convert Indentation to Spaces", 
-    #             lambda: editor.convertIndentationToSpaces()
-    #         ),
-    #         createAction("Guess from text (not implemented yet)")
-    #     ]+[createAction(
-    #         f"TabWidth: {i}",
-    #         lambda i=i: editor.setTabSize(i)
-    #     ) for i in range(1,9)]
-    # )
-    # menuBar.addMenu(indentation_menu)
-
-    
-    # mainLayout = QVBoxLayout()
-    # mainLayout.setMenuBar(menuBar)
-    # mainLayout.setContentsMargins(0,0,0,0)
-    # window.setLayout(mainLayout)
-    # mainLayout.addWidget(editor)
-    # mainLayout.addWidget(ThreadPoolCounterWidget())
-    # window.setWindowTitle("QTextEdit with Non-Blocking Rope Assist Completer")
+    editor.textChanged.connect(lambda: 
+        validate_script(editor.toPlainText()))
 
 
     editor.show()
-
     app.exec()
 
 

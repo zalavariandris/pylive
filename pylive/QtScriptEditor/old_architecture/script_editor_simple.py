@@ -8,7 +8,7 @@ from pylive.QtScriptEditor.components.pygments_syntax_highlighter import Pygment
 from pylive.QtScriptEditor.components.textedit_number_editor import TextEditNumberEditor
 from pylive.QtScriptEditor.old_architecture.KeywordsCompleter_OLD import KeywordsCompleter
 import rope.base.project
-
+from pylive.QtScriptEditor.components.script_cursor import ScriptCursor
 
 
 class LineNumberArea(QWidget):
@@ -16,39 +16,9 @@ class LineNumberArea(QWidget):
 		super().__init__(codeEditor)
 		self.codeEditor = codeEditor
 
-	@override
-	def sizeHint()->QSize:
-		return QSize(self.codeEditor.lineNumberAreaWidth(), 0)
 
 	def paintEvent(self, event:QPaintEvent):
 		self.codeEditor.lineNumberAreaPaintEvent(event)
-
-
-# class ScriptCompleter(QCompleter):
-# 	def __init__(self, textedit:QTextEdit):
-# 		# completion model
-# 		keywords = [
-# 			'and', 'as', 'assert', 'async', 'await', 'break', 'class', 'continue',
-# 			'def', 'del', 'elif', 'else', 'except', 'False', 'finally', 'for',
-# 			'from', 'global', 'if', 'import', 'in', 'is', 'lambda', 'None', 'nonlocal',
-# 			'not', 'or', 'pass', 'raise', 'return', 'True', 'try', 'while', 'with', 'yield'
-# 		]
-# 		self.completions_model = QStringListModel(keywords)
-# 		super().__init__(self.completions_model, parent=textedit)
-# 		self.textedit = textedit
-# 		# self.textedit.installEventFilter(self)
-		
-
-# 		# completion view
-# 		self.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
-
-# 	def eventFilter(self, o: QObject, e: QEvent) -> bool:
-# 		if o == self.textedit:
-# 			match e.type():
-# 				case QEvent.Type.KeyPress:
-# 					print("key pressed")
-# 					return False
-# 		return super().eventFilter(o, e)
 
 
 class ScriptEdit(QPlainTextEdit):
@@ -77,7 +47,12 @@ class ScriptEdit(QPlainTextEdit):
 			if dy:
 				self.lineNumberArea.scroll(0, dy)
 			else:
-				self.lineNumberArea.update(0, rect.y(), self.lineNumberArea.width(), rect.height())
+				self.lineNumberArea.update(
+					0, 
+					rect.y(), 
+					self.lineNumberArea.width(), 
+					rect.height()
+				)
 			if rect.contains(self.viewport().rect()):
 				self.updateLineNumberAreaWidth(0)
 
@@ -392,7 +367,12 @@ class ScriptEdit(QPlainTextEdit):
 	def resizeEvent(self, e: QResizeEvent) -> None:
 		super().resizeEvent(e)
 		cr = self.contentsRect()
-		self.lineNumberArea.setGeometry(QRect(cr.left(), cr.top(), self.lineNumberAreaWidth(), cr.height()));
+		self.lineNumberArea.setGeometry(QRect(
+			cr.left(), 
+			cr.top(), 
+			self.lineNumberAreaWidth(), 
+			cr.height())
+		)
 
 if __name__ == "__main__":
 	import sys
@@ -409,6 +389,20 @@ if __name__ == "__main__":
 		# This is a comment
 		x = 42
 		return x
+
+	1
+	2
+	3
+	4
+	5
+	6
+	7
+	9
+	10
+	11
+	12
+	13
+	14
 	"""))
 
 	def updateNotifications():

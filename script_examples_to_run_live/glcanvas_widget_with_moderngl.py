@@ -2,6 +2,7 @@ from typing import *
 from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
+
 import moderngl
 from pylive.render_engine.GLCanvasWidget_with_painting_signal import GLCanvasWidget
 
@@ -10,9 +11,13 @@ import sys
 app = QApplication.instance() or QApplication(sys.argv)
 glcanvas = GLCanvasWidget()
 glcanvas.show()
-if __name__ == "__live__":
-	live.setPreview(glcanvas)
+
+from pylive.QtLiveApp import display
+display(glcanvas)
+
 ctx = None
+
+
 
 #%% update
 ### define render function ###

@@ -145,16 +145,18 @@ class TextEditNumberEditor(QObject):
     def applyHighlight(self, cursor:QTextCursor):
         """Highlight the current hovered word."""
         if self.number_cursor!=cursor:
-            self.textedit.blockSignals(True)
-            cursor.setCharFormat(self.highlight_format)
-            self.textedit.blockSignals(False)
+            ...
+            # self.textedit.blockSignals(True)
+            # cursor.setCharFormat(self.highlight_format)
+            # self.textedit.blockSignals(False)
 
     def clearHoverHighlight(self):
         """Remove the highlight from the previously hovered word."""
         if self.number_cursor:
-            self.textedit.blockSignals(True)
-            self.number_cursor.setCharFormat(self.default_format)
-            self.textedit.blockSignals(False)
+            ...
+            # self.textedit.blockSignals(True)
+            # self.number_cursor.setCharFormat(self.default_format)
+            # self.textedit.blockSignals(False)
             self.number_cursor = None
 
 

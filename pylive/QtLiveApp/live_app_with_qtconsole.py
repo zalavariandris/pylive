@@ -13,7 +13,7 @@ from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.inprocess import QtInProcessKernelManager
 
 
-from pylive.QtLiveFramework.live_framework_skeleton import LiveFrameworkWindow
+from pylive.QtLiveApp.live_app_skeleton import LiveAppWindow
 from pylive.QtScriptEditor.script_edit import ScriptEdit
 
 import logging
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 from io import StringIO
 
 
-class IPythonWindow(LiveFrameworkWindow):
+class IPythonWindow(LiveAppWindow):
 	def __init__(self):
 		super().__init__()
 		self.setWindowTitle("IPython Console in PySide6")

@@ -1,5 +1,8 @@
 # TODO
 
+- JediCompleter: FIX not compatible with QLineEdit
+- ScriptEdit: Move Script Edito behaviour to its own class
+
 ## livescript
 
 - [x] add restart button
@@ -19,7 +22,6 @@
 
 - TEST, TEST...
 
-- FIX JediCompleter not compatible with QLineEdit
 
 ## Known hickups
 
