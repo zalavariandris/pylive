@@ -4,80 +4,60 @@
 		"selected_items":
 		[
 			[
-				"file",
-				"fileChanged"
+				"split",
+				"split_cells"
 			],
 			[
-				"add",
-				"addMenu"
+				"block",
+				"blockNumber"
 			],
 			[
-				"inser",
-				"insertMenu"
+				"cell",
+				"cell_at_line"
 			],
 			[
-				"QMenu",
-				"QMenuBar"
+				"Inde",
+				"IndexError"
 			],
 			[
-				"parent",
-				"parentWidget"
-			],
-			[
-				"isin",
-				"isinstance"
-			],
-			[
-				"QMeu",
-				"QMenuBar"
-			],
-			[
-				"QPlainTe",
-				"QPlainTextDocumentLayout"
-			],
-			[
-				"ty",
-				"typing"
-			],
-			[
-				"LiveA",
-				"QtLiveApp"
-			],
-			[
-				"NotIm",
-				"NotImplementedError"
-			],
-			[
-				"LiveAppW",
-				"LiveAppWithExec"
-			],
-			[
-				"Qt",
-				"QtGraphEditor"
+				"cell_",
+				"cell_at_line"
 			],
 			[
 				"text",
-				"textedit"
+				"textwrap"
 			],
 			[
-				"inter",
-				"intersects"
+				"setPla",
+				"setPlainText"
 			],
 			[
-				"con",
-				"contentsRect"
+				"cells",
+				"cells_view"
 			],
 			[
-				"Upda",
-				"UpdateRequest"
+				"setPl",
+				"setPlainText"
 			],
 			[
-				"lineNumberAre",
-				"lineNumberAreaWidth"
+				"Sc",
+				"ScriptEdit"
 			],
 			[
-				"line",
-				"lineNumberArea"
+				"add",
+				"addLayout"
+			],
+			[
+				"pre",
+				"preview_area"
+			],
+			[
+				"preview",
+				"preview_area"
+			],
+			[
+				"class",
+				"classmethod"
 			],
 			[
 				"gc",
@@ -162,6 +142,10 @@
 			[
 				"Qope",
 				"QOpenGLWidget"
+			],
+			[
+				"con",
+				"context"
 			],
 			[
 				"frame",
@@ -268,6 +252,10 @@
 				"resizeGL"
 			],
 			[
+				"isin",
+				"isinstance"
+			],
+			[
 				"typ",
 				"typing"
 			],
@@ -348,18 +336,6 @@
 				"insertRow"
 			],
 			[
-				"cell",
-				"cell_layout"
-			],
-			[
-				"cell_",
-				"cells_layout"
-			],
-			[
-				"cells",
-				"cells_layout"
-			],
-			[
 				"content",
 				"contentsMargins"
 			],
@@ -392,10 +368,6 @@
 				"insertWidget"
 			],
 			[
-				"setPl",
-				"setPlainText"
-			],
-			[
 				"main",
 				"mainLayout"
 			],
@@ -406,10 +378,6 @@
 			[
 				"note",
 				"notebook_preview"
-			],
-			[
-				"Sc",
-				"ScriptEdit"
 			],
 			[
 				"Note",
@@ -512,13 +480,115 @@
 				"sorted_proposals"
 			],
 			[
+				"Qt",
+				"QtScriptEditor"
+			],
+			[
 				"Rope",
 				"AsyncRopeCompleter"
+			],
+			[
+				"update",
+				"update_ui"
+			],
+			[
+				"thre",
+				"thread_pool"
+			],
+			[
+				"track",
+				"setMouseTracking"
+			],
+			[
+				"word",
+				"WordUnderCursor"
+			],
+			[
+				"Key",
+				"Key_Return"
+			],
+			[
+				"event",
+				"eventFilter"
+			],
+			[
+				"ty",
+				"typing"
 			]
 		]
 	},
 	"buffers":
 	[
+		{
+			"file": "pylive/__main__.py",
+			"settings":
+			{
+				"buffer_size": 919,
+				"encoding": "UTF-8",
+				"line_ending": "Windows"
+			},
+			"undo_stack":
+			[
+				[
+					13,
+					6,
+					"left_delete",
+					null,
+					"BgAAAEUAAAAAAAAARQAAAAAAAAABAAAAdEQAAAAAAAAARAAAAAAAAAABAAAAcEMAAAAAAAAAQwAAAAAAAAABAAAAaUIAAAAAAAAAQgAAAAAAAAABAAAAckEAAAAAAAAAQQAAAAAAAAABAAAAY0AAAAAAAAAAQAAAAAAAAAABAAAAcw",
+					"AQAAAAAAAAABAAAARgAAAAAAAABGAAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					14,
+					1,
+					"insert",
+					{
+						"characters": "app"
+					},
+					"AwAAAEAAAAAAAAAAQQAAAAAAAAAAAAAAQQAAAAAAAABCAAAAAAAAAAAAAABCAAAAAAAAAEMAAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAQAAAAAAAAABAAAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					18,
+					1,
+					"insert",
+					{
+						"characters": "script"
+					},
+					"BwAAAEAAAAAAAAAAQQAAAAAAAAAAAAAAQQAAAAAAAABBAAAAAAAAAAMAAABhcHBBAAAAAAAAAEIAAAAAAAAAAAAAAEIAAAAAAAAAQwAAAAAAAAAAAAAAQwAAAAAAAABEAAAAAAAAAAAAAABEAAAAAAAAAEUAAAAAAAAAAAAAAEUAAAAAAAAARgAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAQwAAAAAAAABAAAAAAAAAAAAAAAAAAPC/"
+				]
+			]
+		},
+		{
+			"file": "pylive/QtLiveApp/live_script_with_exec.py",
+			"settings":
+			{
+				"buffer_size": 4332,
+				"encoding": "UTF-8",
+				"line_ending": "Windows"
+			},
+			"undo_stack":
+			[
+				[
+					14,
+					3,
+					"left_delete",
+					null,
+					"AwAAAHANAAAAAAAAcA0AAAAAAAABAAAAcG8NAAAAAAAAbw0AAAAAAAABAAAAcG4NAAAAAAAAbg0AAAAAAAABAAAAQQ",
+					"AQAAAAAAAAABAAAAcQ0AAAAAAABxDQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					15,
+					1,
+					"insert",
+					{
+						"characters": "Script"
+					},
+					"BgAAAG4NAAAAAAAAbw0AAAAAAAAAAAAAbw0AAAAAAABwDQAAAAAAAAAAAABwDQAAAAAAAHENAAAAAAAAAAAAAHENAAAAAAAAcg0AAAAAAAAAAAAAcg0AAAAAAABzDQAAAAAAAAAAAABzDQAAAAAAAHQNAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAbg0AAAAAAABuDQAAAAAAAAAAAAAAAPC/"
+				]
+			]
+		}
 	],
 	"build_system": "Packages/Python/Python.sublime-build",
 	"build_system_choices":
@@ -643,31 +713,24 @@
 		"/C/dev/src/pylive",
 		"/C/dev/src/pylive/pylive",
 		"/C/dev/src/pylive/pylive/QtLiveApp",
-		"/C/dev/src/pylive/script_examples_to_run_live"
+		"/C/dev/src/pylive/tests"
 	],
 	"file_history":
 	[
-		"/C/dev/src/pylive/pylive/QtLiveApp/live_app_with_exec.py",
-		"/C/dev/src/pylive/script_examples_to_run_live/glcanvas_widget_with_moderngl.py",
+		"/C/dev/src/pylive/pylive/QtLiveApp/live_script_with_exec.py",
+		"/C/dev/src/pylive/tests/test_cells.py",
+		"/C/dev/src/pylive/pylive/QtScriptEditor/cell_support.py",
+		"/C/dev/src/pylive/pylive/QtScriptEditor/components/linter_widget.py",
 		"/C/dev/src/pylive/pylive/QtScriptEditor/components/textedit_number_editor.py",
-		"/C/dev/src/pylive/pylive/QtLiveApp/file_link.py",
-		"/C/dev/src/pylive/pylive/QtScriptEditor/components/invisibles_highlighter.py",
-		"/C/dev/src/pylive/script_examples_to_run_live/livescript_demonstration.py",
-		"/C/dev/src/pylive/script_examples_to_run_live/lorem_ipsum.md",
-		"/C/dev/src/pylive/pylive/examples/livescript.py",
-		"/C/dev/src/pylive/pylive/QtScriptEditor/components/line_number_area.py",
-		"/C/dev/src/pylive/expreiments/file_textdocument_link.py",
-		"/C/dev/src/pylive/pylive/QtLiveApp/display.py",
-		"/C/dev/src/pylive/pylive/QtLiveApp/live_app_skeleton.py",
-		"/C/dev/src/pylive/pylive/__init__.py",
-		"/C/dev/src/pylive/pylive/QtLiveApp/__init__.py",
-		"/C/dev/src/pylive/pylive/QtLiveApp/live_app_with_qtconsole.py",
-		"/C/dev/src/pylive/.venv/Lib/site-packages/asttokens/line_numbers.py",
-		"/C/dev/src/pylive/pylive/QtScriptEditor/old_architecture/script_editor_simple.py",
-		"/C/dev/src/pylive/pylive/QtScriptEditor/components/jedi_completer.py",
-		"/C/dev/src/pylive/pylive/QtLiveFramework/live_framework_with_exec.py",
 		"/C/dev/src/pylive/pylive/QtScriptEditor/script_edit.py",
 		"/C/dev/src/pylive/TODOs.md",
+		"/C/dev/src/pylive/script_examples_to_run_live/glcanvas_widget_with_moderngl.py",
+		"/C/dev/src/pylive/pylive/QtTerminal/preview_widget.py",
+		"/C/dev/src/pylive/pylive/render_engine/GLCanvasWidget_with_painting_signal.py",
+		"/C/dev/src/pylive/pylive/QtLiveFramework/live_framework_with_exec.py",
+		"/C/dev/src/pylive/expreiments/file_textdocument_link.py",
+		"/E/__ANDRIS__/ART/_Applications_/Cynthia Lopez 7000 - 2024/Cynthia Lopez 7000.xlsx",
+		"/C/dev/src/pylive/pylive/QtScriptEditor/components/jedi_completer.py",
 		"/C/dev/src/pylive/expreiments/glcanvas.py",
 		"/C/dev/src/pylive/pylive/render_engine/regl/regl.py",
 		"/C/dev/src/pylive/pylive/QtLiveFramework/live_framework_skeleton.py",
@@ -686,7 +749,6 @@
 		"/C/dev/src/pylive/expreiments/opengl_outside_window.py",
 		"/C/dev/src/pylive/pylive/render_engine/orbit_control.py",
 		"/C/dev/src/pylive/pylive/render_engine/lookAt_standalone.vert",
-		"/C/dev/src/pylive/pylive/QtScriptEditor/components/linter_widget.py",
 		"/C/dev/src/pylive/pylive/logwindow.py",
 		"/C/dev/src/pylive/pylive/render_engine/render_layers.py",
 		"/C/dev/src/pylive/pylive/shaders/billboard.vert",
@@ -697,6 +759,7 @@
 		"/C/dev/src/pylive/pylive/render_engine/camera.py",
 		"/C/dev/src/pylive/pylive/shaders/default_vertex_shader.vert",
 		"/C/dev/src/pylive/pylive/shaders/flat_fragment_shader.frag",
+		"/C/dev/src/pylive/pylive/examples/livescript.py",
 		"/C/dev/src/pylive/gloo/render_layers.py",
 		"/C/dev/src/pylive/gloo/gl_widget_with_moderngl.py",
 		"/C/dev/src/pylive/gloo/camera.py",
@@ -774,7 +837,14 @@
 		"/C/dev/src/pylive/pylive/livescript.py",
 		"/C/dev/src/pylive/pylive/QtGraphEditor/test_graphmodel_databased.py",
 		"/C/dev/src/pylive/examples/livescript.py",
-		"/C/dev/src/pylive/examples/visual_coding.py"
+		"/C/dev/src/pylive/examples/visual_coding.py",
+		"/C/dev/src/pylive/pylive/utils.py",
+		"/C/dev/src/pylive/pylive/QtGraphEditor/graphmodel_columnbased.py",
+		"/C/dev/src/pylive/pylive/QtGraphEditor/graphview_columnbased.py",
+		"/C/dev/src/pylive/pylive/QtGraphEditor/test_graphmodel_columnbased.py",
+		"/C/dev/src/pylive/pylive/QtGraphEditor/graphmodel_abc.py",
+		"/C/dev/src/pylive/pylive/livegraph.py",
+		"/C/dev/src/pylive/pylive/QtGraphEditor/GraphView.py"
 	],
 	"find":
 	{
@@ -793,21 +863,9 @@
 		"case_sensitive": false,
 		"find_history":
 		[
-			"self._wi",
-			"saveFile",
-			"def setup",
-			"def setu[",
-			"setup",
-			"self.document",
-			"updateWindowTitle",
-			"modified",
-			"def open",
-			"setPreview",
-			"pylive.display",
-			"get_line_at_offset",
-			"updateLine",
-			"LineNumberArea",
-			"line number",
+			"cell_at_line",
+			"def instance",
+			"instance",
 			"setAttribute(",
 			"setAttribute",
 			"get_context",
@@ -920,7 +978,19 @@
 			"EdgeDataColumn",
 			"addInlet",
 			"addOut",
-			"Property"
+			"Property",
+			"EdgeProperty",
+			"OutletProperty",
+			"InletProperty",
+			"NodeProperty",
+			"addOutlet(",
+			"addOutlet",
+			"OutletView(",
+			"addInlet",
+			"EdgeItem",
+			"InletItem",
+			"OutletItem",
+			"action"
 		],
 		"highlight": true,
 		"in_selection": false,
@@ -928,7 +998,6 @@
 		"regex": false,
 		"replace_history":
 		[
-			"self._document",
 			"interactive_edge_moving_pin",
 			"interactive_edge_fixed_pin",
 			"interactive_edge_moving_pin",
@@ -973,6 +1042,107 @@
 		{
 			"sheets":
 			[
+				{
+					"buffer": 0,
+					"file": "pylive/__main__.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 919,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								70,
+								70
+							]
+						],
+						"settings":
+						{
+							"auto_complete_triggers":
+							[
+								{
+									"characters": "<",
+									"selector": "text.html, text.xml"
+								},
+								{
+									"rhs_empty": true,
+									"selector": "punctuation.accessor"
+								},
+								{
+									"characters": ".[\"'",
+									"selector": "meta.tag, source - comment - string.quoted.double.block - string.quoted.single.block - string.unquoted.heredoc",
+									"server": "LSP-pyright"
+								}
+							],
+							"lsp_active": true,
+							"lsp_uri": "file:///C:/dev/src/pylive/pylive/__main__.py",
+							"show_definitions": false,
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 1,
+					"stack_multiselect": false,
+					"type": "text"
+				},
+				{
+					"buffer": 1,
+					"file": "pylive/QtLiveApp/live_script_with_exec.py",
+					"selected": true,
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 4332,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								3444,
+								3444
+							]
+						],
+						"settings":
+						{
+							"auto_complete_triggers":
+							[
+								{
+									"characters": "<",
+									"selector": "text.html, text.xml"
+								},
+								{
+									"rhs_empty": true,
+									"selector": "punctuation.accessor"
+								},
+								{
+									"characters": ".[\"'",
+									"selector": "meta.tag, source - comment - string.quoted.double.block - string.quoted.single.block - string.unquoted.heredoc",
+									"server": "LSP-pyright"
+								}
+							],
+							"lsp_active": true,
+							"lsp_uri": "file:///C:/dev/src/pylive/pylive/QtLiveApp/live_script_with_exec.py",
+							"show_definitions": false,
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 1045.33333333,
+						"zoom_level": 1.0
+					},
+					"stack_index": 0,
+					"stack_multiselect": false,
+					"type": "text"
+				}
 			]
 		},
 		{
@@ -983,7 +1153,7 @@
 	],
 	"incremental_find":
 	{
-		"height": 23.0
+		"height": 23.3333333333
 	},
 	"input":
 	{
@@ -1009,7 +1179,7 @@
 		"cols":
 		[
 			0.0,
-			0.397712833545,
+			0.606765234672,
 			1.0
 		],
 		"rows":
@@ -1037,7 +1207,7 @@
 	},
 	"output.exec":
 	{
-		"height": 248.0
+		"height": 337.0
 	},
 	"output.find_results":
 	{
@@ -1051,7 +1221,7 @@
 	"project": "pylive.sublime-project",
 	"replace":
 	{
-		"height": 68.0
+		"height": 42.6666666667
 	},
 	"save_all_on_build": true,
 	"select_file":
@@ -1061,40 +1231,32 @@
 		"selected_items":
 		[
 			[
-				"numbere",
+				"number",
 				"pylive\\pylive\\QtScriptEditor\\components\\textedit_number_editor.py"
 			],
 			[
-				"highlight",
-				"pylive\\pylive\\QtScriptEditor\\components\\invisibles_highlighter.py"
+				"lint",
+				"pylive\\pylive\\QtScriptEditor\\components\\linter_widget.py"
 			],
 			[
-				"glca",
-				"pylive\\script_examples_to_run_live\\glcanvas_widget_with_moderngl.py"
+				"script_",
+				"pylive\\pylive\\QtScriptEditor\\script_edit.py"
 			],
 			[
-				"filelink",
+				"scriptedit",
+				"pylive\\pylive\\QtScriptEditor\\script_edit.py"
+			],
+			[
+				"cell_s",
+				"pylive\\pylive\\QtScriptEditor\\cell_support.py"
+			],
+			[
+				"live_framewo",
+				"pylive\\pylive\\QtLiveFramework\\live_framework_with_exec.py"
+			],
+			[
+				"link file",
 				"pylive\\expreiments\\file_textdocument_link.py"
-			],
-			[
-				"linenu",
-				"pylive\\pylive\\QtScriptEditor\\components\\line_number_area.py"
-			],
-			[
-				"displ",
-				"pylive\\pylive\\QtLiveApp\\display.py"
-			],
-			[
-				"script",
-				"pylive\\pylive\\QtScriptEditor\\script_edit.py"
-			],
-			[
-				"line",
-				"pylive\\.venv\\Lib\\site-packages\\asttokens\\line_numbers.py"
-			],
-			[
-				"scri",
-				"pylive\\pylive\\QtScriptEditor\\script_edit.py"
 			],
 			[
 				"jedi",
@@ -1179,6 +1341,10 @@
 			[
 				"orbitcon",
 				"pylive\\expreiments\\3d_rendering\\orbit_control.py"
+			],
+			[
+				"script",
+				"pylive\\pylive\\QtScriptEditor\\script_edit.py"
 			],
 			[
 				"number editor",

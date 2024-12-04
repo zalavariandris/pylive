@@ -19,6 +19,8 @@ from pylive.QtScriptEditor.components.async_jedi_completer import AsyncJediCompl
 from pylive.QtScriptEditor.components.textedit_completer import PythonKeywordsCompleter
 from pylive.QtScriptEditor.components.linter_widget import TextEditLinterWidget
 from pylive.QtScriptEditor.components.line_number_area import LineNumberArea
+from pylive.QtScriptEditor.cell_support import split_cells, cell_at_line
+
 
 
 class ScriptEdit(QPlainTextEdit):
@@ -70,12 +72,9 @@ class ScriptEdit(QPlainTextEdit):
 
         ### Cells support ###
         def update_cells():
-            script = self.toPlainText()
-            cells = [
-                cell for cell in 
-                re.split(r"(?=#.*%%)", script, flags=re.MULTILINE)
-            ]
+            cells = split_cells(self.toPlainText())
 
+            # find changed cells
             indexes_changed = []
             from itertools import zip_longest
             for i, cell in enumerate(cells):
@@ -84,6 +83,7 @@ class ScriptEdit(QPlainTextEdit):
                     if current is None or current.strip() != cell.strip():
                         indexes_changed.append(i)
 
+            # update
             self._cells = cells
             self.cellsChanged.emit(sorted(indexes_changed))
 
@@ -102,14 +102,8 @@ class ScriptEdit(QPlainTextEdit):
     def cellAtCursor(self):
         cursor = self.textCursor()
 
-        blockNumber = cursor.blockNumber()-1 # 0 index
-        linecount = 0
-        for cell in range(self.cellCount()):
-            cell_content = self.cell(cell)
-            linecount+=len(cell_content.split("\n"))
-            if linecount>blockNumber:
-                return cell
-        raise ValueError("Invalid cursor position")
+        blockNumber = cursor.blockNumber() # 0 index
+        return cell_at_line(self._cells, blockNumber)
 
     def sizeHint(self) -> QSize:
         width = self.fontMetrics().horizontalAdvance('O') * 70

@@ -33,11 +33,10 @@ class TextEditNumberEditor(QObject):
         # (WordUnderCursor does not include the '-' sign.)
         word_cursor = QTextCursor(cursor)
 
-        word_cursor.movePosition(QTextCursor.MoveOperation.PreviousCharacter, QTextCursor.MoveMode.KeepAnchor) # Workaropund: for some reason when i insert new number below, the cursor canot be moved back to its original location.
+        word_cursor.movePosition(QTextCursor.MoveOperation.PreviousCharacter, QTextCursor.MoveMode.KeepAnchor) # Workaround: for some reason when i insert new number below, the cursor canot be moved back to its original location.
         word_cursor.select(QTextCursor.SelectionType.WordUnderCursor)
 
         word = word_cursor.selectedText()
-
 
         if word.isdigit():  # Check for digits without the negative sign
             start = word_cursor.selectionStart()

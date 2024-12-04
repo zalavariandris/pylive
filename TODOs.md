@@ -22,10 +22,11 @@
 
 - TEST, TEST...
 
-
 ## Known hickups
+
+- NumberEditor does not detect the number here: "padding: 10px;"
 - [] multiline string does not highlight properly
-  - fix: https://forum.qt.io/topic/146348/how-to-highlight-multiline-text-on-a-qtextedit/5
+  - fix: <https://forum.qt.io/topic/146348/how-to-highlight-multiline-text-on-a-qtextedit/5>
 - [] RopeCompleter, will replace the "WordUnderCursor", instead of using the
   startingoffset, and offset positions...
   - Fix: We need to update the QCompleter's model from a simple StringListModel
@@ -35,3 +36,6 @@
 - [x] livescript silently reloads a file from disc if it was changed externally.
   This behaviour is intended, but the cursor will jump to the begining of
   the file. Try to keep the cursor in place!
+
+- unindent does not work with inconsistent indentation.
+  eg indentation is tab, but line is intended with spaces

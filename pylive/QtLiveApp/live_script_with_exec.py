@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 from io import StringIO
 
+from pylive.QtScriptEditor.cell_support import cell_at_line, split_cells
 
 from pylive.QtScriptEditor.components.async_jedi_completer import AsyncJediCompleter
 from pylive.QtTerminal.terminal_with_exec import Terminal
@@ -22,6 +23,7 @@ from pylive.QtLiveApp.file_link import FileLink
 
 import logging
 logger = logging.getLogger(__name__)
+
 
 
 import ast
@@ -69,7 +71,6 @@ class LiveAppWithExec(LiveAppWindow):
 				if keypress.modifiers() == Qt.KeyboardModifier.ShiftModifier:
 					cell = self.editor().cellAtCursor()
 					cell_content = self.editor().cell(cell)
-					print(cell)
 					return True
 
 		return super().eventFilter(watched, event)
@@ -79,12 +80,14 @@ class LiveAppWithExec(LiveAppWindow):
 		return cast(ScriptEdit, super().editor())
 
 	def execute_cells(self, indexes:List[int]):
+		self.editor().linter.clear()
 		for cell in indexes:
 			logger.info(f"execute_cell: {cell}")
 
 
-			first_line = self.editor().cell(cell).split("\n")[0]
+			# first_line = self.editor().cell(cell).split("\n")[0]
 
+			# prepend empty lines, so when an exception occures, the linnumber will match the while script lines
 			cell_line_offset = 0
 			for i in range(cell):
 				cell_source = self.editor().cell(cell)
@@ -101,6 +104,7 @@ class LiveAppWithExec(LiveAppWindow):
 			if cell_source.strip():
 				self._current_cell = cell
 				terminal.execute(cell_source)
+			self.statusBar().showMessage(f"cells executed {indexes}")
 			
 			logger.info("code executed!")
 
@@ -113,7 +117,7 @@ class LiveAppWithExec(LiveAppWindow):
 		if self.editor().document().isModified():
 			modified_mark = "*"
 
-		self.setWindowTitle(f"{file_title} {modified_mark} - LiveApp (using exec)")
+		self.setWindowTitle(f"{file_title} {modified_mark} - LiveScript (using exec)")
 
 	def closeEvent(self, event):
 			DoCloseFile = self.fileLink.closeFile()
