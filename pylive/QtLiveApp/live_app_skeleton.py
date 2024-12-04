@@ -49,7 +49,7 @@ class LiveAppWindow(QWidget):
 		raise SingletonException("Singleon can cannot be instantiated directly. Use the 'instance()' static method!")
 
 	def setupUI(self):
-		self.setWindowTitle("Live")
+		self.setWindowTitle("Live (skeleton)")
 		### Layout ###
 		self._editor = QPlainTextEdit("[Editor]")
 		self._preview = Placeholder("[Preview]")
@@ -84,11 +84,10 @@ class LiveAppWindow(QWidget):
 		statusbar = QStatusBar(self)
 		statusbar.setSizeGripEnabled(False)
 		mainLayout.addWidget(statusbar)
-		statusbar.showMessage("Statusbar")
 		statusbar.setSizePolicy(QSizePolicy.Policy.Minimum, 
 			                    QSizePolicy.Policy.Maximum)
-		statusbar.showMessage("hello")
 		self._statusbar = statusbar
+		self._statusbar.hide() # hide statusbar by default. Will pop up if used.
 
 		### MenuBar ###
 		menubar = self.createDefaultMenuBar()
@@ -212,7 +211,7 @@ def main():
 	app = QApplication(sys.argv)
 	window = LiveAppWindow.instance()
 		
-	window.statusBar().showMessage("[StatusBar]")
+	# window.statusBar().showMessage("[StatusBar]")
 	window.show()
 	sys.exit(app.exec())
 

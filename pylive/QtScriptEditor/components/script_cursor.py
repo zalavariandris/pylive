@@ -239,7 +239,7 @@ if __name__ == "__main__":
 					self.unindentSelection()
 			elif e.key() == Qt.Key.Key_Slash and e.modifiers() & Qt.KeyboardModifier.ControlModifier:
 				self.toggleCommentSelection()
-			elif e.key() == Qt.Key.Key_Return:
+			elif e.key() == Qt.Key.Key_Return or Qt.Key.Key_Enter:
 				self.scriptCursor().insertNewLine()
 			else:
 				super().keyPressEvent(e)

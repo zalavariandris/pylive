@@ -30,7 +30,7 @@ class LiveAppWithExec(LiveAppWindow):
 	@override
 	def setupUI(self):
 		super().setupUI()
-		self.setWindowTitle("IPython Console in PySide6")
+		
 
 		### IPython Console widget ###
 		terminal = Terminal()
@@ -57,6 +57,22 @@ class LiveAppWithExec(LiveAppWindow):
 			self.editor().linter.lintException(exc, 'underline'))
 
 		terminal.setContext({"__name__": "__live__"})
+
+		self.updateWindowTitle()
+
+		editor.installEventFilter(self)
+
+	def eventFilter(self, watched: QObject, event: QEvent) -> bool:
+		if watched == self.editor() and event.type()==QEvent.Type.KeyPress:
+			keypress = cast(QKeyEvent, event)
+			if keypress.key() in {Qt.Key.Key_Return, Qt.Key.Key_Enter}:
+				if keypress.modifiers() == Qt.KeyboardModifier.ShiftModifier:
+					cell = self.editor().cellAtCursor()
+					cell_content = self.editor().cell(cell)
+					print(cell)
+					return True
+
+		return super().eventFilter(watched, event)
 		
 	@override
 	def editor(self)->ScriptEdit:
@@ -124,17 +140,18 @@ if __name__ == "__main__":
 	# set initial code
 	from textwrap import dedent
 
-	script = dedent("""\
+	script = dedent('''\
 		#%% setup
 		from PySide6.QtWidgets import *
 		from pylive.QtLiveApp import display
-		
+
 		#%% update
-		print("print this to the console")
+		print(f"Print this {28} to the console!")
 
-		display("Display this in the preview Area")
-
-	""")
+		display("""\\
+		Display this *text* or any *QWidget* in the preview area.
+		""")
+	''')
 	window.editor().setPlainText(script)
 
 	# launch QApp

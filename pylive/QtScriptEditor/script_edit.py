@@ -91,8 +91,25 @@ class ScriptEdit(QPlainTextEdit):
         self.textChanged.connect(lambda: update_cells())
         update_cells()
 
-    def cell(self, idx:int):
-        return self._cells[idx]
+    def cell(self, idx:int)->str:
+        cell_content = self._cells[idx]
+        assert isinstance(cell_content, str)
+        return cell_content
+
+    def cellCount(self):
+        return len(self._cells)
+
+    def cellAtCursor(self):
+        cursor = self.textCursor()
+
+        blockNumber = cursor.blockNumber()-1 # 0 index
+        linecount = 0
+        for cell in range(self.cellCount()):
+            cell_content = self.cell(cell)
+            linecount+=len(cell_content.split("\n"))
+            if linecount>blockNumber:
+                return cell
+        raise ValueError("Invalid cursor position")
 
     def sizeHint(self) -> QSize:
         width = self.fontMetrics().horizontalAdvance('O') * 70
