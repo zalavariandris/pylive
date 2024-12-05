@@ -2,7 +2,7 @@ from typing import *
 from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
-from pylive.QtLiveApp.live_app_skeleton import LiveAppWindow
+from pylive.QtLiveApp.live_script_skeleton import LiveScriptWindow
 
 
 class SupportLiveDisplay(Protocol):
@@ -16,5 +16,5 @@ class SupportLiveDisplay(Protocol):
 		...
 
 def display(data):
-	live = LiveAppWindow.instance()
+	live = LiveScriptWindow.instance()
 	live.display(data)

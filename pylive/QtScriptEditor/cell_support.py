@@ -1,48 +1,57 @@
 from typing import *
 
 import re
+from dataclasses import dataclass
 
+@dataclass
+class Cell:
+	idx:int
+	lineno:int # 1 based index
+	content:str
 
+	def lineCount(self):
+		return len(self.content.split("\n"))
 
-def split_cells(script:str)->List[str]:
+def split_cells(script:str, strip=False)->List[Cell]:
 	"""
 	returns a dict where the key is the first line,
 	and the value si the cell content
 	"""
 	cell_pattern = r"#\s*%%" # Define a regex pattern to match the cell markers (`# %%`)
 	
-	cells = [[]]
+	cells:List[Cell] = []
 	Scope="TEXT"
-	for lineno, line in enumerate(script.split("\n")):
-		if line:
-			code = line.split("#")[-1]
-			CodeHasDocstring = code.count('"""')%2==1 or code.count("'''")%2==1
-			CodeIsEmpty = False if len(line)>0 else True
-			CodeIsComment= line.lstrip() and line.lstrip()[0] == "#"
-			CodeIsHeading = re.match(cell_pattern, line.lstrip())
+	for i, line in enumerate(script.split("\n")):
 
-			if not CodeIsEmpty:
-				if Scope == "TEXT":
-					if CodeIsHeading and lineno!=0:
-						cells.append([])
-					elif CodeHasDocstring:
-						Scope = "DOCSTRING"
-				elif Scope == "DOCSTRING":
-					if CodeHasDocstring:
-						Scope = "TEXT"
+		code = line.split("#")[-1]
+		CodeHasDocstring = code.count('"""')%2==1 or code.count("'''")%2==1
+		if CodeHasDocstring and Scope !="DOCSTRING":
+			# Enter multiline DOCSTRING
+			Scope = "DOCSTRING"
+		elif CodeHasDocstring and Scope == "DOCSTRING":
+			# Exit multiline DOCSTRING
+			Scope = "TEXT"
+
+		CodeIsEmpty = False if len(code)>0 else True
+		CodeIsComment= line.lstrip() and line.lstrip()[0] == "#"
+		CodeIsHeading = re.match(cell_pattern, line.lstrip()) and Scope == "TEXT"
 
 
-		cells[-1].append(line)
+		if CodeIsHeading or i==0:
+			cells.append(Cell(len(cells), i+1, line))
+		else:
+			cells[-1].content+=f"\n{line}"
 
-	return ["\n".join(cell) for cell in cells]
+	if strip:
+		for cell in cells:
+			cell.content = cell.content.strip()
+	return [cell for cell in cells]
 
-def cell_at_line(cells:List[str], lineno:int):
-	linecount = 0
-	for i, content in enumerate(cells):
-		linecount+=len(content.split("\n"))
-		if linecount>lineno:
-			return i
-	raise IndexError(f"Line number {lineno} out of range,")
+def cell_at_line(cells:List[Cell], lineno:int)->Cell|None:
+	for cell in cells:
+		if lineno>=cell.lineno and lineno<=cell.lineno+cell.lineCount()-1:
+			return cell
+	return None
 
 if __name__ == "__main__":
 	from textwrap import dedent

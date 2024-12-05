@@ -17,7 +17,7 @@ class SingletonException(Exception):
 	...
 
 
-class LiveAppWindow(QWidget):
+class LiveScriptWindow(QWidget):
 	# |---------LiveFramework----------|
 	# |--menubar-----------------------|
 	# | |----Editor----|---Preview---| |
@@ -34,15 +34,15 @@ class LiveAppWindow(QWidget):
 	@classmethod
 	def instance(cls) -> Self:
 		"""
-		Factory method to get the singleton instance of LiveAppWindow.
+		Factory method to get the singleton instance of LiveScriptWindow.
 		"""
 		
-		if LiveAppWindow._instance is None:
+		if LiveScriptWindow._instance is None:
 			# Create the instance if it doesn't exist
-			LiveAppWindow._instance = cls.__new__(cls)
-			super().__init__(LiveAppWindow._instance, parent=None)
-			LiveAppWindow._instance.setupUI()
-		return LiveAppWindow._instance
+			LiveScriptWindow._instance = cls.__new__(cls)
+			super().__init__(LiveScriptWindow._instance, parent=None)
+			LiveScriptWindow._instance.setupUI()
+		return LiveScriptWindow._instance
 
 	def __init__(self, parent: Optional[QWidget] = None) -> None:
 		"""Disable direct instantiation. Use instance() method instead."""
@@ -209,7 +209,7 @@ class LiveAppWindow(QWidget):
 def main():
 	import sys
 	app = QApplication(sys.argv)
-	window = LiveAppWindow.instance()
+	window = LiveScriptWindow.instance()
 		
 	# window.statusBar().showMessage("[StatusBar]")
 	window.show()

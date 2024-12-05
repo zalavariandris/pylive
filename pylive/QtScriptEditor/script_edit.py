@@ -19,12 +19,11 @@ from pylive.QtScriptEditor.components.async_jedi_completer import AsyncJediCompl
 from pylive.QtScriptEditor.components.textedit_completer import PythonKeywordsCompleter
 from pylive.QtScriptEditor.components.linter_widget import TextEditLinterWidget
 from pylive.QtScriptEditor.components.line_number_area import LineNumberArea
-from pylive.QtScriptEditor.cell_support import split_cells, cell_at_line
+from pylive.QtScriptEditor.cell_support import Cell, split_cells, cell_at_line
 
 
 
 class ScriptEdit(QPlainTextEdit):
-    cellsChanged = Signal(list) # List[int]
     def __init__(self, parent=None):
         super().__init__(parent)
         ### Font###
@@ -70,40 +69,6 @@ class ScriptEdit(QPlainTextEdit):
         ### Edit Numbers ###
         self.number_editor = TextEditNumberEditor(self)
 
-        ### Cells support ###
-        def update_cells():
-            cells = split_cells(self.toPlainText())
-
-            # find changed cells
-            indexes_changed = []
-            from itertools import zip_longest
-            for i, cell in enumerate(cells):
-                current = self._cells[i] if i<len(self._cells) else None
-                if current!=cell:
-                    if current is None or current.strip() != cell.strip():
-                        indexes_changed.append(i)
-
-            # update
-            self._cells = cells
-            self.cellsChanged.emit(sorted(indexes_changed))
-
-        self._cells = []
-        self.textChanged.connect(lambda: update_cells())
-        update_cells()
-
-    def cell(self, idx:int)->str:
-        cell_content = self._cells[idx]
-        assert isinstance(cell_content, str)
-        return cell_content
-
-    def cellCount(self):
-        return len(self._cells)
-
-    def cellAtCursor(self):
-        cursor = self.textCursor()
-
-        blockNumber = cursor.blockNumber() # 0 index
-        return cell_at_line(self._cells, blockNumber)
 
     def sizeHint(self) -> QSize:
         width = self.fontMetrics().horizontalAdvance('O') * 70
@@ -238,6 +203,8 @@ class ScriptEdit(QPlainTextEdit):
                 return True
 
         return super().eventFilter(o, e)
+
+
 
 
 def main():

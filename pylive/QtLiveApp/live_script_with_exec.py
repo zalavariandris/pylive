@@ -6,7 +6,7 @@ from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
-from pylive.QtLiveApp.live_app_skeleton import LiveAppWindow, Placeholder
+from pylive.QtLiveApp.live_script_skeleton import LiveScriptWindow, Placeholder
 from pylive.QtScriptEditor.components.textedit_completer import TextEditCompleter
 from pylive.QtScriptEditor.script_edit import ScriptEdit
 
@@ -25,19 +25,68 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+from pylive.QtScriptEditor.cell_support import Cell, split_cells, cell_at_line
+
+from dataclasses import dataclass
+
+
+class ScriptEditWithCells(ScriptEdit):
+    cellsContentChanged = Signal(list) # List[int]
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self._cells = []
+        self.textChanged.connect(lambda: self.updateCells())
+        self.updateCells()
+
+    def updateCells(self):
+    	### Cells support ###
+        cells = split_cells(self.toPlainText(), strip=True)
+        
+
+        # find changed cells
+        indexes_changed = []
+        from itertools import zip_longest
+        for i, cell in enumerate(cells):
+            current = self._cells[i] if i<len(self._cells) else None
+            if current!=cell:
+                if current is None or current.content.strip() != cell.content.strip():
+                    indexes_changed.append(i)
+
+        # update
+        self._cells = cells
+        self.cellsContentChanged.emit(sorted(indexes_changed))
+
+        # update cell bars
+        self.lineNumberArea.clearBars()
+        for cell in cells:
+        	self.lineNumberArea.insertBar(cell.lineno, cell.lineno+cell.lineCount()-1)
+
+    def cell(self, idx:int)->Cell:
+        cell = self._cells[idx]
+        assert isinstance(cell, Cell)
+        return cell
+
+    def cellCount(self):
+        return len(self._cells)
+
+    def cellAtCursor(self):
+        cursor = self.textCursor()
+
+        blockNumber = cursor.blockNumber() # 0 index
+        return cell_at_line(self._cells, blockNumber+1)
 
 import ast
 from pathlib import Path
-class LiveAppWithExec(LiveAppWindow):
+class LiveScriptWithExec(LiveScriptWindow):
 	@override
 	def setupUI(self):
 		super().setupUI()
 		
-
 		### IPython Console widget ###
 		terminal = Terminal()
 		self.setTerminal(terminal)
-		editor = ScriptEdit()
+		editor = ScriptEditWithCells()
 		self.setEditor(editor)
 
 		self.fileLink = FileLink(editor.document())
@@ -52,7 +101,7 @@ class LiveAppWithExec(LiveAppWindow):
 
 		### Bind Widgets ###
 		### bind texteditor to execute cells ###
-		self.editor().cellsChanged.connect(lambda indexes: 
+		self.editor().cellsContentChanged.connect(lambda indexes: 
 			self.execute_cells(indexes))
 
 		terminal.exceptionThrown.connect(lambda exc: 
@@ -70,30 +119,30 @@ class LiveAppWithExec(LiveAppWindow):
 			if keypress.key() in {Qt.Key.Key_Return, Qt.Key.Key_Enter}:
 				if keypress.modifiers() == Qt.KeyboardModifier.ShiftModifier:
 					cell = self.editor().cellAtCursor()
-					cell_content = self.editor().cell(cell)
+					self.execute_cells([cell])
 					return True
 
 		return super().eventFilter(watched, event)
 		
 	@override
-	def editor(self)->ScriptEdit:
-		return cast(ScriptEdit, super().editor())
+	def editor(self)->ScriptEditWithCells:
+		return cast(ScriptEditWithCells, super().editor())
 
 	def execute_cells(self, indexes:List[int]):
 		self.editor().linter.clear()
-		for cell in indexes:
-			logger.info(f"execute_cell: {cell}")
+		for cell_idx in indexes:
+			logger.info(f"execute_cell: {cell_idx}")
 
 
 			# first_line = self.editor().cell(cell).split("\n")[0]
 
 			# prepend empty lines, so when an exception occures, the linnumber will match the while script lines
 			cell_line_offset = 0
-			for i in range(cell):
-				cell_source = self.editor().cell(cell)
+			for i in range(cell_idx):
+				cell_source = self.editor().cell(cell_idx).content
 				line_count = len(cell_source.split("\n"))					
 				cell_line_offset+=line_count
-			cell_source = self.editor().cell(cell)
+			cell_source = self.editor().cell(cell_idx).content
 			cell_source = "\n"*cell_line_offset + cell_source
 
 			logger.info("executing code...")
@@ -102,7 +151,7 @@ class LiveAppWithExec(LiveAppWindow):
 			terminal.clear()
 
 			if cell_source.strip():
-				self._current_cell = cell
+				self._current_cell = cell_idx
 				terminal.execute(cell_source)
 			self.statusBar().showMessage(f"cells executed {indexes}")
 			
@@ -136,9 +185,9 @@ if __name__ == "__main__":
 	# create livecsript app
 	app = QApplication(sys.argv)
 
-	window = LiveAppWithExec.instance()
-	live = LiveAppWindow.instance()
-	live = LiveAppWindow.instance()
+	window = LiveScriptWithExec.instance()
+	live = LiveScriptWindow.instance()
+	live = LiveScriptWindow.instance()
 	window.show()
 	
 	# set initial code
@@ -150,10 +199,14 @@ if __name__ == "__main__":
 		from pylive.QtLiveApp import display
 
 		#%% update
-		print(f"Print this {28} to the console!")
+		print(f"Print this {42} to the console!")
 
 		display("""\\
-		Display this *text* or any *QWidget* in the preview area.
+		Display this *text*
+		or any *QWidget* 
+		in the preview area.
+
+		(here is a nubmer for dragging 10)
 		""")
 	''')
 	window.editor().setPlainText(script)

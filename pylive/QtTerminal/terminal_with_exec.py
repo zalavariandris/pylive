@@ -50,6 +50,7 @@ class Terminal(QFrame):
         layout.addWidget(self.input)
 
         self.exceptionThrown.connect(lambda exc: print(f"{exc}"))
+        self.messageSent.connect(lambda msg: print(f"{msg}"))
 
     def sizeHint(self):
         return QSize(512,256)
@@ -61,12 +62,13 @@ class Terminal(QFrame):
         self._context = context
         self._context['__builtins__'] = __builtins__
 
-    def _execute(self, source:str, mode:Literal["exec","single"]="exec"):
+    def _execute(self, source:str, mode:Literal["exec","single"]):
         try:
             tree = ast.parse(source)
             try:
                 code = compile(source, "<script>", mode=mode)
                 try:
+                    print(f">{source.strip()}")
                     result = exec(code, self.context())
                     if result:
                         print(result)

@@ -27,6 +27,21 @@ class LineNumberArea(QWidget):
 		editor.updateRequest.connect(onUpdateRequest)
 		self.updateLineNumberAreaWidth(0)
 
+		self._bars = []
+
+	def clearBars(self):
+		self._bars = []
+		self.update()
+
+	def insertBar(self, first_line_no:int, last_line_no:int, color:QColor|None=None):
+		if not color:
+			color = self.palette().color(QPalette.ColorRole.Accent)
+		self._bars.append((first_line_no, last_line_no, color))
+		self.update()
+
+	def removeBar(self, first_line_no:int, last_line_no:int):
+		self._bars.remove((first_line_no, last_line_no))
+		self.update()
 
 	@override
 	def sizeHint(self)->QSize:
@@ -41,7 +56,7 @@ class LineNumberArea(QWidget):
 
 		space = 3 + self.fontMetrics().horizontalAdvance('9') * digits;
 
-		return space;
+		return space
 
 	@Slot(int)
 	def updateLineNumberAreaWidth(self, newBlockCount:int):
@@ -54,8 +69,10 @@ class LineNumberArea(QWidget):
 			editor_contents_rect.height()
 		))
 
-
 	def paintEvent(self, event:QPaintEvent):
+
+		self.paintBars()
+
 		painter = QPainter(self);
 		palette = self.palette()
 		text_color = palette.color(QPalette.ColorRole.PlaceholderText)
@@ -77,6 +94,29 @@ class LineNumberArea(QWidget):
 			top = bottom
 			bottom = top + round(self.editor.blockBoundingRect(block).height())
 			block_number += 1
+
+		
+
+	def paintBars(self):
+		painter = QPainter(self);
+		
+		painter.setPen(Qt.NoPen)
+		content_offset = self.editor.contentOffset()
+		for begin, end, color in self._bars:
+			begin_block = self.editor.document().findBlockByLineNumber(begin-1)
+			end_block = self.editor.document().findBlockByLineNumber(end-1)
+
+			begin_rect = self.editor.blockBoundingGeometry(begin_block)
+			end_rect = self.editor.blockBoundingGeometry(end_block)
+
+			color.setAlpha(128)
+			painter.setBrush(color)
+			painter.drawRoundedRect(QRectF(
+				content_offset.x(),
+				begin_rect.top()+content_offset.y()+2, 
+				self.width(),
+				end_rect.bottom()-begin_rect.top()-4
+			), 4, 4)
 
 class TextEditWithLineNumbers(QPlainTextEdit):
 	def __init__(self, parent=None):
@@ -151,6 +191,7 @@ if __name__ == "__main__":
 	"""))
 
 	lineNumberArea = LineNumberArea(textedit)
+	lineNumberArea.insertBar(2,4)
 
 	# show app
 	textedit.show()
