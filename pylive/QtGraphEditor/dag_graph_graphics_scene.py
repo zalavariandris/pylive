@@ -642,13 +642,12 @@ class DAGScene(QGraphicsScene):
 			current_outlet.setHighlight(False)
 
 		if isinstance(self.interactive_edge_fixed_pin, OutletWidget) and isinstance(pinUnderMouse, InletWidget):
-			self.interactive_edge.setTargetInlet(pinUnderMouse)
 			pinUnderMouse.setHighlight(True)
+			self.interactive_edge.setTargetInlet(pinUnderMouse)
 			self.interactive_edge.updatePosition()
 		elif isinstance(self.interactive_edge_fixed_pin, InletWidget) and isinstance(pinUnderMouse, OutletWidget):
-			self.interactive_edge.sourceOutlet().setHighlight(False)
-			self.interactive_edge.setSourceOutlet(pinUnderMouse)
 			pinUnderMouse.setHighlight(True)
+			self.interactive_edge.setSourceOutlet(pinUnderMouse)
 			self.interactive_edge.updatePosition()
 
 	def cancelConnection(self):
@@ -703,6 +702,7 @@ if __name__ == "__main__":
 	class GraphView(QGraphicsView):
 		def __init__(self):
 			super().__init__()
+			self.setWindowTitle("DAGScene example")
 			self.setRenderHint(QPainter.RenderHint.Antialiasing)
 			self.setInteractive(True)
 			self.setDragMode(QGraphicsView.DragMode.RubberBandDrag) # optional, default mouse behaviour
@@ -765,7 +765,6 @@ if __name__ == "__main__":
 				node.destroy()
 
 if __name__ == "__main__":
-	from pylive.examples import livescript
 	import sys
 	app = QApplication(sys.argv)
 

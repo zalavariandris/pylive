@@ -48,9 +48,11 @@ class EditableTextItem(QGraphicsTextItem):
 		self.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
 		super().focusOutEvent(event)
 
+
 class PinType(Enum):
 	INLET = "INLET"
 	OUTLET = "OUTLET"
+
 
 class PinGraphicsItem(QGraphicsItem):
 	"""Graphics item representing a pin (either inlet or outlet)."""

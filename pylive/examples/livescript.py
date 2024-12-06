@@ -15,8 +15,8 @@ from typing import *
 from io import StringIO
 import sys
 
-from pylive.unique import make_unique_id
-from pylive.logwindow import LogWindow
+from pylive.utils.unique import make_unique_id
+from pylive.QtTerminal.logwindow import LogWindow
 
 import traceback
 import ast

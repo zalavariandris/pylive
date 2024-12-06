@@ -31,5 +31,6 @@ dependencies = [
     "pyglm == 2.7.3",
     "trimesh == 4.5.2",
     "qtconsole == 5.6.1",
-    "Panda3D == 1.10.15"
+    "Panda3D == 1.10.15",
+    "networkx == 3.4.2"
 ]

@@ -1,6 +1,6 @@
 from collections import defaultdict
 from enum import IntEnum, StrEnum
-from pylive import unique
+from pylive.utils import unique
 import sys
 from PySide6.QtGui import *
 from PySide6.QtCore import *
