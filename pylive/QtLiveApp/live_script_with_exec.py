@@ -114,6 +114,8 @@ class LiveScriptWithExec(LiveScriptWindow):
 		editor.installEventFilter(self)
 
 	def eventFilter(self, watched: QObject, event: QEvent) -> bool:
+
+		# run cell on +hift+Enter
 		if watched == self.editor() and event.type()==QEvent.Type.KeyPress:
 			keypress = cast(QKeyEvent, event)
 			if keypress.key() in {Qt.Key.Key_Return, Qt.Key.Key_Enter}:
