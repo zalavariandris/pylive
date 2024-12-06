@@ -77,7 +77,7 @@ class NXGraphView(QGraphicsView):
 		for node in nodes:
 			widget = NodeWidget()
 			self.graph_scene.addNode(widget)
-			self.setNodeWidget(node, widget)
+			self.setItemWidget(node, widget)
 
 	def handleNodesPropertiesChanged(self, nodes:List[NodeRef], properties:List[str]=None):
 		...
