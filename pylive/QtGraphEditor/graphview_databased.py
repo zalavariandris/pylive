@@ -935,10 +935,11 @@ class StandardGraphView(GraphView):
 	@override
 	def handleNodesPropertiesChanged(self, nodes: List[NodeRef], properties: List[str] = None):
 		graph = self.model()
+		if not graph:
+				return
+
 		for node in nodes:
 			node_item = cast(StandardNodeItem, self.index_to_item_map[node])
-			if not graph:
-				return
 
 			if not properties or 'name' in properties:
 				new_expression = graph.getNodeProperty(node, 'name')
