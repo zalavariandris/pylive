@@ -15,50 +15,6 @@ from pylive.QtGraphEditor.graphmodel_databased import EdgeRef, GraphModel, Inlet
 from pylive.QtGraphEditor.graphview_databased import EditableTextItem, InletGraphicsItem
 
 
-class NXGraphModel(GraphModel):
-	def __init__(self, nxgraph, parent=None):
-		super().__init__(parent=parent)
-		self.G = nxgraph
-
-
-class MyNodeWidget(QGraphicsWidget):
-	def __init__(self, parent=None):
-		# model reference
-		# self.persistent_node_index:Optional[NodeRef] = None
-		super().__init__(parent)
-		# # widgets
-		self.nameedit = EditableTextItem(self)
-		self.nameedit.setPos(0,0)
-		self.nameedit.setTextWidth(self.geometry().width()-10)
-
-	def mouseDoubleClickEvent(self, event: QGraphicsSceneMouseEvent):
-		# Enable editing subitems on double-click
-		"""parent node must manually cal the double click event,
-		because an item nor slectable nor movable will not receive press events"""
-
-		# Check if double-click is within the text item’s bounding box
-		if self.nameedit.contains(self.mapFromScene(event.scenePos())):
-			# Forward the event to nameedit if clicked inside it
-			self.nameedit.mouseDoubleClickEvent(event)
-		else:
-			print("NodeItem->mouseDoubleClickEvent")
-			super().mouseDoubleClickEvent(event)
-
-
-class MyEdgeWidget(QGraphicsItem):
-	def __init__(self, parent=None):
-		super().__init__(parent=parent)
-
-
-class ConnectableProtocol(Protocol):
-	geometryChanged = Signal()
-
-class EdgeWidgetProtocol(Protocol):
-	def setSourcePin(self, source_outlet:ConnectableProtocol):
-		...
-
-	def setTargetPin(self, target_inlet:ConnectableProtocol):
-		...
 
 
 class NXGraphView(QGraphicsView):
@@ -79,7 +35,6 @@ class NXGraphView(QGraphicsView):
 		self._item_to_widget_map:Dict[NodeRef|EdgeRef|InletRef|OutletRef, QGraphicsItem] = dict()
 		self._widget_to_item_map:Dict[QGraphicsItem, NodeRef|EdgeRef|InletRef|OutletRef] = dict()
 		# self.delegate = NodeItemDelegate(self)
-
 
 	def itemWidget(self, item:NodeRef|EdgeRef|InletRef|OutletRef)->QGraphicsItem:
 		"""returns the widget for the noderef"""
@@ -115,7 +70,7 @@ class NXGraphView(QGraphicsView):
 
 		for node in nodes:		
 			# Create Node Widget TODO: move to a delegate
-			widget =  MyNodeWidget(self)
+			widget =  MyNodeWidget()
 			widget.nameedit.document().contentsChanged.connect(lambda model=self.graph_model: 
 				model.setNodeProperty(node, 
 					name=widget.nameedit.toPlainText()
@@ -137,7 +92,7 @@ class NXGraphView(QGraphicsView):
 			self._widget_to_item_map[widget] = node
 
 			# update graphics item
-			self.handleNodesPropertiesChanged([node], properties=['name', 'posx', 'posy'])
+			self.handleNodesPropertiesChanged([node], properties=['name'])
 			self.handleInletsAdded(self.graph_model.getNodeInlets(node))
 			self.handleOutletsAdded(self.graph_model.getNodeOutlets(node))
 
@@ -230,6 +185,7 @@ if __name__ == "__main__":
 	app = QApplication(sys.argv)
 
 	G = nx.DiGraph()
+	G.add_edge("a", "b")
 	graphmodel = NXGraphModel(G)
 	graphview = NXGraphView()
 	graphview.setModel(graphmodel)

@@ -37,7 +37,7 @@ from typing import List, Tuple
 
 from shiboken6 import isValid
 
-from pylive.declerative_widgets import Panel
+from pylive.declerative_qt import Panel
 
 from pylive.QtGraphEditor.graphmodel_columnbased import GraphModel, NodeRef, InletRef, OutletRef, EdgeRef
 from pathlib import Path

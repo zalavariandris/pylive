@@ -31,3 +31,4 @@ def prettify_json(json_file:Path|str):
 		indent=4
 	)
 	json_file.write_text(pretty)
+

@@ -134,17 +134,14 @@ class GraphModel(QObject):
 	nodesAboutToBeRemoved = Signal(list) #List[NodeRef]
 	nodesPropertyChanged = Signal(list, list) #List[NodeRef], List[str]
 	nodesRemoved = Signal(list)
-
 	inletsAdded = Signal(list) #List[InletRef]
 	inletsAboutToBeRemoved = Signal(list) #List[InletRef]
 	inletsPropertyChanged = Signal(list, list) #List[InletRef], List[str]
 	inletsRemoved = Signal(list)
-
 	outletsAdded = Signal(list) #List[OutletIndex]
 	outletsAboutToBeRemoved = Signal(list) #List[OutletRef]
 	outletsPropertyChanged = Signal(list, list) #List[OutletRef], List[str]
 	outletsRemoved = Signal(list)
-
 	edgesAdded = Signal(list) #List[EdgeRef]
 	edgesAboutToBeRemoved = Signal(list) #List[EdgeRef]
 	edgesPropertyChanged = Signal(list, list) #List[EdgeRef], List[str]
@@ -186,6 +183,24 @@ class GraphModel(QObject):
 		self._inlets_edges.clear()
 		self._outlets_edges.clear()
 
+		# signals
+		nodesAdded.disconnect()
+		nodesAboutToBeRemoved.disconnect()
+		nodesPropertyChanged.disconnect()
+		nodesRemoved.disconnect()
+		inletsAdded.disconnect()
+		inletsAboutToBeRemoved.disconnect()
+		inletsPropertyChanged.disconnect()
+		inletsRemoved.disconnect()
+		outletsAdded.disconnect()
+		outletsAboutToBeRemoved.disconnect()
+		outletsPropertyChanged.disconnect()
+		outletsRemoved.disconnect()
+		edgesAdded.disconnect()
+		edgesAboutToBeRemoved.disconnect()
+		edgesPropertyChanged.disconnect()
+		edgesRemoved.disconnect()
+
 	# Query
 	def getNodes(self)->Iterable[NodeRef]:
 		for node in self._nodes:
@@ -209,6 +224,7 @@ class GraphModel(QObject):
 
 	# CREATE
 	def addNode(self, /, **props)->NodeRef:
+		"""addNode(**proper)->NodeRef"""
 		unique_id = unique.make_unique_id()
 		node = NodeRef(unique_id, self)
 		self._nodes[node] = props
@@ -466,7 +482,7 @@ class GraphModel(QObject):
 		assert isinstance(node, NodeRef)
 		assert node.isValid()
 
-		# change guard
+		# change guard TODO: find removed props
 		change = {}
 		for key, val in props.items():
 			if key not in self._nodes[node] or val != self._nodes[node][key]:

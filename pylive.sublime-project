@@ -4,9 +4,6 @@
         {
             "path": ".",
         },
-        {
-			"path": "C:\\dev\\src\\pylive-examples"
-		},
     ],
 
     "settings": {
@@ -23,7 +20,7 @@
                 "cmd": ["${project_path}/.venv/Scripts/python.exe", "-u", "$file"],
             },
             "osx": {
-                "cmd": ["${project_path}/.venv/bin/python", "-u", "$file"],
+                "cmd": ["${project_path}/.venv/bin/python3", "-u", "$file"],
             },
             "linux": {
                 "cmd": ["${project_path}/.venv/bin/python", "-u", "$file"],
