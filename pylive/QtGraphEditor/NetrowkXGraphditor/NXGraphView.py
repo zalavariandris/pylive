@@ -15,8 +15,6 @@ from pylive.QtGraphEditor.graphmodel_databased import EdgeRef, GraphModel, Inlet
 from pylive.QtGraphEditor.graphview_databased import EditableTextItem, InletGraphicsItem
 
 
-
-
 class NXGraphView(QGraphicsView):
 	def __init__(self, parent=None):
 		super().__init__(parent=parent)
@@ -35,13 +33,6 @@ class NXGraphView(QGraphicsView):
 		self._item_to_widget_map:Dict[NodeRef|EdgeRef|InletRef|OutletRef, QGraphicsItem] = dict()
 		self._widget_to_item_map:Dict[QGraphicsItem, NodeRef|EdgeRef|InletRef|OutletRef] = dict()
 		# self.delegate = NodeItemDelegate(self)
-
-	def itemWidget(self, item:NodeRef|EdgeRef|InletRef|OutletRef)->QGraphicsItem:
-		"""returns the widget for the noderef"""
-		return self._item_to_widget_map[item]
-
-	def widgetItem(self, widget:QGraphicsItem)->NodeRef|EdgeRef|InletRef|OutletRef:
-		return cast(NodeRef, self._widget_to_item_map[widget])
 
 	def setModel(self, graph_model:NXGraphModel):
 		self.graph_model = graph_model
@@ -147,12 +138,6 @@ class NXGraphView(QGraphicsView):
 			widget.setSourcePin(source_pin_item)
 			target_pin_item = cast(ConnectableWidgetProtocol, self._item_to_widget_map[outlet])
 			widget.setTargetPin(target_pin_item)
-
-
-
-
-
-
 
 
 	def handleEdgesPropertiesChanged(self, edges:List[EdgeRef], properties:List[str]=None):

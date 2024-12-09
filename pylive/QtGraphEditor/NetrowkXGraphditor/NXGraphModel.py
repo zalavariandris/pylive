@@ -396,8 +396,8 @@ if __name__ == "__main__":
 	window = NXGraphView()
 	# window.scene().addItem( QGraphicsRectItem(QRect(0,0,100,100)) )
 	graph = window.graphModel()
-	graph.addNode("A")
-	graph.addNode("B")
+	# graph.addNode("A")
+	# graph.addNode("B")
 	graph.addEdge("A", "B")
 
 	window.show()
