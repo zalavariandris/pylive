@@ -3,36 +3,84 @@ from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
-from standard_graph_delegate import AbstractGraphDelegate
+
 from nx_graph_model import NXGraphModel
 
 from link_graphics_items import makeLineBetweenShapes
+from qgraphics_arrow_item import QGraphicsArrowItem
 
-class BoundingRectEffect(QGraphicsEffect):
-    def __init__(self, parent=None):
-        super().__init__(parent)
+TNodeWidget = TypeVar('TNodeWidget')  # Represents the type of a node widget
+TEdgeWidget = TypeVar('TEdgeWidget')  # Represents the type of an edge widget
 
-    def draw(self, painter):
-        # Draw the base item (widget)
-        self.drawSource(painter)
-        
-        # Access the item and check if it's selected
-        # item = self.sourceItem()
-        # if item and item.isSelected():
-        #     # Get the bounding rect of the item
-        rect = self.boundingRect()
-        
-        # Customize the selection rectangle
-        pen = QPen(QColor(255, 0, 0), 3)  # Red pen with 3px width
-        pen.setStyle(Qt.SolidLine)
-        painter.setPen(pen)
-        painter.drawRect(rect)
+
+
+class AbstractGraphDelegate(Generic[TNodeWidget, TEdgeWidget], QObject):
+	def createNodeWidget(self, graph: 'NXGraphModel', n: Hashable) -> TNodeWidget:
+		"""create widget and bind thw widget signals to update the model"""
+		...
+
+	def setNodeWidgetProps(self, graph: 'NXGraphModel', n: Hashable, widget: TNodeWidget, **props):
+		"""update widget when model changes"""
+		...
+
+	def setNodeModelProps(self, graph: 'NXGraphModel', n: Hashable, widget: TNodeWidget, **props):
+		"""
+		Update the model when widget emits signals.
+		This is a convenient function and not called automatically.
+		It shoul be connected when the widget is created.
+		"""
+		...
+
+	def createEdgeWidget(self, graph: 'NXGraphModel', source: TNodeWidget, target: TNodeWidget) -> TEdgeWidget:
+		"""create widget to connect the nodes."""
+		...
+
+	def setEdgeWidgetProps(self, graph: 'NXGraphModel', e: Tuple[Hashable, Hashable], widget: TEdgeWidget, **props):
+		"""update link widget with the edge properties"""
+		...
+
+	def setEdgeModelProps(self, graph: 'NXGraphModel', e: Tuple[Hashable, Hashable], widget: TEdgeWidget, **props):
+		"""
+		Update the edge properties when the edge widget emits signals.
+		This is a convenient function and not called automatically.
+		It shoul be connected when the widget is created.
+		"""
+		...
+
+
+class StandardNodeWidget(QGraphicsWidget):
+	def __init__(self, parent: Optional[QGraphicsItem]=None) -> None:
+		QGraphicsWidget.__init__(self, parent=parent)
+		self.setGeometry(0,0,50,50)	
+		
+	def paint(self, painter, option:QStyleOptionGraphicsItem, widget=None):
+		palette = self.palette()
+
+		pen = QPen(palette.color(QPalette.ColorRole.Text), 1)
+		painter.setPen(pen)
+		rect = QRectF(0,0, self.geometry().width(), self.geometry().height())
+		# painter.drawEllipse(rect)
+
+		painter.drawRoundedRect(rect, 10, 10)
+
+		if QStyle.StateFlag.State_Selected in option.state:
+			pen = QPen(palette.color(QPalette.ColorRole.WindowText), 1, Qt.PenStyle.DashLine)
+			painter.setPen(pen)
+			painter.drawRoundedRect(rect, 1, 1)
+
+
+class StandardLinkWidget(QGraphicsArrowItem):
+	def __init__(self, parent=None):
+		super().__init__(parent=parent)
+		pen = QPen(QColor("white"), 2)
+		self.setPen(pen)
+
 
 class StandardGraphDelegate(AbstractGraphDelegate):
 	def createNodeWidget(self, graph:'NXGraphModel', n:Hashable)->QGraphicsWidget:
 		"""create and bind the widget"""
-		widget = QGraphicsWidget()
-		widget.setAutoFillBackground(True)
+		widget = StandardNodeWidget()
+		# widget.setAutoFillBackground(True)
 		palette = widget.palette()
 		palette.setColor(QPalette.Window, Qt.darkGray)
 		widget.setPalette(palette)
@@ -58,10 +106,9 @@ class StandardGraphDelegate(AbstractGraphDelegate):
 		"""update model props from widget"""
 		graph.setNodeProperties(n, **props)
 
-	def createEdgeWidget(self, graph:'NXGraphModel', source:QGraphicsWidget, target:QGraphicsWidget)->QGraphicsLineItem:
-		link = QGraphicsLineItem()
-		pen = QPen(QColor("white"), 2)
-		link.setPen(pen)
+	def createEdgeWidget(self, graph:'NXGraphModel', source:QGraphicsWidget, target:QGraphicsWidget)->QGraphicsArrowItem:
+		link = StandardLinkWidget()
+
 
 		def update_link():
 			link.setLine( makeLineBetweenShapes(source.geometry(), target.geometry() ) )
@@ -72,10 +119,10 @@ class StandardGraphDelegate(AbstractGraphDelegate):
 
 		return link
 
-	def setEdgeWidgetProps(self, graph:'NXGraphModel', e:Tuple[Hashable, Hashable], widget:QGraphicsLineItem, **props):
+	def setEdgeWidgetProps(self, graph:'NXGraphModel', e:Tuple[Hashable, Hashable], widget:QGraphicsArrowItem, **props):
 		...
 
-	def setEdgeModelProps(self, graph:'NXGraphModel', e:Tuple[Hashable, Hashable], widget:QGraphicsLineItem, **props):
+	def setEdgeModelProps(self, graph:'NXGraphModel', e:Tuple[Hashable, Hashable], widget:QGraphicsArrowItem, **props):
 		...
 
 
@@ -83,20 +130,19 @@ from pylive.utils.unique import make_unique_id
 class NXGraphView(QGraphicsView):
 	def __init__(self, parent=None):
 		super().__init__(parent=parent)
+		self.setRenderHints(QPainter.Antialiasing)
 		self.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
 		scene = QGraphicsScene()
 		scene.setSceneRect(QRect(-9999//2,-9999//2, 9999, 9999))
 		self.setScene(scene)
-
-
-		self.ellipse = QGraphicsEllipseItem(50,50,50,50)
-		self.ellipse.setFlag(QGraphicsItem.ItemIsSelectable, True)
-		scene.addItem(self.ellipse)
 		
 		self._item_to_widget_map = dict()
 		self._widget_to_item_map = dict()
 		self._delegate = StandardGraphDelegate()
 		self.setGraphModel( NXGraphModel() )
+
+	def nodeWidget(self, n:Hashable):
+		return self._item_to_widget_map[n]
 		
 	def delegate(self):
 		return self._delegate
@@ -208,13 +254,19 @@ class NXGraphView(QGraphicsView):
 
 if __name__ == "__main__":
 	app = QApplication.instance() or QApplication()
-	window = NXGraphView()
-	# window.scene().addItem( QGraphicsRectItem(QRect(0,0,100,100)) )
-	graph = window.graphModel()
-	# graph.addNode("A")
-	# graph.addNode("B")
-	graph.addEdge("A", "B")
+	view = NXGraphView()
 
-	window.show()
+
+	graph = view.graphModel()
+	graph.addEdge("A", "B")
+	view.nodeWidget("A").setPos(-75,-10)
+	view.nodeWidget("B").setPos(75, 10)
+
+	# add a simple item to the same scene
+	ellipse = QGraphicsEllipseItem(0,0,50,50)
+	ellipse.setFlag(QGraphicsItem.ItemIsSelectable, True)
+	view.scene().addItem(ellipse)
+
+	view.show()
 	app.exec()
 

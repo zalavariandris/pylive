@@ -5,7 +5,7 @@ from PySide6.QtWidgets import *
 
 import networkx as nx
 
-from pylive.utils.geo import intersectRayWithRectangle
+from pylive.utils.geo import intersect_ray_with_rectangle
 
 class NXGraphModel(QObject):
 	nodesAdded = Signal(list) #List[Tuple[Hashable, Hashable]]
