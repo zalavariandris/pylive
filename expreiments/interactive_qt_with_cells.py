@@ -136,9 +136,11 @@ class FunctionNodeWidget(QGraphicsWidget):
 
 def add_function_node(fn):
     widget = FunctionNodeWidget(fn)
-    scene.clear()
     scene.addItem(widget)
+
+scene.clear()
 add_function_node(format_signature)
+add_function_node(print)
 expression = "print(msg)"
 
 # %%
