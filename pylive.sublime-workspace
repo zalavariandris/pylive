@@ -4,6 +4,22 @@
 		"selected_items":
 		[
 			[
+				"QPainter",
+				"QPainterPath"
+			],
+			[
+				"item",
+				"_item_to_widget_map"
+			],
+			[
+				"QSize",
+				"QSizeF"
+			],
+			[
+				"set",
+				"setColor"
+			],
+			[
 				"setP",
 				"setP2"
 			],
@@ -498,27 +514,55 @@
 			[
 				"QtOpen",
 				"QtOpenGLWidgets"
-			],
-			[
-				"completion",
-				"gui_completion_height"
-			],
-			[
-				"compl",
-				"gui_completion"
-			],
-			[
-				"Color",
-				"ColorGroup"
-			],
-			[
-				"set",
-				"setColor"
 			]
 		]
 	},
 	"buffers":
 	[
+		{
+			"file": "expreiments/inspect_available_functions.py",
+			"settings":
+			{
+				"buffer_size": 803,
+				"encoding": "UTF-8",
+				"line_ending": "Windows"
+			},
+			"undo_stack":
+			[
+				[
+					3,
+					1,
+					"toggle_comment",
+					{
+						"block": false
+					},
+					"GgAAAAoDAAAAAAAACgMAAAAAAAACAAAAIyD5AgAAAAAAAPkCAAAAAAAAAgAAACMg3gIAAAAAAADeAgAAAAAAAAIAAAAjILECAAAAAAAAsQIAAAAAAAACAAAAIyCZAgAAAAAAAJkCAAAAAAAAAgAAACMghgIAAAAAAACGAgAAAAAAAAIAAAAjIGUCAAAAAAAAZQIAAAAAAAACAAAAIyAyAgAAAAAAADICAAAAAAAAAgAAACMgEwIAAAAAAAATAgAAAAAAAAIAAAAjIOwBAAAAAAAA7AEAAAAAAAACAAAAIyDGAQAAAAAAAMYBAAAAAAAAAgAAACMgpQEAAAAAAAClAQAAAAAAAAIAAAAjIIgBAAAAAAAAiAEAAAAAAAACAAAAIyBgAQAAAAAAAGABAAAAAAAAAgAAACMgPwEAAAAAAAA/AQAAAAAAAAIAAAAjIB8BAAAAAAAAHwEAAAAAAAACAAAAIyAJAQAAAAAAAAkBAAAAAAAAAgAAACMg7QAAAAAAAADtAAAAAAAAAAIAAAAjINIAAAAAAAAA0gAAAAAAAAACAAAAIyCjAAAAAAAAAKMAAAAAAAAAAgAAACMgjAAAAAAAAACMAAAAAAAAAAIAAAAjIH8AAAAAAAAAfwAAAAAAAAACAAAAIyBdAAAAAAAAAF0AAAAAAAAAAgAAACMgPgAAAAAAAAA+AAAAAAAAAAIAAAAjICAAAAAAAAAAIAAAAAAAAAACAAAAIyAAAAAAAAAAAAAAAAAAAAAAAgAAACMg",
+					"AQAAAAAAAAABAAAAVwMAAAAAAAAAAAAAAAAAAAAAAAAAAPC/"
+				]
+			]
+		},
+		{
+			"contents": "\n\nimport inspect\n\n#SEE python docs: https://docs.python.org/3/library/inspect.html\nfrom typing import *\ndef sample_function(a: int, b: str, c: float = 5.0, props:List=[]) -> bool:\n\treturn True\n\n\n# Print argument details\nprint(\"Arguments:\")\nfor param in sig.parameters.values():\n    print(f\"- Name: {param.name}, Default: {param.default}, Annotation: {param.annotation}\")\n\ndef format_type(annotation):\n\t\"\"\"Helper function to format type annotations as readable strings.\"\"\"\n\tif hasattr(annotation, '__name__'):  # For built-in types like int, float\n\t\treturn annotation.__name__\n\telif hasattr(annotation, '__origin__'):  # For generic types like List, Dict\n\t\torigin = annotation.__origin__\n\t\targs = \", \".join(format_type(arg) for arg in annotation.__args__) if annotation.__args__ else \"\"\n\t\treturn f\"{origin.__name__}[{args}]\" if args else origin.__name__\n\telse:\n\t\treturn str(annotation)  # Fallback for unusual cases\n\ndef format_param(param)->str:\n\ttext = \"\"\n\tif param.kind == inspect.Parameter.VAR_POSITIONAL:\n\t\ttext += \"*\"\n\tif param.kind == inspect.Parameter.VAR_KEYWORD:\n\t\ttext += \"**\"\n\ttext += f\"{param.name}\"\n\t\n\t# Add type annotation if available\n\tif param.annotation is not inspect.Parameter.empty:\n\t\ttext += f\":{format_type(param.annotation)}\"\n\t\n\t# Add default value if available\n\tif param.default is not inspect.Parameter.empty:\n\t\ttext += f\"={repr(param.default)}\"\n\t\n\treturn text\n\ndef format_signature(fn):\n\t# Get the signature of the function\n\tsig = inspect.signature(fn)\n\n\t# Build the formatted signature text\n\ttext = f\"{fn.__name__}\"\n\ttext+=\"(\"\n\ttext+=\", \".join( [format_param(param) for param in sig.parameters.values()] )\n\ttext+=\")\"\n\t\n\t# Output the return type annotation if present\n\tif sig.return_annotation is not inspect.Signature.empty:\n\t\ttext += f\"-> {format_type(sig.return_annotation)}\"\n\t\n\treturn text\n\t\n\nfrom pylive import livescript\nlivescript.display(format_signature(sample_function))\nlivescript.display(format_signature(print))\n",
+			"file": "expreiments/inspect_functions_experiment.py",
+			"file_size": 2019,
+			"file_write_time": 133765004069861375,
+			"settings":
+			{
+				"buffer_size": 1951,
+				"line_ending": "Windows"
+			},
+			"undo_stack":
+			[
+				[
+					3,
+					2,
+					"left_delete",
+					null,
+					"AgAAAMMAAAAAAAAAwwAAAAAAAAABAAAACsIAAAAAAAAAwgAAAAAAAAABAAAACg",
+					"AQAAAAAAAAABAAAAxAAAAAAAAADEAAAAAAAAAAAAAAAAAPC/"
+				]
+			]
+		}
 	],
 	"build_system": "Packages/Python/Python.sublime-build",
 	"build_system_choices":
@@ -641,14 +685,20 @@
 	"expanded_folders":
 	[
 		"/C/dev/src/pylive",
-		"/C/dev/src/pylive/docs",
-		"/C/dev/src/pylive/pylive",
-		"/C/dev/src/pylive/pylive/QtGraphEditor",
-		"/C/dev/src/pylive/pylive/QtGraphEditor/NetrowkXGraphditor"
+		"/C/dev/src/pylive/expreiments",
+		"/C/dev/src/pylive/expreiments/live_coding"
 	],
 	"file_history":
 	[
+		"/C/dev/src/pylive/pylive/QtGraphEditor/NetrowkXGraphEditor/graphview_with_delegate.py",
+		"/C/dev/src/pylive/pylive/QtGraphEditor/NetrowkXGraphEditor/nx_graph_model.py",
+		"/P/!!INSTALL!!/____Install 2024/TVPaint Animation 10 Pro 10.0.16 (32 Bit)/Install.Notes.nfo",
 		"/C/dev/src/pylive/pylive/utils/geo.py",
+		"/C/Users/and/Desktop/TVPaint Animation 10 Pro 10.0.16 (32 Bit)/Install.Notes.nfo",
+		"/C/dev/src/pylive/pylive/QtGraphEditor/NetrowkXGraphEditor/link_graphics_items.py",
+		"/C/dev/src/pylive/pylive/QtGraphEditor/NetrowkXGraphEditor/abstract_graph_delegate.py",
+		"/C/dev/src/pylive/pylive/QtGraphEditor/NetrowkXGraphEditor/qgraphics_arrow_item.py",
+		"/C/dev/src/pylive/expreiments/ListItemDelegate-example.py",
 		"/C/dev/src/pylive/pylive/QtGraphEditor/NetrowkXGraphditor/nx_graph_view.py",
 		"/C/dev/src/pylive/pylive/QtGraphEditor/NetrowkXGraphditor/nx_graph_model.py",
 		"/C/dev/src/pylive/pylive/QtGraphEditor/NetrowkXGraphditor/standard_graph_delegate.py",
@@ -767,19 +817,11 @@
 		"/C/dev/src/pylive/pylive/QtScriptEditor/components/number_editor.py",
 		"/C/dev/src/pylive/pylive/QtScriptEditor/components/KeywordsCompleter_OLD.py",
 		"/C/dev/src/pylive/pylive/thread_pool_tracker.py",
-		"/C/dev/src/pylive/pylive/QtScriptEditor/script_editor_with_async_rope_completer.py",
-		"/C/dev/src/pylive/pylive/QtScriptEditor/ScriptEdit.py",
-		"/C/dev/src/pylive/.venv/Lib/site-packages/IPython/utils/capture.py",
-		"/C/dev/src/pylive/pylive/QtGraphEditor/mindmap_example.py",
-		"/C/dev/src/pylive/pylive/examples/live_paint_qwidget.py",
-		"/C/dev/src/pylive/pylive/preview_widget.py",
-		"/C/dev/src/pylive/expreiments/GraphScene.py",
-		"/C/dev/src/pylive/pylive/examples/visual_coding.py",
-		"/C/dev/src/pylive/expreiments/live_graphics_scene.py"
+		"/C/dev/src/pylive/pylive/QtScriptEditor/script_editor_with_async_rope_completer.py"
 	],
 	"find":
 	{
-		"height": 38.0
+		"height": 23.0
 	},
 	"find_in_files":
 	{
@@ -794,6 +836,14 @@
 		"case_sensitive": false,
 		"find_history":
 		[
+			"intersectLineWithRectangle",
+			"intersectLineWithPath",
+			"ellipse",
+			"intersectRay",
+			"rect_max[1]",
+			"rect_min[1]",
+			"rect_max[0]",
+			"rect_min[0]",
 			"print",
 			"intersect",
 			"intersectLineWithPath",
@@ -913,15 +963,7 @@
 			"pyg",
 			"setNodeProperty",
 			"index",
-			"html",
-			"self.outpu",
-			"setHtml",
-			"onNodeProper",
-			"NodeGraphicsItem",
-			"Data",
-			"NodeProp",
-			"Data",
-			"getEdgeSource"
+			"html"
 		],
 		"highlight": true,
 		"in_selection": false,
@@ -929,6 +971,10 @@
 		"regex": false,
 		"replace_history":
 		[
+			"bottom",
+			"top",
+			"right",
+			"left",
 			"self._document",
 			"interactive_edge_moving_pin",
 			"interactive_edge_fixed_pin",
@@ -974,6 +1020,107 @@
 		{
 			"sheets":
 			[
+				{
+					"buffer": 0,
+					"file": "expreiments/inspect_available_functions.py",
+					"selected": true,
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 803,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								327,
+								327
+							]
+						],
+						"settings":
+						{
+							"auto_complete_triggers":
+							[
+								{
+									"characters": "<",
+									"selector": "text.html, text.xml"
+								},
+								{
+									"rhs_empty": true,
+									"selector": "punctuation.accessor"
+								},
+								{
+									"characters": ".[\"'",
+									"selector": "meta.tag, source - comment - string.quoted.double.block - string.quoted.single.block - string.unquoted.heredoc",
+									"server": "LSP-pyright"
+								}
+							],
+							"lsp_active": true,
+							"lsp_uri": "file:///C:/dev/src/pylive/expreiments/inspect_available_functions.py",
+							"show_definitions": false,
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 0,
+					"stack_multiselect": false,
+					"type": "text"
+				},
+				{
+					"buffer": 1,
+					"file": "expreiments/inspect_functions_experiment.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 1951,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								1370,
+								1370
+							]
+						],
+						"settings":
+						{
+							"auto_complete_triggers":
+							[
+								{
+									"characters": "<",
+									"selector": "text.html, text.xml"
+								},
+								{
+									"rhs_empty": true,
+									"selector": "punctuation.accessor"
+								},
+								{
+									"characters": ".[\"'",
+									"selector": "meta.tag, source - comment - string.quoted.double.block - string.quoted.single.block - string.unquoted.heredoc",
+									"server": "LSP-pyright"
+								}
+							],
+							"lsp_active": true,
+							"lsp_uri": "file:///C:/dev/src/pylive/expreiments/inspect_functions_experiment.py",
+							"show_definitions": false,
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 1,
+					"stack_multiselect": false,
+					"type": "text"
+				}
 			]
 		},
 		{
@@ -1010,7 +1157,7 @@
 		"cols":
 		[
 			0.0,
-			0.554002541297,
+			0.60038119441,
 			1.0
 		],
 		"rows":
@@ -1038,7 +1185,7 @@
 	},
 	"output.exec":
 	{
-		"height": 154.0
+		"height": 166.0
 	},
 	"output.find_results":
 	{
@@ -1314,7 +1461,7 @@
 		],
 		"width": 592.0
 	},
-	"selected_group": 1,
+	"selected_group": 0,
 	"settings":
 	{
 		"lsp_show_inlay_hints": false
@@ -1323,7 +1470,7 @@
 	"show_open_files": false,
 	"show_tabs": true,
 	"side_bar_visible": true,
-	"side_bar_width": 346.0,
+	"side_bar_width": 601.0,
 	"status_bar_visible": true,
 	"template_settings":
 	{
