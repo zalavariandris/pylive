@@ -11,12 +11,82 @@ app = QApplication.instance() or QApplication()
 view = QGraphicsView()
 scene = QGraphicsScene()
 view.setScene(scene)
+scene.setSceneRect(-4500, -4500, 9000, 9000)
 view.show()
 
 # %%
 import ast
 def parse_expression(expression:str):
     ...
+
+
+class Pin(QGraphicsProxyWidget):
+    hoverEntered:Signal = Signal()
+    hoverLeft:Signal = Signal()
+    connectionInitiated:Signal = Signal()
+
+    def __init__(self, text:str, parent=None):
+        super().__init__(parent=parent)
+        self._text = text
+
+        label = QLabel("<function>")
+        label.setStyleSheet(f"""
+            border-radius: 25px;
+            color: {self.color()};
+            background: transparent;
+        """)
+        # label.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        # label.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground)
+
+
+        label.setSizePolicy(
+            QSizePolicy.Policy.Maximum, 
+            QSizePolicy.Policy.Minimum
+        )
+
+        self.setWidget(label)
+        
+        self._label = label
+        self.setText( self.text() )
+
+    def setText(self, text:str):
+        self._label.setText(text)
+
+    def text(self):
+        return self._label.text()
+
+    def highlight(self):
+        label = cast(QLabel, self.widget())
+        label.setStyleSheet(f"""
+            border-radius: 25px;
+            color: orange;
+            background: transparent;
+        """)
+
+    def unhighlight(self):
+        label = cast(QLabel, self.widget())
+        label.setStyleSheet(f"""
+            border-radius: 25px;
+            color: {self.color()};
+            background: transparent;
+        """)
+
+    def color(self)->str:
+        return "palette(text)"
+
+    def text(self)->str:
+        return self._text
+
+    def hoverEnterEvent(self, event: QGraphicsSceneHoverEvent) -> None:
+        self.hoverEntered.emit()
+        self.highlight()
+        return super().hoverEnterEvent(event)
+
+    def hoverLeaveEvent(self, event: QGraphicsSceneHoverEvent) -> None:
+        self.hoverLeft.emit()
+        self.unhighlight()
+        return super().hoverLeaveEvent(event)
+
 
 import inspect
 
@@ -36,36 +106,23 @@ def format_type(annotation):
     else:
         return str(annotation)  # Fallback for unusual cases
 
-class ParamInlet(QGraphicsProxyWidget):
+class ParamInlet(Pin):
+    hoverEntered:Signal = Signal()
+    hoverLeft:Signal = Signal()
+    connectionInitiated:Signal = Signal()
+
     def __init__(self, param:inspect.Parameter, parent=None):
-        super().__init__(parent=parent)
         self._param = param
+        super().__init__(text=self.text(), parent=parent)        
 
-        label = QLabel("<function>")
-        label.setStyleSheet(f"""
-            border-radius: 25px;
-            color: {self.color()};
-        """)
-
-        label.setSizePolicy(
-            QSizePolicy.Policy.Maximum, 
-            QSizePolicy.Policy.Minimum
-        )
-
-        self.setWidget(label)
-        
-        label.setText( "".join([
-            self.text(), 
-            self.annotation(), 
-            f"={self.default()}" if self.default() else ""
-        ]))
-
+    @override
     def color(self)->str:
         if self._param.default is inspect.Parameter.empty:
             return "red"
 
         return "palette(text)"
 
+    @override
     def text(self)->str:
         param = self._param
         text = param.name
@@ -73,11 +130,15 @@ class ParamInlet(QGraphicsProxyWidget):
             text = "*" + text
         if param.kind == inspect.Parameter.VAR_KEYWORD:
             text = "**" + text
-        return text
+
+        return "".join([
+            text, 
+            self.annotation(), 
+            f"={self.default()}" if self.default() else ""
+        ])
         
     def annotation(self)->str:
         return format_type(self._param.annotation)
-
 
     def default(self):
         if self._param.default == inspect.Parameter.empty:
@@ -93,6 +154,7 @@ class FunctionNodeWidget(QGraphicsWidget):
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
 
         layout = QGraphicsLinearLayout(Qt.Orientation.Horizontal)
+        layout.setContentsMargins(6,4,10,4)
         self.setLayout(layout)
 
         self.setFunction(function)
@@ -111,19 +173,10 @@ class FunctionNodeWidget(QGraphicsWidget):
             item.deleteLater()
 
         # add header
-        label = QLabel(function.__name__)
-        label.setStyleSheet(f"""
-            color: palette(text);
-        """)
+        header = Pin(function.__name__)
 
-        label.setSizePolicy(
-            QSizePolicy.Policy.Maximum, 
-            QSizePolicy.Policy.Minimum
-        )
-        proxy = QGraphicsProxyWidget(self)
-        proxy.setWidget(label)
         layout = cast(QGraphicsLinearLayout, self.layout())
-        layout.addItem(proxy)
+        layout.addItem(header)
 
         # add inlets
         sig = inspect.signature(function)
@@ -134,15 +187,24 @@ class FunctionNodeWidget(QGraphicsWidget):
 
     def paint(self, painter, option, widget=None):
         w, h = self.geometry().width(), self.geometry().height()
+        painter.drawRoundedRect(QRectF(0,0,w,h),5.0,5.0)
 
-        painter.drawRoundedRect(0,0,w,h,5,5)
+        fm = painter.fontMetrics()
+        x = fm.horizontalAdvance(self._function.__name__)
+        rect = self.layout().contentsRect()
+        painter.drawText(rect.x()+x, rect.y()+fm.ascent()-1,"(")
+        painter.drawText(rect.right(),rect.y()+fm.ascent()-1,")")
 
 
 scene.clear()
-widget = FunctionNodeWidget(print)
-scene.addItem(widget)
-expression = "print(msg)"
 
+from pathlib import Path
+for i, fn in enumerate( [print, Path] ):
+    widget = FunctionNodeWidget(fn)
+    widget.setPos(0,i*40)
+    scene.addItem(widget)
+expression = "print(msg)"
+view.centerOn( 190, 90)
 app.exec()
 
 # %%
