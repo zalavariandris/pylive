@@ -16,8 +16,68 @@ from pylive.QtGraphEditor.NetrowkXGraphEditor.qgraphics_arrow_item import (
 )
 
 
-class NodeDelegate(QObject):
+class NodeWidget(QGraphicsWidget):
+    def __init__(
+        self,
+        view: "GraphView",
+        n: Hashable,
+        parent: Optional[QGraphicsItem] = None,
+    ) -> None:
+        QGraphicsWidget.__init__(self, parent=parent)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsFocusable, True)
+
+        self._view = view
+        self._n = n
+
+    @override
     def sizeHint(
+        self, which: Qt.SizeHint, constraint: QSizeF | QSize = QSizeF()
+    ) -> QSizeF:
+        option = QStyleOptionGraphicsItem()
+        option.font = self.font()
+        return self._view._delegate.nodeSizeHint(
+            option, self._view._graphmodel, self._n
+        )
+
+    def paint(
+        self, painter: QPainter, option: QStyleOptionGraphicsItem, widget=None
+    ):
+        self._view._delegate.paintNode(
+            painter, option, self._view._graphmodel, self._n
+        )
+
+    def mouseDoubleClickEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+        print("press")
+        return super().mousePressEvent(event)
+
+
+class GraphDelegate(QObject):
+    def nodeFactory(self, view, graph, n) -> QGraphicsItem:
+        return NodeWidget(view=view, n=n)
+
+    def edgeFactory(
+        self, view, graph, source_node, target_node
+    ) -> QGraphicsItem:
+        arrow = QGraphicsArrowItem()
+        pen = QPen(view.palette().color(QPalette.ColorRole.Text), 1.5)
+        arrow.setPen(pen)
+
+        def update_link():
+            arrow.setLine(
+                makeLineBetweenShapes(
+                    source_node.geometry(), target_node.geometry()
+                )
+            )
+
+        update_link()
+
+        source_node.geometryChanged.connect(update_link)
+        target_node.geometryChanged.connect(update_link)
+        return arrow
+
+    def nodeSizeHint(
         self, option: QStyleOptionViewItem, graph: GraphModel, n: Hashable
     ) -> QSizeF:
         padding = 4
@@ -27,7 +87,7 @@ class NodeDelegate(QObject):
             padding + text_width + padding, padding + fm.ascent() + padding
         )
 
-    def paint(
+    def paintNode(
         self,
         painter: QPainter,
         option: QStyleOptionViewItem,
@@ -45,36 +105,6 @@ class NodeDelegate(QObject):
         # painter.drawLine(0, y, option.rect.width(), y) # draw baseline
 
 
-class NodeWidget(QGraphicsWidget):
-    def __init__(self, view, n, parent: Optional[QGraphicsItem] = None) -> None:
-        QGraphicsWidget.__init__(self, parent=parent)
-        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
-        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)
-        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsFocusable, True)
-
-        self._view = view
-        self._n = n
-
-    @override
-    def sizeHint(
-        self, which: Qt.SizeHint, constraint: QSizeF | QSize = QSizeF()
-    ) -> QSizeF:
-        option = QStyleOptionGraphicsItem()
-        option.font = self.font()
-        return self._view._delegate.sizeHint(
-            option, self._view._graphmodel, self._n
-        )
-
-    def paint(self, painter, option: QStyleOptionGraphicsItem, widget=None):
-        self._view._delegate.paint(
-            painter, option, self._view._graphmodel, self._n
-        )
-
-    def mouseDoubleClickEvent(self, event: QGraphicsSceneMouseEvent) -> None:
-        print("press")
-        return super().mousePressEvent(event)
-
-
 class GraphView(QGraphicsView):
     def __init__(self, parent=None):
         super().__init__(parent=parent)
@@ -84,7 +114,7 @@ class GraphView(QGraphicsView):
         scene.setSceneRect(QRect(-9999 // 2, -9999 // 2, 9999, 9999))
         self.setScene(scene)
         # scene.installEventFilter(self)
-        self._delegate = NodeDelegate()
+        self._delegate = GraphDelegate()
         self._item_to_widget_map = dict()
         self._widget_to_item_map = dict()
         self._graphmodel: GraphModel | None = None
@@ -99,14 +129,22 @@ class GraphView(QGraphicsView):
         self._graphmodel = graphmodel
 
         self._graphmodel.nodesAdded.connect(self.handleNodesAdded)
+        self._graphmodel.nodesAboutToBeRemoved.connect(self.handleNodesRemoved)
         self._graphmodel.nodesPropertiesChanged.connect(
             self.handleNodesPropertiesChanged
         )
+
         self._graphmodel.edgesAdded.connect(self.handleEdgesAdded)
+        self._graphmodel.edgesAboutToBeRemoved.connect(self.handleEdgesRemoved)
+        self._graphmodel.edgesPropertiesChanged.connect(
+            self.handleEdgesPropertiesChanged
+        )
 
     def handleNodesAdded(self, nodes: List[Hashable]):
         for n in nodes:
-            widget = NodeWidget(view=self, n=n)
+            widget = self._delegate.nodeFactory(
+                view=self, graph=self._graphmodel, n=n
+            )
 
             self._item_to_widget_map[n] = widget
             self._widget_to_item_map[widget] = n
@@ -123,28 +161,16 @@ class GraphView(QGraphicsView):
         for u, v in edges:
             source_node = self._item_to_widget_map[u]
             target_node = self._item_to_widget_map[v]
-            arrow = QGraphicsArrowItem()
-            pen = QPen(self.palette().color(QPalette.ColorRole.Text), 1.5)
-            arrow.setPen(pen)
 
-            def update_link():
-                arrow.setLine(
-                    makeLineBetweenShapes(
-                        source_node.geometry(), target_node.geometry()
-                    )
-                )
+            widget = self._delegate.edgeFactory(
+                self, self._graphmodel, source_node, target_node
+            )
 
-            update_link()
+            self._item_to_widget_map[(u, v)] = widget
+            self._widget_to_item_map[widget] = (u, v)
+            self.scene().addItem(widget)
 
-            source_node.geometryChanged.connect(update_link)
-            target_node.geometryChanged.connect(update_link)
-            # widget.setSource(source_node)
-            # widget.setTarget(target_node)
-            self._item_to_widget_map[(u, v)] = arrow
-            self._widget_to_item_map[arrow] = (u, v)
-            self.scene().addItem(arrow)
-
-    def handleEdgesRemoed(self, edges: List[Tuple[Hashable, Hashable]]):
+    def handleEdgesRemoved(self, edges: List[Tuple[Hashable, Hashable]]):
         for u, v in edges:
             widget = self._item_to_widget_map[(u, v)]
             widget.setSource(None)

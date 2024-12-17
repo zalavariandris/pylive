@@ -12,20 +12,20 @@ from pylive.QtGraphEditor.NetrowkXGraphEditor.qgraphics_arrow_item import (
     QGraphicsArrowItem,
 )
 
-from graph_view import GraphView, NodeDelegate
+from graph_view import GraphView, GraphDelegate
 
 from pylive.utils.unique import make_unique_name
 
 from function_widget import FunctionNodeWidget
 
 
-class FnGraphDelegate(NodeDelegate):
+class FnGraphDelegate(GraphDelegate):
     def _header_text(self, graph: GraphModel, n: Hashable):
         fn = graph.getNodeProperty(n, "fn")
         return f"{n}-{fn.__name__}"
 
     @override
-    def sizeHint(
+    def nodeSizeHint(
         self, option: QStyleOptionViewItem, graph: GraphModel, n: Hashable
     ) -> QSizeF:
         padding = 8
@@ -36,7 +36,7 @@ class FnGraphDelegate(NodeDelegate):
         )
 
     @override
-    def paint(
+    def paintNode(
         self,
         painter: QPainter,
         option: QStyleOptionViewItem,
