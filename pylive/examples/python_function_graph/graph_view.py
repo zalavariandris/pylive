@@ -16,11 +16,40 @@ from pylive.QtGraphEditor.NetrowkXGraphEditor.qgraphics_arrow_item import (
 )
 
 
+class PinWidget(QGraphicsWidget):
+    def __init__(
+        self,
+        i: Hashable,
+        node: Optional["NodeWidget"],
+        view: "GraphView",
+    ) -> None:
+        QGraphicsWidget.__init__(self, parent=node)
+
+        self._node = node
+        self._view = view
+        self._i = i
+
+    @override
+    def sizeHint(
+        self, which: Qt.SizeHint, constraint: QSizeF | QSize = QSizeF()
+    ) -> QSizeF:
+        return QSizeF(20, 20)
+
+    def paint(
+        self, painter: QPainter, option: QStyleOptionGraphicsItem, widget=None
+    ):
+        r = 10
+        painter.drawEllipse(0, 0, r, r)
+
+    def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+        self._view.initiateConnection(self)
+
+
 class NodeWidget(QGraphicsWidget):
     def __init__(
         self,
-        view: "GraphView",
         n: Hashable,
+        view: "GraphView",
         parent: Optional[QGraphicsItem] = None,
     ) -> None:
         QGraphicsWidget.__init__(self, parent=parent)
@@ -31,22 +60,25 @@ class NodeWidget(QGraphicsWidget):
         self._view = view
         self._n = n
 
+        # add name label
+
     @override
     def sizeHint(
         self, which: Qt.SizeHint, constraint: QSizeF | QSize = QSizeF()
     ) -> QSizeF:
-        option = QStyleOptionGraphicsItem()
-        option.font = self.font()
-        return self._view._delegate.nodeSizeHint(
-            option, self._view._graphmodel, self._n
+        padding = 4
+        fm = QFontMetrics(self.font())
+        text_width = fm.horizontalAdvance(f"{self._n}")
+        return QSizeF(
+            padding + text_width + padding, padding + fm.ascent() + padding
         )
 
     def paint(
         self, painter: QPainter, option: QStyleOptionGraphicsItem, widget=None
     ):
-        self._view._delegate.paintNode(
-            painter, option, self._view._graphmodel, self._n
-        )
+        padding = 4
+        # draw outline
+        painter.drawRoundedRect(option.rect, 4, 4)
 
     def mouseDoubleClickEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         print("press")
@@ -76,33 +108,6 @@ class GraphDelegate(QObject):
         source_node.geometryChanged.connect(update_link)
         target_node.geometryChanged.connect(update_link)
         return arrow
-
-    def nodeSizeHint(
-        self, option: QStyleOptionViewItem, graph: GraphModel, n: Hashable
-    ) -> QSizeF:
-        padding = 4
-        fm = QFontMetrics(option.font)
-        text_width = fm.horizontalAdvance(f"{n}")
-        return QSizeF(
-            padding + text_width + padding, padding + fm.ascent() + padding
-        )
-
-    def paintNode(
-        self,
-        painter: QPainter,
-        option: QStyleOptionViewItem,
-        graph,
-        n: Hashable,
-    ):
-        padding = 4
-        # draw outline
-        painter.drawRoundedRect(option.rect, 4, 4)
-
-        # draw node text
-        fm = option.fontMetrics
-        y = option.rect.height() - padding
-        painter.drawText(padding, y, f"{n}")
-        # painter.drawLine(0, y, option.rect.width(), y) # draw baseline
 
 
 class GraphView(QGraphicsView):
@@ -157,6 +162,25 @@ class GraphView(QGraphicsView):
             del self._item_to_widget_map[n]
             del self._widget_to_item_map[widget]
 
+    def handleNodesPropertiesChanged(self, nodesProperies):
+        for n, properties in nodesProperies.items():
+            node_widget = self._item_to_widget_map[n]
+
+            for prop, value in properties.items():
+                match prop:
+                    case "label":
+                        ...
+                    case "inlets":
+                        for inlet in value:
+                            pin = PinWidget(inlet, node_widget, self)
+                            layout = cast(
+                                QGraphicsLinearLayout, node_widget.layout()
+                            )
+                            layout.addItem(pin)
+
+                    case "outlets":
+                        print(prop, value)
+
     def handleEdgesAdded(self, edges: List[Tuple[Hashable, Hashable]]):
         for u, v in edges:
             source_node = self._item_to_widget_map[u]
@@ -179,16 +203,13 @@ class GraphView(QGraphicsView):
             del self._item_to_widget_map[(u, v)]
             del self._widget_to_item_map[widget]
 
-    def handleNodesPropertiesChanged(self, nodesProperies):
-        for n, properties in nodesProperies.items():
-            widget = self._item_to_widget_map[n]
-
-            # self.delegate().setNodeWidgetProps(self, n, widget, **properties)
-
     def handleEdgesPropertiesChanged(self, edgesProperties):
         for edge, properties in edgesProperties.items():
             widget = self._item_to_widget_amp[edge]
             # self.delegate().setEdgeWidgetProps(self, edge, widget, **properties)
+
+    def initiateConnection(self, source: QGraphicsItem):
+        print("initiateConnection")
 
 
 if __name__ == "__main__":
@@ -206,7 +227,9 @@ if __name__ == "__main__":
 
             # n = make_unique_id(length=12)
             n = make_unique_name("NODE", [n for n in self._graphmodel.nodes()])
-            self._graphmodel.addNode(n, label="new node")
+            self._graphmodel.addNode(
+                n, label="new node", inlets=["in"], outlets=["out"]
+            )
             widget = self._item_to_widget_map[n]
             widget.setPos(clickpos)
 
@@ -224,7 +247,9 @@ if __name__ == "__main__":
                 n = make_unique_name(
                     "NODE", [n for n in self._graphmodel.nodes()]
                 )
-                self._graphmodel.addNode(n, label="new node")
+                self._graphmodel.addNode(
+                    n, label="new node", inlets=["in"], outlets=["out"]
+                )
                 widget = self._item_to_widget_map[n]
                 widget.setPos(scenePos or QPointF(0, 0))
 

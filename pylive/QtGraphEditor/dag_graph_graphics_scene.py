@@ -4,810 +4,888 @@ from PySide6.QtWidgets import *
 
 from typing import *
 
-from pylive.QtGraphEditor.pan_and_zoom_graphicsview_optimized import PanAndZoomGraphicsView
-
+from pylive.QtGraphEditor.pan_and_zoom_graphicsview_optimized import (
+    PanAndZoomGraphicsView,
+)
 
 
 class TextWidget(QGraphicsWidget):
-	"""A simple widget that contains a QGraphicsTextItem."""
-	def __init__(self, text, parent=None):
-		super().__init__(parent)
-		# Create the text item
-		self.text_item = QGraphicsTextItem(text, self)
-		self.text_item.document().setDocumentMargin(0)
-		self.text_item.setTextInteractionFlags(Qt.TextInteractionFlag.TextEditorInteraction)
-		self.text_item.setAcceptedMouseButtons(Qt.MouseButton.NoButton)  # Transparent to mouse events
-		self.text_item.setEnabled(False)
+    """A simple widget that contains a QGraphicsTextItem."""
 
-		self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges)
-		self.set_line_height(1.1)
+    def __init__(self, text, parent=None):
+        super().__init__(parent)
+        # Create the text item
+        self.text_item = QGraphicsTextItem(text, self)
+        self.text_item.document().setDocumentMargin(0)
+        self.text_item.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextEditorInteraction
+        )
+        self.text_item.setAcceptedMouseButtons(
+            Qt.MouseButton.NoButton
+        )  # Transparent to mouse events
+        self.text_item.setEnabled(False)
 
-	def set_line_height(self, line_height):
-		"""Set the line height for the text."""
-		cursor = QTextCursor(self.text_item.document())
-		cursor.select(QTextCursor.SelectionType.Document)
+        self.setFlag(
+            QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges
+        )
+        self.set_line_height(1.1)
 
-		# Configure block format
-		block_format = QTextBlockFormat()
-		block_format.setLineHeight(100, 1)
-		cursor.mergeBlockFormat(block_format)
+    def set_line_height(self, line_height):
+        """Set the line height for the text."""
+        cursor = QTextCursor(self.text_item.document())
+        cursor.select(QTextCursor.SelectionType.Document)
 
-	def sizeHint(self, which, constraint=QSizeF()):
-		text_size = QSize(self.text_item.document().size().toSize())
-		return text_size
+        # Configure block format
+        block_format = QTextBlockFormat()
+        block_format.setLineHeight(100, 1)
+        cursor.mergeBlockFormat(block_format)
+
+    def sizeHint(self, which, constraint=QSizeF()):
+        text_size = QSize(self.text_item.document().size().toSize())
+        return text_size
 
 
 class CircleWidget(QGraphicsWidget):
-	def __init__(self, radius:float, parent=None):
-		super().__init__()
-		self.circle_item = QGraphicsEllipseItem(QRectF(0,0,radius*2, radius*2), self)
-		text_color = self.palette().color(QPalette.ColorRole.Text)
-		self.circle_item.setBrush(Qt.BrushStyle.NoBrush)
-		self.circle_item.setPen(QPen(text_color, 1.4))
+    def __init__(self, radius: float, parent=None):
+        super().__init__()
+        self.circle_item = QGraphicsEllipseItem(
+            QRectF(0, 0, radius * 2, radius * 2), self
+        )
+        text_color = self.palette().color(QPalette.ColorRole.Text)
+        self.circle_item.setBrush(Qt.BrushStyle.NoBrush)
+        self.circle_item.setPen(QPen(text_color, 1.4))
 
-	def sizeHint(self, which, constraint=QSizeF()):
-		circle_rect = self.circle_item.rect()
-		return circle_rect.size()
+    def sizeHint(self, which, constraint=QSizeF()):
+        circle_rect = self.circle_item.rect()
+        return circle_rect.size()
 
 
 class PinWidget(QGraphicsWidget):
-	def __init__(self, text, orientation=Qt.Orientation.Horizontal):
-		super().__init__()
-		# store relations
-		self._parent_node:NodeWidget|None = None
-		self._edges = []
-		
-		# Setup widgets
-		self.setAcceptHoverEvents(True)
-		self.circle_item = CircleWidget(radius=3)
-		self.text_widget = TextWidget(text)
-		font = self.text_widget.text_item.document().defaultFont()
-		font.setPointSize(6)
-		self.text_widget.text_item.document().setDefaultFont(font)
+    def __init__(self, text, orientation=Qt.Orientation.Horizontal):
+        super().__init__()
+        # store relations
+        self._parent_node: NodeWidget | None = None
+        self._edges = []
 
-		# layout
-		self.main_layout = QGraphicsLinearLayout(Qt.Orientation.Horizontal)
-		self.main_layout.setContentsMargins(0,0,0,0)
-		self.main_layout.setSpacing(3)
-		self.setLayout(self.main_layout)
-		self.setOrientation(orientation)
+        # Setup widgets
+        self.setAcceptHoverEvents(True)
+        self.circle_item = CircleWidget(radius=3)
+        self.text_widget = TextWidget(text)
+        font = self.text_widget.text_item.document().defaultFont()
+        font.setPointSize(6)
+        self.text_widget.text_item.document().setDefaultFont(font)
 
-		# update edge on scenepos or geometry change
-		
-		self.geometryChanged.connect(self.updateEdges)
-		self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges)
+        # layout
+        self.main_layout = QGraphicsLinearLayout(Qt.Orientation.Horizontal)
+        self.main_layout.setContentsMargins(0, 0, 0, 0)
+        self.main_layout.setSpacing(3)
+        self.setLayout(self.main_layout)
+        self.setOrientation(orientation)
 
-	def setOrientation(self, orientation:Qt.Orientation):
-		match orientation:
-			case Qt.Orientation.Vertical:
-				self.main_layout.setOrientation(orientation)
-				self.main_layout.removeItem(self.text_widget)
-				self.text_widget.hide()
-				if isinstance(self, OutletWidget):
-					self.text_widget.moveBy(3,+10)
-				else:
-					self.text_widget.moveBy(3,-13)
-				
-				self._orientation = orientation
+        # update edge on scenepos or geometry change
 
-			case Qt.Orientation.Horizontal:
-				self.main_layout.setOrientation(orientation)
-				if isinstance(self, OutletWidget):
-					self.main_layout.insertItem(0, self.text_widget)
-				else:
-					self.main_layout.addItem(self.text_widget)
-				self.text_widget.show()
-				self._orientation = orientation
-			case _:
-				...
+        self.geometryChanged.connect(self.updateEdges)
+        self.setFlag(
+            QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges
+        )
 
-		self.updateGeometry()
-		self.adjustSize()
+    def setOrientation(self, orientation: Qt.Orientation):
+        match orientation:
+            case Qt.Orientation.Vertical:
+                self.main_layout.setOrientation(orientation)
+                self.main_layout.removeItem(self.text_widget)
+                self.text_widget.hide()
+                if isinstance(self, OutletWidget):
+                    self.text_widget.moveBy(3, +10)
+                else:
+                    self.text_widget.moveBy(3, -13)
 
-	def setHighlight(self, value):
-		if value:
-			accent_color = self.palette().color(QPalette.ColorRole.Accent)
-			self.circle_item.circle_item.setPen(QPen(accent_color, 2))
-		else:
-			text_color = self.palette().color(QPalette.ColorRole.Text)
-			self.circle_item.circle_item.setPen(QPen(text_color, 2))
+                self._orientation = orientation
 
-	def updateEdges(self):
-		for edge_item in list(self._edges):
-			edge_item.updatePosition()
+            case Qt.Orientation.Horizontal:
+                self.main_layout.setOrientation(orientation)
+                if isinstance(self, OutletWidget):
+                    self.main_layout.insertItem(0, self.text_widget)
+                else:
+                    self.main_layout.addItem(self.text_widget)
+                self.text_widget.show()
+                self._orientation = orientation
+            case _:
+                ...
 
-	def itemChange(self, change, value):
-		match change:
-			case QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
-				self.updateEdges()
+        self.updateGeometry()
+        self.adjustSize()
 
-		return super().itemChange(change, value)
+    def setHighlight(self, value):
+        if value:
+            accent_color = self.palette().color(QPalette.ColorRole.Accent)
+            self.circle_item.circle_item.setPen(QPen(accent_color, 2))
+        else:
+            text_color = self.palette().color(QPalette.ColorRole.Text)
+            self.circle_item.circle_item.setPen(QPen(text_color, 2))
 
-	def shape(self):
-		shape = QPainterPath()
-		circle_rect = self.circle_item.rect()
-		circle_rect.adjust(-5,-5,5,5)
-		circle_rect.translate(self.circle_item.pos())
-		shape.addRect( circle_rect )
-		return shape
+    def updateEdges(self):
+        for edge_item in list(self._edges):
+            edge_item.updatePosition()
 
-	def boundingRect(self) -> QRectF:
-		return self.shape().boundingRect()
+    def itemChange(self, change, value):
+        match change:
+            case QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
+                self.updateEdges()
 
-	def orientation(self):
-		return self._orientation
+        return super().itemChange(change, value)
 
-	def hoverEnterEvent(self, event: QGraphicsSceneHoverEvent) -> None:
-		self.setHighlight(True)
-		if self.orientation() == Qt.Orientation.Vertical:
-			self.text_widget.show()
-		return super().hoverEnterEvent(event)
+    def shape(self):
+        shape = QPainterPath()
+        circle_rect = self.circle_item.rect()
+        circle_rect.adjust(-5, -5, 5, 5)
+        circle_rect.translate(self.circle_item.pos())
+        shape.addRect(circle_rect)
+        return shape
 
-	def hoverLeaveEvent(self, event: QGraphicsSceneHoverEvent) -> None:
-		self.setHighlight(False)
-		if self.orientation() == Qt.Orientation.Vertical:
-			self.text_widget.hide()
-		return super().hoverLeaveEvent(event)
+    def boundingRect(self) -> QRectF:
+        return self.shape().boundingRect()
 
+    def orientation(self):
+        return self._orientation
 
+    def hoverEnterEvent(self, event: QGraphicsSceneHoverEvent) -> None:
+        self.setHighlight(True)
+        if self.orientation() == Qt.Orientation.Vertical:
+            self.text_widget.show()
+        return super().hoverEnterEvent(event)
 
-	# def paint(self, painter, option, widget):
-	# 	painter.setPen('green')
-	# 	painter.drawRect(self.boundingRect())
-	# 	painter.setPen('cyan')
-	# 	painter.drawPath(self.shape())
+    def hoverLeaveEvent(self, event: QGraphicsSceneHoverEvent) -> None:
+        self.setHighlight(False)
+        if self.orientation() == Qt.Orientation.Vertical:
+            self.text_widget.hide()
+        return super().hoverLeaveEvent(event)
+
+    # def paint(self, painter, option, widget):
+    # 	painter.setPen('green')
+    # 	painter.drawRect(self.boundingRect())
+    # 	painter.setPen('cyan')
+    # 	painter.drawPath(self.shape())
 
 
 class OutletWidget(PinWidget):
-	def __init__(self, text):
-		super().__init__(text)
-		self.main_layout.addItem(self.text_widget)
-		self.main_layout.addItem(self.circle_item)
-		self.main_layout.setAlignment(self.circle_item, Qt.AlignmentFlag.AlignCenter)
+    def __init__(self, text):
+        super().__init__(text)
+        self.main_layout.addItem(self.text_widget)
+        self.main_layout.addItem(self.circle_item)
+        self.main_layout.setAlignment(
+            self.circle_item, Qt.AlignmentFlag.AlignCenter
+        )
 
-	def destroy(self):
-		for edge in reversed(self._edges):
-			edge.destroy()
-		self._edges = []
+    def destroy(self):
+        for edge in reversed(self._edges):
+            edge.destroy()
+        self._edges = []
 
-		if self._parent_node:
-			self._parent_node.removeOutlet(self)
-		self.scene().removeItem(self)
+        if self._parent_node:
+            self._parent_node.removeOutlet(self)
+        self.scene().removeItem(self)
 
 
 class InletWidget(PinWidget):
-	def __init__(self, text):
-		super().__init__(text)
-		self.main_layout.addItem(self.circle_item)
-		self.main_layout.addItem(self.text_widget)
-		self.main_layout.setAlignment(self.circle_item, Qt.AlignmentFlag.AlignCenter)
+    def __init__(self, text):
+        super().__init__(text)
+        self.main_layout.addItem(self.circle_item)
+        self.main_layout.addItem(self.text_widget)
+        self.main_layout.setAlignment(
+            self.circle_item, Qt.AlignmentFlag.AlignCenter
+        )
 
-	def destroy(self):
-		for edge in reversed(self._edges):
-			edge.destroy()
-		self._edges = []
+    def destroy(self):
+        for edge in reversed(self._edges):
+            edge.destroy()
+        self._edges = []
 
-		if self._parent_node:
-			self._parent_node.removeInlet(self)
-		self._parent_node = None
-		self.scene().removeItem(self)
+        if self._parent_node:
+            self._parent_node.removeInlet(self)
+        self._parent_node = None
+        self.scene().removeItem(self)
 
 
 class NodeWidget(QGraphicsWidget):
-	"""A widget that holds multiple TextWidgets arranged in a vertical layout."""
+    """A widget that holds multiple TextWidgets arranged in a vertical layout."""
 
-	def __init__(self, title="Node", orientation=Qt.Orientation.Horizontal, parent=None):
-		super().__init__(parent)
+    def __init__(
+        self, title="Node", orientation=Qt.Orientation.Horizontal, parent=None
+    ):
+        super().__init__(parent)
 
-		# Enable selection and movement
-		self.setFlag(QGraphicsWidget.GraphicsItemFlag.ItemIsSelectable, True)
-		self.setFlag(QGraphicsWidget.GraphicsItemFlag.ItemIsMovable, True)
-		self.setFlag(QGraphicsWidget.GraphicsItemFlag.ItemIsFocusable, True)
+        # Enable selection and movement
+        self.setFlag(QGraphicsWidget.GraphicsItemFlag.ItemIsSelectable, True)
+        self.setFlag(QGraphicsWidget.GraphicsItemFlag.ItemIsMovable, True)
+        self.setFlag(QGraphicsWidget.GraphicsItemFlag.ItemIsFocusable, True)
 
-		self._orientation = Qt.Orientation.Horizontal
+        self._orientation = Qt.Orientation.Horizontal
 
-		# Create a layout
-		self.main_layout = QGraphicsLinearLayout(Qt.Orientation.Vertical)
-		self.main_layout.setContentsMargins(8,3,8,3)
-		self.main_layout.setSpacing(0)
+        # Create a layout
+        self.main_layout = QGraphicsLinearLayout(Qt.Orientation.Vertical)
+        self.main_layout.setContentsMargins(8, 3, 8, 3)
+        self.main_layout.setSpacing(0)
 
-		# create heading layout
-		self.header = TextWidget(title)
-		self.main_layout.addItem(self.header)
+        # create heading layout
+        self.header = TextWidget(title)
+        self.main_layout.addItem(self.header)
 
-		# Create inlets layout
-		self.inlets_layout = QGraphicsLinearLayout(Qt.Orientation.Vertical)
-		self.main_layout.addItem(self.inlets_layout)
+        # Create inlets layout
+        self.inlets_layout = QGraphicsLinearLayout(Qt.Orientation.Vertical)
+        self.main_layout.addItem(self.inlets_layout)
 
-		# create outlets layout
-		self.outlets_layout = QGraphicsLinearLayout(Qt.Orientation.Vertical)
-		self.main_layout.addItem(self.outlets_layout)
-		self.main_layout.setAlignment(self.outlets_layout, Qt.AlignmentFlag.AlignRight)
+        # create outlets layout
+        self.outlets_layout = QGraphicsLinearLayout(Qt.Orientation.Vertical)
+        self.main_layout.addItem(self.outlets_layout)
+        self.main_layout.setAlignment(
+            self.outlets_layout, Qt.AlignmentFlag.AlignRight
+        )
 
-		# Set the layout for the widget
-		self.setLayout(self.main_layout)
-		self.setOrientation(orientation)
+        # Set the layout for the widget
+        self.setLayout(self.main_layout)
+        self.setOrientation(orientation)
 
-		# Define the bounding geometry
-		# self.setGeometry(QRectF(-75, -59, 150, 100))
-		self._inlets = []
-		self._outlets = []
+        # Define the bounding geometry
+        # self.setGeometry(QRectF(-75, -59, 150, 100))
+        self._inlets = []
+        self._outlets = []
 
-	def orientation(self):
-		return self._orientation
+    def orientation(self):
+        return self._orientation
 
-	def setOrientation(self, orientation:Qt.Orientation):
-		match orientation:
-			case Qt.Orientation.Vertical:
+    def setOrientation(self, orientation: Qt.Orientation):
+        match orientation:
+            case Qt.Orientation.Vertical:
+                # Set orientation for inlets and outlets
+                self.inlets_layout.setOrientation(orientation)
+                self.outlets_layout.setOrientation(orientation)
+                # self.inlets_layout.setMaximumHeight(1)
+                # self.outlets_layout.setMaximumHeight(1)
 
-				# Set orientation for inlets and outlets
-				self.inlets_layout.setOrientation(orientation)
-				self.outlets_layout.setOrientation(orientation)
-				# self.inlets_layout.setMaximumHeight(1)
-				# self.outlets_layout.setMaximumHeight(1)
+                # Update orientation for child items
 
-				# Update orientation for child items
+                for i in range(self.inlets_layout.count()):
+                    item = cast(InletWidget, self.inlets_layout.itemAt(i))
+                    item.setOrientation(orientation)
 
-				for i in range(self.inlets_layout.count()):
-					item = cast(InletWidget, self.inlets_layout.itemAt(i))
-					item.setOrientation(orientation)
+                for i in range(self.outlets_layout.count()):
+                    item = cast(OutletWidget, self.outlets_layout.itemAt(i))
+                    item.setOrientation(orientation)
 
-				for i in range(self.outlets_layout.count()):
-					item = cast(OutletWidget, self.outlets_layout.itemAt(i))
-					item.setOrientation(orientation)
+                    # Clear and reorder main_layout: inlets, header, outlets
+                while self.main_layout.count() > 0:
+                    self.main_layout.removeAt(0)
 
-				 # Clear and reorder main_layout: inlets, header, outlets
-				while self.main_layout.count() > 0:
-					self.main_layout.removeAt(0)
+                self.main_layout.addItem(self.inlets_layout)
+                self.main_layout.addItem(self.header)
+                self.main_layout.addItem(self.outlets_layout)
 
-				self.main_layout.addItem(self.inlets_layout)
-				self.main_layout.addItem(self.header)
-				self.main_layout.addItem(self.outlets_layout)
+                # Align items
+                self.main_layout.setAlignment(
+                    self.inlets_layout, Qt.AlignmentFlag.AlignCenter
+                )
+                self.main_layout.setAlignment(
+                    self.outlets_layout, Qt.AlignmentFlag.AlignCenter
+                )
 
-				# Align items
-				self.main_layout.setAlignment(self.inlets_layout, Qt.AlignmentFlag.AlignCenter)
-				self.main_layout.setAlignment(self.outlets_layout, Qt.AlignmentFlag.AlignCenter)
+                self._orientation = orientation
 
-				self._orientation = orientation
-			
-			case Qt.Orientation.Horizontal:
-				# Update orientation for inlets and outlets
-				self.inlets_layout.setOrientation(orientation)
-				self.outlets_layout.setOrientation(orientation)
+            case Qt.Orientation.Horizontal:
+                # Update orientation for inlets and outlets
+                self.inlets_layout.setOrientation(orientation)
+                self.outlets_layout.setOrientation(orientation)
 
-				
-				
+                for i in range(self.inlets_layout.count()):
+                    item = cast(InletWidget, self.inlets_layout.itemAt(i))
+                    item.setOrientation(orientation)
 
-				for i in range(self.inlets_layout.count()):
-					item = cast(InletWidget, self.inlets_layout.itemAt(i))
-					item.setOrientation(orientation)
+                for i in range(self.outlets_layout.count()):
+                    item = cast(OutletWidget, self.outlets_layout.itemAt(i))
+                    item.setOrientation(orientation)
 
-				for i in range(self.outlets_layout.count()):
-					item = cast(OutletWidget, self.outlets_layout.itemAt(i))
-					item.setOrientation(orientation)
+                # Clear and reorder main_layout: header, inlets, outlets
+                while self.main_layout.count() > 0:
+                    self.main_layout.removeAt(0)
 
-				# Clear and reorder main_layout: header, inlets, outlets
-				while self.main_layout.count() > 0:
-					self.main_layout.removeAt(0)
+                self.main_layout.addItem(self.header)
+                self.main_layout.addItem(self.inlets_layout)
+                self.main_layout.addItem(self.outlets_layout)
 
-				self.main_layout.addItem(self.header)
-				self.main_layout.addItem(self.inlets_layout)
-				self.main_layout.addItem(self.outlets_layout)
+                # Align items
+                self.main_layout.setAlignment(
+                    self.inlets_layout, Qt.AlignmentFlag.AlignLeft
+                )
+                self.main_layout.setAlignment(
+                    self.outlets_layout, Qt.AlignmentFlag.AlignRight
+                )
 
-				# Align items
-				self.main_layout.setAlignment(self.inlets_layout, Qt.AlignmentFlag.AlignLeft)
-				self.main_layout.setAlignment(self.outlets_layout, Qt.AlignmentFlag.AlignRight)
+                self._orientation = orientation
+            case _:
+                ...
 
-				self._orientation = orientation
-			case _:
-				...
+        self.adjustSize()
 
-		self.adjustSize()
+    def addInlet(self, inlet: InletWidget):
+        self.inlets_layout.addItem(inlet)
+        self.inlets_layout.setAlignment(inlet, Qt.AlignmentFlag.AlignLeft)
+        inlet._parent_node = self
+        inlet.setParentItem(self)
+        self._inlets.append(inlet)
 
-	def addInlet(self, inlet:InletWidget):
-		self.inlets_layout.addItem(inlet)
-		self.inlets_layout.setAlignment(inlet, Qt.AlignmentFlag.AlignLeft)
-		inlet._parent_node = self
-		inlet.setParentItem(self)
-		self._inlets.append(inlet)
+    def removeInlet(self, inlet: InletWidget):
+        self.inlets_layout.removeItem(inlet)
+        inlet._parent_node = None
+        self._inlets.remove(inlet)
 
-	def removeInlet(self, inlet:InletWidget):
-		self.inlets_layout.removeItem(inlet)
-		inlet._parent_node = None
-		self._inlets.remove(inlet)
+    def addOutlet(self, outlet: OutletWidget):
+        self.outlets_layout.addItem(outlet)
+        self.outlets_layout.setAlignment(outlet, Qt.AlignmentFlag.AlignRight)
+        outlet._parent_node = self
+        outlet.setParentItem(self)
+        self._outlets.append(outlet)
 
-	def addOutlet(self, outlet:OutletWidget):
-		self.outlets_layout.addItem(outlet)
-		self.outlets_layout.setAlignment(outlet, Qt.AlignmentFlag.AlignRight)
-		outlet._parent_node = self
-		outlet.setParentItem(self)
-		self._outlets.append(outlet)
+    def removeOutlet(self, outlet: OutletWidget):
+        self.outlets_layout.removeItem(outlet)
+        outlet._parent_node = None
+        self._outlets.remove(outlet)
 
-	def removeOutlet(self, outlet:OutletWidget):
-		self.outlets_layout.removeItem(outlet)
-		outlet._parent_node = None
-		self._outlets.remove(outlet)
+    def paint(
+        self, painter: QPainter, option: QStyleOptionGraphicsItem, widget=None
+    ):
+        # Draw the node rectangle
+        palette: QPalette = option.palette  # type: ignore
+        state: QStyle.StateFlag = option.state  # type: ignore
 
-	def paint(self, painter:QPainter, option:QStyleOptionGraphicsItem, widget=None):
-		# Draw the node rectangle
-		palette:QPalette = option.palette # type: ignore
-		state:QStyle.StateFlag = option.state # type: ignore
+        painter.setBrush(palette.window())
+        # painter.setBrush(Qt.NoBrush)
 
-		painter.setBrush(palette.window())
-		# painter.setBrush(Qt.NoBrush)
+        pen = QPen(palette.text().color(), 1)
+        pen.setCosmetic(True)
+        pen.setWidthF(1)
+        if state & QStyle.StateFlag.State_Selected:
+            pen.setColor(palette.accent().color())
+        painter.setPen(pen)
 
-		pen = QPen(palette.text().color(), 1)
-		pen.setCosmetic(True)
-		pen.setWidthF(1)
-		if state & QStyle.StateFlag.State_Selected:
-			pen.setColor(palette.accent().color())
-		painter.setPen(pen)
+        # painter.setPen(palette.window().color())
+        painter.drawRoundedRect(QRectF(QPointF(), self.size()), 3, 3)
 
-		# painter.setPen(palette.window().color())
-		painter.drawRoundedRect(QRectF(QPointF(), self.size()), 3, 3)
+    def destroy(self):
+        while self._inlets:
+            self._inlets[0].destroy()  # Always remove first
 
-	def destroy(self):
-		while self._inlets:
-			self._inlets[0].destroy() # Always remove first
+        while self._outlets:
+            self._outlets[0].destroy()  # Always remove first
 
-		while self._outlets:
-			self._outlets[0].destroy() # Always remove first
-		
-		self.scene().removeItem(self)
+        self.scene().removeItem(self)
 
 
 class EdgeWidget(QGraphicsLineItem):
-	"""Graphics item representing an edge (connection)."""
-	GrabThreshold = 15
-	def __init__(self, source_outlet:OutletWidget|None, target_inlet:InletWidget|None):
-		super().__init__(parent=None)
-		assert source_outlet is None or isinstance(source_outlet, OutletWidget), f"got: {source_outlet}"
-		assert target_inlet is None or isinstance(target_inlet, InletWidget), f"got: {target_inlet}"
-		self._source_outlet = source_outlet
-		self._target_inlet = target_inlet
+    """Graphics item representing an edge (connection)."""
 
-		if source_outlet:
-			source_outlet._edges.append(self)
-		if target_inlet:
-			target_inlet._edges.append(self)
+    GrabThreshold = 15
 
-		self.setPen(QPen(Qt.GlobalColor.black, 2))
-		self.updatePosition()
+    def __init__(
+        self,
+        source_outlet: OutletWidget | None,
+        target_inlet: InletWidget | None,
+    ):
+        super().__init__(parent=None)
+        assert source_outlet is None or isinstance(
+            source_outlet, OutletWidget
+        ), f"got: {source_outlet}"
+        assert target_inlet is None or isinstance(
+            target_inlet, InletWidget
+        ), f"got: {target_inlet}"
+        self._source_outlet = source_outlet
+        self._target_inlet = target_inlet
 
-		# Enable selecting
-		self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
-		self.setAcceptHoverEvents(True)
+        if source_outlet:
+            source_outlet._edges.append(self)
+        if target_inlet:
+            target_inlet._edges.append(self)
 
-		self.setZValue(-1)
+        self.setPen(QPen(Qt.GlobalColor.black, 2))
+        self.updatePosition()
 
-		#
-		self.is_moving_endpoint = False\
+        # Enable selecting
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
+        self.setAcceptHoverEvents(True)
 
-		self.GrabThreshold = 10
-		self._shape_pen = QPen(Qt.GlobalColor.black, self.GrabThreshold)
+        self.setZValue(-1)
 
-	def sourceOutlet(self)->OutletWidget|None:
-		return self._source_outlet
+        #
+        self.is_moving_endpoint = False
+        self.GrabThreshold = 10
+        self._shape_pen = QPen(Qt.GlobalColor.black, self.GrabThreshold)
 
-	def setSourceOutlet(self, pin: OutletWidget|None):
-		assert pin is None or isinstance(pin, OutletWidget), f"got: {pin}"
+    def sourceOutlet(self) -> OutletWidget | None:
+        return self._source_outlet
 
-		# add or remove edge to pin edges for position update
-		if pin:
-			pin._edges.append(self)
-		elif self._source_outlet:
-			self._source_outlet._edges.remove(self)
+    def setSourceOutlet(self, pin: OutletWidget | None):
+        assert pin is None or isinstance(pin, OutletWidget), f"got: {pin}"
 
-		self._source_outlet = pin
-		self.updatePosition()
+        # add or remove edge to pin edges for position update
+        if pin:
+            pin._edges.append(self)
+        elif self._source_outlet:
+            self._source_outlet._edges.remove(self)
 
-	def targetInlet(self):
-		return self._target_inlet
+        self._source_outlet = pin
+        self.updatePosition()
 
-	def setTargetInlet(self, pin: InletWidget|None):
-		assert pin is None or isinstance(pin, InletWidget), f"got: {pin}"
+    def targetInlet(self):
+        return self._target_inlet
 
-		# add or remove edge to pin edges for position update
-		if pin:
-			pin._edges.append(self)
-		elif self._target_inlet:
-			self._target_inlet._edges.remove(self)
-		self._target_inlet = pin
-		self.updatePosition()
+    def setTargetInlet(self, pin: InletWidget | None):
+        assert pin is None or isinstance(pin, InletWidget), f"got: {pin}"
 
+        # add or remove edge to pin edges for position update
+        if pin:
+            pin._edges.append(self)
+        elif self._target_inlet:
+            self._target_inlet._edges.remove(self)
+        self._target_inlet = pin
+        self.updatePosition()
 
-	def shape(self) -> QPainterPath:
-		"""Override shape to provide a wider clickable area."""
-		
-		self._shape_pen.setCosmetic(True)
-		path = QPainterPath()
-		path.moveTo(self.line().p1())
-		path.lineTo(self.line().p2())
-		stroker = QPainterPathStroker()
-		stroker.setWidth(self.GrabThreshold)
-		stroker.setCapStyle(Qt.PenCapStyle.RoundCap)
-		stroker.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
-		return stroker.createStroke(path)
+    def shape(self) -> QPainterPath:
+        """Override shape to provide a wider clickable area."""
 
-	def boundingRect(self) -> QRectF:
-		"""Override boundingRect to account for the wider collision shape."""
-		self._shape_pen = QPen(Qt.GlobalColor.black, self.GrabThreshold)
-		extra = (self._shape_pen.width() + self.pen().width()) / 2.0
-		p1 = self.line().p1()
-		p2 = self.line().p2()
-		return QRectF(p1, QSizeF(p2.x() - p1.x(), p2.y() - p1.y())).normalized().adjusted(-extra, -extra, extra, extra)
+        self._shape_pen.setCosmetic(True)
+        path = QPainterPath()
+        path.moveTo(self.line().p1())
+        path.lineTo(self.line().p2())
+        stroker = QPainterPathStroker()
+        stroker.setWidth(self.GrabThreshold)
+        stroker.setCapStyle(Qt.PenCapStyle.RoundCap)
+        stroker.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+        return stroker.createStroke(path)
 
-	def updatePosition(self):
-		# assert self._source_outlet and self._target_inlet
-		# if not (
-		# 	self.scene 
-		# 	and self._source_outlet.scene() 
-		# 	and self._target_inlet.scene()
-		# ):
-		# 	return # dont update position if not in scene or the pins are not part of the same scene
+    def boundingRect(self) -> QRectF:
+        """Override boundingRect to account for the wider collision shape."""
+        self._shape_pen = QPen(Qt.GlobalColor.black, self.GrabThreshold)
+        extra = (self._shape_pen.width() + self.pen().width()) / 2.0
+        p1 = self.line().p1()
+        p2 = self.line().p2()
+        return (
+            QRectF(p1, QSizeF(p2.x() - p1.x(), p2.y() - p1.y()))
+            .normalized()
+            .adjusted(-extra, -extra, extra, extra)
+        )
 
-		# assert self.scene() == self._source_outlet.scene() == self._target_inlet.scene()
+    def updatePosition(self):
+        # assert self._source_outlet and self._target_inlet
+        # if not (
+        # 	self.scene
+        # 	and self._source_outlet.scene()
+        # 	and self._target_inlet.scene()
+        # ):
+        # 	return # dont update position if not in scene or the pins are not part of the same scene
 
+        # assert self.scene() == self._source_outlet.scene() == self._target_inlet.scene()
 
-		line = self.line()
-		sourcePin = self._source_outlet
-		targetPin = self._target_inlet
+        line = self.line()
+        sourcePin = self._source_outlet
+        targetPin = self._target_inlet
 
-		def getConnectionPoint(widget):
-			# try:
-			# 	return widget.getConnectionPoint()
-			# except AttributeError:
-			return widget.scenePos() + widget.boundingRect().center()
+        def getConnectionPoint(widget):
+            # try:
+            # 	return widget.getConnectionPoint()
+            # except AttributeError:
+            return widget.scenePos() + widget.boundingRect().center()
 
-		if sourcePin and targetPin:
-			line.setP1( getConnectionPoint(sourcePin) )
-			line.setP2( getConnectionPoint(targetPin) )
-			self.setLine(line)
-		elif sourcePin:
-			line.setP1( getConnectionPoint(sourcePin) )
-			line.setP2( getConnectionPoint(sourcePin) )
-			self.setLine(line)
-		elif targetPin:
-			line.setP1( getConnectionPoint(targetPin) )
-			line.setP2( getConnectionPoint(targetPin) )
-			self.setLine(line)
-		else:
-			return # nothing to update
+        if sourcePin and targetPin:
+            line.setP1(getConnectionPoint(sourcePin))
+            line.setP2(getConnectionPoint(targetPin))
+            self.setLine(line)
+        elif sourcePin:
+            line.setP1(getConnectionPoint(sourcePin))
+            line.setP2(getConnectionPoint(sourcePin))
+            self.setLine(line)
+        elif targetPin:
+            line.setP1(getConnectionPoint(targetPin))
+            line.setP2(getConnectionPoint(targetPin))
+            self.setLine(line)
+        else:
+            return  # nothing to update
 
-	def destroy(self):
-		# Safely remove from source pin
-		if self._source_outlet:
-			try:
-				self._source_outlet._edges.remove(self)
-			except ValueError:
-				pass  # Already removed
-			self._source_outlet = None
+    def destroy(self):
+        # Safely remove from source pin
+        if self._source_outlet:
+            try:
+                self._source_outlet._edges.remove(self)
+            except ValueError:
+                pass  # Already removed
+            self._source_outlet = None
 
-		# Safely remove from target pin
-		if self._target_inlet:
-			try:
-				self._target_inlet._edges.remove(self)
-			except ValueError:
-				pass  # Already removed
-			self._target_inlet = None
+        # Safely remove from target pin
+        if self._target_inlet:
+            try:
+                self._target_inlet._edges.remove(self)
+            except ValueError:
+                pass  # Already removed
+            self._target_inlet = None
 
-		# Safely remove from scene
-		if self.scene():
-			self.scene().removeItem(self)
+        # Safely remove from scene
+        if self.scene():
+            self.scene().removeItem(self)
 
-	def paint(self, painter:QPainter, option:QStyleOptionGraphicsItem, widget=None):
-		p1 = self.line().p1()
-		p2 = self.line().p2()
+    def paint(
+        self, painter: QPainter, option: QStyleOptionGraphicsItem, widget=None
+    ):
+        p1 = self.line().p1()
+        p2 = self.line().p2()
 
-		palette:QPalette = option.palette # type: ignore
-		state:QStyle.StateFlag = option.state # type: ignore
-		pen = QPen(palette.text().color(), 2)
-		pen.setCosmetic(True)
-		pen.setWidthF(1)
-		if state & (QStyle.StateFlag.State_Selected | QStyle.StateFlag.State_MouseOver):
-			pen.setColor(palette.accent().color())
-		painter.setPen(pen)
+        palette: QPalette = option.palette  # type: ignore
+        state: QStyle.StateFlag = option.state  # type: ignore
+        pen = QPen(palette.text().color(), 2)
+        pen.setCosmetic(True)
+        pen.setWidthF(1)
+        if state & (
+            QStyle.StateFlag.State_Selected | QStyle.StateFlag.State_MouseOver
+        ):
+            pen.setColor(palette.accent().color())
+        painter.setPen(pen)
 
-		# painter.setPen(options.palette.light().color())
-		painter.drawLine(self.line())
+        # painter.setPen(options.palette.light().color())
+        painter.drawLine(self.line())
 
 
 class DAGScene(QGraphicsScene):
-	def __init__(self, parent=None):
-		super().__init__(parent)
+    def __init__(self, parent=None):
+        super().__init__(parent)
 
-		# Create a scene to hold the node and edge graphics
-		self.setSceneRect(QRect(-9999//2,-9999//2, 9999, 9999))
+        # Create a scene to hold the node and edge graphics
+        self.setSceneRect(QRect(-9999 // 2, -9999 // 2, 9999, 9999))
 
-		self.interactive_edge:EdgeWidget|None = None
-		self.interactive_edge_fixed_pin:PinWidget|None = None
-		self.interactive_edge_moving_pin:PinWidget|None = None # keep track of original connection
-		self.is_dragging_edge = False # indicate that an edge is being moved
+        self.interactive_edge: EdgeWidget | None = None
+        self.interactive_edge_fixed_pin: PinWidget | None = None
+        self.interactive_edge_moving_pin: PinWidget | None = (
+            None  # keep track of original connection
+        )
+        self.is_dragging_edge = False  # indicate that an edge is being moved
 
-	def addNode(self, node: NodeWidget):
-		self.addItem(node)
+    def addNode(self, node: NodeWidget):
+        self.addItem(node)
 
-	def removeNodes(self, node:NodeWidget):
-		node.destroy()
+    def removeNodes(self, node: NodeWidget):
+        node.destroy()
 
-	def addEdge(self, edge: EdgeWidget):
-		self.addItem(edge)
+    def addEdge(self, edge: EdgeWidget):
+        self.addItem(edge)
 
-	def pinAt(self, pos:QPoint|QPointF)->PinWidget|None:
-		for item in self.items(pos, deviceTransform=QTransform()):
-			if isinstance(item, PinWidget):
-				return item
-		return None
+    def pinAt(self, pos: QPoint | QPointF) -> PinWidget | None:
+        for item in self.items(pos, deviceTransform=QTransform()):
+            if isinstance(item, PinWidget):
+                return item
+        return None
 
-	def nodeAt(self, pos:QPoint|QPointF)->NodeWidget|None:
-		for item in self.items(pos, deviceTransform=QTransform()):
-			if isinstance(item, NodeWidget):
-				return item
-		return None
+    def nodeAt(self, pos: QPoint | QPointF) -> NodeWidget | None:
+        for item in self.items(pos, deviceTransform=QTransform()):
+            if isinstance(item, NodeWidget):
+                return item
+        return None
 
-	def edgeAt(self, pos:QPoint|QPointF)->EdgeWidget|None:
-		for item in self.items(pos, deviceTransform=QTransform()):
-			if isinstance(item, EdgeWidget):
-				return item
-		return None
+    def edgeAt(self, pos: QPoint | QPointF) -> EdgeWidget | None:
+        for item in self.items(pos, deviceTransform=QTransform()):
+            if isinstance(item, EdgeWidget):
+                return item
+        return None
 
-	def mousePressEvent(self, event)->None:
-		self.mousePressScenePos = event.scenePos()
+    def mousePressEvent(self, event) -> None:
+        self.mousePressScenePos = event.scenePos()
 
-		if pin:=self.pinAt(event.scenePos()):
-			self.initiateConnection(pin)
-			event.accept()
-			return
+        if pin := self.pinAt(event.scenePos()):
+            self.initiateConnection(pin)
+            event.accept()
+            return
 
-		if edge:=self.edgeAt(event.scenePos()):
-			delta1 = edge.line().p1() - event.scenePos()
-			d1 = delta1.manhattanLength()
-			delta2 = edge.line().p2() - event.scenePos()
-			d2 = delta2.manhattanLength()
+        if edge := self.edgeAt(event.scenePos()):
+            delta1 = edge.line().p1() - event.scenePos()
+            d1 = delta1.manhattanLength()
+            delta2 = edge.line().p2() - event.scenePos()
+            d2 = delta2.manhattanLength()
 
-			if d1<d2:
-				self.interactive_edge_fixed_pin = edge._target_inlet
-				self.interactive_edge_moving_pin = edge._source_outlet
-			else:
-				self.interactive_edge_fixed_pin = edge._source_outlet
-				self.interactive_edge_moving_pin = edge._target_inlet
+            if d1 < d2:
+                self.interactive_edge_fixed_pin = edge._target_inlet
+                self.interactive_edge_moving_pin = edge._source_outlet
+            else:
+                self.interactive_edge_fixed_pin = edge._source_outlet
+                self.interactive_edge_moving_pin = edge._target_inlet
 
-			self.interactive_edge = edge
-			self.is_dragging_edge = False
-			event.accept()
-			return
-		
-		return super().mousePressEvent(event)
+            self.interactive_edge = edge
+            self.is_dragging_edge = False
+            event.accept()
+            return
 
-	def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent) -> None:
-		GrabThreshold = 15
-		
-		if self.interactive_edge and not self.is_dragging_edge:
-			mouseDelta = event.scenePos() - self.mousePressScenePos
-			IsThresholdSurpassed = mouseDelta.manhattanLength()>GrabThreshold
-			if IsThresholdSurpassed:
-				self.is_dragging_edge = True
+        return super().mousePressEvent(event)
 
-		if self.is_dragging_edge and self.interactive_edge:
-			self.moveConnection(event.scenePos())
-			return
-		
-		return super().mouseMoveEvent(event)
+    def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+        GrabThreshold = 15
 
-	def mouseReleaseEvent(self, event):
-		"""
-		Override mouseReleaseEvent to filter events when the mouse is released in the scene.
-		"""
-		if self.is_dragging_edge:
-			pin = self.pinAt(event.scenePos())
-			self.finishConnection(pin)
+        if self.interactive_edge and not self.is_dragging_edge:
+            mouseDelta = event.scenePos() - self.mousePressScenePos
+            IsThresholdSurpassed = mouseDelta.manhattanLength() > GrabThreshold
+            if IsThresholdSurpassed:
+                self.is_dragging_edge = True
 
-		self.is_dragging_edge = False
-		self.interactive_edge_fixed_pin = None
-		self.interactive_edge = None
-		self.interactive_edge_moving_pin = None
+        if self.is_dragging_edge and self.interactive_edge:
+            self.moveConnection(event.scenePos())
+            return
 
-		return super().mouseReleaseEvent(event)
-		
-	def initiateConnection(self, pin):
-		if isinstance(pin, OutletWidget):
-			self.interactive_edge = EdgeWidget(source_outlet=pin, target_inlet=None)
-			self.interactive_edge_fixed_pin = pin
-		elif isinstance(pin, InletWidget):
-			self.interactive_edge = EdgeWidget(source_outlet=None, target_inlet=pin)
-			self.interactive_edge_fixed_pin = pin
-		assert self.interactive_edge
-		self.interactive_edge.updatePosition()
-		self.addItem(self.interactive_edge)
-		self.is_dragging_edge = True
+        return super().mouseMoveEvent(event)
 
-	def moveConnection(self, scenepos:QPointF):
-		assert isinstance(scenepos, QPointF), f"got: {scenepos}"
-		assert self.interactive_edge
+    def mouseReleaseEvent(self, event):
+        """
+        Override mouseReleaseEvent to filter events when the mouse is released in the scene.
+        """
+        if self.is_dragging_edge:
+            pin = self.pinAt(event.scenePos())
+            self.finishConnection(pin)
 
-		# move free endpoint
-		line = self.interactive_edge.line()
-		if isinstance(self.interactive_edge_fixed_pin, OutletWidget):
-			line.setP2(scenepos)
-		elif isinstance(self.interactive_edge_fixed_pin, InletWidget):
-			line.setP1(scenepos)
-		self.interactive_edge.setLine(line)
+        self.is_dragging_edge = False
+        self.interactive_edge_fixed_pin = None
+        self.interactive_edge = None
+        self.interactive_edge_moving_pin = None
 
-		# attach free endpoint to closeby pin
-		pinUnderMouse = self.pinAt(scenepos)
+        return super().mouseReleaseEvent(event)
 
-		if current_inlet:=self.interactive_edge.targetInlet():
-			current_inlet.setHighlight(False)
-		if current_outlet:=self.interactive_edge.sourceOutlet():
-			current_outlet.setHighlight(False)
+    def initiateConnection(self, pin):
+        if isinstance(pin, OutletWidget):
+            self.interactive_edge = EdgeWidget(
+                source_outlet=pin, target_inlet=None
+            )
+            self.interactive_edge_fixed_pin = pin
+        elif isinstance(pin, InletWidget):
+            self.interactive_edge = EdgeWidget(
+                source_outlet=None, target_inlet=pin
+            )
+            self.interactive_edge_fixed_pin = pin
+        assert self.interactive_edge
+        self.interactive_edge.updatePosition()
+        self.addItem(self.interactive_edge)
+        self.is_dragging_edge = True
 
-		if isinstance(self.interactive_edge_fixed_pin, OutletWidget) and isinstance(pinUnderMouse, InletWidget):
-			pinUnderMouse.setHighlight(True)
-			self.interactive_edge.setTargetInlet(pinUnderMouse)
-			self.interactive_edge.updatePosition()
-		elif isinstance(self.interactive_edge_fixed_pin, InletWidget) and isinstance(pinUnderMouse, OutletWidget):
-			pinUnderMouse.setHighlight(True)
-			self.interactive_edge.setSourceOutlet(pinUnderMouse)
-			self.interactive_edge.updatePosition()
+    def moveConnection(self, scenepos: QPointF):
+        assert isinstance(scenepos, QPointF), f"got: {scenepos}"
+        assert self.interactive_edge
 
-	def cancelConnection(self):
-		assert self.is_dragging_edge and self.interactive_edge and self.interactive_edge_fixed_pin
+        # move free endpoint
+        line = self.interactive_edge.line()
+        if isinstance(self.interactive_edge_fixed_pin, OutletWidget):
+            line.setP2(scenepos)
+        elif isinstance(self.interactive_edge_fixed_pin, InletWidget):
+            line.setP1(scenepos)
+        self.interactive_edge.setLine(line)
 
-		if self.interactive_edge_moving_pin:
-			# restore edge pin connections
-			if isinstance(self.interactive_edge_moving_pin, InletWidget):
-				self.interactive_edge.setTargetInlet(self.interactive_edge_moving_pin)
-			if isinstance(self.interactive_edge_moving_pin, OutletWidget):
-				self.interactive_edge.setSourceOutlet(self.interactive_edge_moving_pin)
-		else:
-			self.interactive_edge.destroy()
-			#remove cancelled edge creation
+        # attach free endpoint to closeby pin
+        pinUnderMouse = self.pinAt(scenepos)
 
-	def canConnect(self, start_pin: PinWidget, end_pin: PinWidget) -> bool:
-		# Check if start_pin is an OutletWidget and end_pin is an InletWidget, or vice versa
-		if isinstance(start_pin, OutletWidget) and isinstance(end_pin, InletWidget):
-			return True
-		elif isinstance(start_pin, InletWidget) and isinstance(end_pin, OutletWidget):
-			return True
+        if current_inlet := self.interactive_edge.targetInlet():
+            current_inlet.setHighlight(False)
+        if current_outlet := self.interactive_edge.sourceOutlet():
+            current_outlet.setHighlight(False)
 
-		# You can add additional checks here (e.g., same node, already connected, etc.)
-		
-		return False
+        if isinstance(
+            self.interactive_edge_fixed_pin, OutletWidget
+        ) and isinstance(pinUnderMouse, InletWidget):
+            pinUnderMouse.setHighlight(True)
+            self.interactive_edge.setTargetInlet(pinUnderMouse)
+            self.interactive_edge.updatePosition()
+        elif isinstance(
+            self.interactive_edge_fixed_pin, InletWidget
+        ) and isinstance(pinUnderMouse, OutletWidget):
+            pinUnderMouse.setHighlight(True)
+            self.interactive_edge.setSourceOutlet(pinUnderMouse)
+            self.interactive_edge.updatePosition()
 
-	def finishConnection(self, pin:PinWidget|None):
-		assert self.interactive_edge_fixed_pin
-		assert self.interactive_edge
+    def cancelConnection(self):
+        assert (
+            self.is_dragging_edge
+            and self.interactive_edge
+            and self.interactive_edge_fixed_pin
+        )
 
-		start_pin:PinWidget = self.interactive_edge_fixed_pin
-		end_pin = pin
+        if self.interactive_edge_moving_pin:
+            # restore edge pin connections
+            if isinstance(self.interactive_edge_moving_pin, InletWidget):
+                self.interactive_edge.setTargetInlet(
+                    self.interactive_edge_moving_pin
+                )
+            if isinstance(self.interactive_edge_moving_pin, OutletWidget):
+                self.interactive_edge.setSourceOutlet(
+                    self.interactive_edge_moving_pin
+                )
+        else:
+            self.interactive_edge.destroy()
+            # remove cancelled edge creation
 
-		if pin and self.canConnect(start_pin, pin):
-			"""establish connection"""
-			if isinstance(self.interactive_edge_fixed_pin, InletWidget):
-				outlet = cast(OutletWidget, pin)
-				self.interactive_edge.setSourceOutlet(outlet)
+    def canConnect(self, start_pin: PinWidget, end_pin: PinWidget) -> bool:
+        # Check if start_pin is an OutletWidget and end_pin is an InletWidget, or vice versa
+        if isinstance(start_pin, OutletWidget) and isinstance(
+            end_pin, InletWidget
+        ):
+            return True
+        elif isinstance(start_pin, InletWidget) and isinstance(
+            end_pin, OutletWidget
+        ):
+            return True
 
-			elif isinstance(self.interactive_edge_fixed_pin, OutletWidget):
-				inlet = cast(InletWidget, pin)
-				self.interactive_edge.setTargetInlet(inlet)
-		else:
-			"""remove interactive edge"""
-			self.interactive_edge.destroy()
+        # You can add additional checks here (e.g., same node, already connected, etc.)
 
-		self.interactive_edge = None
-		self.interactive_edge_fixed_pin = None
+        return False
+
+    def finishConnection(self, pin: PinWidget | None):
+        assert self.interactive_edge_fixed_pin
+        assert self.interactive_edge
+
+        start_pin: PinWidget = self.interactive_edge_fixed_pin
+        end_pin = pin
+
+        if pin and self.canConnect(start_pin, pin):
+            """establish connection"""
+            if isinstance(self.interactive_edge_fixed_pin, InletWidget):
+                outlet = cast(OutletWidget, pin)
+                self.interactive_edge.setSourceOutlet(outlet)
+
+            elif isinstance(self.interactive_edge_fixed_pin, OutletWidget):
+                inlet = cast(InletWidget, pin)
+                self.interactive_edge.setTargetInlet(inlet)
+        else:
+            """remove interactive edge"""
+            self.interactive_edge.destroy()
+
+        self.interactive_edge = None
+        self.interactive_edge_fixed_pin = None
+
+
+if __name__ == "__main__":
+
+    class GraphView(QGraphicsView):
+        def __init__(self):
+            super().__init__()
+            self.setWindowTitle("DAGScene example")
+            self.setRenderHint(QPainter.RenderHint.Antialiasing)
+            self.setInteractive(True)
+            self.setDragMode(
+                QGraphicsView.DragMode.RubberBandDrag
+            )  # optional, default mouse behaviour
+
+        def contextMenuEvent(self, event: QContextMenuEvent) -> None:
+            # Create the context menu
+            context_menu = QMenu(self)
+
+            # Add actions to the context menu
+            delete_selection_action = QAction("delete selection", self)
+            context_menu.addAction(delete_selection_action)
+            delete_selection_action.triggered.connect(self.deleteSelectedNodes)
+
+            create_node_action = QAction("create node", self)
+            context_menu.addAction(create_node_action)
+            clickpos = self.mapToScene(event.pos())
+            create_node_action.triggered.connect(
+                lambda: self.createNode(clickpos)
+            )
+
+            horizontal_orientation_action = QAction(
+                f"horizontal orientation", self
+            )
+            context_menu.addAction(horizontal_orientation_action)
+            horizontal_orientation_action.triggered.connect(
+                self.flipOrientation
+            )
+
+            flip_orientation_action = QAction(f"flip orientation", self)
+            context_menu.addAction(flip_orientation_action)
+            flip_orientation_action.triggered.connect(self.flipOrientation)
+
+            # Show the context menu at the position of the mouse event
+            context_menu.exec(event.globalPos())
+
+        def setOrientation(self):
+            graphscene = cast(DAGScene, self.scene())
+            for item in graphscene.items():
+                if isinstance(item, NodeWidget):
+                    node = cast(NodeWidget, item)
+                    if node.orientation() == Qt.Orientation.Vertical:
+                        node.setOrientation(Qt.Orientation.Horizontal)
+                    elif node.orientation() == Qt.Orientation.Horizontal:
+                        node.setOrientation(Qt.Orientation.Vertical)
+
+        def flipOrientation(self):
+            graphscene = cast(DAGScene, self.scene())
+            for item in graphscene.items():
+                if isinstance(item, NodeWidget):
+                    node = cast(NodeWidget, item)
+                    if node.orientation() == Qt.Orientation.Vertical:
+                        node.setOrientation(Qt.Orientation.Horizontal)
+                    elif node.orientation() == Qt.Orientation.Horizontal:
+                        node.setOrientation(Qt.Orientation.Vertical)
+
+        def createNode(self, scenepos=QPointF(0, 0), /):
+            graphscene = cast(DAGScene, self.scene())
+            node = NodeWidget("<new node>")
+            node.setPos(scenepos)
+            graphscene.addNode(node)
+            node.addInlet(InletWidget("in"))
+            node.addOutlet(OutletWidget("out"))
+
+        def deleteSelectedNodes(self):
+            for node in (
+                item
+                for item in self.scene().selectedItems()
+                if isinstance(item, NodeWidget)
+            ):
+                node.destroy()
 
 
 if __name__ == "__main__":
-	class GraphView(QGraphicsView):
-		def __init__(self):
-			super().__init__()
-			self.setWindowTitle("DAGScene example")
-			self.setRenderHint(QPainter.RenderHint.Antialiasing)
-			self.setInteractive(True)
-			self.setDragMode(QGraphicsView.DragMode.RubberBandDrag) # optional, default mouse behaviour
+    import sys
 
-		def contextMenuEvent(self, event: QContextMenuEvent) -> None:
-			# Create the context menu
-			context_menu = QMenu(self)
-			
-			# Add actions to the context menu
-			delete_selection_action = QAction("delete selection", self)
-			context_menu.addAction(delete_selection_action)
-			delete_selection_action.triggered.connect(self.deleteSelectedNodes)
-			
-			create_node_action = QAction("create node", self)
-			context_menu.addAction(create_node_action)
-			clickpos = self.mapToScene(event.pos())
-			create_node_action.triggered.connect(lambda: self.createNode(clickpos) )
+    app = QApplication(sys.argv)
 
-			horizontal_orientation_action = QAction(f"horizontal orientation", self)
-			context_menu.addAction(horizontal_orientation_action)
-			horizontal_orientation_action.triggered.connect(self.flipOrientation)
+    # setup main window
+    window = QWidget()
+    mainLayout = QVBoxLayout()
+    mainLayout.setContentsMargins(0, 0, 0, 0)
+    window.setLayout(mainLayout)
+    graphview = QGraphicsView()
+    mainLayout.addWidget(graphview)
 
-			flip_orientation_action = QAction(f"flip orientation", self)
-			context_menu.addAction(flip_orientation_action)
-			flip_orientation_action.triggered.connect(self.flipOrientation)
-			
-			# Show the context menu at the position of the mouse event
-			context_menu.exec(event.globalPos())
+    # create graph scene
+    graphscene = DAGScene()
+    graphscene.setSceneRect(QRectF(-400, -400, 800, 800))
+    graphview.setScene(graphscene)
 
-		def setOrientation(self):
-			graphscene = cast(DAGScene, self.scene())
-			for item in graphscene.items():
-				if isinstance(item, NodeWidget):
-					node = cast(NodeWidget, item)
-					if node.orientation() == Qt.Orientation.Vertical:
-						node.setOrientation(Qt.Orientation.Horizontal)
-					elif node.orientation() == Qt.Orientation.Horizontal:
-						node.setOrientation(Qt.Orientation.Vertical)
+    # Create nodes
+    read_text_node = NodeWidget("Read Text")
+    outlet = OutletWidget("text out")
+    read_text_node.addOutlet(outlet)
+    graphscene.addNode(read_text_node)
+    read_text_node.moveBy(-70, -70)
 
-		def flipOrientation(self):
-			graphscene = cast(DAGScene, self.scene())
-			for item in graphscene.items():
-				if isinstance(item, NodeWidget):
-					node = cast(NodeWidget, item)
-					if node.orientation() == Qt.Orientation.Vertical:
-						node.setOrientation(Qt.Orientation.Horizontal)
-					elif node.orientation() == Qt.Orientation.Horizontal:
-						node.setOrientation(Qt.Orientation.Vertical)
+    convert_node = NodeWidget("Markdown2Html")
+    inlet = InletWidget("Markdown in")
+    convert_node.addInlet(inlet)
+    convert_node.addOutlet(OutletWidget("HTML out"))
+    graphscene.addNode(convert_node)
+    convert_node.moveBy(0, 0)
 
-		def createNode(self, scenepos=QPointF(0,0),/):
-			graphscene = cast(DAGScene, self.scene())
-			node = NodeWidget("<new node>")
-			node.setPos(scenepos)
-			graphscene.addNode(node)
-			node.addInlet(InletWidget("in"))
-			node.addOutlet(OutletWidget("out"))
+    write_text_node = NodeWidget("Write Text")
+    write_text_node.addInlet(InletWidget("text in"))
+    graphscene.addNode(write_text_node)
+    write_text_node.moveBy(70, 100)
 
-		def deleteSelectedNodes(self):
-			for node in (item for item in self.scene().selectedItems() if isinstance(item, NodeWidget)):
-				node.destroy()
+    # create edge1
+    edge1 = EdgeWidget(outlet, inlet)
+    graphscene.addEdge(edge1)
 
-if __name__ == "__main__":
-	import sys
-	app = QApplication(sys.argv)
+    # set nodes orientation
+    for node in (
+        item for item in graphscene.items() if isinstance(item, NodeWidget)
+    ):
+        node.setOrientation(Qt.Orientation.Vertical)
 
-	# setup main window
-	window = QWidget()
-	mainLayout = QVBoxLayout()
-	mainLayout.setContentsMargins(0,0,0,0)
-	window.setLayout(mainLayout)
-	graphview = QGraphicsView()
-	mainLayout.addWidget(graphview)
-
-	# create graph scene
-	graphscene = DAGScene()
-	graphscene.setSceneRect(QRectF(-400, -400, 800, 800))
-	graphview.setScene(graphscene)
-
-	# Create nodes
-	read_text_node = NodeWidget("Read Text")
-	outlet = OutletWidget("text out")
-	read_text_node.addOutlet(outlet)
-	graphscene.addNode(read_text_node)
-	read_text_node.moveBy(-70, -70)
-
-	convert_node = NodeWidget("Markdown2Html")
-	inlet  =InletWidget("Markdown in")
-	convert_node.addInlet(inlet)
-	convert_node.addOutlet(OutletWidget("HTML out"))
-	graphscene.addNode(convert_node)
-	convert_node.moveBy(0, 0)
-
-	write_text_node = NodeWidget("Write Text")
-	write_text_node.addInlet(InletWidget("text in"))
-	graphscene.addNode(write_text_node)
-	write_text_node.moveBy(70, 100)
-
-	# create edge1
-	edge1 = EdgeWidget(outlet, inlet)
-	graphscene.addEdge(edge1)
-
-	# set nodes orientation
-	for node in (item for item in graphscene.items() if isinstance(item, NodeWidget)):
-		node.setOrientation(Qt.Orientation.Vertical)
-
-	# show window
-	window.show()
-	sys.exit(app.exec())
+    # show window
+    window.show()
+    sys.exit(app.exec())

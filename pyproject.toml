@@ -35,5 +35,6 @@ dependencies = [
     "networkx == 3.4.2",
     "colour-science",
     "matplotlib",
-    "scipy"
+    "scipy",
+    "colour-science"
 ]
