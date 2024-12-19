@@ -95,6 +95,9 @@ def parse_graph_to_ast(G: nx.MultiDiGraph):
 
 
 class PythonGraphModel(NXGraphModel):
+    def __init__(self, parent:QObject|None=None):
+        super().__init__(G=nx.MultiDiGraph(), parent=parent)
+
     @override
     def addEdge(self, u: Hashable, v: Hashable, k: str, **props):
         fn: Callable = self.getNodeProperty(v, "fn")
@@ -115,6 +118,9 @@ class PythonGraphModel(NXGraphModel):
             )
 
         return super().addEdge(u, v, k, **props)
+
+    def evaluate(self):
+        pass
 
 
 class PythonGraphWindow(QWidget):
@@ -334,6 +340,5 @@ class PythonGraphWindow(QWidget):
 
 
 window = PythonGraphWindow()
-
 window.show()
 app.exec()
