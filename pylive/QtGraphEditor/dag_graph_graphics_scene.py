@@ -4,10 +4,6 @@ from PySide6.QtWidgets import *
 
 from typing import *
 
-from pylive.QtGraphEditor.pan_and_zoom_graphicsview_optimized import (
-    PanAndZoomGraphicsView,
-)
-
 
 class TextWidget(QGraphicsWidget):
     """A simple widget that contains a QGraphicsTextItem."""
@@ -29,6 +25,12 @@ class TextWidget(QGraphicsWidget):
             QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges
         )
         self.set_line_height(1.1)
+
+    def toPlainText(self):
+        return self.text_item.toPlainText()
+
+    def setPlainText(self, text: str):
+        return self.text_item.setPlainText(text)
 
     def set_line_height(self, line_height):
         """Set the line height for the text."""
@@ -162,15 +164,17 @@ class PinWidget(QGraphicsWidget):
         return super().hoverLeaveEvent(event)
 
     # def paint(self, painter, option, widget):
-    # 	painter.setPen('green')
-    # 	painter.drawRect(self.boundingRect())
-    # 	painter.setPen('cyan')
-    # 	painter.drawPath(self.shape())
+    #   painter.setPen('green')
+    #   painter.drawRect(self.boundingRect())
+    #   painter.setPen('cyan')
+    #   painter.drawPath(self.shape())
 
 
 class OutletWidget(PinWidget):
-    def __init__(self, text):
-        super().__init__(text)
+    def __init__(
+        self, text: str, orientation: Qt.Orientation = Qt.Orientation.Horizontal
+    ):
+        super().__init__(text, orientation)
         self.main_layout.addItem(self.text_widget)
         self.main_layout.addItem(self.circle_item)
         self.main_layout.setAlignment(
@@ -188,8 +192,10 @@ class OutletWidget(PinWidget):
 
 
 class InletWidget(PinWidget):
-    def __init__(self, text):
-        super().__init__(text)
+    def __init__(
+        self, text: str, orientation: Qt.Orientation = Qt.Orientation.Horizontal
+    ):
+        super().__init__(text, orientation)
         self.main_layout.addItem(self.circle_item)
         self.main_layout.addItem(self.text_widget)
         self.main_layout.setAlignment(
@@ -211,7 +217,10 @@ class NodeWidget(QGraphicsWidget):
     """A widget that holds multiple TextWidgets arranged in a vertical layout."""
 
     def __init__(
-        self, title="Node", orientation=Qt.Orientation.Horizontal, parent=None
+        self,
+        title="Node",
+        orientation: Qt.Orientation = Qt.Orientation.Horizontal,
+        parent=None,
     ):
         super().__init__(parent)
 
@@ -250,6 +259,12 @@ class NodeWidget(QGraphicsWidget):
         # self.setGeometry(QRectF(-75, -59, 150, 100))
         self._inlets = []
         self._outlets = []
+
+    def title(self):
+        return self.header.toPlainText()
+
+    def setTitle(self, text: str):
+        self.header.setPlainText(text)
 
     def orientation(self):
         return self._orientation
@@ -389,6 +404,7 @@ class EdgeWidget(QGraphicsLineItem):
         self,
         source_outlet: OutletWidget | None,
         target_inlet: InletWidget | None,
+        label: str = "-edge-",
     ):
         super().__init__(parent=None)
         assert source_outlet is None or isinstance(
@@ -406,6 +422,7 @@ class EdgeWidget(QGraphicsLineItem):
             target_inlet._edges.append(self)
 
         self.setPen(QPen(Qt.GlobalColor.black, 2))
+        self._label_item = QGraphicsTextItem(label, parent=self)
         self.updatePosition()
 
         # Enable selecting
@@ -418,6 +435,12 @@ class EdgeWidget(QGraphicsLineItem):
         self.is_moving_endpoint = False
         self.GrabThreshold = 10
         self._shape_pen = QPen(Qt.GlobalColor.black, self.GrabThreshold)
+
+    def setLabelText(self, text: str):
+        self._label_item.setPlainText(text)
+
+    def labelText(self):
+        return self._label_item.toPlainText()
 
     def sourceOutlet(self) -> OutletWidget | None:
         return self._source_outlet
@@ -473,14 +496,37 @@ class EdgeWidget(QGraphicsLineItem):
             .adjusted(-extra, -extra, extra, extra)
         )
 
+    @overload
+    def setLine(self, line: QLine | QLineF) -> None:
+        ...
+
+    @overload
+    def setLine(self, x1: float, y1: float, x2: float, y2: float) -> None:
+        ...
+
+    def setLine(self, *args: QLine | QLineF | float) -> None:
+        # Implementing the logic
+        if len(args) == 1 and isinstance(args[0], (QLine, QLineF)):
+            line = args[0]
+            super().setLine(line)
+        elif len(args) == 4 and all(
+            isinstance(arg, (int, float)) for arg in args
+        ):
+            x1, y1, x2, y2 = args
+            super().setLine(x1, y1, x2, y2)
+        else:
+            super().setLine(*args)
+
+        self._label_item.setPos(self.line().center())
+
     def updatePosition(self):
         # assert self._source_outlet and self._target_inlet
         # if not (
-        # 	self.scene
-        # 	and self._source_outlet.scene()
-        # 	and self._target_inlet.scene()
+        #   self.scene
+        #   and self._source_outlet.scene()
+        #   and self._target_inlet.scene()
         # ):
-        # 	return # dont update position if not in scene or the pins are not part of the same scene
+        #   return # dont update position if not in scene or the pins are not part of the same scene
 
         # assert self.scene() == self._source_outlet.scene() == self._target_inlet.scene()
 
@@ -490,7 +536,7 @@ class EdgeWidget(QGraphicsLineItem):
 
         def getConnectionPoint(widget):
             # try:
-            # 	return widget.getConnectionPoint()
+            #   return widget.getConnectionPoint()
             # except AttributeError:
             return widget.scenePos() + widget.boundingRect().center()
 
@@ -552,6 +598,9 @@ class EdgeWidget(QGraphicsLineItem):
 
 
 class DAGScene(QGraphicsScene):
+    connected = Signal(EdgeWidget)
+    disconnected = Signal(EdgeWidget)
+
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -568,11 +617,14 @@ class DAGScene(QGraphicsScene):
     def addNode(self, node: NodeWidget):
         self.addItem(node)
 
-    def removeNodes(self, node: NodeWidget):
+    def removeNode(self, node: NodeWidget):
         node.destroy()
 
     def addEdge(self, edge: EdgeWidget):
         self.addItem(edge)
+
+    def removeEdge(self, edge: EdgeWidget):
+        edge.destroy()
 
     def pinAt(self, pos: QPoint | QPointF) -> PinWidget | None:
         for item in self.items(pos, deviceTransform=QTransform()):
@@ -747,12 +799,15 @@ class DAGScene(QGraphicsScene):
             if isinstance(self.interactive_edge_fixed_pin, InletWidget):
                 outlet = cast(OutletWidget, pin)
                 self.interactive_edge.setSourceOutlet(outlet)
+                self.connected.emit(self.interactive_edge)
 
             elif isinstance(self.interactive_edge_fixed_pin, OutletWidget):
                 inlet = cast(InletWidget, pin)
                 self.interactive_edge.setTargetInlet(inlet)
+                self.connected.emit(self.interactive_edge)
         else:
             """remove interactive edge"""
+            self.disconnected.emit(self.interactive_edge)
             self.interactive_edge.destroy()
 
         self.interactive_edge = None

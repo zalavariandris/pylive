@@ -2,24 +2,26 @@ import random
 import string
 import re
 
+
 def make_unique_id(length=8):
     # Generate a random string of the specified length from ASCII letters and digits
     characters = string.ascii_uppercase
-    unique_id = ''.join(random.choices(characters, k=length))
+    unique_id = "".join(random.choices(characters, k=length))
     return unique_id
 
+
 def make_unique_name(name, names):
-	# Regex to extract the name part (without trailing digits)
-	match = re.search(r'(.*?)(\d*)$', name)
-	if match:
-		# Name part without digits
-		name_part = match.group(1)
-	
-		# Loop to find a unique name
-		digit = 1
-		while name in names:
-			# Append the current digit to the name part
-			name = f"{name_part}{digit}"
-			digit += 1
-	
-	return name
+    # Regex to extract the name part (without trailing digits)
+    match = re.search(r"(.*?)(\d*)$", name)
+    if match:
+        # Name part without digits
+        name_part = match.group(1)
+
+        # Loop to find a unique name
+        digit = 1
+        while name in names:
+            # Append the current digit to the name part
+            name = f"{name_part}{digit}"
+            digit += 1
+
+    return name
