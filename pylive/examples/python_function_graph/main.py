@@ -46,13 +46,52 @@ def parse_graph_to_script(G: nx.MultiDiGraph) -> str:
         for n in nodes:
             fn = G.nodes[n]["fn"]
             formatted_params = ", ".join(
-                [f"{k}={u}" for u, v, k in G.in_edges(n, keys=True)]
+                [f"{u}" for u, v, k in G.in_edges(n, keys=True)]
             )
             yield f"{n} = {fn.__qualname__ }({formatted_params})"
 
     script = "\n".join(get_lines(nodes))
     script = "from pathlib import Path\n\n" + script
     return script
+
+
+def parse_graph_to_ast(G: nx.MultiDiGraph):
+    print("parse_graph_to_script")
+    import networkx as nx
+    import ast
+
+    import_node = ast.ImportFrom(
+        module="pathlib", names=[ast.alias(name="Path", asname=None)], level=0
+    )
+
+    assignements: list[ast.stmt] = []
+    nodes = nx.topological_sort(G)
+    for n in nodes:
+        assignment = ast.Assign(
+            targets=[
+                ast.Name(id="cwd1", ctx=ast.Store(), lineno=2, col_offset=0)
+            ],
+            value=ast.Call(
+                func=ast.Attribute(
+                    value=ast.Name(
+                        id="Path", ctx=ast.Load(), lineno=2, col_offset=8
+                    ),
+                    attr="cwd",
+                    ctx=ast.Load(),
+                    lineno=2,
+                    col_offset=8,
+                ),
+                args=[],
+                keywords=[],
+                lineno=2,
+                col_offset=8,
+            ),
+            lineno=2,
+            col_offset=0,
+        )
+        assignements.append(assignment)
+
+    module = ast.Module(body=[import_node] + assignements, type_ignores=[])
 
 
 class PythonGraphModel(NXGraphModel):
