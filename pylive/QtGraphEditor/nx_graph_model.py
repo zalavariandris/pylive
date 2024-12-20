@@ -53,8 +53,8 @@ class NXGraphModel(QObject):
     def nodes(self) -> List[Hashable]:
         return [n for n in self.G.nodes]
 
-    def addNode(self, n: Hashable, /, **props):
-        print("add node", n)
+    def addNode(self, n: Hashable, /, **props) -> None:
+        # print("add node: '{n}'")
         self.G.add_node(n, **props)
         self.nodesAdded.emit([n])
         self.nodesPropertiesChanged.emit({n: props})
@@ -71,7 +71,7 @@ class NXGraphModel(QObject):
     def getNodeProperty(self, n: Hashable, name, /):
         return self.G.nodes[n][name]
 
-    def remove_node(self, n: Hashable):
+    def removeNode(self, n: Hashable):
         self.nodesAboutToBeRemoved.emit([n])
         self.G.remove_node(n)
         self.nodesRemoved.emit([n])
@@ -79,9 +79,13 @@ class NXGraphModel(QObject):
     def edges(self) -> list[Tuple[Hashable, Hashable, Hashable]]:
         return [(u, v, k) for u, v, k in self.G.edges]
 
+    def inEdges(self, n: Hashable) -> list[tuple[Hashable, Hashable, Hashable]]:
+        """retrun incoming edges to the node"""
+        return [(u, v, k) for u, v, k in self.G.in_edges(n, keys=True)]
+
     def addEdge(
         self, u: Hashable, v: Hashable, k: Hashable | None = None, /, **props
-    ):
+    ) -> None:
         if u not in self.G.nodes:
             self.addNode(u)
         if v not in self.G.nodes:
@@ -90,7 +94,7 @@ class NXGraphModel(QObject):
         self.G.add_edge(u, v, k, **props)
         self.edgesAdded.emit([(u, v, k)])
 
-    def remove_edge(self, u: Hashable, v: Hashable, k: Hashable):
+    def removeEdge(self, u: Hashable, v: Hashable, k: Hashable):
         self.edgesAboutToBeRemoved.emit([(u, v, k)])
         self.G.remove_edge(u, v, k)
         self.edgesRemoved.emit([(u, v, k)])

@@ -1,4 +1,4 @@
-from ast import Call
+from ast import Call, arguments
 from typing import *
 from PySide6.QtGui import *
 from PySide6.QtCore import *
@@ -9,7 +9,7 @@ from pylive.QtScriptEditor.script_edit import ScriptEdit
 
 from pathlib import Path
 
-app = QApplication()
+
 from pylive.QtGraphEditor.dag_graph_graphics_scene import (
     DAGScene,
     EdgeWidget,
@@ -20,107 +20,106 @@ from pylive.QtGraphEditor.dag_graph_graphics_scene import (
 from pylive.QtGraphEditor.infinite_graphicsview_optimized import (
     InfiniteGraphicsView,
 )
-from pylive.QtGraphEditor.nx_graph_model import NXGraphModel
+
+from pylive.QtGraphEditor.nx_graph_selection_model import NXGraphSelectionModel
 from pylive.utils.unique import make_unique_name
 
+#########
+# UTILS #
+#########
 import inspect
 
 
-def is_multi_param(fn: Callable, paramname: str):
-    signature = inspect.signature(fn)
-    param = signature.parameters[paramname]
-    return param.kind == inspect.Parameter.VAR_POSITIONAL
+#########
+# MODEL #
+#########
+app = QApplication()
+
+from pylive.examples.python_function_graph.python_graph_model import (
+    PythonGraphModel,
+)
 
 
-import networkx as nx
+#########
+# VIEWS #
+#########
+class OperatorInspectorView(QWidget):
+    def __init__(self, parent: QWidget | None = None):
+        super().__init__(parent=parent)
+        self._model = PythonGraphModel()
 
+        mainLayout = QVBoxLayout()
+        self.setLayout(mainLayout)
 
-def parse_graph_to_script(G: nx.MultiDiGraph) -> str:
-    print("parse_graph_to_script")
-    import networkx as nx
-    import ast
+    def setModel(self, model: PythonGraphModel):
+        self._model = model
 
-    nodes = nx.topological_sort(G)
+    def model(self):
+        return self._model
 
-    def get_lines(nodes):
-        for n in nodes:
-            fn = G.nodes[n]["fn"]
-            formatted_params = ", ".join(
-                [f"{u}" for u, v, k in G.in_edges(n, keys=True)]
-            )
-            yield f"{n} = {fn.__qualname__ }({formatted_params})"
+    def setSelectionModel(self, selectionmodel: NXGraphSelectionModel):
+        selectionmodel.modelChanged.connect(self.handleModelChanged)
+        selectionmodel.selectionChanged.connect(self.handleSelectionChanged)
+        self._selectionModel = selectionmodel
 
-    script = "\n".join(get_lines(nodes))
-    script = "from pathlib import Path\n\n" + script
-    return script
+    def handleModelChanged(self, model: PythonGraphModel):
+        ...
 
+    def handleSelectionChanged(
+        self, selected: set[Hashable], deselected: set[Hashable]
+    ):
+        if len(self._selectionModel.selectedNodes()) > 0:
+            currentNode = self._selectionModel.selectedNodes()[0]
+            layout = cast(QBoxLayout, self.layout())
+            # clear inspector
+            self.clear()
 
-def parse_graph_to_ast(G: nx.MultiDiGraph):
-    print("parse_graph_to_script")
-    import networkx as nx
-    import ast
+            # add heading
+            label = QLabel(f"{currentNode}")
+            layout.addWidget(label)
 
-    import_node = ast.ImportFrom(
-        module="pathlib", names=[ast.alias(name="Path", asname=None)], level=0
-    )
+            # add properties
+            fn = self._model.getNodeProperty(currentNode, "fn")
+            sig = inspect.signature(fn)
+            for param in sig.parameters.values():
+                value = self.model().getParamValue(currentNode, param.name)
+                param_label = QLabel(f"{param.name}: {value}")
 
-    assignements: list[ast.stmt] = []
-    nodes = nx.topological_sort(G)
-    for n in nodes:
-        assignment = ast.Assign(
-            targets=[
-                ast.Name(id="cwd1", ctx=ast.Store(), lineno=2, col_offset=0)
-            ],
-            value=ast.Call(
-                func=ast.Attribute(
-                    value=ast.Name(
-                        id="Path", ctx=ast.Load(), lineno=2, col_offset=8
-                    ),
-                    attr="cwd",
-                    ctx=ast.Load(),
-                    lineno=2,
-                    col_offset=8,
-                ),
-                args=[],
-                keywords=[],
-                lineno=2,
-                col_offset=8,
-            ),
-            lineno=2,
-            col_offset=0,
-        )
-        assignements.append(assignment)
+                layout.addWidget(param_label)
+            layout.addStretch()
 
-    module = ast.Module(body=[import_node] + assignements, type_ignores=[])
+        else:
+            self.clear()
 
+    def clear(self):
+        while self.layout().count() > 0:
+            layoutItem = self.layout().takeAt(0)
+            if widget := layoutItem.widget():
+                widget.deleteLater()
 
-class PythonGraphModel(NXGraphModel):
-    def __init__(self, parent:QObject|None=None):
-        super().__init__(G=nx.MultiDiGraph(), parent=parent)
+    def selectionModel(self):
+        return self._selectionModel
 
-    @override
-    def addEdge(self, u: Hashable, v: Hashable, k: str, **props):
-        fn: Callable = self.getNodeProperty(v, "fn")
-        IsMultiInlet = is_multi_param(fn, k)
-        if not IsMultiInlet:
-            edges_to_remove = []
-            in_edges = self.G.in_edges(v, keys=True)
-            for edge in in_edges:
-                if edge[2] == k:
-                    edges_to_remove.append(edge)
-            for edge in edges_to_remove:
-                super().remove_edge(*edge)
-            print(
-                "IsMultiInlet",
-                IsMultiInlet,
-                "edges_to_remove:",
-                edges_to_remove,
-            )
-
-        return super().addEdge(u, v, k, **props)
-
-    def evaluate(self):
-        pass
+    def widgetForValue(self, value: object | None):
+        match value:
+            case str():
+                ...
+            case int(), float(), complex():
+                ...
+            case list(), tuple(), range():
+                ...
+            case dict():
+                ...
+            case set(), frozenset():
+                ...
+            case bool():
+                ...
+            case bytes(), bytearray(), memoryview():
+                ...
+            case None:
+                ...
+            case _:
+                return QLabel(f"{value}")
 
 
 class PythonGraphWindow(QWidget):
@@ -140,18 +139,22 @@ class PythonGraphWindow(QWidget):
         result_script_edit.setReadOnly(True)
         self.result_script_edit = result_script_edit
 
+        # inspector
+        inspector = OperatorInspectorView(parent=self)
+        self.inspector = inspector
+
         # menubar
         menubar = QMenuBar(self)
         add_menu = QMenu("add", self)
-        for fn in [print, len, Path.cwd, Path.iterdir]:
+        for fn in [print, len, Path, Path.cwd, Path.iterdir]:
             create_operator_action = QAction(fn.__qualname__, self)
             create_operator_action.triggered.connect(
-                lambda checked, fn=fn: self.create_operator(fn)
+                lambda checked, fn=fn: self.createOperator(fn)
             )
             add_menu.addAction(create_operator_action)
         menubar.addMenu(add_menu)
         run_action = menubar.addAction("run")
-        run_action.triggered.connect(lambda checked: self.runScript())
+        run_action.triggered.connect(lambda checked: self.evaluateGraph())
 
         # statusbar
         statusbar = QStatusBar(self)
@@ -163,6 +166,7 @@ class PythonGraphWindow(QWidget):
         mainlayout.setContentsMargins(0, 0, 0, 0)
         splitter = QSplitter()
         splitter.addWidget(graphview)
+        splitter.addWidget(inspector)
         splitter.addWidget(result_script_edit)
         splitter.setSizes(
             [
@@ -176,6 +180,7 @@ class PythonGraphWindow(QWidget):
         self.setLayout(mainlayout)
 
         #### create and bind models ###
+        # graphmodel
         graphmodel = PythonGraphModel()
         graphmodel.nodesAdded.connect(self.handleNodesAdded)
         graphmodel.nodesPropertiesChanged.connect(
@@ -189,12 +194,32 @@ class PythonGraphWindow(QWidget):
         )
         graphmodel.edgesAboutToBeRemoved.connect(self.handleEdgesRemoved)
 
+        # selection model
+        selectionmodel = NXGraphSelectionModel()
+        selectionmodel.setModel(graphmodel)
+
+        @dagscene.selectionChanged.connect
+        def on_dagscene_selection_changed():
+            print("dagscene->selectionChanged")
+            selected_nodes = [
+                self._widget_to_operator[widget]
+                for widget in dagscene.selectedItems()
+                if isinstance(widget, NodeWidget)
+            ]
+            print("  -", selected_nodes)
+            selectionmodel.setSelectedNodes(selected_nodes)
+
+        selectionmodel.selectionChanged.connect(self.handleSelectionChanged)
+
         # trigger evaluate
-        graphmodel.nodesAdded.connect(self.parseGraph)
-        graphmodel.nodesRemoved.connect(self.parseGraph)
-        graphmodel.edgesAdded.connect(self.parseGraph)
-        graphmodel.edgesRemoved.connect(self.parseGraph)
-        self.graphmodel = graphmodel
+        graphmodel.nodesAdded.connect(self.evaluateGraph)
+        graphmodel.nodesRemoved.connect(self.evaluateGraph)
+        graphmodel.edgesAdded.connect(self.evaluateGraph)
+        graphmodel.edgesRemoved.connect(self.evaluateGraph)
+        self._graphmodel = graphmodel
+
+        inspector.setModel(graphmodel)
+        inspector.setSelectionModel(selectionmodel)
 
         # widget model mappings
         self._operator_to_widget: dict[Hashable, NodeWidget] = dict()
@@ -218,24 +243,21 @@ class PythonGraphWindow(QWidget):
         dagscene.disconnected.connect(self.onDisconnect)
 
     @Slot()
-    def parseGraph(self):
-        script = parse_graph_to_script(self.graphmodel.G)
+    def parseGraphToScript(self):
+        script = parse_graph_to_script(self._graphmodel.G)
         self.result_script_edit.setPlainText(script)
 
     @Slot()
-    def runScript(self):
-        script = parse_graph_to_script(self.graphmodel.G)
-        self.result_script_edit.setPlainText(script)
-        from textwrap import dedent
-
-        exec(dedent(script))
+    def evaluateGraph(self):
+        result = self._graphmodel()
+        print("graphEvaluated:", result)
 
     @Slot(object)
-    def create_operator(self, fn: Callable):
+    def createOperator(self, fn: Callable):
         unique_node_id = make_unique_name(
-            f"{fn.__name__ }1", self.graphmodel.nodes()
+            f"{fn.__name__ }1", self._graphmodel.nodes()
         )
-        self.graphmodel.addNode(unique_node_id, fn=fn)
+        self._graphmodel.addNode(unique_node_id, fn=fn)
 
     @Slot(EdgeWidget)
     def onConnect(self, edge: EdgeWidget):
@@ -248,7 +270,7 @@ class PythonGraphWindow(QWidget):
         source_operator = self._widget_to_return[outlet]
         target_operator, paramname = self._widget_to_param[inlet]
         print(f"connected: {source_operator} -> {target_operator}.{paramname}")
-        self.graphmodel.addEdge(source_operator, target_operator, paramname)
+        self._graphmodel.addEdge(source_operator, target_operator, paramname)
 
     @Slot(EdgeWidget)
     def onDisconnect(self, edge: EdgeWidget):
@@ -263,7 +285,9 @@ class PythonGraphWindow(QWidget):
         print(
             f"disconnected: {source_operator} -> {target_operator}.{paramname}"
         )
-        self.graphmodel.remove_edge(source_operator, target_operator, paramname)
+        self._graphmodel.remove_edge(
+            source_operator, target_operator, paramname
+        )
 
     @Slot(list)
     def handleNodesAdded(self, nodes: List[Hashable]):
@@ -292,7 +316,7 @@ class PythonGraphWindow(QWidget):
             for prop, value in props.items():
                 match prop:
                     case "fn":
-                        fn = self.graphmodel.getNodeProperty(n, "fn")
+                        fn = self._graphmodel.getNodeProperty(n, "fn")
                         sig = inspect.signature(fn)
                         for param in sig.parameters.values():
                             inlet_widget = InletWidget(param.name)
@@ -337,6 +361,21 @@ class PythonGraphWindow(QWidget):
         self, change: dict[Hashable, dict[str, object | None]]
     ):
         print("edges changed:", change)
+
+    @Slot(set, set)
+    def handleSelectionChanged(
+        self, selected: set[Hashable], deselected: set[Hashable]
+    ):
+        selected_widgets = [self._operator_to_widget[n] for n in selected]
+        deselected_widgets = [self._operator_to_widget[n] for n in deselected]
+        self.dagscene.blockSignals(True)
+        for widget in selected_widgets:
+            widget.setSelected(True)
+
+        for widget in deselected_widgets:
+            widget.setSelected(False)
+        self.dagscene.blockSignals(False)
+        self.dagscene.selectionChanged.emit()
 
 
 window = PythonGraphWindow()

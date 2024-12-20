@@ -431,7 +431,12 @@ class EdgeWidget(QGraphicsLineItem):
 
         self.setZValue(-1)
 
-        #
+        pen = QPen(QApplication.instance().palette().text().color(), 2)
+        pen.setCosmetic(True)
+        pen.setWidthF(1)
+
+        self.setPen(pen)
+
         self.is_moving_endpoint = False
         self.GrabThreshold = 10
         self._shape_pen = QPen(Qt.GlobalColor.black, self.GrabThreshold)
@@ -509,9 +514,7 @@ class EdgeWidget(QGraphicsLineItem):
         if len(args) == 1 and isinstance(args[0], (QLine, QLineF)):
             line = args[0]
             super().setLine(line)
-        elif len(args) == 4 and all(
-            isinstance(arg, (int, float)) for arg in args
-        ):
+        elif len(args) == 4 and all(isinstance(arg, float) for arg in args):
             x1, y1, x2, y2 = args
             super().setLine(x1, y1, x2, y2)
         else:
@@ -576,26 +579,6 @@ class EdgeWidget(QGraphicsLineItem):
         if self.scene():
             self.scene().removeItem(self)
 
-    def paint(
-        self, painter: QPainter, option: QStyleOptionGraphicsItem, widget=None
-    ):
-        p1 = self.line().p1()
-        p2 = self.line().p2()
-
-        palette: QPalette = option.palette  # type: ignore
-        state: QStyle.StateFlag = option.state  # type: ignore
-        pen = QPen(palette.text().color(), 2)
-        pen.setCosmetic(True)
-        pen.setWidthF(1)
-        if state & (
-            QStyle.StateFlag.State_Selected | QStyle.StateFlag.State_MouseOver
-        ):
-            pen.setColor(palette.accent().color())
-        painter.setPen(pen)
-
-        # painter.setPen(options.palette.light().color())
-        painter.drawLine(self.line())
-
 
 class DAGScene(QGraphicsScene):
     connected = Signal(EdgeWidget)
@@ -614,16 +597,23 @@ class DAGScene(QGraphicsScene):
         )
         self.is_dragging_edge = False  # indicate that an edge is being moved
 
+        self._node_widgets: List[NodeWidget] = []  # TODO: possibly not needed
+        self._edge_widgets: List[EdgeWidget] = []  # not really needed
+
     def addNode(self, node: NodeWidget):
+        self._node_widgets.append(node)
         self.addItem(node)
 
     def removeNode(self, node: NodeWidget):
+        self._node_widgets.remove(node)
         node.destroy()
 
     def addEdge(self, edge: EdgeWidget):
+        self._edge_widgets.append(edge)
         self.addItem(edge)
 
     def removeEdge(self, edge: EdgeWidget):
+        self._edge_widgets.remove(edge)
         edge.destroy()
 
     def pinAt(self, pos: QPoint | QPointF) -> PinWidget | None:
@@ -703,6 +693,7 @@ class DAGScene(QGraphicsScene):
         return super().mouseReleaseEvent(event)
 
     def initiateConnection(self, pin):
+        print("initiate connection")
         if isinstance(pin, OutletWidget):
             self.interactive_edge = EdgeWidget(
                 source_outlet=pin, target_inlet=None
@@ -713,9 +704,13 @@ class DAGScene(QGraphicsScene):
                 source_outlet=None, target_inlet=pin
             )
             self.interactive_edge_fixed_pin = pin
+
         assert self.interactive_edge
         self.interactive_edge.updatePosition()
         self.addItem(self.interactive_edge)
+        pen = self.interactive_edge.pen()
+        pen.setStyle(Qt.DashLine)
+        self.interactive_edge.setPen(pen)
         self.is_dragging_edge = True
 
     def moveConnection(self, scenepos: QPointF):
