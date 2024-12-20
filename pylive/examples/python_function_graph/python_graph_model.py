@@ -223,8 +223,12 @@ class PythonGraphModel(NXGraphModel):
                         for keyword in value.keys():
                             # Note: could use the update method.
                             kwargs[keyword] = value[keyword]
+
+            # evaluate function and store results
             try:
-                self._cache[n] = fn(*args, **kwargs)
+                result = fn(*args, **kwargs)
+                self.setNodeProperties(n, _result=result)
+                
             except Exception as err:
                 return err
 
