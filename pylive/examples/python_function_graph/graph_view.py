@@ -4,6 +4,7 @@ from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
 # from standard_graph_delegate import StandardGraphDelegate
+from pylive.QtGraphEditor.dag_graph_graphics_scene import TextWidget
 from pylive.utils.unique import make_unique_id, make_unique_name
 
 from graph_model import GraphModel
@@ -60,8 +61,6 @@ class NodeWidget(QGraphicsWidget):
         self._view = view
         self._n = n
 
-        # add name label
-
     @override
     def sizeHint(
         self, which: Qt.SizeHint, constraint: QSizeF | QSize = QSizeF()
@@ -87,7 +86,11 @@ class NodeWidget(QGraphicsWidget):
 
 class GraphDelegate(QObject):
     def nodeFactory(self, view, graph, n) -> QGraphicsItem:
-        return NodeWidget(view=view, n=n)
+        widget = NodeWidget(view=view, n=n)
+        widget.setLayout(QGraphicsLinearLayout())
+        header = TextWidget(f"{n}")
+        widget.layout().addItem(header)
+        return widget
 
     def edgeFactory(
         self, view, graph, source_node, target_node
