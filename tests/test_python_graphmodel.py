@@ -98,6 +98,20 @@ class TestGraphEvaluation(unittest.TestCase):
 
         self.assertEqual(graph(), Path.cwd())
 
+    def test_cached_arguments_after_evaluation(self):
+        from pathlib import Path
+
+        graph = PythonGraphModel()
+        graph.addNode("cwd1", Path.cwd)
+        graph.addNode("print1", print)
+        graph.addEdge("cwd1", "print1", "args")
+        graph.setOutput("print1")
+
+        self.assertEqual(graph(), None)
+        self.assertEqual(
+            graph.getNodeProperty("print1", "_arguments")["args"], [Path.cwd()]
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -133,23 +133,28 @@ class PythonGraphModel(NXGraphModel):
         super().addNode(n, fn=fn, _arguments={}, _result=None)
 
     def sources(
-        self, name: Hashable, prop: str | None = None
+        self, n: Hashable, propname: str | None = None
     ) -> Iterable[Hashable]:
         for u, v, k in self.G.in_edges(n, keys=True):
-            if prop is None or k == prop:
+            if propname is None or k == propname:
                 yield u
+
+    def targets(self, n: Hashable) -> Iterable[tuple[Hashable, str]]:
+        for u, v, k in self.G.out_edges(n, keys=True):
+            yield v, k
 
     def isConnected(self, n: Hashable, propname: str) -> bool:
         for u, v, k in self.G.in_edges(n, keys=True):
-            if k == prop:
+            if k == propname:
                 return True
         return False
 
     def getParamValue(
         self, n, paramname
     ) -> object | List[object] | dict[str, object]:
-        arguments = self.getNodeProperty("_arguments")
+        arguments = self.getNodeProperty(n, "_arguments")
         assert isinstance(arguments, dict)
+
         return arguments[paramname]
 
     def _getParamValueFromSource(self, n, paramname):
@@ -160,25 +165,25 @@ class PythonGraphModel(NXGraphModel):
         match param.kind:
             case inspect.Parameter.POSITIONAL_ONLY:
                 return [
-                    self.getNodeProperty(u, "result")
+                    self.getNodeProperty(u, "_result")
                     for u in self.sources(n, param.name)
                 ][0]
 
             case inspect.Parameter.POSITIONAL_OR_KEYWORD | inspect.Parameter.KEYWORD_ONLY:
                 return [
-                    self.getNodeProperty(u, "result")
+                    self.getNodeProperty(u, "_result")
                     for u in self.sources(n, param.name)
                 ][0]
 
             case inspect.Parameter.VAR_POSITIONAL:  # *args
                 return [
-                    self.getNodeProperty(u, "result")
+                    self.getNodeProperty(u, "_result")
                     for u in self.sources(n, param.name)
                 ]
 
             case inspect.Parameter.VAR_KEYWORD:  # **kwargs
                 return [
-                    self.getNodeProperty(u, "result")
+                    self.getNodeProperty(u, "_result")
                     for u in self.sources(n, param.name)
                 ]
 
@@ -205,33 +210,45 @@ class PythonGraphModel(NXGraphModel):
             args = list()
             kwargs = dict()
             for param in sig.parameters.values():
-                value = self.getParamValue(n, param.name, self._cache)
-                # get value from the nodes or properties
-                match param.kind:
-                    # docs: https://docs.python.org/3/library/inspect.html#inspect.Parameter.kind
-                    case inspect.Parameter.POSITIONAL_ONLY:
-                        args.append(value)
-                    case inspect.Parameter.POSITIONAL_OR_KEYWORD | inspect.Parameter.KEYWORD_ONLY:
-                        kwargs[param.name] = value
+                try:
+                    value = self.getParamValue(n, param.name)
+                    # get value from the nodes or properties
+                    match param.kind:
+                        # docs: https://docs.python.org/3/library/inspect.html#inspect.Parameter.kind
+                        case inspect.Parameter.POSITIONAL_ONLY:
+                            args.append(value)
+                        case inspect.Parameter.POSITIONAL_OR_KEYWORD | inspect.Parameter.KEYWORD_ONLY:
+                            kwargs[param.name] = value
 
-                    case inspect.Parameter.VAR_POSITIONAL:  # *args
-                        assert isinstance(value, list)
-                        args += value
+                        case inspect.Parameter.VAR_POSITIONAL:  # *args
+                            assert isinstance(value, list), f"got: {value}"
+                            args += value
 
-                    case inspect.Parameter.VAR_KEYWORD:  # **kwargs
-                        assert isinstance(value, dict)
-                        for keyword in value.keys():
-                            # Note: could use the update method.
-                            kwargs[keyword] = value[keyword]
+                        case inspect.Parameter.VAR_KEYWORD:  # **kwargs
+                            assert isinstance(value, dict)
+                            for keyword in value.keys():
+                                # Note: could use the update method.
+                                kwargs[keyword] = value[keyword]
+                except KeyError:
+                    print("param is not available")
 
             # evaluate function and store results
             try:
                 result = fn(*args, **kwargs)
-                self.setNodeProperties(n, _result=result)
-                
+                super().setNodeProperties(n, _result=result)
+
+                # propagate results to connected node arguments
+                for target_node, target_param in self.targets(n):
+                    arguments = self.getNodeProperty(target_node, "_arguments")
+                    arguments[target_param] = self._getParamValueFromSource(
+                        target_node, target_param
+                    )
+
+                    super().setNodeProperties(target_node, _arguments=arguments)
+
             except Exception as err:
                 return err
 
-        result = self._cache[self._output_operator]
+        result = self.getNodeProperty(self._output_operator, "_result")
         print("  output:{self._output_operator}->{result}")
         return result

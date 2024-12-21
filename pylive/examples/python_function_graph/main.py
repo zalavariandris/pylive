@@ -257,7 +257,7 @@ class PythonGraphWindow(QWidget):
         unique_node_id = make_unique_name(
             f"{fn.__name__ }1", self._graphmodel.nodes()
         )
-        self._graphmodel.addNode(unique_node_id, fn=fn)
+        self._graphmodel.addNode(unique_node_id, fn)
 
     @Slot(EdgeWidget)
     def onConnect(self, edge: EdgeWidget):
