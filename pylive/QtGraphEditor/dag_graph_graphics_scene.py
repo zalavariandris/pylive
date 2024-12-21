@@ -236,9 +236,11 @@ class NodeWidget(QGraphicsWidget):
         self.main_layout.setContentsMargins(8, 3, 8, 3)
         self.main_layout.setSpacing(0)
 
-        # create heading layout
+        # create heading
         self.header = TextWidget(title)
         self.main_layout.addItem(self.header)
+        self._badges_layout = QGraphicsLinearLayout(Qt.Orientation.Vertical)
+        self.main_layout.addItem(self._badges_layout)
 
         # Create inlets layout
         self.inlets_layout = QGraphicsLinearLayout(Qt.Orientation.Vertical)
@@ -364,6 +366,11 @@ class NodeWidget(QGraphicsWidget):
         self.outlets_layout.removeItem(outlet)
         outlet._parent_node = None
         self._outlets.remove(outlet)
+
+    def addBadge(self, badge:str|QGraphicsWidget):
+        if isinstance(badge, str):
+            badge = TextWidget(badge)
+        self._badges_layout.addItem(badge)
 
     def paint(
         self, painter: QPainter, option: QStyleOptionGraphicsItem, widget=None
@@ -590,6 +597,7 @@ class DAGScene(QGraphicsScene):
         # Create a scene to hold the node and edge graphics
         self.setSceneRect(QRect(-9999 // 2, -9999 // 2, 9999, 9999))
 
+        self.original_edge_pins:None|Tuple[PinWidget, PinWidget] = None
         self.interactive_edge: EdgeWidget | None = None
         self.interactive_edge_fixed_pin: PinWidget | None = None
         self.interactive_edge_moving_pin: PinWidget | None = (
@@ -597,23 +605,16 @@ class DAGScene(QGraphicsScene):
         )
         self.is_dragging_edge = False  # indicate that an edge is being moved
 
-        self._node_widgets: List[NodeWidget] = []  # TODO: possibly not needed
-        self._edge_widgets: List[EdgeWidget] = []  # not really needed
-
     def addNode(self, node: NodeWidget):
-        self._node_widgets.append(node)
         self.addItem(node)
 
     def removeNode(self, node: NodeWidget):
-        self._node_widgets.remove(node)
         node.destroy()
 
     def addEdge(self, edge: EdgeWidget):
-        self._edge_widgets.append(edge)
         self.addItem(edge)
 
     def removeEdge(self, edge: EdgeWidget):
-        self._edge_widgets.remove(edge)
         edge.destroy()
 
     def pinAt(self, pos: QPoint | QPointF) -> PinWidget | None:
@@ -670,6 +671,10 @@ class DAGScene(QGraphicsScene):
             IsThresholdSurpassed = mouseDelta.manhattanLength() > GrabThreshold
             if IsThresholdSurpassed:
                 self.is_dragging_edge = True
+                outlet = self.interactive_edge.sourceOutlet()
+                inlet = self.interactive_edge.targetInlet()
+                assert outlet, inlet
+                self.original_edge_pins = outlet, inlet
 
         if self.is_dragging_edge and self.interactive_edge:
             self.moveConnection(event.scenePos())
@@ -693,7 +698,6 @@ class DAGScene(QGraphicsScene):
         return super().mouseReleaseEvent(event)
 
     def initiateConnection(self, pin):
-        print("initiate connection")
         if isinstance(pin, OutletWidget):
             self.interactive_edge = EdgeWidget(
                 source_outlet=pin, target_inlet=None
@@ -783,6 +787,7 @@ class DAGScene(QGraphicsScene):
         return False
 
     def finishConnection(self, pin: PinWidget | None):
+        """this is called after an edge was moved, and dropped somewhere"""
         assert self.interactive_edge_fixed_pin
         assert self.interactive_edge
 
@@ -802,11 +807,14 @@ class DAGScene(QGraphicsScene):
                 self.connected.emit(self.interactive_edge)
         else:
             """remove interactive edge"""
-            self.disconnected.emit(self.interactive_edge)
-            self.interactive_edge.destroy()
+            if self.original_edge_pins is not None:
+                self.disconnected.emit(self.interactive_edge)
+            else: # if edge creation was cancelled
+                self.interactive_edge.destroy()
 
         self.interactive_edge = None
         self.interactive_edge_fixed_pin = None
+        self.original_edge_pins = None
 
 
 if __name__ == "__main__":

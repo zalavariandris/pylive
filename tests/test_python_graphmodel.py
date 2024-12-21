@@ -44,10 +44,14 @@ class TextNodeCRUD(unittest.TestCase):
         graph = PythonGraphModel()
         graph.addNode("d", print)
 
-        with self.assertRaises(KeyError):
+        with self.assertRaises(ValueError):
             graph.setNodeProperties("d", _arguments="whatever")
-        with self.assertRaises(KeyError):
+
+        with self.assertRaises(ValueError):
             graph.setNodeProperties("d", _result="what")
+
+        with self.assertRaises(ValueError):
+            graph.setNodeProperties("d", _exception="an exception")
 
 
 class TextEdgeCRUD(unittest.TestCase):

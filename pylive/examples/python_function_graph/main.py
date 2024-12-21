@@ -83,9 +83,13 @@ class OperatorInspectorView(QWidget):
             sig = inspect.signature(fn)
             for param in sig.parameters.values():
                 value = self.model().getParamValue(currentNode, param.name)
-                param_label = QLabel(f"{param.name}: {value}")
+                param_label = QLabel(f"{param.name}: {value!r}")
 
                 layout.addWidget(param_label)
+
+            result = self.model().getNodeProperty(currentNode, "_result")
+            result_label = QLabel(f"{result!r}")
+            layout.addWidget(result_label)
             layout.addStretch()
 
         else:
@@ -167,7 +171,7 @@ class PythonGraphWindow(QWidget):
         splitter = QSplitter()
         splitter.addWidget(graphview)
         splitter.addWidget(inspector)
-        splitter.addWidget(result_script_edit)
+        # splitter.addWidget(result_script_edit)
         splitter.setSizes(
             [
                 splitter.width() // splitter.count()
@@ -197,6 +201,7 @@ class PythonGraphWindow(QWidget):
         # selection model
         selectionmodel = NXGraphSelectionModel()
         selectionmodel.setModel(graphmodel)
+        self._selectionModel = selectionmodel
 
         @dagscene.selectionChanged.connect
         def on_dagscene_selection_changed():
@@ -261,6 +266,8 @@ class PythonGraphWindow(QWidget):
 
     @Slot(EdgeWidget)
     def onConnect(self, edge: EdgeWidget):
+        assert isinstance(edge, EdgeWidget)
+        print("onConnect", edge)
         """called when pins are connected by the widget"""
         outlet = edge.sourceOutlet()
         inlet = edge.targetInlet()
@@ -285,7 +292,7 @@ class PythonGraphWindow(QWidget):
         print(
             f"disconnected: {source_operator} -> {target_operator}.{paramname}"
         )
-        self._graphmodel.remove_edge(
+        self._graphmodel.removeEdge(
             source_operator, target_operator, paramname
         )
 
@@ -332,6 +339,10 @@ class PythonGraphWindow(QWidget):
                         node_widget.addOutlet(outlet_widget)
                         self._return_to_widget[n] = outlet_widget
                         self._widget_to_return[outlet_widget] = n
+                    case "_result":
+                        ...
+                    case "_exception":
+                        node_widget.addBadge(value)
 
     @Slot(list)
     def handleEdgesAdded(self, edges: List[Tuple[Hashable, Hashable, str]]):
@@ -366,6 +377,14 @@ class PythonGraphWindow(QWidget):
     def handleSelectionChanged(
         self, selected: set[Hashable], deselected: set[Hashable]
     ):
+        # update graph output
+        selected_nodes = self._selectionModel.selectedNodes()
+        if len(selected_nodes)>0:
+            currentNode = selected_nodes[0]
+            self._graphmodel.setOutput(currentNode)
+        else:
+            self._graphmodel.setOutput(None)
+        # update dagscene selection
         selected_widgets = [self._operator_to_widget[n] for n in selected]
         deselected_widgets = [self._operator_to_widget[n] for n in deselected]
         self.dagscene.blockSignals(True)

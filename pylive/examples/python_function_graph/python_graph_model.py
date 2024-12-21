@@ -86,7 +86,7 @@ class PythonGraphModel(NXGraphModel):
         return self._output_operator
 
     def setOutput(self, n: Hashable):
-        if n not in self.nodes():
+        if n is not None and n not in self.nodes():
             raise KeyError(f"Operator '{n}' is not part of this graph!")
 
         self._output_operator = n
@@ -152,10 +152,19 @@ class PythonGraphModel(NXGraphModel):
     def getParamValue(
         self, n, paramname
     ) -> object | List[object] | dict[str, object]:
-        arguments = self.getNodeProperty(n, "_arguments")
-        assert isinstance(arguments, dict)
 
-        return arguments[paramname]
+        # 1. try to get storead value
+        try:
+            arguments = self.getNodeProperty(n, "_arguments")
+            assert isinstance(arguments, dict)
+            return arguments[paramname]
+        except KeyError:
+            #2 try gettin default parameter value
+            fn = self.getNodeProperty(n, 'fn')
+            sig = inspect.signature(fn)
+            param = sig.parameters[paramname]
+            default = param.default
+            return default
 
     def _getParamValueFromSource(self, n, paramname):
         fn = self.getNodeProperty(n, "fn")
@@ -188,16 +197,16 @@ class PythonGraphModel(NXGraphModel):
                 ]
 
     def setNodeProperties(self, n, **props):
-        if "_arguments" in props or "_result" in props:
-            raise KeyError(
+        if "_arguments" in props or "_result" in props or "_exception" in props:
+            raise ValueError(
                 "'_arguments' and '_result' are protected properties!"
             )
         else:
             super().setNodeProperties(n, **props)
 
     def __call__(self) -> Exception | object | None:
-        print("PythonGraphModel->call")
         if not self._output_operator:
+            print("no output operator specified")
             return
         """evalute the graph from the output operator"""
         nodes = nx.topological_sort(self.G)
@@ -230,12 +239,13 @@ class PythonGraphModel(NXGraphModel):
                                 # Note: could use the update method.
                                 kwargs[keyword] = value[keyword]
                 except KeyError:
-                    print("param is not available")
+                    ...
 
             # evaluate function and store results
             try:
                 result = fn(*args, **kwargs)
                 super().setNodeProperties(n, _result=result)
+                print(f"node evaluated {n}->{result}")
 
                 # propagate results to connected node arguments
                 for target_node, target_param in self.targets(n):
@@ -247,8 +257,8 @@ class PythonGraphModel(NXGraphModel):
                     super().setNodeProperties(target_node, _arguments=arguments)
 
             except Exception as err:
+                super().setNodeProperties(n, _exception=err)
                 return err
 
         result = self.getNodeProperty(self._output_operator, "_result")
-        print("  output:{self._output_operator}->{result}")
         return result
