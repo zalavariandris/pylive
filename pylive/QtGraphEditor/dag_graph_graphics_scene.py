@@ -63,6 +63,7 @@ class CircleWidget(QGraphicsWidget):
 
 
 class PinWidget(QGraphicsWidget):
+    sceneGeometryChanged = Signal()
     def __init__(self, text, orientation=Qt.Orientation.Horizontal):
         super().__init__()
         # store relations
@@ -128,12 +129,14 @@ class PinWidget(QGraphicsWidget):
 
     def updateEdges(self):
         for edge_item in list(self._edges):
-            edge_item.updatePosition()
+            pass
+            # edge_item.updatePosition()
 
     def itemChange(self, change, value):
         match change:
             case QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
-                self.updateEdges()
+                self.sceneGeometryChanged.emit()
+                # self.updateEdges()
 
         return super().itemChange(change, value)
 
@@ -215,7 +218,7 @@ class InletWidget(PinWidget):
 
 class NodeWidget(QGraphicsWidget):
     """A widget that holds multiple TextWidgets arranged in a vertical layout."""
-
+    sceneGeometryChanged = Signal()
     def __init__(
         self,
         title="Node",
@@ -226,7 +229,7 @@ class NodeWidget(QGraphicsWidget):
 
         # Enable selection and movement
         self.setFlag(QGraphicsWidget.GraphicsItemFlag.ItemIsSelectable, True)
-        self.setFlag(QGraphicsWidget.GraphicsItemFlag.ItemIsMovable, True)
+        # self.setFlag(QGraphicsWidget.GraphicsItemFlag.ItemIsMovable, True)
         self.setFlag(QGraphicsWidget.GraphicsItemFlag.ItemIsFocusable, True)
 
         self._orientation = Qt.Orientation.Horizontal
@@ -261,6 +264,19 @@ class NodeWidget(QGraphicsWidget):
         # self.setGeometry(QRectF(-75, -59, 150, 100))
         self._inlets = []
         self._outlets = []
+
+        self.geometryChanged.connect(self.sceneGeometryChanged)
+        self.setFlag(
+            QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges
+        )
+
+    def itemChange(self, change, value):
+        match change:
+            case QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
+                self.sceneGeometryChanged.emit()
+                # self.updateEdges()
+
+        return super().itemChange(change, value)
 
     def title(self):
         return self.header.toPlainText()
@@ -372,6 +388,9 @@ class NodeWidget(QGraphicsWidget):
             badge = TextWidget(badge)
         self._badges_layout.addItem(badge)
 
+    def setHighlight(self, value):
+        ...
+
     def paint(
         self, painter: QPainter, option: QStyleOptionGraphicsItem, widget=None
     ):
@@ -381,16 +400,17 @@ class NodeWidget(QGraphicsWidget):
 
         painter.setBrush(palette.window())
         # painter.setBrush(Qt.NoBrush)
-
+ 
         pen = QPen(palette.text().color(), 1)
         pen.setCosmetic(True)
         pen.setWidthF(1)
         if state & QStyle.StateFlag.State_Selected:
+            pen.setWidthF(2)
             pen.setColor(palette.accent().color())
         painter.setPen(pen)
 
         # painter.setPen(palette.window().color())
-        painter.drawRoundedRect(QRectF(QPointF(), self.size()), 3, 3)
+        painter.drawRoundedRect(QRectF(QPointF(), self.size()), 10, 10)
 
     def destroy(self):
         while self._inlets:
@@ -409,24 +429,20 @@ class EdgeWidget(QGraphicsLineItem):
 
     def __init__(
         self,
-        source_outlet: OutletWidget | None,
-        target_inlet: InletWidget | None,
+        source: OutletWidget | NodeWidget | None,
+        target: InletWidget | NodeWidget | None,
         label: str = "-edge-",
     ):
         super().__init__(parent=None)
-        assert source_outlet is None or isinstance(
-            source_outlet, OutletWidget
-        ), f"got: {source_outlet}"
-        assert target_inlet is None or isinstance(
-            target_inlet, InletWidget
-        ), f"got: {target_inlet}"
-        self._source_outlet = source_outlet
-        self._target_inlet = target_inlet
-
-        if source_outlet:
-            source_outlet._edges.append(self)
-        if target_inlet:
-            target_inlet._edges.append(self)
+        assert source is None or hasattr(
+            source, 'sceneGeometryChanged'
+        ), f"got: {source}"
+        assert target is None or hasattr(
+            target, 'sceneGeometryChanged'
+        ), f"got: {target}"
+        self._source = None
+        self._target = None
+    
 
         self.setPen(QPen(Qt.GlobalColor.black, 2))
         self._label_item = QGraphicsTextItem(label, parent=self)
@@ -448,39 +464,50 @@ class EdgeWidget(QGraphicsLineItem):
         self.GrabThreshold = 10
         self._shape_pen = QPen(Qt.GlobalColor.black, self.GrabThreshold)
 
+        self.setSource(source)
+        self.setTarget(target)
+
     def setLabelText(self, text: str):
         self._label_item.setPlainText(text)
 
     def labelText(self):
         return self._label_item.toPlainText()
 
-    def sourceOutlet(self) -> OutletWidget | None:
-        return self._source_outlet
+    def source(self) -> OutletWidget | NodeWidget | None:
+        return self._source
 
-    def setSourceOutlet(self, pin: OutletWidget | None):
-        assert pin is None or isinstance(pin, OutletWidget), f"got: {pin}"
+    def setSource(self, source: OutletWidget | NodeWidget | None):
+        assert source is None or hasattr(source, 'sceneGeometryChanged'), f"got: {source}"
 
         # add or remove edge to pin edges for position update
-        if pin:
-            pin._edges.append(self)
-        elif self._source_outlet:
-            self._source_outlet._edges.remove(self)
+        if source:
+            # pin._edges.append(self)
+            source.sceneGeometryChanged.connect(self.updatePosition)
+            print("listen to source geometry changes")
+        if self._source:
+            self._source.sceneGeometryChanged.disconnect(self.updatePosition)
+            # self._source_outlet._edges.remove(self)
+            print("unlisten to source geometry changes")
 
-        self._source_outlet = pin
+        self._source = source
         self.updatePosition()
 
-    def targetInlet(self):
-        return self._target_inlet
+    def target(self)->InletWidget | NodeWidget | None:
+        return self._target
 
-    def setTargetInlet(self, pin: InletWidget | None):
-        assert pin is None or isinstance(pin, InletWidget), f"got: {pin}"
+    def setTarget(self, target: InletWidget | NodeWidget | None):
+        assert target is None or hasattr(target, 'sceneGeometryChanged'), f"got: {target}"
 
         # add or remove edge to pin edges for position update
-        if pin:
-            pin._edges.append(self)
-        elif self._target_inlet:
-            self._target_inlet._edges.remove(self)
-        self._target_inlet = pin
+        if target:
+            # target._edges.append(self)
+            target.sceneGeometryChanged.connect(self.updatePosition)
+            print("listen to target geometry changes")
+        elif self._target:
+            self._target.sceneGeometryChanged.disconnect(self.updatePosition)
+            # self._target_inlet._edges.remove(self)
+            print("unlisten to target geometry changes")
+        self._target = target
         self.updatePosition()
 
     def shape(self) -> QPainterPath:
@@ -530,6 +557,7 @@ class EdgeWidget(QGraphicsLineItem):
         self._label_item.setPos(self.line().center())
 
     def updatePosition(self):
+        print("Edge: updatePosition")
         # assert self._source_outlet and self._target_inlet
         # if not (
         #   self.scene
@@ -541,8 +569,8 @@ class EdgeWidget(QGraphicsLineItem):
         # assert self.scene() == self._source_outlet.scene() == self._target_inlet.scene()
 
         line = self.line()
-        sourcePin = self._source_outlet
-        targetPin = self._target_inlet
+        source = self._source
+        target = self._target
 
         def getConnectionPoint(widget):
             # try:
@@ -550,46 +578,57 @@ class EdgeWidget(QGraphicsLineItem):
             # except AttributeError:
             return widget.scenePos() + widget.boundingRect().center()
 
-        if sourcePin and targetPin:
-            line.setP1(getConnectionPoint(sourcePin))
-            line.setP2(getConnectionPoint(targetPin))
+        if source and target:
+            line.setP1(getConnectionPoint(source))
+            line.setP2(getConnectionPoint(target))
             self.setLine(line)
-        elif sourcePin:
-            line.setP1(getConnectionPoint(sourcePin))
-            line.setP2(getConnectionPoint(sourcePin))
+        elif source:
+            line.setP1(getConnectionPoint(source))
+            line.setP2(getConnectionPoint(source))
             self.setLine(line)
-        elif targetPin:
-            line.setP1(getConnectionPoint(targetPin))
-            line.setP2(getConnectionPoint(targetPin))
+        elif target:
+            line.setP1(getConnectionPoint(target))
+            line.setP2(getConnectionPoint(target))
             self.setLine(line)
         else:
             return  # nothing to update
 
     def destroy(self):
         # Safely remove from source pin
-        if self._source_outlet:
+        if self._source:
             try:
-                self._source_outlet._edges.remove(self)
+                self._source._edges.remove(self)
             except ValueError:
                 pass  # Already removed
             self._source_outlet = None
 
         # Safely remove from target pin
-        if self._target_inlet:
+        if self._target:
             try:
-                self._target_inlet._edges.remove(self)
+                self._target._edges.remove(self)
             except ValueError:
                 pass  # Already removed
-            self._target_inlet = None
+            self._target = None
 
         # Safely remove from scene
         if self.scene():
             self.scene().removeItem(self)
 
+from dataclasses import dataclass
+
+@dataclass
+class EdgeConnectionEvent:
+    direction:Literal['forward', 'backward']
+    edge: EdgeWidget
+    source:OutletWidget|NodeWidget|None
+    target:InletWidget|NodeWidget|None
+    scenePos:QPointF
+
 
 class DAGScene(QGraphicsScene):
-    connected = Signal(EdgeWidget)
-    disconnected = Signal(EdgeWidget)
+    connected = Signal(EdgeWidget) # source, target
+    disconnected = Signal(EdgeWidget)  # edge
+    edgeDropped = Signal(EdgeWidget, object, object) # source, target
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -597,13 +636,25 @@ class DAGScene(QGraphicsScene):
         # Create a scene to hold the node and edge graphics
         self.setSceneRect(QRect(-9999 // 2, -9999 // 2, 9999, 9999))
 
-        self.original_edge_pins:None|Tuple[PinWidget, PinWidget] = None
-        self.interactive_edge: EdgeWidget | None = None
-        self.interactive_edge_fixed_pin: PinWidget | None = None
-        self.interactive_edge_moving_pin: PinWidget | None = (
-            None  # keep track of original connection
-        )
-        self.is_dragging_edge = False  # indicate that an edge is being moved
+
+        # self.original_edge_pins:None|Tuple[PinWidget, PinWidget] = None
+        # self.interactive_edge: EdgeWidget | None = None
+        # self.interactive_edge_fixed_pin: PinWidget | None = None
+        # self.interactive_edge_moving_pin: PinWidget | None = (
+        #     None  # keep track of original connection
+        # )
+        # self.is_dragging_edge = False  # indicate that an edge is being moved
+        self._drag_threshold = 5
+        self._mouse_is_dragging = False # indicate that the mouse is pressed, (press and move has passed the drag threeshold) and dragging.
+        self._current_connection_event:EdgeConnectionEvent|None = None
+
+        self.installEventFilter(self)
+
+    def eventFilter(self, watched:QObject, event:QEvent):
+        if watched == self:
+            print("filter events")
+        else:
+            return super().eventFilter(watched, event)
 
     def addNode(self, node: NodeWidget):
         self.addItem(node)
@@ -636,49 +687,122 @@ class DAGScene(QGraphicsScene):
         return None
 
     def mousePressEvent(self, event) -> None:
-        self.mousePressScenePos = event.scenePos()
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.mousePressScenePos = event.scenePos()
 
-        if pin := self.pinAt(event.scenePos()):
-            self.initiateConnection(pin)
-            event.accept()
-            return
+            if pin := self.pinAt(event.scenePos()):
+                match pin:
+                    case OutletWidget():
+                        connectionEvent = EdgeConnectionEvent(
+                            source=pin,
+                            target=None,
+                            direction="forward",
+                            edge=EdgeWidget(source=pin, target=None),
+                            scenePos=event.scenePos()
+                        )
 
-        if edge := self.edgeAt(event.scenePos()):
-            delta1 = edge.line().p1() - event.scenePos()
-            d1 = delta1.manhattanLength()
-            delta2 = edge.line().p2() - event.scenePos()
-            d2 = delta2.manhattanLength()
+                    case InletWidget():
+                        connectionEvent = EdgeConnectionEvent(
+                            source=pin,
+                            target=None,
+                            direction="backward",
+                            edge=EdgeWidget(source=None, target=pin),
+                            scenePos=event.scenePos()
+                        )
+                    case _:
+                        raise ValueError()
+                self.addItem(connectionEvent.edge)
+                self._current_connection_event = connectionEvent
+                self.connectionStartEvent(connectionEvent)
+                event.accept()
+                return
 
-            if d1 < d2:
-                self.interactive_edge_fixed_pin = edge._target_inlet
-                self.interactive_edge_moving_pin = edge._source_outlet
-            else:
-                self.interactive_edge_fixed_pin = edge._source_outlet
-                self.interactive_edge_moving_pin = edge._target_inlet
+            elif node:=self.nodeAt(event.scenePos()):
+                connectionEvent = EdgeConnectionEvent(
+                    source=node,
+                    target=None,
+                    direction="forward",
+                    edge=EdgeWidget(source=node, target=None),
+                    scenePos=event.scenePos()
+                )
+                self.addItem(connectionEvent.edge)
+                self._current_connection_event = connectionEvent
+                self.connectionStartEvent(connectionEvent)
+                event.accept()
+                return
 
-            self.interactive_edge = edge
-            self.is_dragging_edge = False
-            event.accept()
-            return
+            elif edge := self.edgeAt(event.scenePos()):
+                delta1 = edge.line().p1() - event.scenePos()
+                d1 = delta1.manhattanLength()
+                delta2 = edge.line().p2() - event.scenePos()
+                d2 = delta2.manhattanLength()
+
+                if d1 < d2:
+                    connectionEvent = EdgeConnectionEvent(
+                        source=edge.source(),
+                        target=edge.target(),
+                        direction="backward",
+                        edge=EdgeWidget(source=node, target=None),
+                        scenePos=event.scenePos()
+                    )
+                else:
+                    connectionEvent = EdgeConnectionEvent(
+                        source=edge.source(),
+                        target=edge.target(),
+                        direction="forward",
+                        edge=EdgeWidget(source=node, target=None),
+                        scenePos=event.scenePos()
+                    )
+
+                # self.interactive_edge = edge
+                # self.is_dragging_edge = False
+                self.connectionStartEvent(connectionEvent)
+                self._current_connection_event = connectionEvent
+                event.accept()
+                return
 
         return super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent) -> None:
-        GrabThreshold = 15
-
-        if self.interactive_edge and not self.is_dragging_edge:
-            mouseDelta = event.scenePos() - self.mousePressScenePos
-            IsThresholdSurpassed = mouseDelta.manhattanLength() > GrabThreshold
+        if self._mouse_is_dragging == False:
+            mouseDelta = event.scenePos() - event.buttonDownScenePos(Qt.MouseButton.LeftButton)
+            IsThresholdSurpassed = mouseDelta.manhattanLength() > self._drag_threshold
             if IsThresholdSurpassed:
-                self.is_dragging_edge = True
-                outlet = self.interactive_edge.sourceOutlet()
-                inlet = self.interactive_edge.targetInlet()
-                assert outlet, inlet
-                self.original_edge_pins = outlet, inlet
+                self._mouse_is_dragging = True
+                if edge:=self.edgeAt(event.buttonDownScenePos(Qt.MouseButton.LeftButton)):
+                    assert self._current_connection_event is None
+                    delta1 = edge.line().p1() - event.scenePos()
+                    d1 = delta1.manhattanLength()
+                    delta2 = edge.line().p2() - event.scenePos()
+                    d2 = delta2.manhattanLength()
 
-        if self.is_dragging_edge and self.interactive_edge:
-            self.moveConnection(event.scenePos())
-            return
+                    if d1 < d2:
+                        connectionEvent = EdgeConnectionEvent(
+                            source=edge.source(),
+                            target=edge.target(),
+                            direction="backward",
+                            edge=EdgeWidget(source=node, target=None),
+                            scenePos=event.scenePos()
+                        )
+                    else:
+                        connectionEvent = EdgeConnectionEvent(
+                            source=edge.source(),
+                            target=edge.target(),
+                            direction="forward",
+                            edge=EdgeWidget(source=node, target=None),
+                            scenePos=event.scenePos()
+                        )
+                    self.connectionStartEvent(connectionEvent)
+                    self._current_connection_event = connectionEvent
+                    event.accept()
+                    return
+
+        if self._mouse_is_dragging and event.buttons()==Qt.MouseButton.LeftButton:
+            if self._current_connection_event:
+                connectionEvent = self._current_connection_event
+                connectionEvent.scenePos = event.scenePos()
+                self.connectionMoveEvent(connectionEvent)
+                return
 
         return super().mouseMoveEvent(event)
 
@@ -686,135 +810,69 @@ class DAGScene(QGraphicsScene):
         """
         Override mouseReleaseEvent to filter events when the mouse is released in the scene.
         """
-        if self.is_dragging_edge:
-            pin = self.pinAt(event.scenePos())
-            self.finishConnection(pin)
+        if self._mouse_is_dragging and self._current_connection_event:
+            connectionEvent = self._current_connection_event
+            connectionEvent.scenePos = event.scenePos()
+            self.connectionDropEvent(connectionEvent)
+            self._current_connection_event = None
 
-        self.is_dragging_edge = False
-        self.interactive_edge_fixed_pin = None
-        self.interactive_edge = None
-        self.interactive_edge_moving_pin = None
+        self._mouse_is_dragging = False
 
         return super().mouseReleaseEvent(event)
 
-    def initiateConnection(self, pin):
-        if isinstance(pin, OutletWidget):
-            self.interactive_edge = EdgeWidget(
-                source_outlet=pin, target_inlet=None
-            )
-            self.interactive_edge_fixed_pin = pin
-        elif isinstance(pin, InletWidget):
-            self.interactive_edge = EdgeWidget(
-                source_outlet=None, target_inlet=pin
-            )
-            self.interactive_edge_fixed_pin = pin
-
-        assert self.interactive_edge
-        self.interactive_edge.updatePosition()
-        self.addItem(self.interactive_edge)
-        pen = self.interactive_edge.pen()
+    def connectionStartEvent(self, event: EdgeConnectionEvent):
+        event.edge.updatePosition()
+        pen = event.edge.pen()
         pen.setStyle(Qt.DashLine)
-        self.interactive_edge.setPen(pen)
-        self.is_dragging_edge = True
+        event.edge.setPen(pen)
 
-    def moveConnection(self, scenepos: QPointF):
-        assert isinstance(scenepos, QPointF), f"got: {scenepos}"
-        assert self.interactive_edge
+    def connectionMoveEvent(self, event: EdgeConnectionEvent):
+        # Move free endpoint
+        line = event.edge.line()
+        match event.direction:
+            case 'forward':
+                line.setP2(event.scenePos)
+            case 'backward':
+                line.setP1(event.scenePos)
+        event.edge.setLine(line)
 
-        # move free endpoint
-        line = self.interactive_edge.line()
-        if isinstance(self.interactive_edge_fixed_pin, OutletWidget):
-            line.setP2(scenepos)
-        elif isinstance(self.interactive_edge_fixed_pin, InletWidget):
-            line.setP1(scenepos)
-        self.interactive_edge.setLine(line)
+        # Attach free endpoint to closeby items
 
-        # attach free endpoint to closeby pin
-        pinUnderMouse = self.pinAt(scenepos)
+        if pin:=self.pinAt(event.scenePos):
+            #todo: highlight pin
+            match event.direction:
+                case 'forward':
+                    event.edge.setTarget(pin)
+                case 'backward':
+                    event.edge.setSource(pin)
+        elif node:=self.nodeAt(event.scenePos):
+            #todo: highlight node
+            match event.direction:
+                case 'forward':
+                    event.edge.setTarget(node)
+                case 'backward':
+                    event.edge.setSource(node)
 
-        if current_inlet := self.interactive_edge.targetInlet():
-            current_inlet.setHighlight(False)
-        if current_outlet := self.interactive_edge.sourceOutlet():
-            current_outlet.setHighlight(False)
+    def connectionDropEvent(self, event:EdgeConnectionEvent):
+        """this is called after an edge was moved, and dropped somewhere"""
+        match event.direction:
+            case 'forward':
+                target = self.pinAt(event.scenePos) or self.nodeAt(event.scenePos) or None
+                self.edgeDropped.emit(event.edge, event.edge.source, target)
+            case 'backward':
+                source = self.pinAt(event.scenePos) or self.nodeAt(event.scenePos) or None
+                self.edgeDropped.emit(event.edge, source, event.edge.target)
 
-        if isinstance(
-            self.interactive_edge_fixed_pin, OutletWidget
-        ) and isinstance(pinUnderMouse, InletWidget):
-            pinUnderMouse.setHighlight(True)
-            self.interactive_edge.setTargetInlet(pinUnderMouse)
-            self.interactive_edge.updatePosition()
-        elif isinstance(
-            self.interactive_edge_fixed_pin, InletWidget
-        ) and isinstance(pinUnderMouse, OutletWidget):
-            pinUnderMouse.setHighlight(True)
-            self.interactive_edge.setSourceOutlet(pinUnderMouse)
-            self.interactive_edge.updatePosition()
-
-    def cancelConnection(self):
-        assert (
-            self.is_dragging_edge
-            and self.interactive_edge
-            and self.interactive_edge_fixed_pin
-        )
-
-        if self.interactive_edge_moving_pin:
-            # restore edge pin connections
-            if isinstance(self.interactive_edge_moving_pin, InletWidget):
-                self.interactive_edge.setTargetInlet(
-                    self.interactive_edge_moving_pin
-                )
-            if isinstance(self.interactive_edge_moving_pin, OutletWidget):
-                self.interactive_edge.setSourceOutlet(
-                    self.interactive_edge_moving_pin
-                )
+        # restore moved edge connection
+        if event.source and event.target:
+            event.edge.setSource(event.source)
+            event.edge.setTarget(event.target)
         else:
-            self.interactive_edge.destroy()
-            # remove cancelled edge creation
+            self.removeItem(event.edge)
 
     def canConnect(self, start_pin: PinWidget, end_pin: PinWidget) -> bool:
-        # Check if start_pin is an OutletWidget and end_pin is an InletWidget, or vice versa
-        if isinstance(start_pin, OutletWidget) and isinstance(
-            end_pin, InletWidget
-        ):
-            return True
-        elif isinstance(start_pin, InletWidget) and isinstance(
-            end_pin, OutletWidget
-        ):
-            return True
-
-        # You can add additional checks here (e.g., same node, already connected, etc.)
-
-        return False
-
-    def finishConnection(self, pin: PinWidget | None):
-        """this is called after an edge was moved, and dropped somewhere"""
-        assert self.interactive_edge_fixed_pin
-        assert self.interactive_edge
-
-        start_pin: PinWidget = self.interactive_edge_fixed_pin
-        end_pin = pin
-
-        if pin and self.canConnect(start_pin, pin):
-            """establish connection"""
-            if isinstance(self.interactive_edge_fixed_pin, InletWidget):
-                outlet = cast(OutletWidget, pin)
-                self.interactive_edge.setSourceOutlet(outlet)
-                self.connected.emit(self.interactive_edge)
-
-            elif isinstance(self.interactive_edge_fixed_pin, OutletWidget):
-                inlet = cast(InletWidget, pin)
-                self.interactive_edge.setTargetInlet(inlet)
-                self.connected.emit(self.interactive_edge)
-        else:
-            """remove interactive edge"""
-            if self.original_edge_pins is not None:
-                self.disconnected.emit(self.interactive_edge)
-            else: # if edge creation was cancelled
-                self.interactive_edge.destroy()
-
-        self.interactive_edge = None
-        self.interactive_edge_fixed_pin = None
-        self.original_edge_pins = None
+        # todo: implemenmt connection allowed
+        ...
 
 
 if __name__ == "__main__":

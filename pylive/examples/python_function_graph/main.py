@@ -384,6 +384,7 @@ class PythonGraphWindow(QWidget):
             self._graphmodel.setOutput(currentNode)
         else:
             self._graphmodel.setOutput(None)
+            
         # update dagscene selection
         selected_widgets = [self._operator_to_widget[n] for n in selected]
         deselected_widgets = [self._operator_to_widget[n] for n in deselected]
