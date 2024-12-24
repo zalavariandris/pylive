@@ -8,6 +8,7 @@ from pylive.QtGraphEditor.nx_graph_selection_model import NXGraphSelectionModel
 from pylive.QtGraphEditor.dag_graph_graphics_scene import (
     DAGScene,
     EdgeWidget,
+    NodeConnectionTool,
     NodeWidget,
     InletWidget,
     OutletWidget,
@@ -22,6 +23,7 @@ class NXGraphView(InfiniteGraphicsView):
     def __init__(self, parent:QWidget|None=None):
         super().__init__(parent=parent)
         self._graphScene = DAGScene()
+        self._graphScene.setMouseTool(NodeConnectionTool(self._graphScene))
         self.setScene(self._graphScene)
         self._model:NXGraphModel|None = None
         self._selectionModel:NXGraphSelectionModel|None = None
@@ -77,6 +79,7 @@ class NXGraphView(InfiniteGraphicsView):
         for N, (x, y) in positions.items():
             widget = self._node_to_widget_map[N]
             widget.setPos(x, y)
+        print("layout updated")
 
     @Slot(list)
     def handleNodesAdded(self, nodes: List[Hashable]):
@@ -164,8 +167,9 @@ class NXGraphView(InfiniteGraphicsView):
         n = make_unique_name("N1", self._model.nodes())
         self._model.addNode(n)
 
-        widget = self._node_to_widget_map[n]
-        widget.setPos(clickpos)
+        # widget = self._node_to_widget_map[n]
+        # widget.setPos(clickpos)
+        # print("move node to clickpos")
 
     def contextMenuEvent(self, event:QContextMenuEvent):
         def create_node_at(scenePos:QPointF):
