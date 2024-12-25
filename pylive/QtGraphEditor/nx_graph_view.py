@@ -19,6 +19,7 @@ from pylive.QtGraphEditor.infinite_graphicsview_optimized import (
 
 from pylive.utils.unique import make_unique_name
 import networkx as nx
+
 class NXGraphView(InfiniteGraphicsView):
     def __init__(self, parent:QWidget|None=None):
         super().__init__(parent=parent)
@@ -61,7 +62,6 @@ class NXGraphView(InfiniteGraphicsView):
                     # do nothing
                     pass
 
-
     def setModel(self, model:NXGraphModel):
         model.nodesAdded.connect(self.handleNodesAdded)
         model.edgesAdded.connect(self.handleEdgesAdded)
@@ -75,7 +75,7 @@ class NXGraphView(InfiniteGraphicsView):
 
     def updateLayout(self):
         assert self._model
-        positions = nx.shell_layout(self._model.G, scale=100)
+        positions = nx.spring_layout(self._model.G, scale=100, iterations=100)
         for N, (x, y) in positions.items():
             widget = self._node_to_widget_map[N]
             widget.setPos(x, y)
@@ -204,6 +204,9 @@ class NXGraphView(InfiniteGraphicsView):
         menu.addAction(connect_action)
 
         menu.exec(event.globalPos())
+
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:
+        return super().mouseMoveEvent(event)
 
 
 class NXInspectorView(QWidget):

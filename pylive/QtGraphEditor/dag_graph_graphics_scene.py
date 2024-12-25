@@ -6,6 +6,11 @@ from PySide6.QtWidgets import *
 from pylive.QtGraphEditor.text_widget import TextWidget
 from pylive.QtGraphEditor.circle_widget import CircleWidget
 
+
+
+
+
+
 class PinWidget(QGraphicsWidget):
     sceneGeometryChanged = Signal()
     def __init__(self, text, orientation=Qt.Orientation.Horizontal):
@@ -214,6 +219,8 @@ class NodeWidget(QGraphicsWidget):
             QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges
         )
 
+        self.setAcceptDrops(True)
+
     def itemChange(self, change, value):
         match change:
             case QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
@@ -364,6 +371,20 @@ class NodeWidget(QGraphicsWidget):
             self._outlets[0].destroy()  # Always remove first
 
         self.scene().removeItem(self)
+
+    def dragEnterEvent(self, event):
+        # if event.direction == "backward" and isinstance(event.target, OutletWidget):
+        event.setAccepted(True)
+
+    def dropEvent(self, event: QGraphicsSceneDragDropEvent) -> None:
+        return super().dropEvent(event)
+
+    @override
+    def dragLeaveEvent(self, event):
+        print("leave")
+
+    # def connectionLeaveEvent(self, event):
+    #     pass
 
 
 class EdgeWidget(QGraphicsLineItem):
@@ -560,7 +581,6 @@ class EdgeWidget(QGraphicsLineItem):
 
 
 from dataclasses import dataclass
-
 @dataclass
 class ConnectionEvent:
     direction:Literal['forward', 'backward']
@@ -568,6 +588,7 @@ class ConnectionEvent:
     source:OutletWidget|NodeWidget|None
     target:InletWidget|NodeWidget|None
     scenePos:QPointF
+
 
 
 class MouseTool(QObject):
@@ -597,7 +618,9 @@ class PinConnectionTool(MouseTool):
                     mousePressEvent = cast(QGraphicsSceneMouseEvent, event)
                     if mousePressEvent.button() == Qt.MouseButton.LeftButton:
                         self.mousePressScenePos = mousePressEvent.scenePos()
+
                         if pin := self._dagscene.pinAt(mousePressEvent.scenePos()):
+                            ## Start connection from Pin
                             match pin:
                                 case OutletWidget():
                                     connectionEvent = ConnectionEvent(
@@ -625,6 +648,7 @@ class PinConnectionTool(MouseTool):
                             return True
 
                         elif edge := self._dagscene.edgeAt(mousePressEvent.scenePos()):
+                            ## Start connection from Edge
                             delta1 = edge.line().p1() - mousePressEvent.scenePos()
                             d1 = delta1.manhattanLength()
                             delta2 = edge.line().p2() - mousePressEvent.scenePos()
@@ -647,8 +671,6 @@ class PinConnectionTool(MouseTool):
                                     scenePos=mousePressEvent.scenePos()
                                 )
 
-                            # self.interactive_edge = edge
-                            # self.is_dragging_edge = False
                             self.connectionStartEvent(connectionEvent)
                             self._current_connection_event = connectionEvent
                             event.accept()
@@ -663,6 +685,7 @@ class PinConnectionTool(MouseTool):
                             self._mouse_is_dragging = True
                             if edge:=self._dagscene.edgeAt(mouseMoveEvent.buttonDownScenePos(Qt.MouseButton.LeftButton)):
                                 assert self._current_connection_event is None
+                                ## start connection from existing edge
                                 delta1 = edge.line().p1() - mouseMoveEvent.scenePos()
                                 d1 = delta1.manhattanLength()
                                 delta2 = edge.line().p2() - mouseMoveEvent.scenePos()
@@ -710,7 +733,6 @@ class PinConnectionTool(MouseTool):
 
         return super().eventFilter(watched, event)
 
-
     def connectionStartEvent(self, event: ConnectionEvent):
         event.edge.updatePosition()
         pen = event.edge.pen()
@@ -728,7 +750,6 @@ class PinConnectionTool(MouseTool):
         event.edge.setLine(line)
 
         # Attach free endpoint to closeby items
-
         if pin:=self._dagscene.pinAt(event.scenePos):
             #todo: highlight pin
             match event.direction:
@@ -793,35 +814,6 @@ class NodeConnectionTool(QObject):
                             mousePressEvent.accept()
                             return True
 
-                        # elif edge := self._dagscene.edgeAt(mousePressEvent.scenePos()):
-                        #     delta1 = edge.line().p1() - mousePressEvent.scenePos()
-                        #     d1 = delta1.manhattanLength()
-                        #     delta2 = edge.line().p2() - mousePressEvent.scenePos()
-                        #     d2 = delta2.manhattanLength()
-
-                        #     if d1 < d2:
-                        #         connectionEvent = ConnectionEvent(
-                        #             source=edge.source(),
-                        #             target=edge.target(),
-                        #             direction="backward",
-                        #             edge=edge,
-                        #             scenePos=mousePressEvent.scenePos()
-                        #         )
-                        #     else:
-                        #         connectionEvent = ConnectionEvent(
-                        #             source=edge.source(),
-                        #             target=edge.target(),
-                        #             direction="forward",
-                        #             edge=edge,
-                        #             scenePos=mousePressEvent.scenePos()
-                        #         )
-
-                        #     # self.interactive_edge = edge
-                        #     # self.is_dragging_edge = False
-                        #     self.connectionStartEvent(connectionEvent)
-                        #     self._current_connection_event = connectionEvent
-                        #     event.accept()
-                        #     return True
                 case QEvent.Type.GraphicsSceneMouseMove:
                     mouseMoveEvent = cast(QGraphicsSceneMouseEvent, event)
                     if self._mouse_is_dragging == False:
@@ -1028,83 +1020,62 @@ class DAGScene(QGraphicsScene):
 
 
 
-# if __name__ == "__main__":
-#     class GraphView(QGraphicsView):
-#         def __init__(self):
-#             super().__init__()
-#             self.setWindowTitle("DAGScene example")
-#             self.setRenderHint(QPainter.RenderHint.Antialiasing)
-#             self.setInteractive(True)
-#             self.setDragMode(
-#                 QGraphicsView.DragMode.RubberBandDrag
-#             )  # optional, default mouse behaviour
+# class DropTarget(QGraphicsWidget)
 
-#         def contextMenuEvent(self, event: QContextMenuEvent) -> None:
-#             # Create the context menu
-#             context_menu = QMenu(self)
 
-#             # Add actions to the context menu
-#             delete_selection_action = QAction("delete selection", self)
-#             context_menu.addAction(delete_selection_action)
-#             delete_selection_action.triggered.connect(self.deleteSelectedNodes)
+# class DraggableItem(QGraphicsWidget):
+#     def __init__(self, parent:QGraphicsRectItem=None):
+#         super().__init__(parent=parent)
+#         self.setCursor(Qt.CursorShape.OpenHandCursor)
+#         self.setAcceptedMouseButtons(Qt.MouseButton.LeftButton)
+#         self.setGeometry(0,0,100,100)
 
-#             create_node_action = QAction("create node", self)
-#             context_menu.addAction(create_node_action)
-#             clickpos = self.mapToScene(event.pos())
-#             create_node_action.triggered.connect(
-#                 lambda: self.createNode(clickpos)
-#             )
+#         self._dragline:QGraphicsLineItem|None = None
 
-#             horizontal_orientation_action = QAction(
-#                 f"horizontal orientation", self
-#             )
-#             context_menu.addAction(horizontal_orientation_action)
-#             horizontal_orientation_action.triggered.connect(
-#                 self.flipOrientation
-#             )
+#     def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+#         self.setCursor(Qt.CursorShape.ClosedHandCursor)
 
-#             flip_orientation_action = QAction(f"flip orientation", self)
-#             context_menu.addAction(flip_orientation_action)
-#             flip_orientation_action.triggered.connect(self.flipOrientation)
+#     def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+#         if QLineF(event.screenPos(), event.buttonDownScreenPos(Qt.MouseButton.LeftButton)).length() < QApplication.startDragDistance():
+#             return
 
-#             # Show the context menu at the position of the mouse event
-#             context_menu.exec(event.globalPos())
+#         view = cast(QGraphicsView, event.widget())
+#         drag = QDrag(view)
+#         mime = QMimeData()
+#         drag.setMimeData(mime)
 
-#         def setOrientation(self):
-#             graphscene = cast(DAGScene, self.scene())
-#             for item in graphscene.items():
-#                 if isinstance(item, NodeWidget):
-#                     node = cast(NodeWidget, item)
-#                     if node.orientation() == Qt.Orientation.Vertical:
-#                         node.setOrientation(Qt.Orientation.Horizontal)
-#                     elif node.orientation() == Qt.Orientation.Horizontal:
-#                         node.setOrientation(Qt.Orientation.Vertical)
+#         QApplication.instance().installEventFilter(self)
+#         line = QLineF(self.boundingRect().center(), self.boundingRect().center())
+#         self._dragline = QGraphicsLineItem(line)
+#         self.scene().addItem(self._dragline)
+        
+#         drag.exec()
+#         self.scene().removeItem(self._dragline)
+#         self._dragline = None
+#         QApplication.instance().removeEventFilter(self)
+#         self.setCursor(Qt.CursorShape.OpenHandCursor)
 
-#         def flipOrientation(self):
-#             graphscene = cast(DAGScene, self.scene())
-#             for item in graphscene.items():
-#                 if isinstance(item, NodeWidget):
-#                     node = cast(NodeWidget, item)
-#                     if node.orientation() == Qt.Orientation.Vertical:
-#                         node.setOrientation(Qt.Orientation.Horizontal)
-#                     elif node.orientation() == Qt.Orientation.Horizontal:
-#                         node.setOrientation(Qt.Orientation.Vertical)
+#     def eventFilter(self, watched: QObject, event: QEvent) -> bool:
+#         # print(event)
+#         if event.type() == QEvent.Type.DragMove:
+#             # print("drag move event")
+#             ...
+#         if event.type() == QEvent.Type.GraphicsSceneDragMove:
+#             # print("mouse move event")
+#             dragMoveEvent = cast(QGraphicsSceneDragDropEvent, event)
+#             line = self._dragline.line()
+#             line.setP2(dragMoveEvent.scenePos())
+#             self._dragline.setLine(line)
+#             self.update()
 
-#         def createNode(self, scenepos=QPointF(0, 0), /):
-#             graphscene = cast(DAGScene, self.scene())
-#             node = NodeWidget("<new node>")
-#             node.setPos(scenepos)
-#             graphscene.addNode(node)
-#             node.addInlet(InletWidget("in"))
-#             node.addOutlet(OutletWidget("out"))
+#         return super().eventFilter(watched, event)
 
-#         def deleteSelectedNodes(self):
-#             for node in (
-#                 item
-#                 for item in self.scene().selectedItems()
-#                 if isinstance(item, NodeWidget)
-#             ):
-#                 node.destroy()
+#     def mouseReleaseEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+#         self.setCursor(Qt.CursorShape.OpenHandCursor);
+
+#     def paint(self, painter:QPainter, option: QStyleOptionGraphicsItem, widget: QWidget|None=None):
+#         painter.setBrush(QBrush("purple"))
+#         painter.drawRect(self.geometry())
 
 
 if __name__ == "__main__":
@@ -1123,7 +1094,10 @@ if __name__ == "__main__":
 
     # create graph scene
     graphscene = DAGScene()
+    graphscene.edgeDropped.connect(lambda edge, source, target: print("edge dropped"))
     graphscene.setSceneRect(QRectF(-400, -400, 800, 800))
+    # draggable_rect = DraggableItem()
+    # graphscene.addItem(draggable_rect)
     graphview.setScene(graphscene)
 
     # Create nodes
