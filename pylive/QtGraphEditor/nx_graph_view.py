@@ -8,10 +8,13 @@ from pylive.QtGraphEditor.nx_graph_selection_model import NXGraphSelectionModel
 from pylive.QtGraphEditor.dag_graph_graphics_scene import (
     DAGScene,
     EdgeWidget,
-    NodeConnectionTool,
+    # NodeConnectionTool,
     # NodeWidget,
     InletWidget,
     OutletWidget,
+    Connection,
+    ConnectionEvent,
+    ConnectionDropType,ConnectionEnterType, ConnectionLeaveType, ConnectionMoveType
 )
 from pylive.QtGraphEditor.infinite_graphicsview_optimized import (
     InfiniteGraphicsView,
@@ -32,98 +35,99 @@ from pylive.QtGraphEditor.NetrowkXGraphEditor.qgraphics_arrow_item import (
 )
 
 
-ConnectionEnterType = QEvent.Type( QEvent.registerEventType() )
-ConnectionLeaveType = QEvent.Type( QEvent.registerEventType() )
-ConnectionMoveType  = QEvent.Type( QEvent.registerEventType() )
-ConnectionDropType  = QEvent.Type( QEvent.registerEventType() )
+# ConnectionEnterType = QEvent.Type( QEvent.registerEventType() )
+# ConnectionLeaveType = QEvent.Type( QEvent.registerEventType() )
+# ConnectionMoveType  = QEvent.Type( QEvent.registerEventType() )
+# ConnectionDropType  = QEvent.Type( QEvent.registerEventType() )
 
 
-class ConnectionEvent(QGraphicsSceneEvent):
-    def __init__(self, type:QEvent.Type, source:'NodeWidget'):
-        super().__init__( type )
-        self._type = type
-        self._source = source
+# class ConnectionEvent(QGraphicsSceneEvent):
+#     def __init__(self, type:QEvent.Type, source:'NodeWidget'):
+#         super().__init__( type )
+#         self._type = type
+#         self._source = source
 
-    def source(self):
-        return self._source
+#     def source(self):
+#         return self._source
 
-    def __str__(self):
-        return f"ConnectionEvent({self._source})"
+#     def __str__(self):
+#         return f"ConnectionEvent({self._source})"
 
 
-class Connection(QObject):
-    targetChanged = Signal()
-    def __init__(self, source:'NodeWidget', parent=None):
-        super().__init__(parent=parent)
-        self._source = source
-        self._loop = QEventLoop()
+# class Connection(QObject):
+#     targetChanged = Signal()
+#     def __init__(self, source:'NodeWidget', parent=None):
+#         super().__init__(parent=parent)
+#         self._source = source
+#         self._loop = QEventLoop()
 
-        self._arrow = None
-        self._target:QGraphicsItem|None = None
-        self._entered_items = []
+#         self._arrow = None
+#         self._target:QGraphicsItem|None = None
+#         self._entered_items = []
 
-    def source(self)->QGraphicsItem:
-        return self._source
+#     def source(self)->QGraphicsItem:
+#         return self._source
 
-    def target(self)->QGraphicsItem|None:
-        return self._target
+#     def target(self)->QGraphicsItem|None:
+#         return self._target
 
-    def exec(self):
-        scene = self._source.scene()
-        assert scene
+#     def exec(self):
+#         scene = self._source.scene()
+#         assert scene
         
-        self._arrow = QGraphicsArrowItem(QLineF(self._source.pos(), self._source.pos()))
-        self._source.scene().addItem(self._arrow )
-        scene.installEventFilter(self)
-        self._loop.exec()
-        scene.removeEventFilter(self)
-        self._source.scene().removeItem(self._arrow)
+#         self._arrow = QGraphicsArrowItem(QLineF(self._source.pos(), self._source.pos()))
+#         self._source.scene().addItem(self._arrow )
+#         scene.installEventFilter(self)
+#         self._loop.exec()
+#         scene.removeEventFilter(self)
+#         self._source.scene().removeItem(self._arrow)
 
-    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
-        if event.type() == QEvent.Type.GraphicsSceneMouseMove:
-            event = cast(QGraphicsSceneMouseEvent, event)
+#     def eventFilter(self, watched: QObject, event: QEvent) -> bool:
+#         if event.type() == QEvent.Type.GraphicsSceneMouseMove:
+#             event = cast(QGraphicsSceneMouseEvent, event)
 
-            ### Move arrow ####
-            assert self._arrow
-            line = makeLineBetweenShapes(self.source(), event.scenePos())
-            self._arrow.setLine(line)
+#             ### Move arrow ####
+#             assert self._arrow
+#             line = makeLineBetweenShapes(self.source(), event.scenePos())
+#             self._arrow.setLine(line)
             
-            # manage connection enter and leave event
-            scene = self._source.scene()
-            entered_items = [item for item in self._entered_items]
-            itemsUnderMouse = [item for item in scene.items(event.scenePos()) if hasattr(item, 'connectionEnterEvent')]
-            for item in itemsUnderMouse:
-                if item not in entered_items:
-                    self._entered_items.append(item)
-                    event = ConnectionEvent(ConnectionEnterType, self._source)
-                    scene.sendEvent(item, event)
-                    if event.isAccepted():
-                        self._target = item
-                        self.targetChanged.emit()
-                        break
+#             # manage connection enter and leave event
+#             scene = self._source.scene()
+#             entered_items = [item for item in self._entered_items]
+#             itemsUnderMouse = [item for item in scene.items(event.scenePos()) if hasattr(item, 'connectionEnterEvent')]
+#             for item in itemsUnderMouse:
+#                 if item not in entered_items:
+#                     self._entered_items.append(item)
+#                     event = ConnectionEvent(ConnectionEnterType, self._source)
+#                     scene.sendEvent(item, event)
+#                     if event.isAccepted():
+#                         self._target = item
+#                         self.targetChanged.emit()
+#                         break
 
-            for item in entered_items:
-                if item not in itemsUnderMouse:
-                    self._entered_items.remove(item)
-                    event = ConnectionEvent(ConnectionLeaveType, self._source)
-                    scene.sendEvent(item, event)
+#             for item in entered_items:
+#                 if item not in itemsUnderMouse:
+#                     self._entered_items.remove(item)
+#                     event = ConnectionEvent(ConnectionLeaveType, self._source)
+#                     scene.sendEvent(item, event)
 
-            # send ConnectionMove event
-            for item in self._entered_items:
-                event = ConnectionEvent(ConnectionMoveType, self._source)
-                scene.sendEvent(item, event)
+#             # send ConnectionMove event
+#             for item in self._entered_items:
+#                 event = ConnectionEvent(ConnectionMoveType, self._source)
+#                 scene.sendEvent(item, event)
 
-            return True
+#             return True
 
-        if event.type() == QEvent.Type.GraphicsSceneMouseRelease:
+#         if event.type() == QEvent.Type.GraphicsSceneMouseRelease:
             
-            if self._target:
-                scene = self._source.scene()
-                event = ConnectionEvent(ConnectionDropType, self._source)
-                scene.sendEvent(self._target, event)
-            self._loop.exit()
-            return True
-        return super().eventFilter(watched, event)
+#             if self._target:
+#                 scene = self._source.scene()
+#                 event = ConnectionEvent(ConnectionDropType, self._source)
+#                 scene.sendEvent(self._target, event)
+#             self._loop.exit()
+#             return True
+#         return super().eventFilter(watched, event)
+
 
 
 class NodeWidget(QGraphicsWidget):
@@ -235,17 +239,17 @@ class NodeWidget(QGraphicsWidget):
         connection = Connection(self)
         connection.exec()
 
-    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
-        if event.type() == QEvent.Type.DragMove:
-            ...
-        if event.type() == QEvent.Type.GraphicsSceneDragMove:
-            dragMoveEvent = cast(QGraphicsSceneDragDropEvent, event)
-            line = self._dragline.line()
-            line.setP2(dragMoveEvent.scenePos())
-            self._dragline.setLine(line)
-            self.update()
+    # def eventFilter(self, watched: QObject, event: QEvent) -> bool:
+    #     if event.type() == QEvent.Type.DragMove:
+    #         ...
+    #     if event.type() == QEvent.Type.GraphicsSceneDragMove:
+    #         dragMoveEvent = cast(QGraphicsSceneDragDropEvent, event)
+    #         line = self._dragline.line()
+    #         line.setP2(dragMoveEvent.scenePos())
+    #         self._dragline.setLine(line)
+    #         self.update()
 
-        return super().eventFilter(watched, event)
+    #     return super().eventFilter(watched, event)
 
     # listen to enter/leave events
     def hoverEnterEvent(self, event: QGraphicsSceneHoverEvent) -> None:
@@ -288,7 +292,7 @@ class NodeWidget(QGraphicsWidget):
         self._is_hovered = False
         self.update()
     
-    def connectionDropEvent(self, event):
+    def connectionDropEvent(self, event:ConnectionEvent):
         if True:
             print(f"connection dropped from: {event.source()} onto: {self}!")
             event.setAccepted(True)

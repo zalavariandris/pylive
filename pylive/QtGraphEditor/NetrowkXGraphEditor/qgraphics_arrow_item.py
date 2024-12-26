@@ -4,7 +4,8 @@ from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
 class QGraphicsArrowItem(QGraphicsLineItem):
-	def shape(self)->QPainterPath:
+
+	def _arrow_shape(self)->QPainterPath:
 		line = self.line()
 
 		# arrow shape
@@ -34,11 +35,14 @@ class QGraphicsArrowItem(QGraphicsLineItem):
 
 		return path
 
+	def shape(self)->QPainterPath:
+		return self._arrow_shape()
+
 	def paint(self, painter, option, widget=None):
 		# draw arrow body
 		painter.setPen(Qt.PenStyle.NoPen)
 		painter.setBrush(self.pen().color())
-		path = self.shape()
+		path = self._arrow_shape()
 		painter.drawPath(path)
 
 	def boundingRect(self):
