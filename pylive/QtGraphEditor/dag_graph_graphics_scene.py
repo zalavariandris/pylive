@@ -9,8 +9,6 @@ from pylive.QtGraphEditor.circle_widget import CircleWidget
 
 
 
-
-
 class PinWidget(QGraphicsWidget):
     sceneGeometryChanged = Signal()
     def __init__(self, text, orientation=Qt.Orientation.Horizontal):
@@ -608,6 +606,8 @@ class PinConnectionTool(MouseTool):
         dagscene.installEventFilter(self)
         self._dagscene = dagscene
 
+        self.loop = QEventLoop()
+
     def eventFilter(self, watched:QObject, event:QEvent):
         # """
         # Override eventFilter to handle connections
@@ -775,6 +775,10 @@ class PinConnectionTool(MouseTool):
         else:
             self._dagscene.removeItem(event.edge)
 
+    def exec(self):
+
+        self.loop.exec()
+
 
 class NodeConnectionTool(QObject):
     def __init__(self, dagscene: 'DAGScene') -> None:
@@ -929,14 +933,6 @@ class DAGScene(QGraphicsScene):
 
         # Create am 'infinite' scene to hold the node and edge graphics
         self.setSceneRect(QRect(-9999 // 2, -9999 // 2, 9999, 9999))
-        self._mouse_tool = None
-        self.setMouseTool( PinConnectionTool(self) )
-
-    def setMouseTool(self, mouseTool:MouseTool):
-        self._mouse_tool = PinConnectionTool(self)
-
-    def mouseTool(self)->MouseTool|None:
-        return self._mouse_tool
 
     def addNode(self, node: NodeWidget):
         self.addItem(node)
@@ -968,114 +964,64 @@ class DAGScene(QGraphicsScene):
                 return item
         return None
 
-    def connectionStartEvent(self, event: ConnectionEvent):
-        event.edge.updatePosition()
-        pen = event.edge.pen()
-        pen.setStyle(Qt.DashLine)
-        event.edge.setPen(pen)
+class DropTarget(QGraphicsWidget):
+    ...
 
-    def connectionMoveEvent(self, event: ConnectionEvent):
-        # Move free endpoint
-        line = event.edge.line()
-        match event.direction:
-            case 'forward':
-                line.setP2(event.scenePos)
-            case 'backward':
-                line.setP1(event.scenePos)
-        event.edge.setLine(line)
+class DraggableItem(QGraphicsWidget):
+    def __init__(self, parent:QGraphicsRectItem=None):
+        super().__init__(parent=parent)
+        self.setCursor(Qt.CursorShape.OpenHandCursor)
+        self.setAcceptedMouseButtons(Qt.MouseButton.LeftButton)
+        self.setGeometry(0,0,100,100)
 
-        # Attach free endpoint to closeby items
+        self._dragline:QGraphicsLineItem|None = None
 
-        if pin:=self.pinAt(event.scenePos):
-            #todo: highlight pin
-            match event.direction:
-                case 'forward':
-                    event.edge.setTarget(pin)
-                case 'backward':
-                    event.edge.setSource(pin)
-        elif node:=self.nodeAt(event.scenePos):
-            #todo: highlight node
-            match event.direction:
-                case 'forward':
-                    event.edge.setTarget(node)
-                case 'backward':
-                    event.edge.setSource(node)
+    def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+        self.setCursor(Qt.CursorShape.ClosedHandCursor)
 
-    def connectionDropEvent(self, event:ConnectionEvent):
-        """this is called after an edge was moved, and dropped somewhere"""
-        match event.direction:
-            case 'forward':
-                target = self.pinAt(event.scenePos) or self.nodeAt(event.scenePos) or None
-                self.edgeDropped.emit(event.edge, event.edge.source(), target)
-            case 'backward':
-                source = self.pinAt(event.scenePos) or self.nodeAt(event.scenePos) or None
-                self.edgeDropped.emit(event.edge, source, event.edge.target())
+    def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+        if QLineF(event.screenPos(), event.buttonDownScreenPos(Qt.MouseButton.LeftButton)).length() < QApplication.startDragDistance():
+            return
 
-        # restore moved edge connection
-        if event.source and event.target:
-            event.edge.setSource(event.source())
-            event.edge.setTarget(event.target())
-        else:
-            self.removeItem(event.edge)
+        # Start dtrag
+        view = cast(QGraphicsView, event.widget())
+        drag = QDrag(view)
+        mime = QMimeData()
+        drag.setMimeData(mime)
 
-
-
-# class DropTarget(QGraphicsWidget)
-
-
-# class DraggableItem(QGraphicsWidget):
-#     def __init__(self, parent:QGraphicsRectItem=None):
-#         super().__init__(parent=parent)
-#         self.setCursor(Qt.CursorShape.OpenHandCursor)
-#         self.setAcceptedMouseButtons(Qt.MouseButton.LeftButton)
-#         self.setGeometry(0,0,100,100)
-
-#         self._dragline:QGraphicsLineItem|None = None
-
-#     def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
-#         self.setCursor(Qt.CursorShape.ClosedHandCursor)
-
-#     def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent) -> None:
-#         if QLineF(event.screenPos(), event.buttonDownScreenPos(Qt.MouseButton.LeftButton)).length() < QApplication.startDragDistance():
-#             return
-
-#         view = cast(QGraphicsView, event.widget())
-#         drag = QDrag(view)
-#         mime = QMimeData()
-#         drag.setMimeData(mime)
-
-#         QApplication.instance().installEventFilter(self)
-#         line = QLineF(self.boundingRect().center(), self.boundingRect().center())
-#         self._dragline = QGraphicsLineItem(line)
-#         self.scene().addItem(self._dragline)
+        QApplication.instance().installEventFilter(self)
+        line = QLineF(self.boundingRect().center(), self.boundingRect().center())
+        self._dragline = QGraphicsLineItem(line)
+        self.scene().addItem(self._dragline)
         
-#         drag.exec()
-#         self.scene().removeItem(self._dragline)
-#         self._dragline = None
-#         QApplication.instance().removeEventFilter(self)
-#         self.setCursor(Qt.CursorShape.OpenHandCursor)
+        drag.exec()
+        self.scene().removeItem(self._dragline)
+        self._dragline = None
+        QApplication.instance().removeEventFilter(self)
+        self.setCursor(Qt.CursorShape.OpenHandCursor)
 
-#     def eventFilter(self, watched: QObject, event: QEvent) -> bool:
-#         # print(event)
-#         if event.type() == QEvent.Type.DragMove:
-#             # print("drag move event")
-#             ...
-#         if event.type() == QEvent.Type.GraphicsSceneDragMove:
-#             # print("mouse move event")
-#             dragMoveEvent = cast(QGraphicsSceneDragDropEvent, event)
-#             line = self._dragline.line()
-#             line.setP2(dragMoveEvent.scenePos())
-#             self._dragline.setLine(line)
-#             self.update()
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
+        # print(event)
+        if event.type() == QEvent.Type.DragMove:
+            # print("drag move event")
+            ...
+        if event.type() == QEvent.Type.GraphicsSceneDragMove:
+            # print("mouse move event")
+            dragMoveEvent = cast(QGraphicsSceneDragDropEvent, event)
+            line = self._dragline.line()
+            line.setP2(dragMoveEvent.scenePos())
+            self._dragline.setLine(line)
+            self.update()
 
-#         return super().eventFilter(watched, event)
+        return super().eventFilter(watched, event)
 
-#     def mouseReleaseEvent(self, event: QGraphicsSceneMouseEvent) -> None:
-#         self.setCursor(Qt.CursorShape.OpenHandCursor);
+    def mouseReleaseEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+        self.setCursor(Qt.CursorShape.OpenHandCursor);
 
-#     def paint(self, painter:QPainter, option: QStyleOptionGraphicsItem, widget: QWidget|None=None):
-#         painter.setBrush(QBrush("purple"))
-#         painter.drawRect(self.geometry())
+    def paint(self, painter:QPainter, option: QStyleOptionGraphicsItem, widget: QWidget|None=None):
+        painter.setBrush(QBrush("purple"))
+        painter.drawRect(self.geometry())
+
 
 
 if __name__ == "__main__":
@@ -1096,8 +1042,8 @@ if __name__ == "__main__":
     graphscene = DAGScene()
     graphscene.edgeDropped.connect(lambda edge, source, target: print("edge dropped"))
     graphscene.setSceneRect(QRectF(-400, -400, 800, 800))
-    # draggable_rect = DraggableItem()
-    # graphscene.addItem(draggable_rect)
+    draggable_rect = DraggableItem()
+    graphscene.addItem(draggable_rect)
     graphview.setScene(graphscene)
 
     # Create nodes

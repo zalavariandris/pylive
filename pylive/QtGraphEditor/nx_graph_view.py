@@ -9,22 +9,231 @@ from pylive.QtGraphEditor.dag_graph_graphics_scene import (
     DAGScene,
     EdgeWidget,
     NodeConnectionTool,
-    NodeWidget,
+    # NodeWidget,
     InletWidget,
     OutletWidget,
 )
 from pylive.QtGraphEditor.infinite_graphicsview_optimized import (
     InfiniteGraphicsView,
 )
+from pylive.QtGraphEditor.text_widget import TextWidget
 
 from pylive.utils.unique import make_unique_name
 import networkx as nx
+
+QGraphicsSceneEvent.Type.User
+
+
+from pylive.QtGraphEditor.NetrowkXGraphEditor.link_graphics_items import (
+    makeLineBetweenShapes,
+)
+from pylive.QtGraphEditor.NetrowkXGraphEditor.qgraphics_arrow_item import (
+    QGraphicsArrowItem,
+)
+
+
+class ConnectionEvent(QGraphicsSceneEvent):
+    def __init__(self, source:'NodeWidget'):
+        super().__init__(QGraphicsSceneEvent.Type.User)
+        self._source = source
+
+    def source(self):
+        return self._source
+
+    def __str__(self):
+        return f"ConnectionEvent({self._source})"
+
+
+class Connection(QObject):
+    def __init__(self, source:'NodeWidget', parent=None):
+        super().__init__(parent=parent)
+        self._source = source
+        self._loop = QEventLoop()
+
+        self._arrow = None
+
+    def source(self):
+        return self._source
+
+    def exec(self):
+        app = QApplication.instance()
+        assert app
+        app.installEventFilter(self)
+        self._arrow = QGraphicsArrowItem(QLineF(self._source.pos(), self._source.pos()))
+        self._source.scene().addItem(self._arrow )
+        self._loop.exec()
+        self._source.scene().removeItem(self._arrow)
+        app.removeEventFilter(self)
+
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
+        if event.type() == QEvent.Type.GraphicsSceneMouseMove:  
+            line = self._arrow.line()
+            line.setP2(event.scenePos())
+            self._arrow.setLine(line)
+            connectionEvent = ConnectionEvent(self._source)
+            scene = self._source.scene()
+            for item in scene.items(event.scenePos()):
+                scene.sendEvent(item, connectionEvent)
+            return True
+        if event.type()==QGraphicsSceneEvent.Type.User:
+            print("user event captured", event)
+            return True
+        if event.type() == QEvent.Type.MouseButtonRelease:
+            self._loop.exit()
+            return True
+        return super().eventFilter(watched, event)
+
+
+class NodeWidget(QGraphicsWidget):
+    sceneGeometryChanged = Signal()
+    def __init__(
+        self,
+        title="Node",
+        orientation: Qt.Orientation = Qt.Orientation.Horizontal,
+        parent=None,
+    ):
+        super().__init__(parent)
+
+        # Enable selection and movement
+        self.setFlag(QGraphicsWidget.GraphicsItemFlag.ItemIsSelectable, True)
+        self.setFlag(QGraphicsWidget.GraphicsItemFlag.ItemIsMovable, True)
+        self.setFlag(QGraphicsWidget.GraphicsItemFlag.ItemIsFocusable, True)
+
+        # Create a layout
+        self.main_layout = QGraphicsLinearLayout(Qt.Orientation.Vertical)
+        self.main_layout.setContentsMargins(8, 3, 8, 3)
+        self.main_layout.setSpacing(0)
+
+        # create heading
+        self.header = TextWidget(title)
+        self.main_layout.addItem(self.header)
+
+        # Set the layout for the widget
+        self.setLayout(self.main_layout)
+
+        # Define the bounding geometry
+        # self.setGeometry(QRectF(-75, -59, 150, 100))
+        self._inlets = []
+        self._outlets = []
+
+        self.geometryChanged.connect(self.sceneGeometryChanged)
+        self.setFlag(
+            QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges
+        )
+
+        self.setAcceptDrops(True)
+
+        self._dragline = None
+
+    def itemChange(self, change, value):
+        match change:
+            case QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
+                self.sceneGeometryChanged.emit()
+
+        return super().itemChange(change, value)
+
+    def paint(
+        self, painter: QPainter, option: QStyleOptionGraphicsItem, widget=None
+    ):
+        # Draw the node rectangle
+        palette: QPalette = option.palette  # type: ignore
+        state: QStyle.StateFlag = option.state  # type: ignore
+
+        painter.setBrush(palette.window())
+        # painter.setBrush(Qt.NoBrush)
+ 
+        pen = QPen(palette.text().color(), 1)
+        pen.setCosmetic(True)
+        pen.setWidthF(1)
+        if state & QStyle.StateFlag.State_Selected:
+            pen.setWidthF(2)
+            pen.setColor(palette.accent().color())
+        painter.setPen(pen)
+
+        # painter.setPen(palette.window().color())
+        painter.drawRoundedRect(QRectF(QPointF(), self.size()), 10, 10)
+
+    def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+        if QLineF(event.screenPos(), event.buttonDownScreenPos(Qt.MouseButton.LeftButton)).length() < QApplication.startDragDistance():
+            return
+        print("start drag event")
+
+        # start connection
+        connection = Connection(self)
+        connection.exec()
+        # Start drag
+        # view = cast(QGraphicsView, event.widget())
+        # drag = QDrag(self)
+        # mime = QMimeData()
+
+        # mime.setData("node-graph-nx", bytes(self.header.toPlainText(), 'utf-8')) # TODO: research memoryview for arbitrary python object as darta
+        # drag.setMimeData(mime)line
+
+        # QApplication.instance().installEventFilter(self)
+        # line = QLineF(self.geometry().center(), self.geometry().center())
+        # self._dragline = QGraphicsLineItem(line)
+        # print(line)
+        # self.scene().addItem(self._dragline)
+        
+        # drag.exec()
+        # self.scene().removeItem(self._dragline)
+        # self._dragline = None
+        # QApplication.instance().removeEventFilter(self)
+        # self.setCursor(Qt.CursorShape.OpenHandCursor)
+
+        # return super().mouseMoveEvent(event)
+
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
+        # print(event)
+        if event.type() == QEvent.Type.DragMove:
+            # print("drag move event")
+            ...
+        if event.type() == QEvent.Type.GraphicsSceneDragMove:
+            # print("mouse move event")
+            dragMoveEvent = cast(QGraphicsSceneDragDropEvent, event)
+            line = self._dragline.line()
+            line.setP2(dragMoveEvent.scenePos())
+            self._dragline.setLine(line)
+            self.update()
+
+        return super().eventFilter(watched, event)
+
+    # def dragEnterEvent(self, event):
+    #     mime = event.mimeData()
+    #     print("dragEnterEvent", mime, mime.data("node-graph-nx"))
+    #     if qbytearray:=mime.data("node-graph-nx"):
+    #         n = str(qbytearray.data(), encoding='utf-8')
+    #         if n !=self.header.toPlainText():
+    #             print(n)
+    #             event.setAccepted(True)
+    #             return
+    #     event.setAccepted(False)
+
+    # def dropEvent(self, event: QGraphicsSceneDragDropEvent) -> None:
+    #     mime = event.mimeData()
+    #     print("dragEnterEvent", mime, mime.data("node-graph-nx"))
+
+    #     if qbytearray:=mime.data("node-graph-nx"):
+    #         n = str(qbytearray.data(), encoding='utf-8')
+    #         if n !=self.header.toPlainText():
+    #             print("dropped:", event.source())
+    #             event.setAccepted(True)
+    #             view = cast(NXGraphView, self.parentWidget())
+    #             # view._model.addEdge(self.header.toPlainText(), n)
+    #             return
+    #     event.setAccepted(False)
+    #     return super().dropEvent(event)
+
+    # @override
+    # def dragLeaveEvent(self, event):
+    #     print("leave")
+
 
 class NXGraphView(InfiniteGraphicsView):
     def __init__(self, parent:QWidget|None=None):
         super().__init__(parent=parent)
         self._graphScene = DAGScene()
-        self._graphScene.setMouseTool(NodeConnectionTool(self._graphScene))
+        # self._graphScene.setMouseTool(NodeConnectionTool(self._graphScene))
         self.setScene(self._graphScene)
         self._model:NXGraphModel|None = None
         self._selectionModel:NXGraphSelectionModel|None = None
