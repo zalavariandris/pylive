@@ -50,7 +50,7 @@ def intersectLineWithPath(p1: QPointF, p2: QPointF, path: QPainterPath) -> QPoin
     return None
 
 
-def getShapeCenter(shape:QPointF|QRectF|QPainterPath):
+def getShapeCenter(shape:QPointF|QRectF|QPainterPath|QGraphicsItem):
 	match shape:
 		case QPointF():
 			return shape
@@ -58,11 +58,14 @@ def getShapeCenter(shape:QPointF|QRectF|QPainterPath):
 			return shape.center()
 		case QPainterPath():
 			return shape.boundingRect().center()
+		case QGraphicsItem():
+			sceneShape = shape.sceneTransform().map(shape.shape())
+			return sceneShape.boundingRect().center()
 		case _:
 			raise ValueError
 
 
-def makeLineToShape(origin:QPointF, shape:QPointF|QRectF|QPainterPath):
+def makeLineToShape(origin:QPointF, shape:QPointF|QRectF|QPainterPath|QGraphicsItem):
 	center = getShapeCenter(shape)
 
 	match shape:
@@ -89,13 +92,18 @@ def makeLineToShape(origin:QPointF, shape:QPointF|QRectF|QPainterPath):
 				intersection = P
 			else:
 				intersection = center
-
+		case QGraphicsItem():
+			sceneShape = shape.sceneTransform().map(shape.shape())
+			if P:=intersectLineWithPath(origin, center, sceneShape): #TODO: use intersect_ray_with_polygon
+				intersection = P
+			else:
+				intersection = center
 		case _:
 			raise ValueError
 
 	return QLineF(center, intersection)
 
-def makeLineBetweenShapes(A:QPointF|QRectF|QPainterPath, B:QPointF|QRectF|QPainterPath)->QLineF:
+def makeLineBetweenShapes(A:QPointF|QRectF|QPainterPath|QGraphicsItem, B:QPointF|QRectF|QPainterPath|QGraphicsItem)->QLineF:
 	Ac = getShapeCenter(A)
 	Bc = getShapeCenter(B)
 

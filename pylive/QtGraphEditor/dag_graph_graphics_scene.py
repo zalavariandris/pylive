@@ -578,349 +578,349 @@ class EdgeWidget(QGraphicsLineItem):
             self.scene().removeItem(self)
 
 
-from dataclasses import dataclass
-@dataclass
-class ConnectionEvent:
-    direction:Literal['forward', 'backward']
-    edge: EdgeWidget
-    source:OutletWidget|NodeWidget|None
-    target:InletWidget|NodeWidget|None
-    scenePos:QPointF
+# from dataclasses import dataclass
+# @dataclass
+# class ConnectionEvent:
+#     direction:Literal['forward', 'backward']
+#     edge: EdgeWidget
+#     source:OutletWidget|NodeWidget|None
+#     target:InletWidget|NodeWidget|None
+#     scenePos:QPointF
 
 
 
-class MouseTool(QObject):
-    ...
+# class MouseTool(QObject):
+#     ...
 
-class PinConnectionTool(MouseTool):
-    def __init__(self, dagscene: 'DAGScene') -> None:
-        super().__init__(parent=dagscene)
+# class PinConnectionTool(MouseTool):
+#     def __init__(self, dagscene: 'DAGScene') -> None:
+#         super().__init__(parent=dagscene)
 
-        # handle mouse dragging events
-        self._drag_threshold = 5
-        self._mouse_is_dragging = False # indicate that the mouse is pressed, (press and move has passed the drag threeshold) and dragging.
+#         # handle mouse dragging events
+#         self._drag_threshold = 5
+#         self._mouse_is_dragging = False # indicate that the mouse is pressed, (press and move has passed the drag threeshold) and dragging.
         
-        # handle connection events
-        self._current_connection_event:ConnectionEvent|None = None
+#         # handle connection events
+#         self._current_connection_event:ConnectionEvent|None = None
         
-        dagscene.installEventFilter(self)
-        self._dagscene = dagscene
+#         dagscene.installEventFilter(self)
+#         self._dagscene = dagscene
 
-        self.loop = QEventLoop()
+#         self.loop = QEventLoop()
 
-    def eventFilter(self, watched:QObject, event:QEvent):
-        # """
-        # Override eventFilter to handle connections
-        # """
-        if watched == self._dagscene:
-            match event.type():
-                case QEvent.Type.GraphicsSceneMousePress:
-                    mousePressEvent = cast(QGraphicsSceneMouseEvent, event)
-                    if mousePressEvent.button() == Qt.MouseButton.LeftButton:
-                        self.mousePressScenePos = mousePressEvent.scenePos()
+#     def eventFilter(self, watched:QObject, event:QEvent):
+#         # """
+#         # Override eventFilter to handle connections
+#         # """
+#         if watched == self._dagscene:
+#             match event.type():
+#                 case QEvent.Type.GraphicsSceneMousePress:
+#                     mousePressEvent = cast(QGraphicsSceneMouseEvent, event)
+#                     if mousePressEvent.button() == Qt.MouseButton.LeftButton:
+#                         self.mousePressScenePos = mousePressEvent.scenePos()
 
-                        if pin := self._dagscene.pinAt(mousePressEvent.scenePos()):
-                            ## Start connection from Pin
-                            match pin:
-                                case OutletWidget():
-                                    connectionEvent = ConnectionEvent(
-                                        source=pin,
-                                        target=None,
-                                        direction="forward",
-                                        edge=EdgeWidget(source=pin, target=None),
-                                        scenePos=mousePressEvent.scenePos()
-                                    )
+#                         if pin := self._dagscene.pinAt(mousePressEvent.scenePos()):
+#                             ## Start connection from Pin
+#                             match pin:
+#                                 case OutletWidget():
+#                                     connectionEvent = ConnectionEvent(
+#                                         source=pin,
+#                                         target=None,
+#                                         direction="forward",
+#                                         edge=EdgeWidget(source=pin, target=None),
+#                                         scenePos=mousePressEvent.scenePos()
+#                                     )
 
-                                case InletWidget():
-                                    connectionEvent = ConnectionEvent(
-                                        source=None,
-                                        target=pin,
-                                        direction="backward",
-                                        edge=EdgeWidget(source=None, target=pin),
-                                        scenePos=mousePressEvent.scenePos()
-                                    )
-                                case _:
-                                    raise ValueError()
-                            self._dagscene.addItem(connectionEvent.edge)
-                            self._current_connection_event = connectionEvent
-                            self.connectionStartEvent(connectionEvent)
-                            mousePressEvent.accept()
-                            return True
+#                                 case InletWidget():
+#                                     connectionEvent = ConnectionEvent(
+#                                         source=None,
+#                                         target=pin,
+#                                         direction="backward",
+#                                         edge=EdgeWidget(source=None, target=pin),
+#                                         scenePos=mousePressEvent.scenePos()
+#                                     )
+#                                 case _:
+#                                     raise ValueError()
+#                             self._dagscene.addItem(connectionEvent.edge)
+#                             self._current_connection_event = connectionEvent
+#                             self.connectionStartEvent(connectionEvent)
+#                             mousePressEvent.accept()
+#                             return True
 
-                        elif edge := self._dagscene.edgeAt(mousePressEvent.scenePos()):
-                            ## Start connection from Edge
-                            delta1 = edge.line().p1() - mousePressEvent.scenePos()
-                            d1 = delta1.manhattanLength()
-                            delta2 = edge.line().p2() - mousePressEvent.scenePos()
-                            d2 = delta2.manhattanLength()
+#                         elif edge := self._dagscene.edgeAt(mousePressEvent.scenePos()):
+#                             ## Start connection from Edge
+#                             delta1 = edge.line().p1() - mousePressEvent.scenePos()
+#                             d1 = delta1.manhattanLength()
+#                             delta2 = edge.line().p2() - mousePressEvent.scenePos()
+#                             d2 = delta2.manhattanLength()
 
-                            if d1 < d2:
-                                connectionEvent = ConnectionEvent(
-                                    source=edge.source(),
-                                    target=edge.target(),
-                                    direction="backward",
-                                    edge=edge,
-                                    scenePos=mousePressEvent.scenePos()
-                                )
-                            else:
-                                connectionEvent = ConnectionEvent(
-                                    source=edge.source(),
-                                    target=edge.target(),
-                                    direction="forward",
-                                    edge=edge,
-                                    scenePos=mousePressEvent.scenePos()
-                                )
+#                             if d1 < d2:
+#                                 connectionEvent = ConnectionEvent(
+#                                     source=edge.source(),
+#                                     target=edge.target(),
+#                                     direction="backward",
+#                                     edge=edge,
+#                                     scenePos=mousePressEvent.scenePos()
+#                                 )
+#                             else:
+#                                 connectionEvent = ConnectionEvent(
+#                                     source=edge.source(),
+#                                     target=edge.target(),
+#                                     direction="forward",
+#                                     edge=edge,
+#                                     scenePos=mousePressEvent.scenePos()
+#                                 )
 
-                            self.connectionStartEvent(connectionEvent)
-                            self._current_connection_event = connectionEvent
-                            event.accept()
-                            return True
+#                             self.connectionStartEvent(connectionEvent)
+#                             self._current_connection_event = connectionEvent
+#                             event.accept()
+#                             return True
 
-                case QEvent.Type.GraphicsSceneMouseMove:
-                    mouseMoveEvent = cast(QGraphicsSceneMouseEvent, event)
-                    if self._mouse_is_dragging == False:
-                        mouseDelta = mouseMoveEvent.scenePos() - mouseMoveEvent.buttonDownScenePos(Qt.MouseButton.LeftButton)
-                        IsThresholdSurpassed = mouseDelta.manhattanLength() > self._drag_threshold
-                        if IsThresholdSurpassed:
-                            self._mouse_is_dragging = True
-                            if edge:=self._dagscene.edgeAt(mouseMoveEvent.buttonDownScenePos(Qt.MouseButton.LeftButton)):
-                                assert self._current_connection_event is None
-                                ## start connection from existing edge
-                                delta1 = edge.line().p1() - mouseMoveEvent.scenePos()
-                                d1 = delta1.manhattanLength()
-                                delta2 = edge.line().p2() - mouseMoveEvent.scenePos()
-                                d2 = delta2.manhattanLength()
+#                 case QEvent.Type.GraphicsSceneMouseMove:
+#                     mouseMoveEvent = cast(QGraphicsSceneMouseEvent, event)
+#                     if self._mouse_is_dragging == False:
+#                         mouseDelta = mouseMoveEvent.scenePos() - mouseMoveEvent.buttonDownScenePos(Qt.MouseButton.LeftButton)
+#                         IsThresholdSurpassed = mouseDelta.manhattanLength() > self._drag_threshold
+#                         if IsThresholdSurpassed:
+#                             self._mouse_is_dragging = True
+#                             if edge:=self._dagscene.edgeAt(mouseMoveEvent.buttonDownScenePos(Qt.MouseButton.LeftButton)):
+#                                 assert self._current_connection_event is None
+#                                 ## start connection from existing edge
+#                                 delta1 = edge.line().p1() - mouseMoveEvent.scenePos()
+#                                 d1 = delta1.manhattanLength()
+#                                 delta2 = edge.line().p2() - mouseMoveEvent.scenePos()
+#                                 d2 = delta2.manhattanLength()
 
-                                if d1 < d2:
-                                    connectionEvent = ConnectionEvent(
-                                        source=edge.source(),
-                                        target=edge.target(),
-                                        direction="backward",
-                                        edge=edge,
-                                        scenePos=mouseMoveEvent.scenePos()
-                                    )
-                                else:
-                                    connectionEvent = ConnectionEvent(
-                                        source=edge.source(),
-                                        target=edge.target(),
-                                        direction="forward",
-                                        edge=edge,
-                                        scenePos=mouseMoveEvent.scenePos()
-                                    )
-                                self.connectionStartEvent(connectionEvent)
-                                self._current_connection_event = connectionEvent
-                                mouseMoveEvent.accept()
-                                return True
+#                                 if d1 < d2:
+#                                     connectionEvent = ConnectionEvent(
+#                                         source=edge.source(),
+#                                         target=edge.target(),
+#                                         direction="backward",
+#                                         edge=edge,
+#                                         scenePos=mouseMoveEvent.scenePos()
+#                                     )
+#                                 else:
+#                                     connectionEvent = ConnectionEvent(
+#                                         source=edge.source(),
+#                                         target=edge.target(),
+#                                         direction="forward",
+#                                         edge=edge,
+#                                         scenePos=mouseMoveEvent.scenePos()
+#                                     )
+#                                 self.connectionStartEvent(connectionEvent)
+#                                 self._current_connection_event = connectionEvent
+#                                 mouseMoveEvent.accept()
+#                                 return True
 
-                    if self._mouse_is_dragging and mouseMoveEvent.buttons()==Qt.MouseButton.LeftButton:
-                        if self._current_connection_event:
-                            connectionEvent = self._current_connection_event
-                            connectionEvent.scenePos = mouseMoveEvent.scenePos()
-                            self.connectionMoveEvent(connectionEvent)
-                            return True
+#                     if self._mouse_is_dragging and mouseMoveEvent.buttons()==Qt.MouseButton.LeftButton:
+#                         if self._current_connection_event:
+#                             connectionEvent = self._current_connection_event
+#                             connectionEvent.scenePos = mouseMoveEvent.scenePos()
+#                             self.connectionMoveEvent(connectionEvent)
+#                             return True
 
-                case QEvent.Type.GraphicsSceneMouseRelease:
-                    mouseReleaseEvent = cast(QGraphicsSceneMouseEvent, event)
-                    if self._mouse_is_dragging and self._current_connection_event:
-                        connectionEvent = self._current_connection_event
-                        connectionEvent.scenePos = mouseReleaseEvent.scenePos()
-                        self.connectionDropEvent(connectionEvent)
-                        self._current_connection_event = None
+#                 case QEvent.Type.GraphicsSceneMouseRelease:
+#                     mouseReleaseEvent = cast(QGraphicsSceneMouseEvent, event)
+#                     if self._mouse_is_dragging and self._current_connection_event:
+#                         connectionEvent = self._current_connection_event
+#                         connectionEvent.scenePos = mouseReleaseEvent.scenePos()
+#                         self.connectionDropEvent(connectionEvent)
+#                         self._current_connection_event = None
 
-                        self._mouse_is_dragging = False
-                        mouseReleaseEvent.accept()
-                        return True
+#                         self._mouse_is_dragging = False
+#                         mouseReleaseEvent.accept()
+#                         return True
 
-        return super().eventFilter(watched, event)
+#         return super().eventFilter(watched, event)
 
-    def connectionStartEvent(self, event: ConnectionEvent):
-        event.edge.updatePosition()
-        pen = event.edge.pen()
-        pen.setStyle(Qt.DashLine)
-        event.edge.setPen(pen)
+#     def connectionStartEvent(self, event: ConnectionEvent):
+#         event.edge.updatePosition()
+#         pen = event.edge.pen()
+#         pen.setStyle(Qt.DashLine)
+#         event.edge.setPen(pen)
 
-    def connectionMoveEvent(self, event: ConnectionEvent):
-        # Move free endpoint
-        line = event.edge.line()
-        match event.direction:
-            case 'forward':
-                line.setP2(event.scenePos)
-            case 'backward':
-                line.setP1(event.scenePos)
-        event.edge.setLine(line)
+#     def connectionMoveEvent(self, event: ConnectionEvent):
+#         # Move free endpoint
+#         line = event.edge.line()
+#         match event.direction:
+#             case 'forward':
+#                 line.setP2(event.scenePos)
+#             case 'backward':
+#                 line.setP1(event.scenePos)
+#         event.edge.setLine(line)
 
-        # Attach free endpoint to closeby items
-        if pin:=self._dagscene.pinAt(event.scenePos):
-            #todo: highlight pin
-            match event.direction:
-                case 'forward':
-                    event.edge.setTarget(pin)
-                case 'backward':
-                    event.edge.setSource(pin)
+#         # Attach free endpoint to closeby items
+#         if pin:=self._dagscene.pinAt(event.scenePos):
+#             #todo: highlight pin
+#             match event.direction:
+#                 case 'forward':
+#                     event.edge.setTarget(pin)
+#                 case 'backward':
+#                     event.edge.setSource(pin)
 
-    def connectionDropEvent(self, event:ConnectionEvent):
-        """this is called after an edge was moved, and dropped somewhere"""
-        match event.direction:
-            case 'forward':
-                target = self._dagscene.pinAt(event.scenePos) or None
-                self._dagscene.edgeDropped.emit(event.edge, event.edge.source(), target)
-            case 'backward':
-                source = self._dagscene.pinAt(event.scenePos) or None
-                self._dagscene.edgeDropped.emit(event.edge, source, event.edge.target())
+#     def connectionDropEvent(self, event:ConnectionEvent):
+#         """this is called after an edge was moved, and dropped somewhere"""
+#         match event.direction:
+#             case 'forward':
+#                 target = self._dagscene.pinAt(event.scenePos) or None
+#                 self._dagscene.edgeDropped.emit(event.edge, event.edge.source(), target)
+#             case 'backward':
+#                 source = self._dagscene.pinAt(event.scenePos) or None
+#                 self._dagscene.edgeDropped.emit(event.edge, source, event.edge.target())
 
-        # restore moved edge connection
-        if event.source and event.target:
-            event.edge.setSource(event.source)
-            event.edge.setTarget(event.target)
-        else:
-            self._dagscene.removeItem(event.edge)
+#         # restore moved edge connection
+#         if event.source and event.target:
+#             event.edge.setSource(event.source)
+#             event.edge.setTarget(event.target)
+#         else:
+#             self._dagscene.removeItem(event.edge)
 
-    def exec(self):
+#     def exec(self):
 
-        self.loop.exec()
+#         self.loop.exec()
 
 
-class NodeConnectionTool(QObject):
-    def __init__(self, dagscene: 'DAGScene') -> None:
-        super().__init__(parent=dagscene)
+# class NodeConnectionTool(QObject):
+#     def __init__(self, dagscene: 'DAGScene') -> None:
+#         super().__init__(parent=dagscene)
 
-        # handle mouse dragging events
-        self._drag_threshold = 5
-        self._mouse_is_dragging = False # indicate that the mouse is pressed, (press and move has passed the drag threeshold) and dragging.
+#         # handle mouse dragging events
+#         self._drag_threshold = 5
+#         self._mouse_is_dragging = False # indicate that the mouse is pressed, (press and move has passed the drag threeshold) and dragging.
         
-        # handle connection events
-        self._current_connection_event:ConnectionEvent|None = None
+#         # handle connection events
+#         self._current_connection_event:ConnectionEvent|None = None
         
-        dagscene.installEventFilter(self)
-        self._dagscene = dagscene
+#         dagscene.installEventFilter(self)
+#         self._dagscene = dagscene
 
-    def eventFilter(self, watched:QObject, event:QEvent):
-        # """
-        # Override eventFilter to handle connections
-        # """
-        if watched == self._dagscene:
-            match event.type():
-                case QEvent.Type.GraphicsSceneMousePress:
-                    mousePressEvent = cast(QGraphicsSceneMouseEvent, event)
-                    if mousePressEvent.button() == Qt.MouseButton.LeftButton:
-                        self.mousePressScenePos = mousePressEvent.scenePos()
-                        if node:=self._dagscene.nodeAt(mousePressEvent.scenePos()):
-                            connectionEvent = ConnectionEvent(
-                                source=node,
-                                target=None,
-                                direction="forward",
-                                edge=EdgeWidget(source=node, target=None),
-                                scenePos=mousePressEvent.scenePos()
-                            )
-                            self._dagscene.addItem(connectionEvent.edge)
-                            self._current_connection_event = connectionEvent
-                            self.connectionStartEvent(connectionEvent)
-                            mousePressEvent.accept()
-                            return True
+#     def eventFilter(self, watched:QObject, event:QEvent):
+#         # """
+#         # Override eventFilter to handle connections
+#         # """
+#         if watched == self._dagscene:
+#             match event.type():
+#                 case QEvent.Type.GraphicsSceneMousePress:
+#                     mousePressEvent = cast(QGraphicsSceneMouseEvent, event)
+#                     if mousePressEvent.button() == Qt.MouseButton.LeftButton:
+#                         self.mousePressScenePos = mousePressEvent.scenePos()
+#                         if node:=self._dagscene.nodeAt(mousePressEvent.scenePos()):
+#                             connectionEvent = ConnectionEvent(
+#                                 source=node,
+#                                 target=None,
+#                                 direction="forward",
+#                                 edge=EdgeWidget(source=node, target=None),
+#                                 scenePos=mousePressEvent.scenePos()
+#                             )
+#                             self._dagscene.addItem(connectionEvent.edge)
+#                             self._current_connection_event = connectionEvent
+#                             self.connectionStartEvent(connectionEvent)
+#                             mousePressEvent.accept()
+#                             return True
 
-                case QEvent.Type.GraphicsSceneMouseMove:
-                    mouseMoveEvent = cast(QGraphicsSceneMouseEvent, event)
-                    if self._mouse_is_dragging == False:
-                        mouseDelta = mouseMoveEvent.scenePos() - mouseMoveEvent.buttonDownScenePos(Qt.MouseButton.LeftButton)
-                        IsThresholdSurpassed = mouseDelta.manhattanLength() > self._drag_threshold
-                        if IsThresholdSurpassed:
-                            self._mouse_is_dragging = True
-                            if edge:=self._dagscene.edgeAt(mouseMoveEvent.buttonDownScenePos(Qt.MouseButton.LeftButton)):
-                                assert self._current_connection_event is None
-                                delta1 = edge.line().p1() - mouseMoveEvent.scenePos()
-                                d1 = delta1.manhattanLength()
-                                delta2 = edge.line().p2() - mouseMoveEvent.scenePos()
-                                d2 = delta2.manhattanLength()
+#                 case QEvent.Type.GraphicsSceneMouseMove:
+#                     mouseMoveEvent = cast(QGraphicsSceneMouseEvent, event)
+#                     if self._mouse_is_dragging == False:
+#                         mouseDelta = mouseMoveEvent.scenePos() - mouseMoveEvent.buttonDownScenePos(Qt.MouseButton.LeftButton)
+#                         IsThresholdSurpassed = mouseDelta.manhattanLength() > self._drag_threshold
+#                         if IsThresholdSurpassed:
+#                             self._mouse_is_dragging = True
+#                             if edge:=self._dagscene.edgeAt(mouseMoveEvent.buttonDownScenePos(Qt.MouseButton.LeftButton)):
+#                                 assert self._current_connection_event is None
+#                                 delta1 = edge.line().p1() - mouseMoveEvent.scenePos()
+#                                 d1 = delta1.manhattanLength()
+#                                 delta2 = edge.line().p2() - mouseMoveEvent.scenePos()
+#                                 d2 = delta2.manhattanLength()
 
-                                if d1 < d2:
-                                    connectionEvent = ConnectionEvent(
-                                        source=edge.source(),
-                                        target=edge.target(),
-                                        direction="backward",
-                                        edge=edge,
-                                        scenePos=mouseMoveEvent.scenePos()
-                                    )
-                                else:
-                                    connectionEvent = ConnectionEvent(
-                                        source=edge.source(),
-                                        target=edge.target(),
-                                        direction="forward",
-                                        edge=edge,
-                                        scenePos=mouseMoveEvent.scenePos()
-                                    )
-                                self.connectionStartEvent(connectionEvent)
-                                self._current_connection_event = connectionEvent
-                                mouseMoveEvent.accept()
-                                return True
+#                                 if d1 < d2:
+#                                     connectionEvent = ConnectionEvent(
+#                                         source=edge.source(),
+#                                         target=edge.target(),
+#                                         direction="backward",
+#                                         edge=edge,
+#                                         scenePos=mouseMoveEvent.scenePos()
+#                                     )
+#                                 else:
+#                                     connectionEvent = ConnectionEvent(
+#                                         source=edge.source(),
+#                                         target=edge.target(),
+#                                         direction="forward",
+#                                         edge=edge,
+#                                         scenePos=mouseMoveEvent.scenePos()
+#                                     )
+#                                 self.connectionStartEvent(connectionEvent)
+#                                 self._current_connection_event = connectionEvent
+#                                 mouseMoveEvent.accept()
+#                                 return True
 
-                    if self._mouse_is_dragging and mouseMoveEvent.buttons()==Qt.MouseButton.LeftButton:
-                        if self._current_connection_event:
-                            connectionEvent = self._current_connection_event
-                            connectionEvent.scenePos = mouseMoveEvent.scenePos()
-                            self.connectionMoveEvent(connectionEvent)
-                            return True
+#                     if self._mouse_is_dragging and mouseMoveEvent.buttons()==Qt.MouseButton.LeftButton:
+#                         if self._current_connection_event:
+#                             connectionEvent = self._current_connection_event
+#                             connectionEvent.scenePos = mouseMoveEvent.scenePos()
+#                             self.connectionMoveEvent(connectionEvent)
+#                             return True
 
-                case QEvent.Type.GraphicsSceneMouseRelease:
-                    mouseReleaseEvent = cast(QGraphicsSceneMouseEvent, event)
-                    if self._mouse_is_dragging and self._current_connection_event:
-                        connectionEvent = self._current_connection_event
-                        connectionEvent.scenePos = mouseReleaseEvent.scenePos()
-                        self.connectionDropEvent(connectionEvent)
-                        self._current_connection_event = None
+#                 case QEvent.Type.GraphicsSceneMouseRelease:
+#                     mouseReleaseEvent = cast(QGraphicsSceneMouseEvent, event)
+#                     if self._mouse_is_dragging and self._current_connection_event:
+#                         connectionEvent = self._current_connection_event
+#                         connectionEvent.scenePos = mouseReleaseEvent.scenePos()
+#                         self.connectionDropEvent(connectionEvent)
+#                         self._current_connection_event = None
 
-                    self._mouse_is_dragging = False
-                    mouseReleaseEvent.accept()
-                    return True
+#                     self._mouse_is_dragging = False
+#                     mouseReleaseEvent.accept()
+#                     return True
 
-        return super().eventFilter(watched, event)
+#         return super().eventFilter(watched, event)
 
 
-    def connectionStartEvent(self, event: ConnectionEvent):
-        event.edge.updatePosition()
-        pen = event.edge.pen()
-        pen.setStyle(Qt.DashLine)
-        event.edge.setPen(pen)
+#     def connectionStartEvent(self, event: ConnectionEvent):
+#         event.edge.updatePosition()
+#         pen = event.edge.pen()
+#         pen.setStyle(Qt.DashLine)
+#         event.edge.setPen(pen)
 
-    def connectionMoveEvent(self, event: ConnectionEvent):
-        # Move free endpoint
-        line = event.edge.line()
-        match event.direction:
-            case 'forward':
-                line.setP2(event.scenePos)
-            case 'backward':
-                line.setP1(event.scenePos)
-        event.edge.setLine(line)
+#     def connectionMoveEvent(self, event: ConnectionEvent):
+#         # Move free endpoint
+#         line = event.edge.line()
+#         match event.direction:
+#             case 'forward':
+#                 line.setP2(event.scenePos)
+#             case 'backward':
+#                 line.setP1(event.scenePos)
+#         event.edge.setLine(line)
 
-        # Attach free endpoint to closeby items
+#         # Attach free endpoint to closeby items
 
-        if node:=self._dagscene.nodeAt(event.scenePos):
-            #todo: highlight node
-            match event.direction:
-                case 'forward':
-                    event.edge.setTarget(node)
-                case 'backward':
-                    event.edge.setSource(node)
+#         if node:=self._dagscene.nodeAt(event.scenePos):
+#             #todo: highlight node
+#             match event.direction:
+#                 case 'forward':
+#                     event.edge.setTarget(node)
+#                 case 'backward':
+#                     event.edge.setSource(node)
 
-    def connectionDropEvent(self, event:ConnectionEvent):
-        """this is called after an edge was moved, and dropped somewhere"""
-        match event.direction:
-            case 'forward':
-                target = self._dagscene.pinAt(event.scenePos) or self._dagscene.nodeAt(event.scenePos) or None
-                self._dagscene.edgeDropped.emit(event.edge, event.edge.source(), target)
-            case 'backward':
-                source = self._dagscene.pinAt(event.scenePos) or self._dagscene.nodeAt(event.scenePos) or None
-                self._dagscene.edgeDropped.emit(event.edge, source, event.edge.target())
+#     def connectionDropEvent(self, event:ConnectionEvent):
+#         """this is called after an edge was moved, and dropped somewhere"""
+#         match event.direction:
+#             case 'forward':
+#                 target = self._dagscene.pinAt(event.scenePos) or self._dagscene.nodeAt(event.scenePos) or None
+#                 self._dagscene.edgeDropped.emit(event.edge, event.edge.source(), target)
+#             case 'backward':
+#                 source = self._dagscene.pinAt(event.scenePos) or self._dagscene.nodeAt(event.scenePos) or None
+#                 self._dagscene.edgeDropped.emit(event.edge, source, event.edge.target())
 
-        # restore moved edge connection
-        if event.source and event.target:
-            event.edge.setSource(event.source)
-            event.edge.setTarget(event.target)
-        else:
-            self._dagscene.removeItem(event.edge)
+#         # restore moved edge connection
+#         if event.source and event.target:
+#             event.edge.setSource(event.source)
+#             event.edge.setTarget(event.target)
+#         else:
+#             self._dagscene.removeItem(event.edge)
 
-    def canConnect(self, start_pin: PinWidget, end_pin: PinWidget) -> bool:
-        # todo: implemenmt connection allowed
-        ...
+#     def canConnect(self, start_pin: PinWidget, end_pin: PinWidget) -> bool:
+#         # todo: implemenmt connection allowed
+#         ...
 
 
 class DAGScene(QGraphicsScene):

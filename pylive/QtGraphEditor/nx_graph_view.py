@@ -32,9 +32,16 @@ from pylive.QtGraphEditor.NetrowkXGraphEditor.qgraphics_arrow_item import (
 )
 
 
+ConnectionEnterType = QEvent.Type( QEvent.registerEventType() )
+ConnectionLeaveType = QEvent.Type( QEvent.registerEventType() )
+ConnectionMoveType  = QEvent.Type( QEvent.registerEventType() )
+ConnectionDropType  = QEvent.Type( QEvent.registerEventType() )
+
+
 class ConnectionEvent(QGraphicsSceneEvent):
-    def __init__(self, source:'NodeWidget'):
-        super().__init__(QGraphicsSceneEvent.Type.User)
+    def __init__(self, type:QEvent.Type, source:'NodeWidget'):
+        super().__init__( type )
+        self._type = type
         self._source = source
 
     def source(self):
@@ -45,40 +52,75 @@ class ConnectionEvent(QGraphicsSceneEvent):
 
 
 class Connection(QObject):
+    targetChanged = Signal()
     def __init__(self, source:'NodeWidget', parent=None):
         super().__init__(parent=parent)
         self._source = source
         self._loop = QEventLoop()
 
         self._arrow = None
+        self._target:QGraphicsItem|None = None
+        self._entered_items = []
 
-    def source(self):
+    def source(self)->QGraphicsItem:
         return self._source
 
+    def target(self)->QGraphicsItem|None:
+        return self._target
+
     def exec(self):
-        app = QApplication.instance()
-        assert app
-        app.installEventFilter(self)
+        scene = self._source.scene()
+        assert scene
+        
         self._arrow = QGraphicsArrowItem(QLineF(self._source.pos(), self._source.pos()))
         self._source.scene().addItem(self._arrow )
+        scene.installEventFilter(self)
         self._loop.exec()
+        scene.removeEventFilter(self)
         self._source.scene().removeItem(self._arrow)
-        app.removeEventFilter(self)
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:
-        if event.type() == QEvent.Type.GraphicsSceneMouseMove:  
-            line = self._arrow.line()
-            line.setP2(event.scenePos())
+        if event.type() == QEvent.Type.GraphicsSceneMouseMove:
+            event = cast(QGraphicsSceneMouseEvent, event)
+
+            ### Move arrow ####
+            assert self._arrow
+            line = makeLineBetweenShapes(self.source(), event.scenePos())
             self._arrow.setLine(line)
-            connectionEvent = ConnectionEvent(self._source)
+            
+            # manage connection enter and leave event
             scene = self._source.scene()
-            for item in scene.items(event.scenePos()):
-                scene.sendEvent(item, connectionEvent)
+            entered_items = [item for item in self._entered_items]
+            itemsUnderMouse = [item for item in scene.items(event.scenePos()) if hasattr(item, 'connectionEnterEvent')]
+            for item in itemsUnderMouse:
+                if item not in entered_items:
+                    self._entered_items.append(item)
+                    event = ConnectionEvent(ConnectionEnterType, self._source)
+                    scene.sendEvent(item, event)
+                    if event.isAccepted():
+                        self._target = item
+                        self.targetChanged.emit()
+                        break
+
+            for item in entered_items:
+                if item not in itemsUnderMouse:
+                    self._entered_items.remove(item)
+                    event = ConnectionEvent(ConnectionLeaveType, self._source)
+                    scene.sendEvent(item, event)
+
+            # send ConnectionMove event
+            for item in self._entered_items:
+                event = ConnectionEvent(ConnectionMoveType, self._source)
+                scene.sendEvent(item, event)
+
             return True
-        if event.type()==QGraphicsSceneEvent.Type.User:
-            print("user event captured", event)
-            return True
-        if event.type() == QEvent.Type.MouseButtonRelease:
+
+        if event.type() == QEvent.Type.GraphicsSceneMouseRelease:
+            
+            if self._target:
+                scene = self._source.scene()
+                event = ConnectionEvent(ConnectionDropType, self._source)
+                scene.sendEvent(self._target, event)
             self._loop.exit()
             return True
         return super().eventFilter(watched, event)
@@ -121,9 +163,32 @@ class NodeWidget(QGraphicsWidget):
             QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges
         )
 
-        self.setAcceptDrops(True)
+        # self.setAcceptDrops(True)
+        # self.setAcceptHoverEvents(True)
 
         self._dragline = None
+
+        # self._pen
+        # self._brush
+        self.setAutoFillBackground(True)
+
+    def __str__(self):
+        return f"{self.__class__}(title={self.header.toPlainText()})"
+
+    @override
+    def event(self, event:QEvent)->bool:
+        if event.type() == ConnectionEnterType:
+            self.connectionEnterEvent(cast(ConnectionEvent, event))
+        elif event.type() == ConnectionLeaveType:
+            self.connectionLeaveEvent(cast(ConnectionEvent, event))
+        elif event.type() == ConnectionMoveType:
+            self.connectionMoveEvent(cast(ConnectionEvent, event))
+        elif event.type() == ConnectionDropType:
+            self.connectionDropEvent(cast(ConnectionEvent, event))
+        else:
+            ...
+
+        return super().event(event)
 
     def itemChange(self, change, value):
         match change:
@@ -139,19 +204,27 @@ class NodeWidget(QGraphicsWidget):
         palette: QPalette = option.palette  # type: ignore
         state: QStyle.StateFlag = option.state  # type: ignore
 
-        painter.setBrush(palette.window())
-        # painter.setBrush(Qt.NoBrush)
- 
-        pen = QPen(palette.text().color(), 1)
-        pen.setCosmetic(True)
-        pen.setWidthF(1)
-        if state & QStyle.StateFlag.State_Selected:
-            pen.setWidthF(2)
-            pen.setColor(palette.accent().color())
-        painter.setPen(pen)
+        print(option)
+        self.style().drawPrimitive(QStyle.PrimitiveElement.PE_FrameDefaultButton, option, painter, widget)
+        # self.style().drawControl(QStyle.ControlElement.CE_CustomBase, option, painter, widget)
+        # self.style().drawControl(QStyle.ControlElement., option, painter, widget)
+        # self.style().drawComplexControl(QStyle.ComplexControl.CC_TitleBar, option, painter, widget)
 
-        # painter.setPen(palette.window().color())
-        painter.drawRoundedRect(QRectF(QPointF(), self.size()), 10, 10)
+        # painter.setBrush(palette.window())
+        # # painter.setBrush(Qt.NoBrush)
+
+        # pen = QPen(palette.text().color(), 1)
+        # pen.setCosmetic(True)
+        # pen.setWidthF(1)
+
+        # if state & state.State_MouseOver:
+        #     pen.setWidthF(3)
+        # if state & QStyle.StateFlag.State_Selected:
+        #     pen.setColor(palette.accent().color())
+        # painter.setPen(pen)
+
+        # # painter.setPen(palette.window().color())
+        # painter.drawRoundedRect(QRectF(QPointF(), self.size()), 10, 10)
 
     def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         if QLineF(event.screenPos(), event.buttonDownScreenPos(Qt.MouseButton.LeftButton)).length() < QApplication.startDragDistance():
@@ -161,35 +234,11 @@ class NodeWidget(QGraphicsWidget):
         # start connection
         connection = Connection(self)
         connection.exec()
-        # Start drag
-        # view = cast(QGraphicsView, event.widget())
-        # drag = QDrag(self)
-        # mime = QMimeData()
-
-        # mime.setData("node-graph-nx", bytes(self.header.toPlainText(), 'utf-8')) # TODO: research memoryview for arbitrary python object as darta
-        # drag.setMimeData(mime)line
-
-        # QApplication.instance().installEventFilter(self)
-        # line = QLineF(self.geometry().center(), self.geometry().center())
-        # self._dragline = QGraphicsLineItem(line)
-        # print(line)
-        # self.scene().addItem(self._dragline)
-        
-        # drag.exec()
-        # self.scene().removeItem(self._dragline)
-        # self._dragline = None
-        # QApplication.instance().removeEventFilter(self)
-        # self.setCursor(Qt.CursorShape.OpenHandCursor)
-
-        # return super().mouseMoveEvent(event)
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:
-        # print(event)
         if event.type() == QEvent.Type.DragMove:
-            # print("drag move event")
             ...
         if event.type() == QEvent.Type.GraphicsSceneDragMove:
-            # print("mouse move event")
             dragMoveEvent = cast(QGraphicsSceneDragDropEvent, event)
             line = self._dragline.line()
             line.setP2(dragMoveEvent.scenePos())
@@ -198,35 +247,53 @@ class NodeWidget(QGraphicsWidget):
 
         return super().eventFilter(watched, event)
 
-    # def dragEnterEvent(self, event):
-    #     mime = event.mimeData()
-    #     print("dragEnterEvent", mime, mime.data("node-graph-nx"))
-    #     if qbytearray:=mime.data("node-graph-nx"):
-    #         n = str(qbytearray.data(), encoding='utf-8')
-    #         if n !=self.header.toPlainText():
-    #             print(n)
-    #             event.setAccepted(True)
-    #             return
-    #     event.setAccepted(False)
+    # listen to enter/leave events
+    def hoverEnterEvent(self, event: QGraphicsSceneHoverEvent) -> None:
+        self.update()
+        print("enter")
+        return super().hoverEnterEvent(event)
 
-    # def dropEvent(self, event: QGraphicsSceneDragDropEvent) -> None:
-    #     mime = event.mimeData()
-    #     print("dragEnterEvent", mime, mime.data("node-graph-nx"))
+    def hoverLeaveEvent(self, event: QGraphicsSceneHoverEvent) -> None:
+        self.update()
+        print("leave")
+        return super().hoverLeaveEvent(event)
 
-    #     if qbytearray:=mime.data("node-graph-nx"):
-    #         n = str(qbytearray.data(), encoding='utf-8')
-    #         if n !=self.header.toPlainText():
-    #             print("dropped:", event.source())
-    #             event.setAccepted(True)
-    #             view = cast(NXGraphView, self.parentWidget())
-    #             # view._model.addEdge(self.header.toPlainText(), n)
-    #             return
-    #     event.setAccepted(False)
-    #     return super().dropEvent(event)
+    # handle connection and drag events
+    def dragEnterEvent(self, event: QGraphicsSceneDragDropEvent) -> None:
+        return super().dragEnterEvent(event)
 
-    # @override
-    # def dragLeaveEvent(self, event):
-    #     print("leave")
+    def dragMoveEvent(self, event: QGraphicsSceneDragDropEvent) -> None:
+        return super().dragMoveEvent(event)
+
+    def dragLeaveEvent(self, event: QGraphicsSceneDragDropEvent) -> None:
+        return super().dragLeaveEvent(event)
+
+    def dropEvent(self, event: QGraphicsSceneDragDropEvent) -> None:
+        return super().dropEvent(event)
+
+    def connectionEnterEvent(self, event:ConnectionEvent) -> None:
+        print("connection enter")
+        if True:
+            event.setAccepted(True)
+            self._is_hovered = True
+            self.update()
+            return
+        event.setAccepted(False)
+
+    def connectionMoveEvent(self, event:ConnectionEvent)->None:
+        print("connection move")
+
+    def connectionLeaveEvent(self, event:ConnectionEvent)->None:
+        print("connection leave")
+        self._is_hovered = False
+        self.update()
+    
+    def connectionDropEvent(self, event):
+        if True:
+            print(f"connection dropped from: {event.source()} onto: {self}!")
+            event.setAccepted(True)
+        event.setAccepted(False)
+
 
 
 class NXGraphView(InfiniteGraphicsView):
@@ -245,7 +312,6 @@ class NXGraphView(InfiniteGraphicsView):
 
         @self._graphScene.edgeDropped.connect
         def on_edge_dropped(edge_widget:EdgeWidget, source:OutletWidget|EdgeWidget|None, target:InletWidget|NodeWidget|None):
-            print("on_edge_dropped", edge_widget, source, target)
             if not self._model:
                 return
             if source and target:
@@ -271,6 +337,10 @@ class NXGraphView(InfiniteGraphicsView):
                     # do nothing
                     pass
 
+    @override
+    def event(self, event)->bool:
+        return super().event(event)
+
     def setModel(self, model:NXGraphModel):
         model.nodesAdded.connect(self.handleNodesAdded)
         model.edgesAdded.connect(self.handleEdgesAdded)
@@ -288,11 +358,9 @@ class NXGraphView(InfiniteGraphicsView):
         for N, (x, y) in positions.items():
             widget = self._node_to_widget_map[N]
             widget.setPos(x, y)
-        print("layout updated")
 
     @Slot(list)
     def handleNodesAdded(self, nodes: List[Hashable]):
-        print("nodes added")
         for n in nodes:
             widget = NodeWidget(title=f"{n}")
             self._graphScene.addNode(widget)
@@ -309,7 +377,6 @@ class NXGraphView(InfiniteGraphicsView):
 
     @Slot(list)
     def handleEdgesAdded(self, edges: List[Tuple[Hashable, Hashable, str]]):
-        print("edges added", edges)
         for u, v, k in edges:
             source = self._node_to_widget_map[u]
             target = self._node_to_widget_map[v]
@@ -321,7 +388,6 @@ class NXGraphView(InfiniteGraphicsView):
 
     @Slot(list)
     def handleEdgesRemoved(self, edges: List[Tuple[Hashable, Hashable, str]]):
-        print("edges removed", edges)
         for u, v, k in edges:
             paramname = k
             edge_widget = self._edge_to_widget_map[u, v, k]
@@ -336,13 +402,11 @@ class NXGraphView(InfiniteGraphicsView):
         @self._graphScene.selectionChanged.connect
         def update_selection_model():
             assert self._selectionModel
-            print("dagscene->selectionChanged")
             selected_nodes = [
                 self._widget_to_node_map[widget]
                 for widget in self._graphScene.selectedItems()
                 if isinstance(widget, NodeWidget)
             ]
-            print("  -", selected_nodes)
             self._selectionModel.setSelectedNodes(selected_nodes)
 
         @selectionModel.selectionChanged.connect
@@ -367,7 +431,6 @@ class NXGraphView(InfiniteGraphicsView):
         if not self._model:
             return 
         itemAtMouse = self.itemAt(event.position().toPoint())
-        print("itemAtMouse", itemAtMouse)
         if itemAtMouse:
             return super().mouseDoubleClickEvent(event)
 
@@ -375,10 +438,6 @@ class NXGraphView(InfiniteGraphicsView):
         
         n = make_unique_name("N1", self._model.nodes())
         self._model.addNode(n)
-
-        # widget = self._node_to_widget_map[n]
-        # widget.setPos(clickpos)
-        # print("move node to clickpos")
 
     def contextMenuEvent(self, event:QContextMenuEvent):
         def create_node_at(scenePos:QPointF):
@@ -389,7 +448,6 @@ class NXGraphView(InfiniteGraphicsView):
 
         def connect_selected_nodes():
             selection = [item for item in self.scene().selectedItems()]
-            print("connect_selected_nodes:", selection)
             if len(selection) < 2:
                 return
 
