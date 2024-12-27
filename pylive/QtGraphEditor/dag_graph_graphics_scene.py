@@ -9,7 +9,7 @@ from pylive.QtGraphEditor.NetrowkXGraphEditor.link_graphics_items import (
     makeLineBetweenShapes,
 )
 from pylive.QtGraphEditor.NetrowkXGraphEditor.qgraphics_arrow_item import (
-    QGraphicsArrowItem,
+    QGraphicsArrowItem, makeArrowShape
 )
 
 ConnectionEnterType = QEvent.Type( QEvent.registerEventType() )
@@ -53,7 +53,7 @@ class Connection(QObject):
         assert scene
         
         self._arrow = QGraphicsArrowItem(QLineF(self._source.pos(), self._source.pos()))
-        self._arrow.setPen(QPen(scene.palette().color(QPalette.ColorRole.Text), 1.5))
+        self._arrow.setPen(QPen(scene.palette().color(QPalette.ColorRole.Text), 1))
         self._source.scene().addItem(self._arrow )
         scene.installEventFilter(self)
         self._loop.exec()
@@ -107,126 +107,27 @@ class Connection(QObject):
         return super().eventFilter(watched, event)
 
 
-class PinWidget(QGraphicsWidget):
+class PinWidget(QGraphicsItem):
     sceneGeometryChanged = Signal()
-    def __init__(self, text, orientation=Qt.Orientation.Horizontal):
-        super().__init__()
+    def __init__(self, text:str, parent:QGraphicsItem|None=None):
+        super().__init__(parent=parent)
         # store relations
         self._parent_node: NodeWidget | None = None
         self._edges = []
 
-        # Setup widgets
-        self.setAcceptHoverEvents(True)
-        self.circle_item = CircleWidget(radius=3)
-        self.text_widget = TextWidget(text)
-        font = self.text_widget.text_item.document().defaultFont()
-        font.setPointSize(6)
-        self.text_widget.text_item.document().setDefaultFont(font)
-
-        # layout
-        self.main_layout = QGraphicsLinearLayout(Qt.Orientation.Horizontal)
-        self.main_layout.setContentsMargins(0, 0, 0, 0)
-        self.main_layout.setSpacing(3)
-        self.setLayout(self.main_layout)
-        self.setOrientation(orientation)
-
-        # update edge on scenepos or geometry change
-
-        self.geometryChanged.connect(self.updateEdges)
         self.setFlag(
             QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges
         )
-
-    def setOrientation(self, orientation: Qt.Orientation):
-        match orientation:
-            case Qt.Orientation.Vertical:
-                self.main_layout.setOrientation(orientation)
-                self.main_layout.removeItem(self.text_widget)
-                self.text_widget.hide()
-                if isinstance(self, OutletWidget):
-                    self.text_widget.moveBy(3, +10)
-                else:
-                    self.text_widget.moveBy(3, -13)
-
-                self._orientation = orientation
-
-            case Qt.Orientation.Horizontal:
-                self.main_layout.setOrientation(orientation)
-                if isinstance(self, OutletWidget):
-                    self.main_layout.insertItem(0, self.text_widget)
-                else:
-                    self.main_layout.addItem(self.text_widget)
-                self.text_widget.show()
-                self._orientation = orientation
-            case _:
-                ...
-
-        self.updateGeometry()
-        self.adjustSize()
-
-    def setHighlight(self, value):
-        if value:
-            accent_color = self.palette().color(QPalette.ColorRole.Accent)
-            self.circle_item.circle_item.setPen(QPen(accent_color, 2))
-        else:
-            text_color = self.palette().color(QPalette.ColorRole.Text)
-            self.circle_item.circle_item.setPen(QPen(text_color, 2))
-
-    def updateEdges(self):
-        for edge_item in list(self._edges):
-            pass
-            # edge_item.updatePosition()
+        self.setAcceptHoverEvents(True)
+        self.radius = 3.5
 
     def itemChange(self, change, value):
         match change:
             case QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
-                self.sceneGeometryChanged.emit()
-                # self.updateEdges()
+                for edge in self._edges:
+                    edge.updatePosition()
 
         return super().itemChange(change, value)
-
-    def shape(self):
-        shape = QPainterPath()
-        circle_rect = self.circle_item.rect()
-        circle_rect.adjust(-5, -5, 5, 5)
-        circle_rect.translate(self.circle_item.pos())
-        shape.addRect(circle_rect)
-        return shape
-
-    def boundingRect(self) -> QRectF:
-        return self.shape().boundingRect()
-
-    def orientation(self):
-        return self._orientation
-
-    def hoverEnterEvent(self, event: QGraphicsSceneHoverEvent) -> None:
-        self.setHighlight(True)
-        if self.orientation() == Qt.Orientation.Vertical:
-            self.text_widget.show()
-        return super().hoverEnterEvent(event)
-
-    def hoverLeaveEvent(self, event: QGraphicsSceneHoverEvent) -> None:
-        self.setHighlight(False)
-        if self.orientation() == Qt.Orientation.Vertical:
-            self.text_widget.hide()
-        return super().hoverLeaveEvent(event)
-
-
-class OutletWidget(PinWidget):
-    def __init__(
-        self, text: str, orientation: Qt.Orientation = Qt.Orientation.Horizontal
-    ):
-        super().__init__(text, orientation)
-        self.main_layout.addItem(self.text_widget)
-        self.main_layout.addItem(self.circle_item)
-        self.main_layout.setAlignment(
-            self.circle_item, Qt.AlignmentFlag.AlignCenter
-        )
-        self.setFlag(QGraphicsWidget.GraphicsItemFlag.ItemIsFocusable, True)
-        self.circle_item.setAcceptHoverEvents(False)
-        self.text_widget.setAcceptHoverEvents(False)
-        self.circle_item.setAcceptedMouseButtons(Qt.NoButton)
-        self.text_widget.setAcceptedMouseButtons(Qt.NoButton)
 
     def destroy(self):
         for edge in reversed(self._edges):
@@ -237,6 +138,31 @@ class OutletWidget(PinWidget):
             self._parent_node.removeOutlet(self)
         self.scene().removeItem(self)
 
+    def boundingRect(self) -> QRectF:
+        return QRectF(-self.radius, -self.radius, self.radius*2, self.radius*2)
+
+    def paint(self, painter:QPainter, option:QStyleOptionGraphicsItem, widget=None):
+        palette:QPalette = option.palette #type: ignore
+        state = option.state #type: ignore
+
+        print("PinWidget->paint", state)
+
+        # Check the item's state
+        baseColor = palette.base().color()
+        baseColor.setAlpha(255)
+        brush = QBrush(baseColor)
+        pen = QPen(palette.text().color())
+        if state & QStyle.StateFlag.State_MouseOver:
+            pen.setColor(palette.brightText().color())  # Color for hover
+        elif state & QStyle.StateFlag.State_Selected:
+            pen.setColor(palette.accent().color())  # Color for selected
+
+        painter.setBrush(brush)
+        painter.setPen(pen)
+        painter.drawEllipse(QPointF(0,0), self.radius, self.radius)
+
+
+class OutletWidget(PinWidget):
     def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         print("PinWidget->mousePressEvent")
         # the default implementation of QGraphicsItem::mousePressEvent() ignores the event
@@ -258,28 +184,8 @@ class OutletWidget(PinWidget):
 
 
 class InletWidget(PinWidget):
-    def __init__(
-        self, text: str, orientation: Qt.Orientation = Qt.Orientation.Horizontal
-    ):
-        super().__init__(text, orientation)
-        self.main_layout.addItem(self.circle_item)
-        self.main_layout.addItem(self.text_widget)
-        self.main_layout.setAlignment(
-            self.circle_item, Qt.AlignmentFlag.AlignCenter
-        )
-
-    def destroy(self):
-        for edge in reversed(self._edges):
-            edge.destroy()
-        self._edges = []
-
-        if self._parent_node:
-            self._parent_node.removeInlet(self)
-        self._parent_node = None
-        self.scene().removeItem(self)
-
     @override
-    def event(self, event:QEvent)->bool:
+    def sceneEvent(self, event: QEvent) -> bool:
         if event.type() == ConnectionEnterType:
             self.connectionEnterEvent(cast(ConnectionEvent, event))
         elif event.type() == ConnectionLeaveType:
@@ -291,7 +197,7 @@ class InletWidget(PinWidget):
         else:
             ...
 
-        return super().event(event)
+        return super().sceneEvent(event)
 
     def connectionEnterEvent(self, event:ConnectionEvent) -> None:
         print("connection enter")
@@ -321,203 +227,62 @@ class InletWidget(PinWidget):
         event.setAccepted(False)
 
 
-class NodeWidget(QGraphicsWidget):
+class NodeWidget(QGraphicsItem):
     """A widget that holds multiple TextWidgets arranged in a layout."""
-    sceneGeometryChanged = Signal()
     def __init__(
         self,
         title="Node",
-        orientation: Qt.Orientation = Qt.Orientation.Horizontal,
         parent=None,
     ):
         super().__init__(parent)
-
+        self._title = title
         # Enable selection and movement
         self.setFlag(QGraphicsWidget.GraphicsItemFlag.ItemIsSelectable, True)
         self.setFlag(QGraphicsWidget.GraphicsItemFlag.ItemIsMovable, True)
         self.setFlag(QGraphicsWidget.GraphicsItemFlag.ItemIsFocusable, True)
-
-        self._orientation = Qt.Orientation.Horizontal
-
-        # Create a layout
-        self.main_layout = QGraphicsLinearLayout(Qt.Orientation.Vertical)
-        self.main_layout.setContentsMargins(8, 3, 8, 3)
-        self.main_layout.setSpacing(0)
-
-        # create heading
-        self.header = TextWidget(title)
-        self.main_layout.addItem(self.header)
-        self._badges_layout = QGraphicsLinearLayout(Qt.Orientation.Vertical)
-        self.main_layout.addItem(self._badges_layout)
-
-        # Create inlets layout
-        self.inlets_layout = QGraphicsLinearLayout(Qt.Orientation.Vertical)
-        self.main_layout.addItem(self.inlets_layout)
-
-        # create outlets layout
-        self.outlets_layout = QGraphicsLinearLayout(Qt.Orientation.Vertical)
-        self.main_layout.addItem(self.outlets_layout)
-        self.main_layout.setAlignment(
-            self.outlets_layout, Qt.AlignmentFlag.AlignRight
-        )
-
-        # Set the layout for the widget
-        self.setLayout(self.main_layout)
-        self.setOrientation(orientation)
-
-        # Define the bounding geometry
-        # self.setGeometry(QRectF(-75, -59, 150, 100))
-        self._inlets = []
-        self._outlets = []
-
-        self.geometryChanged.connect(self.sceneGeometryChanged)
         self.setFlag(
             QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges
         )
+        self.setAcceptHoverEvents(True)
 
-        self.setAcceptDrops(True)
+        # Define the bounding geometry
+        self._inlets:List[InletWidget] = []
+        self._outlets:List[OutletWidget] = []
+        self._edges:List[EdgeWidget] = []
 
-    def itemChange(self, change, value):
-        match change:
-            case QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
-                self.sceneGeometryChanged.emit()
-                # self.updateEdges()
+    def boundingRect(self) -> QRectF:
+        try:
+            fm = QFontMetrics( self.scene().font() )
+        except AttributeError:
+            fm = QFontMetrics(QApplication.instance().font())
 
-        return super().itemChange(change, value)
+        text_width = fm.horizontalAdvance(self._title)
+        text_height = fm.height()
+        return QRectF(0,0,text_width+8, text_height+4)
 
-    def title(self):
-        return self.header.toPlainText()
+    def paint(self, painter:QPainter, option:QStyleOptionGraphicsItem, widget=None):
+        palette:QPalette = option.palette #type: ignore
+        state = option.state #type: ignore
+        print("NodeWidget->paint", state)
+        # Check the item's state
 
-    def setTitle(self, text: str):
-        self.header.setPlainText(text)
-
-    def orientation(self):
-        return self._orientation
-
-    def setOrientation(self, orientation: Qt.Orientation):
-        match orientation:
-            case Qt.Orientation.Vertical:
-                # Set orientation for inlets and outlets
-                self.inlets_layout.setOrientation(orientation)
-                self.outlets_layout.setOrientation(orientation)
-                # self.inlets_layout.setMaximumHeight(1)
-                # self.outlets_layout.setMaximumHeight(1)
-
-                # Update orientation for child items
-
-                for i in range(self.inlets_layout.count()):
-                    item = cast(InletWidget, self.inlets_layout.itemAt(i))
-                    item.setOrientation(orientation)
-
-                for i in range(self.outlets_layout.count()):
-                    item = cast(OutletWidget, self.outlets_layout.itemAt(i))
-                    item.setOrientation(orientation)
-
-                    # Clear and reorder main_layout: inlets, header, outlets
-                while self.main_layout.count() > 0:
-                    self.main_layout.removeAt(0)
-
-                self.main_layout.addItem(self.inlets_layout)
-                self.main_layout.addItem(self.header)
-                self.main_layout.addItem(self.outlets_layout)
-
-                # Align items
-                self.main_layout.setAlignment(
-                    self.inlets_layout, Qt.AlignmentFlag.AlignCenter
-                )
-                self.main_layout.setAlignment(
-                    self.outlets_layout, Qt.AlignmentFlag.AlignCenter
-                )
-
-                self._orientation = orientation
-
-            case Qt.Orientation.Horizontal:
-                # Update orientation for inlets and outlets
-                self.inlets_layout.setOrientation(orientation)
-                self.outlets_layout.setOrientation(orientation)
-
-                for i in range(self.inlets_layout.count()):
-                    item = cast(InletWidget, self.inlets_layout.itemAt(i))
-                    item.setOrientation(orientation)
-
-                for i in range(self.outlets_layout.count()):
-                    item = cast(OutletWidget, self.outlets_layout.itemAt(i))
-                    item.setOrientation(orientation)
-
-                # Clear and reorder main_layout: header, inlets, outlets
-                while self.main_layout.count() > 0:
-                    self.main_layout.removeAt(0)
-
-                self.main_layout.addItem(self.header)
-                self.main_layout.addItem(self.inlets_layout)
-                self.main_layout.addItem(self.outlets_layout)
-
-                # Align items
-                self.main_layout.setAlignment(
-                    self.inlets_layout, Qt.AlignmentFlag.AlignLeft
-                )
-                self.main_layout.setAlignment(
-                    self.outlets_layout, Qt.AlignmentFlag.AlignRight
-                )
-
-                self._orientation = orientation
-            case _:
-                ...
-
-        self.adjustSize()
-
-    def addInlet(self, inlet: InletWidget):
-        self.inlets_layout.addItem(inlet)
-        self.inlets_layout.setAlignment(inlet, Qt.AlignmentFlag.AlignLeft)
-        inlet._parent_node = self
-        inlet.setParentItem(self)
-        self._inlets.append(inlet)
-
-    def removeInlet(self, inlet: InletWidget):
-        self.inlets_layout.removeItem(inlet)
-        inlet._parent_node = None
-        self._inlets.remove(inlet)
-
-    def addOutlet(self, outlet: OutletWidget):
-        self.outlets_layout.addItem(outlet)
-        self.outlets_layout.setAlignment(outlet, Qt.AlignmentFlag.AlignRight)
-        outlet._parent_node = self
-        outlet.setParentItem(self)
-        self._outlets.append(outlet)
-
-    def removeOutlet(self, outlet: OutletWidget):
-        self.outlets_layout.removeItem(outlet)
-        outlet._parent_node = None
-        self._outlets.remove(outlet)
-
-    def addBadge(self, badge:str|QGraphicsWidget):
-        if isinstance(badge, str):
-            badge = TextWidget(badge)
-        self._badges_layout.addItem(badge)
-
-    def setHighlight(self, value):
-        ...
-
-    def paint(
-        self, painter: QPainter, option: QStyleOptionGraphicsItem, widget=None
-    ):
-        # Draw the node rectangle
-        palette: QPalette = option.palette  # type: ignore
-        state: QStyle.StateFlag = option.state  # type: ignore
-
-        painter.setBrush(palette.window())
-        # painter.setBrush(Qt.NoBrush)
- 
-        pen = QPen(palette.text().color(), 1)
-        pen.setCosmetic(True)
-        pen.setWidthF(1)
+        baseColor = palette.base().color()
+        baseColor.setAlpha(255)
+        brush = QBrush(baseColor)
+        pen = QPen(palette.dark().color(), 1)
+        # if state & QStyle.StateFlag.State_MouseOver:
+        #     pen.setColor( palette.brightText().color() )
         if state & QStyle.StateFlag.State_Selected:
-            pen.setWidthF(2)
-            pen.setColor(palette.accent().color())
-        painter.setPen(pen)
+            pen.setColor( palette.accent().color() )
 
-        # painter.setPen(palette.window().color())
-        painter.drawRoundedRect(QRectF(QPointF(), self.size()), 10, 10)
+        painter.setBrush(brush)
+        painter.setPen(pen)
+        painter.drawRoundedRect(self.boundingRect(), 4, 4)
+        
+        pen = QPen(palette.text().color(), 1)
+        painter.setPen(pen)
+        fm = QFontMetrics( self.scene().font() )
+        painter.drawText(4,fm.height()-1,self._title)
 
     def destroy(self):
         while self._inlets:
@@ -528,25 +293,60 @@ class NodeWidget(QGraphicsWidget):
 
         self.scene().removeItem(self)
 
-    def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
-        print("NodeWidget->mousePressEvent")
-        return super().mousePressEvent(event)
+    def itemChange(self, change, value):
+        match change:
+            case QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
+                for edge in self._edges:
+                    edge.updatePosition()
+            case QGraphicsItem.GraphicsItemChange.ItemSceneHasChanged:
+                self.updatePins()
 
-    def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent) -> None:
-        print("NodeWidget->mouseMoveEvent")
-        return super().mouseMoveEvent(event)
+        return super().itemChange(change, value)
 
-    def mouseReleaseEvent(self, event: QGraphicsSceneMouseEvent) -> None:
-        print("NodeWidget->mouseReleaseEvent")
-        return super().mouseReleaseEvent(event)
+    def title(self):
+        return self._title
+
+    def setTitle(self, text: str):
+        self._title = text
+        self.update()
+
+    def addInlet(self, inlet: InletWidget):
+        inlet._parent_node = self
+        inlet.setParentItem(self)
+        self._inlets.append(inlet)
+        self.updatePins()
+
+    def removeInlet(self, inlet: InletWidget):
+        inlet._parent_node = None
+        inlet.scene().removeItem(inlet)
+        self._inlets.remove(inlet)
+        self.updatePins()
+
+    def addOutlet(self, outlet: OutletWidget):
+        outlet._parent_node = self
+        outlet.setParentItem(self)
+        self._outlets.append(outlet)
+        self.updatePins()
+
+    def removeOutlet(self, outlet: OutletWidget):
+        outlet._parent_node = None
+        self._outlets.remove(outlet)
+        outlet.scene().removeItem(outlet)
+        self.updatePins()
+
+    def updatePins(self):
+        inletCount = len(self._inlets)
+        for idx, inlet in enumerate(self._inlets):
+            inlet.setPos(idx/inletCount+(inletCount-1)/2*self.boundingRect().width()+self.boundingRect().width()/2, 0)
+
+        outletCount = len(self._outlets)
+        for idx, outlet in enumerate(self._outlets):
+            outlet.setPos(idx/outletCount+(outletCount-1)/2*self.boundingRect().width()+self.boundingRect().width()/2, self.boundingRect().height())
 
 
-
-class EdgeWidget(QGraphicsArrowItem):
+class EdgeWidget(QGraphicsLineItem):
     """Graphics item representing an edge in a graph."""
-
     GrabThreshold = 15
-
     def __init__(
         self,
         source: OutletWidget | NodeWidget | None,
@@ -554,17 +354,12 @@ class EdgeWidget(QGraphicsArrowItem):
         label: str = "-edge-",
     ):
         super().__init__(parent=None)
-        assert source is None or hasattr(
-            source, 'sceneGeometryChanged'
-        ), f"got: {source}"
-        assert target is None or hasattr(
-            target, 'sceneGeometryChanged'
-        ), f"got: {target}"
+
         self._source = None
         self._target = None
     
 
-        self.setPen(QPen(Qt.GlobalColor.black, 2))
+        self.setPen(QPen(Qt.GlobalColor.black, 1))
         self._label_item = QGraphicsTextItem(label, parent=self)
         self.updatePosition()
 
@@ -574,11 +369,6 @@ class EdgeWidget(QGraphicsArrowItem):
 
         self.setZValue(-1)
 
-        pen = QPen(QApplication.instance().palette().text().color(), 1)
-        # pen.setCosmetic(True)
-        # pen.setWidthF(1)
-
-        self.setPen(pen)
 
         self.is_moving_endpoint = False
         self.GrabThreshold = 10
@@ -586,6 +376,11 @@ class EdgeWidget(QGraphicsArrowItem):
 
         self.setSource(source)
         self.setTarget(target)
+
+        self.setAcceptHoverEvents(True)
+
+    def highlightColor(self):
+        return self.scene().palette().color(QPalette.ColorRole.Accent)
 
     def setLabelText(self, text: str):
         self._label_item.setPlainText(text)
@@ -597,18 +392,11 @@ class EdgeWidget(QGraphicsArrowItem):
         return self._source
 
     def setSource(self, source: OutletWidget | NodeWidget | None):
-        assert source is None or hasattr(source, 'sceneGeometryChanged'), f"got: {source}"
-
-        # add or remove edge to pin edges for position update
-        if source:
-            # pin._edges.append(self)
-            source.sceneGeometryChanged.connect(self.updatePosition)
-            print("listen to source geometry changes")
+        assert source is None or hasattr(source, '_edges'), f"got: {source}"
         if self._source:
-            self._source.sceneGeometryChanged.disconnect(self.updatePosition)
-            # self._source_outlet._edges.remove(self)
-            print("unlisten to source geometry changes")
-
+            self._source._edges.remove(self)
+        if source:
+            source._edges.append(self)
         self._source = source
         self.updatePosition()
 
@@ -616,23 +404,16 @@ class EdgeWidget(QGraphicsArrowItem):
         return self._target
 
     def setTarget(self, target: InletWidget | NodeWidget | None):
-        assert target is None or hasattr(target, 'sceneGeometryChanged'), f"got: {target}"
-
-        # add or remove edge to pin edges for position update
+        assert target is None or hasattr(target, '_edges'), f"got: {target}"
+        if self._target:
+            self._target._edges.remove(self)
         if target:
-            # target._edges.append(self)
-            target.sceneGeometryChanged.connect(self.updatePosition)
-            print("listen to target geometry changes")
-        elif self._target:
-            self._target.sceneGeometryChanged.disconnect(self.updatePosition)
-            # self._target_inlet._edges.remove(self)
-            print("unlisten to target geometry changes")
+            target._edges.append(self)
         self._target = target
         self.updatePosition()
 
     def shape(self) -> QPainterPath:
         """Override shape to provide a wider clickable area."""
-
         self._shape_pen.setCosmetic(True)
         path = QPainterPath()
         path.moveTo(self.line().p1())
@@ -677,17 +458,6 @@ class EdgeWidget(QGraphicsArrowItem):
         self._label_item.setPos(self.line().center())
 
     def updatePosition(self):
-        print("Edge: updatePosition")
-        # assert self._source_outlet and self._target_inlet
-        # if not (
-        #   self.scene
-        #   and self._source_outlet.scene()
-        #   and self._target_inlet.scene()
-        # ):
-        #   return # dont update position if not in scene or the pins are not part of the same scene
-
-        # assert self.scene() == self._source_outlet.scene() == self._target_inlet.scene()
-
         line = self.line()
         source = self._source
         target = self._target
@@ -701,7 +471,7 @@ class EdgeWidget(QGraphicsArrowItem):
         if source and target:
             line.setP1(getConnectionPoint(source))
             line.setP2(getConnectionPoint(target))
-            self.setLine(line)
+            self.setLine( makeLineBetweenShapes(source, target) )
         elif source:
             line.setP1(getConnectionPoint(source))
             line.setP2(getConnectionPoint(source))
@@ -734,6 +504,57 @@ class EdgeWidget(QGraphicsArrowItem):
         if self.scene():
             self.scene().removeItem(self)
 
+    # def paint(self, painter:QPainter, option:QStyleOptionGraphicsItem, widget=None):
+    #     palette:QPalette = option.palette #type: ignore
+    #     state = option.state #type: ignore
+
+    #     # Check the item's state
+    #     if state & QStyle.StateFlag.State_MouseOver:
+    #         painter.setBrush(palette.brightText().color())  # Color for hover
+    #     elif state & QStyle.StateFlag.State_Selected:
+    #         painter.setBrush(palette.accent().color())  # Color for selected
+    #     else:
+    #         painter.setBrush(palette.text().color())  # Default color
+
+    #     arrow_shape = makeArrowShape(self.line(), 1.0)
+    #     painter.setPen(Qt.NoPen)
+    #     painter.drawPath(arrow_shape)
+    #     painter.drawLine(self.line())
+
+    def hoverEnterEvent(self, event: QGraphicsSceneHoverEvent) -> None:
+        gradient = QLinearGradient(self.line().p1(), self.line().p2())
+
+        d1 = (self.line().p1() - event.scenePos() ).manhattanLength() # TODO: measure distance in line item local space
+        d2 = (self.line().p2() - event.scenePos() ).manhattanLength()
+        if d1>d2:
+            gradient.setColorAt(0.0, self.scene().palette().text().color())
+            gradient.setColorAt(1.0, self.scene().palette().brightText().color())
+        else:
+            gradient.setColorAt(0.0, self.scene().palette().brightText().color())
+            gradient.setColorAt(1.0, self.scene().palette().text().color())
+
+        self.setPen(QPen(gradient, 1))
+        # event.accept()
+
+    def hoverMoveEvent(self, event: QGraphicsSceneHoverEvent) -> None:
+        print("hoverMoveEvent")
+        gradient = QLinearGradient(self.line().p1(), self.line().p2())
+
+        d1 = (self.line().p1() - event.scenePos() ).manhattanLength() # TODO: measure distance in line item local space
+        d2 = (self.line().p2() - event.scenePos() ).manhattanLength()
+        print(d1, d2)
+        if d1>d2:
+            gradient.setColorAt(0.0, self.scene().palette().text().color())
+            gradient.setColorAt(1.0, self.scene().palette().brightText().color())
+        else:
+            gradient.setColorAt(0.0, self.scene().palette().brightText().color())
+            gradient.setColorAt(1.0, self.scene().palette().text().color())
+
+        self.setPen(QPen(gradient, 1))
+
+    def hoverLeaveEvent(self, event: QGraphicsSceneHoverEvent) -> None:
+        self.setPen( QPen(self.scene().palette().text().color(), 1) )
+        # return super().hoverLeaveEvent(event)
 
 
 class DAGScene(QGraphicsScene):
@@ -790,6 +611,9 @@ if __name__ == "__main__":
     mainLayout.setContentsMargins(0, 0, 0, 0)
     window.setLayout(mainLayout)
     graphview = QGraphicsView()
+    graphview.setRenderHint(QPainter.Antialiasing, True)
+    graphview.setRenderHint(QPainter.TextAntialiasing, True)
+    graphview.setRenderHint(QPainter.SmoothPixmapTransform, True)
     mainLayout.addWidget(graphview)
 
     # create graph scene
@@ -820,12 +644,6 @@ if __name__ == "__main__":
     # create edge1
     edge1 = EdgeWidget(outlet, inlet)
     graphscene.addEdge(edge1)
-
-    # set nodes orientation
-    for node in (
-        item for item in graphscene.items() if isinstance(item, NodeWidget)
-    ):
-        node.setOrientation(Qt.Orientation.Vertical)
 
     # show window
     window.show()
