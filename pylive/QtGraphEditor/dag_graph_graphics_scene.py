@@ -504,57 +504,36 @@ class EdgeWidget(QGraphicsLineItem):
         if self.scene():
             self.scene().removeItem(self)
 
-    # def paint(self, painter:QPainter, option:QStyleOptionGraphicsItem, widget=None):
-    #     palette:QPalette = option.palette #type: ignore
-    #     state = option.state #type: ignore
+    def paint(self, painter:QPainter, option:QStyleOptionGraphicsItem, widget=None):
+        palette:QPalette = option.palette #type: ignore
+        state = option.state #type: ignore
 
-    #     # Check the item's state
-    #     if state & QStyle.StateFlag.State_MouseOver:
-    #         painter.setBrush(palette.brightText().color())  # Color for hover
-    #     elif state & QStyle.StateFlag.State_Selected:
-    #         painter.setBrush(palette.accent().color())  # Color for selected
-    #     else:
-    #         painter.setBrush(palette.text().color())  # Default color
+        # Check the item's state
+        pen = Qt.NoPen
+        brush = QBrush(palette.text().color())
+        if state & QStyle.StateFlag.State_MouseOver:
+            brush.setColor(palette.brightText().color())  # Color for hover
+        elif state & QStyle.StateFlag.State_Selected:
+            brush.setColor(palette.accent().color())  # Color for selected
 
-    #     arrow_shape = makeArrowShape(self.line(), 1.0)
-    #     painter.setPen(Qt.NoPen)
-    #     painter.drawPath(arrow_shape)
-    #     painter.drawLine(self.line())
+        arrow_shape = makeArrowShape(self.line(), 1.0)
+        painter.setPen(pen)
+        painter.setBrush(brush)
+        painter.drawPath(arrow_shape)
+        painter.drawLine(self.line())
 
-    def hoverEnterEvent(self, event: QGraphicsSceneHoverEvent) -> None:
-        gradient = QLinearGradient(self.line().p1(), self.line().p2())
+    def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+        event.accept()
 
-        d1 = (self.line().p1() - event.scenePos() ).manhattanLength() # TODO: measure distance in line item local space
-        d2 = (self.line().p2() - event.scenePos() ).manhattanLength()
-        if d1>d2:
-            gradient.setColorAt(0.0, self.scene().palette().text().color())
-            gradient.setColorAt(1.0, self.scene().palette().brightText().color())
-        else:
-            gradient.setColorAt(0.0, self.scene().palette().brightText().color())
-            gradient.setColorAt(1.0, self.scene().palette().text().color())
+    def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+        print("PinWidget->mouseMoveEvent")
+        if QLineF(event.screenPos(), event.buttonDownScreenPos(Qt.MouseButton.LeftButton)).length() < QApplication.startDragDistance():
+            return
+        print("start drag event from edge")
 
-        self.setPen(QPen(gradient, 1))
-        # event.accept()
-
-    def hoverMoveEvent(self, event: QGraphicsSceneHoverEvent) -> None:
-        print("hoverMoveEvent")
-        gradient = QLinearGradient(self.line().p1(), self.line().p2())
-
-        d1 = (self.line().p1() - event.scenePos() ).manhattanLength() # TODO: measure distance in line item local space
-        d2 = (self.line().p2() - event.scenePos() ).manhattanLength()
-        print(d1, d2)
-        if d1>d2:
-            gradient.setColorAt(0.0, self.scene().palette().text().color())
-            gradient.setColorAt(1.0, self.scene().palette().brightText().color())
-        else:
-            gradient.setColorAt(0.0, self.scene().palette().brightText().color())
-            gradient.setColorAt(1.0, self.scene().palette().text().color())
-
-        self.setPen(QPen(gradient, 1))
-
-    def hoverLeaveEvent(self, event: QGraphicsSceneHoverEvent) -> None:
-        self.setPen( QPen(self.scene().palette().text().color(), 1) )
-        # return super().hoverLeaveEvent(event)
+        # # start connection
+        # connection = Connection(self)
+        # connection.exec()
 
 
 class DAGScene(QGraphicsScene):
