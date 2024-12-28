@@ -33,23 +33,17 @@ class ConnectionEvent(QGraphicsSceneEvent):
 
 class Connect(QObject):
     targetChanged = Signal()
-    def __init__(self, item:'QGraphicsItem', direction:Literal['forward','backward'], parent=None):
+    def __init__(self, item:'QGraphicsItem', direction:Literal['forward','backward']='forward', parent=None):
         super().__init__(parent=parent)
-        
-        match direction:
-            case 'forward':
-                self._source = item
-                self._target = None
-            case 'backward':
-                self._source = None
-                self._target = item
-
+        self._source:QGraphicsItem = item
         self._direction = direction
+
         self._loop = QEventLoop()
         self._arrow = None
+        self._target:QGraphicsItem|None = None
         self._entered_items = []
 
-    def source(self)->QGraphicsItem|None:
+    def source(self)->QGraphicsItem:
         return self._source
 
     def target(self)->QGraphicsItem|None:
@@ -59,10 +53,7 @@ class Connect(QObject):
         scene = self._source.scene()
         assert scene
         
-        match self._direction:
-
         self._arrow = QGraphicsArrowItem(QLineF(self._source.pos(), self._source.pos()))
-
         self._arrow.setPen(QPen(scene.palette().color(QPalette.ColorRole.Text), 1))
         self._source.scene().addItem(self._arrow )
         scene.installEventFilter(self)
@@ -76,7 +67,7 @@ class Connect(QObject):
 
             ### Move arrow ####
             assert self._arrow
-            line = makeLineBetweenShapes(self.source() or event.scenePos(), self.target() or event.scenePos())
+            line = makeLineBetweenShapes(self.source(), event.scenePos())
             self._arrow.setLine(line)
             
             # manage connection enter and leave event
@@ -118,7 +109,6 @@ class Connect(QObject):
 
 
 class PinWidget(QGraphicsItem):
-    sceneGeometryChanged = Signal()
     def __init__(self, text:str, parent:QGraphicsItem|None=None):
         super().__init__(parent=parent)
         # store relations
@@ -130,14 +120,7 @@ class PinWidget(QGraphicsItem):
         )
         self.setAcceptHoverEvents(True)
         self.radius = 3.5
-
-    def itemChange(self, change, value):
-        match change:
-            case QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
-                for edge in self._edges:
-                    edge.updatePosition()
-
-        return super().itemChange(change, value)
+        self._isHighlighted = False
 
     def destroy(self):
         for edge in reversed(self._edges):
@@ -148,28 +131,60 @@ class PinWidget(QGraphicsItem):
             self._parent_node.removeOutlet(self)
         self.scene().removeItem(self)
 
+    def itemChange(self, change, value):
+        match change:
+            case QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
+                for edge in self._edges:
+                    edge.updatePosition()
+
+        return super().itemChange(change, value)
+
     def boundingRect(self) -> QRectF:
         return QRectF(-self.radius, -self.radius, self.radius*2, self.radius*2)
 
-    def paint(self, painter:QPainter, option:QStyleOptionGraphicsItem, widget=None):
-        palette:QPalette = option.palette #type: ignore
-        state = option.state #type: ignore
+    def pen(self):
+        palette = QApplication.instance().palette()
+        if self.scene():
+            palette = self.scene().palette()
 
-        print("PinWidget->paint", state)
+        pen = QPen(palette.text().color())
+        if self.isHighlighted():
+            pen.setColor(palette.highlight().color())  # Color for hover
 
-        # Check the item's state
+        if self.isSelected():
+            pen.setColor(palette.accent().color())  # Color for selected
+
+        return pen
+
+    def brush(self):
+        palette = QApplication.instance().palette()
+        if self.scene():
+            palette = self.scene().palette()
+
         baseColor = palette.base().color()
         baseColor.setAlpha(255)
         brush = QBrush(baseColor)
-        pen = QPen(palette.text().color())
-        if state & QStyle.StateFlag.State_MouseOver:
-            pen.setColor(palette.highlight().color())  # Color for hover
-        elif state & QStyle.StateFlag.State_Selected:
-            pen.setColor(palette.accent().color())  # Color for selected
+        return brush
 
-        painter.setBrush(brush)
-        painter.setPen(pen)
+    def paint(self, painter:QPainter, option:QStyleOptionGraphicsItem, widget=None):
+        # Check the item's state
+        painter.setBrush(self.brush())
+        painter.setPen(self.pen())
         painter.drawEllipse(QPointF(0,0), self.radius, self.radius)
+
+    def setHighlighted(self, value):
+        self._isHighlighted = value
+
+    def isHighlighted(self):
+        return self._isHighlighted
+
+    def hoverEnterEvent(self, event):
+        self.setHighlighted(True)
+        self.update()
+
+    def hoverLeaveEvent(self, event):
+        self.setHighlighted(False)
+        self.update()
 
 
 class OutletWidget(PinWidget):
@@ -194,6 +209,10 @@ class OutletWidget(PinWidget):
 
 
 class InletWidget(PinWidget):
+    def __init__(self, text:str, parent:QGraphicsItem|None=None):
+        super().__init__(text=text, parent=parent)
+        self._is_connection_entered = False
+
     @override
     def sceneEvent(self, event: QEvent) -> bool:
         if event.type() == ConnectionEnterType:
@@ -210,25 +229,21 @@ class InletWidget(PinWidget):
         return super().sceneEvent(event)
 
     def connectionEnterEvent(self, event:ConnectionEvent) -> None:
-        print("connection enter")
         if True:
             event.setAccepted(True)
-            self._is_hovered = True
-            self.update()
+            self.setHighlighted(True)
             return
         event.setAccepted(False)
 
     def connectionMoveEvent(self, event:ConnectionEvent)->None:
-        print("connection move")
-
+        pass
     def connectionLeaveEvent(self, event:ConnectionEvent)->None:
-        print("connection leave")
-        self._is_hovered = False
-        self.update()
+        self.setHighlighted(False)
     
     def connectionDropEvent(self, event:ConnectionEvent):
         if True:
             print(f"connection dropped from: {event.source()} onto: {self}!")
+            self.setHighlighted(False)
             event.setAccepted(True)
             graphscene = cast(DAGScene, self.scene())
             edge = EdgeWidget(event._source, self)
@@ -270,30 +285,6 @@ class NodeWidget(QGraphicsItem):
         text_height = fm.height()
         return QRectF(0,0,text_width+8, text_height+4)
 
-    def paint(self, painter:QPainter, option:QStyleOptionGraphicsItem, widget=None):
-        palette:QPalette = option.palette #type: ignore
-        state = option.state #type: ignore
-        print("NodeWidget->paint", state)
-        # Check the item's state
-
-        baseColor = palette.base().color()
-        baseColor.setAlpha(255)
-        brush = QBrush(baseColor)
-        pen = QPen(palette.dark().color(), 1)
-        # if state & QStyle.StateFlag.State_MouseOver:
-        #     pen.setColor( palette.highlight().color() )
-        if state & QStyle.StateFlag.State_Selected:
-            pen.setColor( palette.accent().color() )
-
-        painter.setBrush(brush)
-        painter.setPen(pen)
-        painter.drawRoundedRect(self.boundingRect(), 4, 4)
-        
-        pen = QPen(palette.text().color(), 1)
-        painter.setPen(pen)
-        fm = QFontMetrics( self.scene().font() )
-        painter.drawText(4,fm.height()-1,self._title)
-
     def destroy(self):
         while self._inlets:
             self._inlets[0].destroy()  # Always remove first
@@ -312,6 +303,35 @@ class NodeWidget(QGraphicsItem):
                 self.updatePins()
 
         return super().itemChange(change, value)
+
+    def brush(self):
+        palette = QApplication.instance().palette()
+        if self.scene():
+            palette = self.scene().palette()
+
+        baseColor = palette.base().color()
+        baseColor.setAlpha(255)
+        brush = QBrush(baseColor)
+        return brush
+
+    def pen(self):
+        palette = QApplication.instance().palette()
+        if self.scene():
+            palette = self.scene().palette()
+
+        pen = QPen(palette.dark().color(), 1)
+
+        if self.isSelected():
+            pen.setColor( palette.accent().color() )
+        return pen
+
+    def paint(self, painter:QPainter, option:QStyleOptionGraphicsItem, widget=None):
+        painter.setBrush(self.brush())
+        painter.setPen(self.pen())
+        painter.drawRoundedRect(self.boundingRect(), 4, 4)
+        
+        fm = QFontMetrics( self.scene().font() )
+        painter.drawText(4,fm.height()-1,self._title)
 
     def title(self):
         return self._title
@@ -548,10 +568,10 @@ class EdgeWidget(QGraphicsLineItem):
 
         self.hide()
         if d1>d2:
-            connect = Connect(source=self.source())
+            connect = Connect(self.source())
             connect.exec()
         else:
-            connect = Connect(source=self.target())
+            connect = Connect(self.target())
             connect.exec()
         self.show()
 
