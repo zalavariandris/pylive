@@ -5,7 +5,7 @@ created: 2024/10/15
 
 ## Create an environment
 
-### opena  terminal
+### open a terminal
 
 ```bash
 cd /path/to/your/project

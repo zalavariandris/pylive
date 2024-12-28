@@ -31,18 +31,25 @@ class ConnectionEvent(QGraphicsSceneEvent):
         return f"ConnectionEvent({self._source})"
 
 
-class Connection(QObject):
+class Connect(QObject):
     targetChanged = Signal()
-    def __init__(self, source:'NodeWidget', parent=None):
+    def __init__(self, item:'QGraphicsItem', direction:Literal['forward','backward'], parent=None):
         super().__init__(parent=parent)
-        self._source = source
-        self._loop = QEventLoop()
+        
+        match direction:
+            case 'forward':
+                self._source = item
+                self._target = None
+            case 'backward':
+                self._source = None
+                self._target = item
 
+        self._direction = direction
+        self._loop = QEventLoop()
         self._arrow = None
-        self._target:QGraphicsItem|None = None
         self._entered_items = []
 
-    def source(self)->QGraphicsItem:
+    def source(self)->QGraphicsItem|None:
         return self._source
 
     def target(self)->QGraphicsItem|None:
@@ -52,7 +59,10 @@ class Connection(QObject):
         scene = self._source.scene()
         assert scene
         
+        match self._direction:
+
         self._arrow = QGraphicsArrowItem(QLineF(self._source.pos(), self._source.pos()))
+
         self._arrow.setPen(QPen(scene.palette().color(QPalette.ColorRole.Text), 1))
         self._source.scene().addItem(self._arrow )
         scene.installEventFilter(self)
@@ -66,7 +76,7 @@ class Connection(QObject):
 
             ### Move arrow ####
             assert self._arrow
-            line = makeLineBetweenShapes(self.source(), event.scenePos())
+            line = makeLineBetweenShapes(self.source() or event.scenePos(), self.target() or event.scenePos())
             self._arrow.setLine(line)
             
             # manage connection enter and leave event
@@ -153,7 +163,7 @@ class PinWidget(QGraphicsItem):
         brush = QBrush(baseColor)
         pen = QPen(palette.text().color())
         if state & QStyle.StateFlag.State_MouseOver:
-            pen.setColor(palette.brightText().color())  # Color for hover
+            pen.setColor(palette.highlight().color())  # Color for hover
         elif state & QStyle.StateFlag.State_Selected:
             pen.setColor(palette.accent().color())  # Color for selected
 
@@ -175,7 +185,7 @@ class OutletWidget(PinWidget):
         print("start drag event")
 
         # start connection
-        connection = Connection(self)
+        connection = Connect(self)
         connection.exec()
 
     def mouseReleaseEvent(self, event: QGraphicsSceneMouseEvent) -> None:
@@ -271,7 +281,7 @@ class NodeWidget(QGraphicsItem):
         brush = QBrush(baseColor)
         pen = QPen(palette.dark().color(), 1)
         # if state & QStyle.StateFlag.State_MouseOver:
-        #     pen.setColor( palette.brightText().color() )
+        #     pen.setColor( palette.highlight().color() )
         if state & QStyle.StateFlag.State_Selected:
             pen.setColor( palette.accent().color() )
 
@@ -512,7 +522,8 @@ class EdgeWidget(QGraphicsLineItem):
         pen = Qt.NoPen
         brush = QBrush(palette.text().color())
         if state & QStyle.StateFlag.State_MouseOver:
-            brush.setColor(palette.brightText().color())  # Color for hover
+
+            brush.setColor(palette.highlight().color())  # Color for hover
         elif state & QStyle.StateFlag.State_Selected:
             brush.setColor(palette.accent().color())  # Color for selected
 
@@ -532,8 +543,17 @@ class EdgeWidget(QGraphicsLineItem):
         print("start drag event from edge")
 
         # # start connection
-        # connection = Connection(self)
-        # connection.exec()
+        d1 = QLineF(self.line().p1(), event.scenePos()).length()
+        d2 = QLineF(self.line().p2(), event.scenePos()).length()
+
+        self.hide()
+        if d1>d2:
+            connect = Connect(source=self.source())
+            connect.exec()
+        else:
+            connect = Connect(source=self.target())
+            connect.exec()
+        self.show()
 
 
 class DAGScene(QGraphicsScene):

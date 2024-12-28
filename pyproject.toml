@@ -19,7 +19,7 @@ requires-python = ">=3.8"
 
 dependencies = [
     "watchfiles ~= 0.24.0",
-    "PySide6 ~= 6.7.0",
+    "PySide6",
     "rope ~= 1.13.0",
     "pygments ~= 2.18.0",
     "IPython ~= 8.29.0",
