@@ -19,16 +19,16 @@ ConnectionDropType  = QEvent.Type( QEvent.registerEventType() )
 
 
 class ConnectionEvent(QGraphicsSceneEvent):
-    def __init__(self, type:QEvent.Type, source:'NodeWidget'):
+    def __init__(self, type:QEvent.Type, payload:object|None=None):
         super().__init__( type )
         self._type = type
-        self._source = source
+        self._payload = payload
 
-    def source(self):
-        return self._source
+    def payload(self)->object|None:
+        return self._payload
 
     def __str__(self):
-        return f"ConnectionEvent({self._source})"
+        return f"ConnectionEvent({self._payload})"
 
 
 class Connect(QObject):
@@ -98,7 +98,6 @@ class Connect(QObject):
             return True
 
         if event.type() == QEvent.Type.GraphicsSceneMouseRelease:
-            
             if self._target:
                 scene = self._source.scene()
                 event = ConnectionEvent(ConnectionDropType, self._source)
@@ -139,8 +138,15 @@ class PinWidget(QGraphicsItem):
 
         return super().itemChange(change, value)
 
+    def shape(self):
+        r = self.radius+3
+        path = QPainterPath()
+        path.addEllipse(QPointF(), r, r)
+        return path
+
     def boundingRect(self) -> QRectF:
-        return QRectF(-self.radius, -self.radius, self.radius*2, self.radius*2)
+        r = self.radius+3
+        return QRectF(-r, -r, r*2, r*2)
 
     def pen(self):
         palette = QApplication.instance().palette()
@@ -148,11 +154,13 @@ class PinWidget(QGraphicsItem):
             palette = self.scene().palette()
 
         pen = QPen(palette.text().color())
-        if self.isHighlighted():
-            pen.setColor(palette.highlight().color())  # Color for hover
+        
 
-        if self.isSelected():
-            pen.setColor(palette.accent().color())  # Color for selected
+        if self.isSelected() or self.parentItem().isSelected():
+            pen.setColor(palette.highlight().color())  # Color for selected
+
+        if self.isHighlighted():
+            pen.setColor(palette.accent().color())  # Color for hover
 
         return pen
 
@@ -172,19 +180,21 @@ class PinWidget(QGraphicsItem):
         painter.setPen(self.pen())
         painter.drawEllipse(QPointF(0,0), self.radius, self.radius)
 
+        # painter.drawPath(self.shape())
+        # painter.drawRect(self.boundingRect())
+
     def setHighlighted(self, value):
         self._isHighlighted = value
+        self.update()
 
     def isHighlighted(self):
         return self._isHighlighted
 
     def hoverEnterEvent(self, event):
         self.setHighlighted(True)
-        self.update()
 
     def hoverLeaveEvent(self, event):
         self.setHighlighted(False)
-        self.update()
 
 
 class OutletWidget(PinWidget):
@@ -194,17 +204,20 @@ class OutletWidget(PinWidget):
         # docs: https://www.qtcentre.org/threads/21256-QGraphicsItem-no-mouse-events-called
 
     def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent) -> None:
-        print("PinWidget->mouseMoveEvent")
         if QLineF(event.screenPos(), event.buttonDownScreenPos(Qt.MouseButton.LeftButton)).length() < QApplication.startDragDistance():
             return
         print("start drag event")
 
         # start connection
-        connection = Connect(self)
-        connection.exec()
+        connect = Connect(self)
+        connect.exec()
+        
+        graphscene = cast(DAGScene, self.scene())
+        if connect.target():
+            edge = EdgeWidget(connect.source(), connect.target())
+            graphscene.addEdge(edge)
 
     def mouseReleaseEvent(self, event: QGraphicsSceneMouseEvent) -> None:
-        print("PinWidget->mouseReleaseEvent")
         return super().mouseReleaseEvent(event)
 
 
@@ -229,25 +242,20 @@ class InletWidget(PinWidget):
         return super().sceneEvent(event)
 
     def connectionEnterEvent(self, event:ConnectionEvent) -> None:
-        if True:
+        outlet = event.source()
+        if outlet.parentItem()!=self.parentItem():
             event.setAccepted(True)
             self.setHighlighted(True)
             return
         event.setAccepted(False)
 
-    def connectionMoveEvent(self, event:ConnectionEvent)->None:
-        pass
     def connectionLeaveEvent(self, event:ConnectionEvent)->None:
         self.setHighlighted(False)
     
     def connectionDropEvent(self, event:ConnectionEvent):
-        if True:
-            print(f"connection dropped from: {event.source()} onto: {self}!")
+        if event.source().parentItem()!=self.parentItem():
             self.setHighlighted(False)
             event.setAccepted(True)
-            graphscene = cast(DAGScene, self.scene())
-            edge = EdgeWidget(event._source, self)
-            graphscene.addEdge(edge)
 
         event.setAccepted(False)
 
@@ -301,6 +309,9 @@ class NodeWidget(QGraphicsItem):
                     edge.updatePosition()
             case QGraphicsItem.GraphicsItemChange.ItemSceneHasChanged:
                 self.updatePins()
+            case QGraphicsItem.GraphicsItemChange.ItemSelectedHasChanged:
+                for pin in self._inlets+self._outlets:
+                    pin.update()
 
         return super().itemChange(change, value)
 
@@ -322,7 +333,7 @@ class NodeWidget(QGraphicsItem):
         pen = QPen(palette.dark().color(), 1)
 
         if self.isSelected():
-            pen.setColor( palette.accent().color() )
+            pen.setColor( palette.highlight().color() )
         return pen
 
     def paint(self, painter:QPainter, option:QStyleOptionGraphicsItem, widget=None):
@@ -376,7 +387,6 @@ class NodeWidget(QGraphicsItem):
 
 class EdgeWidget(QGraphicsLineItem):
     """Graphics item representing an edge in a graph."""
-    GrabThreshold = 15
     def __init__(
         self,
         source: OutletWidget | NodeWidget | None,
@@ -400,17 +410,13 @@ class EdgeWidget(QGraphicsLineItem):
         self.setZValue(-1)
 
 
-        self.is_moving_endpoint = False
-        self.GrabThreshold = 10
-        self._shape_pen = QPen(Qt.GlobalColor.black, self.GrabThreshold)
+        # self.is_moving_endpoint = False
+
 
         self.setSource(source)
         self.setTarget(target)
 
         self.setAcceptHoverEvents(True)
-
-    def highlightColor(self):
-        return self.scene().palette().color(QPalette.ColorRole.Accent)
 
     def setLabelText(self, text: str):
         self._label_item.setPlainText(text)
@@ -444,27 +450,17 @@ class EdgeWidget(QGraphicsLineItem):
 
     def shape(self) -> QPainterPath:
         """Override shape to provide a wider clickable area."""
-        self._shape_pen.setCosmetic(True)
         path = QPainterPath()
         path.moveTo(self.line().p1())
         path.lineTo(self.line().p2())
         stroker = QPainterPathStroker()
-        stroker.setWidth(self.GrabThreshold)
+        stroker.setWidth(10)
         stroker.setCapStyle(Qt.PenCapStyle.RoundCap)
         stroker.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
         return stroker.createStroke(path)
 
     def boundingRect(self) -> QRectF:
-        """Override boundingRect to account for the wider collision shape."""
-        self._shape_pen = QPen(Qt.GlobalColor.black, self.GrabThreshold)
-        extra = (self._shape_pen.width() + self.pen().width()) / 2.0
-        p1 = self.line().p1()
-        p2 = self.line().p2()
-        return (
-            QRectF(p1, QSizeF(p2.x() - p1.x(), p2.y() - p1.y()))
-            .normalized()
-            .adjusted(-extra, -extra, extra, extra)
-        )
+        return self.shape().boundingRect()
 
     @overload
     def setLine(self, line: QLine | QLineF) -> None:
@@ -542,10 +538,9 @@ class EdgeWidget(QGraphicsLineItem):
         pen = Qt.NoPen
         brush = QBrush(palette.text().color())
         if state & QStyle.StateFlag.State_MouseOver:
-
-            brush.setColor(palette.highlight().color())  # Color for hover
+            brush.setColor(palette.accent().color())  # Color for hover
         elif state & QStyle.StateFlag.State_Selected:
-            brush.setColor(palette.accent().color())  # Color for selected
+            brush.setColor(palette.highlight().color())  # Color for selected
 
         arrow_shape = makeArrowShape(self.line(), 1.0)
         painter.setPen(pen)
@@ -570,9 +565,13 @@ class EdgeWidget(QGraphicsLineItem):
         if d1>d2:
             connect = Connect(self.source())
             connect.exec()
+            if not connect.target():
+                graphscene = cast(DAGScene, self.scene())
+                graphscene.removeEdge(self)
+            elif connect.target() != self.target():
+                self.setTarget(connect.target())
         else:
-            connect = Connect(self.target())
-            connect.exec()
+            ...
         self.show()
 
 
