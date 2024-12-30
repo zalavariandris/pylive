@@ -19,47 +19,50 @@ ConnectionDropType  = QEvent.Type( QEvent.registerEventType() )
 
 
 class ConnectionEvent(QGraphicsSceneEvent):
-    def __init__(self, type:QEvent.Type, payload:object|None=None):
+    def __init__(self, type:QEvent.Type, source:object|None=None):
         super().__init__( type )
         self._type = type
-        self._payload = payload
+        self._source = source
 
-    def payload(self)->object|None:
-        return self._payload
+    def source(self)->QGraphicsItem:
+        """graphics item initiated the event"""
+        return self._source
 
     def __str__(self):
-        return f"ConnectionEvent({self._payload})"
+        return f"ConnectionEvent({self._source})"
 
 
 class Connect(QObject):
     targetChanged = Signal()
-    def __init__(self, item:'QGraphicsItem', direction:Literal['forward','backward']='forward', parent=None):
+
+    def __init__(self, item: 'QGraphicsItem', direction: Literal['forward', 'backward'] = 'forward', parent=None):
         super().__init__(parent=parent)
-        self._source:QGraphicsItem = item
+        self._source: QGraphicsItem|None = item if direction == 'forward' else None
+        self._target: QGraphicsItem|None = item if direction == 'backward' else None
         self._direction = direction
 
         self._loop = QEventLoop()
         self._arrow = None
-        self._target:QGraphicsItem|None = None
+        self._active_item: QGraphicsItem = item
         self._entered_items = []
 
-    def source(self)->QGraphicsItem:
+    def source(self) -> QGraphicsItem|None:
         return self._source
 
-    def target(self)->QGraphicsItem|None:
+    def target(self) -> QGraphicsItem | None:
         return self._target
 
     def exec(self):
-        scene = self._source.scene()
+        scene = self._active_item.scene()
         assert scene
-        
-        self._arrow = QGraphicsArrowItem(QLineF(self._source.pos(), self._source.pos()))
+
+        self._arrow = QGraphicsArrowItem(QLineF(self._active_item.pos(), self._active_item.pos()))
         self._arrow.setPen(QPen(scene.palette().color(QPalette.ColorRole.Text), 1))
-        self._source.scene().addItem(self._arrow )
+        scene.addItem(self._arrow)
         scene.installEventFilter(self)
         self._loop.exec()
         scene.removeEventFilter(self)
-        self._source.scene().removeItem(self._arrow)
+        scene.removeItem(self._arrow)
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:
         if event.type() == QEvent.Type.GraphicsSceneMouseMove:
@@ -67,44 +70,61 @@ class Connect(QObject):
 
             ### Move arrow ####
             assert self._arrow
-            line = makeLineBetweenShapes(self.source(), event.scenePos())
+            match self._direction:
+                case 'forward':
+                    assert self._source
+                    line = makeLineBetweenShapes(self._source, event.scenePos())
+                case 'backward':
+                    assert self._target
+                    line = makeLineBetweenShapes(event.scenePos(), self._target)
+            assert line
             self._arrow.setLine(line)
-            
+
             # manage connection enter and leave event
-            scene = self._source.scene()
+            scene = self._active_item.scene()
             entered_items = [item for item in self._entered_items]
             itemsUnderMouse = [item for item in scene.items(event.scenePos()) if hasattr(item, 'connectionEnterEvent')]
+
             for item in itemsUnderMouse:
                 if item not in entered_items:
                     self._entered_items.append(item)
-                    event = ConnectionEvent(ConnectionEnterType, self._source)
+                    connection_event_source = self._source if self._direction == 'forward' else self._target
+                    event = ConnectionEvent(ConnectionEnterType, connection_event_source)
                     scene.sendEvent(item, event)
                     if event.isAccepted():
-                        self._target = item
+                        if self._direction == 'forward':
+                            self._target = item
+                        else:
+                            self._source = item
                         self.targetChanged.emit()
                         break
 
             for item in entered_items:
                 if item not in itemsUnderMouse:
                     self._entered_items.remove(item)
-                    event = ConnectionEvent(ConnectionLeaveType, self._source)
+                    connection_event_source = self._source if self._direction == 'forward' else self._target
+                    event = ConnectionEvent(ConnectionLeaveType, connection_event_source)
                     scene.sendEvent(item, event)
 
             # send ConnectionMove event
             for item in self._entered_items:
-                event = ConnectionEvent(ConnectionMoveType, self._source)
+                connection_event_source = self._source if self._direction == 'forward' else self._target
+                event = ConnectionEvent(ConnectionMoveType, connection_event_source)
                 scene.sendEvent(item, event)
 
             return True
 
         if event.type() == QEvent.Type.GraphicsSceneMouseRelease:
-            if self._target:
-                scene = self._source.scene()
-                event = ConnectionEvent(ConnectionDropType, self._source)
-                scene.sendEvent(self._target, event)
+            if self._direction == 'forward' and self._target or self._direction == 'backward' and self._source:
+                scene = self._active_item.scene()
+                connection_event_source = self._source if self._direction == 'forward' else self._target
+                event = ConnectionEvent(ConnectionDropType, connection_event_source)
+                scene.sendEvent(self._target if self._direction == 'forward' else self._source, event)
             self._loop.exit()
             return True
+
         return super().eventFilter(watched, event)
+
 
 
 class PinWidget(QGraphicsItem):
@@ -199,9 +219,7 @@ class PinWidget(QGraphicsItem):
 
 class OutletWidget(PinWidget):
     def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
-        print("PinWidget->mousePressEvent")
-        # the default implementation of QGraphicsItem::mousePressEvent() ignores the event
-        # docs: https://www.qtcentre.org/threads/21256-QGraphicsItem-no-mouse-events-called
+        event.accept()
 
     def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         if QLineF(event.screenPos(), event.buttonDownScreenPos(Qt.MouseButton.LeftButton)).length() < QApplication.startDragDistance():
@@ -220,12 +238,6 @@ class OutletWidget(PinWidget):
     def mouseReleaseEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         return super().mouseReleaseEvent(event)
 
-
-class InletWidget(PinWidget):
-    def __init__(self, text:str, parent:QGraphicsItem|None=None):
-        super().__init__(text=text, parent=parent)
-        self._is_connection_entered = False
-
     @override
     def sceneEvent(self, event: QEvent) -> bool:
         if event.type() == ConnectionEnterType:
@@ -242,8 +254,8 @@ class InletWidget(PinWidget):
         return super().sceneEvent(event)
 
     def connectionEnterEvent(self, event:ConnectionEvent) -> None:
-        outlet = event.source()
-        if outlet.parentItem()!=self.parentItem():
+        inlet = event.source()
+        if inlet.parentItem()!=self.parentItem():
             event.setAccepted(True)
             self.setHighlighted(True)
             return
@@ -251,6 +263,9 @@ class InletWidget(PinWidget):
 
     def connectionLeaveEvent(self, event:ConnectionEvent)->None:
         self.setHighlighted(False)
+
+    def connectionMoveEvent(self, event:ConnectionEvent)->None:
+        ...
     
     def connectionDropEvent(self, event:ConnectionEvent):
         if event.source().parentItem()!=self.parentItem():
@@ -258,6 +273,65 @@ class InletWidget(PinWidget):
             event.setAccepted(True)
 
         event.setAccepted(False)
+
+
+class InletWidget(PinWidget):
+    ...
+    # def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+    #     event.accept()
+
+    # def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+    #     if QLineF(event.screenPos(), event.buttonDownScreenPos(Qt.MouseButton.LeftButton)).length() < QApplication.startDragDistance():
+    #         return
+    #     print("start drag event")
+
+    #     # start connection
+    #     connect = Connect(self, direction='backward')
+    #     connect.exec()
+        
+    #     graphscene = cast(DAGScene, self.scene())
+    #     if connect.source():
+    #         edge = EdgeWidget(connect.source(), connect.target())
+    #         graphscene.addEdge(edge)
+
+    # def mouseReleaseEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+    #     return super().mouseReleaseEvent(event)
+
+    # @override
+    # def sceneEvent(self, event: QEvent) -> bool:
+    #     if event.type() == ConnectionEnterType:
+    #         self.connectionEnterEvent(cast(ConnectionEvent, event))
+    #     elif event.type() == ConnectionLeaveType:
+    #         self.connectionLeaveEvent(cast(ConnectionEvent, event))
+    #     elif event.type() == ConnectionMoveType:
+    #         self.connectionMoveEvent(cast(ConnectionEvent, event))
+    #     elif event.type() == ConnectionDropType:
+    #         self.connectionDropEvent(cast(ConnectionEvent, event))
+    #     else:
+    #         ...
+
+    #     return super().sceneEvent(event)
+
+    # def connectionEnterEvent(self, event:ConnectionEvent) -> None:
+    #     outlet = event.source()
+    #     if outlet.parentItem()!=self.parentItem():
+    #         event.setAccepted(True)
+    #         self.setHighlighted(True)
+    #         return
+    #     event.setAccepted(False)
+
+    # def connectionLeaveEvent(self, event:ConnectionEvent)->None:
+    #     self.setHighlighted(False)
+
+    # def connectionMoveEvent(self, event:ConnectionEvent)->None:
+    #     ...
+    
+    # def connectionDropEvent(self, event:ConnectionEvent):
+    #     if event.source().parentItem()!=self.parentItem():
+    #         self.setHighlighted(False)
+    #         event.setAccepted(True)
+
+    #     event.setAccepted(False)
 
 
 class NodeWidget(QGraphicsItem):
@@ -356,18 +430,22 @@ class NodeWidget(QGraphicsItem):
         inlet.setParentItem(self)
         self._inlets.append(inlet)
         self.updatePins()
+        if self.scene():
+            inlet.installSceneEventFilter(self)
 
     def removeInlet(self, inlet: InletWidget):
         inlet._parent_node = None
         inlet.scene().removeItem(inlet)
         self._inlets.remove(inlet)
         self.updatePins()
+        inlet.removeSceneEventFilter(self)
 
     def addOutlet(self, outlet: OutletWidget):
         outlet._parent_node = self
         outlet.setParentItem(self)
         self._outlets.append(outlet)
         self.updatePins()
+        outlet.installSceneEventFilter(self)
 
     def removeOutlet(self, outlet: OutletWidget):
         outlet._parent_node = None
@@ -409,10 +487,7 @@ class EdgeWidget(QGraphicsLineItem):
 
         self.setZValue(-1)
 
-
         # self.is_moving_endpoint = False
-
-
         self.setSource(source)
         self.setTarget(target)
 
