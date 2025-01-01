@@ -1,7 +1,8 @@
 from typing import *
 from PySide6.QtGui import *
 from PySide6.QtCore import *
-from PySide6.QtWidgets import * 
+from PySide6.QtWidgets import *
+from networkx.generators import line 
 from pylive.QtGraphEditor.nx_graph_model import NXGraphModel
 from pylive.QtGraphEditor.nx_graph_selection_model import NXGraphSelectionModel
 from pylive.utils.unique import make_unique_name
@@ -30,6 +31,9 @@ class NXInspectorView(QWidget):
 
         self._item_to_attribute:dict[QTableWidgetItem, str] = dict()
         self._attribute_to_item:dict[str, QTableWidgetItem] = dict()
+
+        self.attributesForm = QFormLayout()
+
 
         self.updateView()
 
@@ -63,12 +67,16 @@ class NXInspectorView(QWidget):
         buttonsLayout.addWidget(self.remove_button)
         mainLayout.addLayout(buttonsLayout)
         mainLayout.addWidget(self.attributesTable)
+        mainLayout.addLayout(self.attributesForm)
         mainLayout.addStretch()
 
         self.setLayout(mainLayout)
 
         self._attribute_to_row:dict[str, int] = dict()
         self._row_to_attribute:dict[int, str] = dict()
+
+        self._widget_to_attribute:dict[QWidget, str] = dict()
+        self._attribute_to_widget:dict[str, QWidget] = dict()
 
     def setModel(self, model:NXGraphModel):
         self._model = model
@@ -94,14 +102,15 @@ class NXInspectorView(QWidget):
             self.attributesTable.setRowCount(0)
             return
 
+        ### update header
         self.kind_label.setText(f"{n.__class__}")
         self.name_label.setText(f"{n}")
+
+        ### update attributes table
         self.attributesTable.clear()
         self.attributesTable.setHorizontalHeaderItem(0, QTableWidgetItem("value"))
         attributes = self._model.G.nodes[n]
         self.attributesTable.setRowCount( len(attributes) )
-        
-        print(attributes)
         for row, (attr, value) in enumerate(attributes.items()):
             print(row, attr, value)
             name_item = QTableWidgetItem(f"{attr}",)
@@ -113,6 +122,30 @@ class NXInspectorView(QWidget):
             self.attributesTable.blockSignals(False)
             self._row_to_attribute[row] = attr
             self._attribute_to_row[attr] = row
+
+        ### update attributes form
+        while self.attributesForm.count():
+            item = self.attributesForm.takeAt(0)
+            if widget:=item.widget():
+                widget.deleteLater()
+
+        attributes = self._model.G.nodes[n]
+        for row, (attr, value) in enumerate(attributes.items()):
+            lineedit = QLineEdit(f"{value}")
+            self.attributesForm.addRow(attr, lineedit)
+            
+            def setModel(widget=lineedit, n=n, attr=attr):
+                assert self._model
+                self._model.setNodeProperties(n, **{attr:widget.text()})
+
+            def setEditor(widget=lineedit, n=n, attr=attr):
+                assert self._model
+                value = self._model.getNodeProperty(n, attr)
+                widget.setText(f"{value}")
+
+            lineedit.editingFinished.connect(setModel)
+            self._widget_to_attribute[lineedit] = attr
+            self._attribute_to_widget[attr] = lineedit
 
     @Slot()
     def addAttribute(self, attr:str="attr1", value=None):

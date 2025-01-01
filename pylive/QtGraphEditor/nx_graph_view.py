@@ -21,6 +21,10 @@ import random
 class NXGraphView(QGraphicsView):
     def __init__(self, parent:QWidget|None=None):
         super().__init__(parent=parent)
+        self.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        self.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
+        self.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
+
         self.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
 
         self._graphScene:NXGraphScene = NXGraphScene()
@@ -117,7 +121,6 @@ class NXGraphView(QGraphicsView):
             self._node_to_widget_map[n] = widget
             self._widget_to_node_map[widget] = n
             self._graphScene.addNode(widget)
-            
 
     @Slot(list)
     def handleNodesRemoved(self, nodes: List[Hashable]):
@@ -134,7 +137,10 @@ class NXGraphView(QGraphicsView):
                 source = self._node_to_widget_map[u]
                 target = self._node_to_widget_map[v]
                 edge_widget = EdgeWidget(source, target)
-                edge_widget.setLabelText(f"{k}")
+                if k:
+                    edge_widget.setLabelText(str(k))
+                else:
+                    edge_widget.setLabelText("")
                 self._edge_to_widget_map[(u, v, k)] = edge_widget
                 self._widget_to_edge_map[edge_widget] = (u, v, k)
                 self._graphScene.addEdge(edge_widget)
@@ -229,79 +235,6 @@ class NXGraphView(QGraphicsView):
         return super().mouseMoveEvent(event)
 
 
-class AttributesTable(QAbstractTableModel):
-    def __init__(self, parent: Optional[QObject]) -> None:
-        super().__init__(parent)
-        self._model:NXGraphModel = None
-
-    def setSourceModel(self, model:NXGraphModel):
-        self._sourceModel = model
-
-    def setSourceSelectionModel(self, selectionModel:NXGraphSelectionModel):
-        self._selectionModel = selectionModel
-
-    def _get_current_node(self)->Hashable|None:
-        if not self._selectionModel:
-            return None
-        selection = self._selectionModel.selectedNodes()
-        return selection[0] if selection else None
-
-    @override
-    def columnCount(self, parent: QModelIndex | QPersistentModelIndex=QModelIndex())->int:
-        return 2
-
-    @override
-    def rowCount(self, parent: QModelIndex | QPersistentModelIndex=QModelIndex()) -> int:
-        n = self._get_current_node()
-        if not n:
-            return 0
-
-        attributes = self._sourceModel.G.nodes[n]
-        return len(attributes)
-
-    def data(self, index: QModelIndex|QPersistentModelIndex, role=Qt.ItemDataRole.DisplayRole)->Any:
-        n = self._get_current_node()
-        if not n:
-            return None
-
-        attributes = self._model.G.nodes[n]
-        attribute_list = [(attr, value) for attr, value in attributes.items()]
-
-        row = index.row()
-        col = index.column()
-
-        return f"{attribute_list[row][col]}"
-
-    @override
-    def flags(self, index: QModelIndex|QPersistentModelIndex)->Qt.ItemFlag:
-        return Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemNeverHasChildren
-
-    @override
-    def setData(self, index:QModelIndex|QPersistentModelIndex, value:object|None, role:int=Qt.ItemDataRole.EditRole)->bool:
-        # Editable models need to implement setData(), and implement flags() to return a value containing Qt::ItemIsEditable.
-        ...
-
-    @override
-    def headerData(self, section:int, orientation:Qt.Orientation, role:int=Qt.ItemDataRole.DisplayRole)->object|None:
-        match orientation:
-            case Qt.Orientation.Horizontal:
-                match section:
-                    case 0:
-                        return 'attribute'
-                    case 1:
-                        return 'value'
-                    case _:
-                        return ""
-            case Qt.Orientation.Vertical:
-                return ""
-            case _:
-                pass
-
-    # beginInsertRows()    endInsertRows()
-    # beginInsertColumns() endInsertColumns()
-    # beginRemoveRows()    endRemoveRows()
-    # beginRemoveColumns() endRemoveColumns()
-
 class NodesListProxyModel(QAbstractListModel):
     def __init__(self, parent: QObject|None=None) -> None:
         super().__init__(parent)
@@ -355,6 +288,20 @@ class NodesListProxyModel(QAbstractListModel):
                 return f"{section}"
 
 
+class MyLinkTool(QObject):
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
+        match event.type():
+            case QEvent.Type.GraphicsSceneMousePress:
+                return True
+            case QEvent.Type.GraphicsSceneMouseMove:
+                return True
+            case QEvent.Type.GraphicsSceneMouseRelease:
+                return True
+            case _:
+                print(event)
+        return super().eventFilter(watched, event)
+
+
 if __name__ == "__main__":
     from pylive.QtGraphEditor.nx_inspector_view import NXInspectorView
     class NXWindow(QWidget):
@@ -365,6 +312,29 @@ if __name__ == "__main__":
             self.selectionmodel = NXGraphSelectionModel()
 
             self.graphview = NXGraphView()
+            menubar = QToolBar()
+            menubar.setOrientation(Qt.Orientation.Vertical)
+            menubar.setStyleSheet("""
+            QToolBar{
+                background-color: rgba(128,128,128,24); 
+                border-radius: 8px;
+                margin:6px;
+            }""")
+
+            self.currentTool = None
+            select_action = QAction("Select", self.graphview)
+            select_action.triggered.connect(lambda: self.setTool(None))
+            menubar.addAction(select_action)
+
+            create_action = QAction("Create", self.graphview)
+            create_action.triggered.connect(lambda: self.setTool(None))
+            menubar.addAction(create_action)
+
+            link_action = QAction("Link", self.graphview)
+            link_action.triggered.connect(lambda: self.setTool(MyLinkTool()))
+            menubar.addAction(link_action)
+
+            menubar.setParent(self.graphview)
             self.graphview.setModel(self.model)
             self.graphview.setSelectionModel(self.selectionmodel)
 
@@ -378,6 +348,7 @@ if __name__ == "__main__":
             self.inspector.setSelectionModel(self.selectionmodel)
 
             mainLayout = QVBoxLayout()
+            mainLayout.setContentsMargins(0,0,0,0)
             splitter = QSplitter()
             mainLayout.addWidget(splitter)
             splitter.addWidget(self.graphview)
@@ -385,6 +356,15 @@ if __name__ == "__main__":
             # splitter.addWidget(self.nodelistview)
             splitter.setSizes([splitter.width()//splitter.count() for _ in range(splitter.count())])
             self.setLayout(mainLayout)
+
+        def setTool(self, tool:QObject|None):
+            print("set tool: ", tool)
+            if self.currentTool:
+                self.graphview.scene().removeEventFilter(self.currentTool)
+
+            if tool:
+                self.graphview.scene().installEventFilter(tool)
+                self.currentTool = tool
 
         def sizeHint(self) -> QSize:
             return QSize(920, 520)

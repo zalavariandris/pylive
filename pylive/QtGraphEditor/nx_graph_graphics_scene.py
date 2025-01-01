@@ -275,7 +275,7 @@ class EdgeWidget(QGraphicsLineItem):
         self._source:QGraphicsItem|None = None
         self._target:QGraphicsItem|None = None
         
-        self.setPen(QPen(Qt.GlobalColor.black, 1))
+        self.setPen(QPen(Qt.GlobalColor.black, 1.5))
         self._label_item = QGraphicsTextItem(label, parent=self)
         self._label_item.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
         self.updatePosition()
@@ -293,7 +293,7 @@ class EdgeWidget(QGraphicsLineItem):
         self.setAcceptHoverEvents(True)
 
     def setLabelText(self, text: str):
-        self._label_item.setPlainText(text)
+        self._label_item.setPlainText(f"{text}")
 
     def labelText(self):
         return self._label_item.toPlainText()
