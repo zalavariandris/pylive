@@ -2,6 +2,7 @@ import random
 import string
 import re
 
+from typing import *
 
 def make_unique_id(length:int=8)->str:
     # Generate a random string of the specified length from ASCII letters and digits
@@ -10,7 +11,7 @@ def make_unique_id(length:int=8)->str:
     return unique_id
 
 
-def make_unique_name(name:str, names:list[str])->str:
+def make_unique_name(name:str, names:Iterable[str])->str:
     # Regex to extract the name part (without trailing digits)
     match = re.search(r"(.*?)(\d*)$", name)
     if match:

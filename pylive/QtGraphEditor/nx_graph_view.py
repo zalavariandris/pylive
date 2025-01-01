@@ -15,6 +15,9 @@ from pylive.utils.unique import make_unique_name
 import networkx as nx
 
 
+import random
+
+
 class NXGraphView(QGraphicsView):
     def __init__(self, parent:QWidget|None=None):
         super().__init__(parent=parent)
@@ -27,16 +30,18 @@ class NXGraphView(QGraphicsView):
         self._selectionModel:NXGraphSelectionModel|None = None
 
         self._node_to_widget_map:dict[Hashable, QGraphicsItem] = dict()
-        self._widget_to_node_map:dict[Hashable, QGraphicsItem] = dict()
-        self._edge_to_widget_map:dict[Hashable, QGraphicsItem] = dict()
-        self._widget_to_edge_map:dict[Hashable, QGraphicsItem] = dict()
+        self._widget_to_node_map:dict[QGraphicsItem, Hashable] = dict()
+        self._edge_to_widget_map:dict[tuple[Hashable,Hashable,Hashable], QGraphicsItem] = dict()
+        self._widget_to_edge_map:dict[QGraphicsItem, tuple[Hashable,Hashable,Hashable]] = dict()
 
         def on_edge_connected(edge_widget:EdgeWidget):
             if not self._model:
                 return
-
-            u = self._widget_to_node_map[edge_widget.source()]
-            v = self._widget_to_node_map[edge_widget.target()]
+            source_widget = edge_widget.source()
+            target_widget = edge_widget.target()
+            assert source_widget and target_widget
+            u = self._widget_to_node_map[source_widget]
+            v = self._widget_to_node_map[target_widget]
             self._model.addEdge(u, v)
 
         self._graphScene.connected.connect(on_edge_connected)
@@ -69,9 +74,38 @@ class NXGraphView(QGraphicsView):
         assert self._model
         G = self._model.G
         # pos = nx.forceatlas2_layout(G, max_iter=100, scaling_ratio=1800, strong_gravity=True)
-        pos = nx.kamada_kawai_layout(G, scale=200)
+        # pos = nx.kamada_kawai_layout(G, scale=200)
 
-        # pos = nx.multipartite_layout(G, scale=200)
+        def hiearchical_layout_with_grandalf(G, scale=1):
+            import grandalf
+            from grandalf.layouts import SugiyamaLayout
+
+            g = grandalf.utils.convert_nextworkx_graph_to_grandalf(G)
+            class defaultview(object): # see README of grandalf's github
+                w, h = scale, scale
+
+            for v in g.C[0].sV:
+                v.view = defaultview()
+            sug = SugiyamaLayout(g.C[0])
+            sug.init_all() # roots=[V[0]])
+            sug.draw()
+            return {v.data: (v.view.xy[0], v.view.xy[1]) for v in g.C[0].sV} # Extracts the positions
+
+        def hiearchical_layout_with_nx(G, scale=100):
+            for layer, nodes in enumerate(reversed(tuple(nx.topological_generations(G)))):
+                # `multipartite_layout` expects the layer as a node attribute, so add the
+                # numeric layer value as a node attribute
+                for node in nodes:
+                    G.nodes[node]["layer"] = -layer
+
+            # Compute the multipartite_layout using the "layer" node attribute
+            pos = nx.multipartite_layout(G, subset_key="layer", align='horizontal')
+            for n, p in pos.items():
+                pos[n] = p[0]*scale, p[1]*scale
+            return pos
+
+        # print(pos)
+        pos = hiearchical_layout_with_nx(G, scale=100)
         for N, (x, y) in pos.items():
             widget = self._node_to_widget_map[N]
             widget.setPos(x, y)
@@ -321,140 +355,8 @@ class NodesListProxyModel(QAbstractListModel):
                 return f"{section}"
 
 
-class NXInspectorView(QWidget):
-    def __init__(self, parent:QWidget|None=None):
-        super().__init__(parent=parent)
-        self._model:NXGraphModel|None = None
-        self._selectionModel:NXGraphSelectionModel|None = None
-
-        # widgets
-        self.kind_label = QLabel()
-        self.name_label = QLabel()
-        self.add_button = QPushButton("add attribute")
-        self.add_button.clicked.connect(lambda: self.addAttribute())
-        self.remove_button = QPushButton("remove attribute")
-        self.remove_button.clicked.connect(lambda: self.removeSelectedAttribute())
-
-
-        # self.header = QLabel()
-
-        # self.attributesEditor = QWidget()
-        # attriubteLayout = QVBoxLayout()
-        # self.attributesEditor.setLayout(attriubteLayout)
-
-        # menuBar = QMenuBar()
-        # addAttributeAction = QAction("add", self)
-        # addAttributeAction.triggered.connect(lambda: self.addAttribute())
-        # removeAttributeAction = QAction("remove", self)
-        # menuBar.addAction(addAttributeAction)
-        # menuBar.addAction(removeAttributeAction)
-        # self.attribTable = QTableWidget()
-        # self.attribTable.setColumnCount(2)
-        # self.attribTable.setHorizontalHeaderLabels(["name", "value"])
-
-        # attriubteLayout.setMenuBar(menuBar)
-        
-        # attriubteLayout.addWidget(self.attribTable)
-        # attriubteLayout.addStretch()
-
-        # layout
-        mainLayout = QVBoxLayout()
-        header_layout = QHBoxLayout()
-        header_layout.addWidget(self.kind_label)
-        header_layout.addWidget(self.name_label)
-        mainLayout.addLayout(header_layout)
-
-        mainLayout.addWidget(QLabel("attributes"))
-        buttonsLayout = QHBoxLayout()
-        buttonsLayout.addWidget(self.add_button)
-        buttonsLayout.addWidget(self.remove_button)
-        mainLayout.addLayout(buttonsLayout)
-        mainLayout.addWidget(self.attributesTable)
-        mainLayout.addStretch()
-
-        self.setLayout(mainLayout)
-
-        self._attribute_to_row:dict[str, int] = dict()
-        self._row_to_attribute:dict[int, str] = dict()
-
-    def setModel(self, model:NXGraphModel):
-        self._model = model
-        self._model.nodesPropertiesChanged.connect(self.handleNodesPropertiesChanged)
-
-    @Slot()
-    def addAttribute(self):
-        print("addAttribute", self._model, self._get_current_node())
-        if not self._model:
-            return
-
-        n = self._get_current_node()
-
-        if not n:
-            return
-
-        attribs = self._model.G.nodes[n]
-        attr = make_unique_name("attrib1", attribs.keys())
-
-        props = {
-            attr: None
-        }
-        self._model.setNodeProperties(n, **props)
-
-    def removeSelectedAttribute(self):
-        ...
-
-    def handleCurrentChange(self, currentNode:Hashable):
-        if not currentNode:
-            self.kind_label.setText("-")
-            self.name_label.setText("no selection")
-            return
-
-        #### Update header
-        attributes = self._model.G.nodes[currentNode]
-        self.kind_label.setText(f"{currentNode.__class__}")
-        self.name_label.setText(f"{currentNode}, attributes: {len(attributes)}")
-
-
-        ### Update attriubtes
-        # clear form
-        while self.attributesForm.count():
-            item = self.attributesForm.takeAt(0)
-            if widget:=item.widget():
-                widget.deleteLater()
-
-        # add attributes to form
-        for row, (attr, value) in enumerate(attributes.items()):
-            print("add attributes form")
-            self.attributesForm.addRow(attr, QLabel(f"{value}"))
-            self._row_to_attribute[row] = attr
-            self._attribute_to_row[attr] = row
-
-
-    def handleNodesPropertiesChanged(self, changes:dict[Hashable, dict[str,Any]]):
-        n = self._get_current_node()
-        if n not in changes:
-            return
-        
-        attributes = self._model.G.nodes[n]
-        self.handleCurrentChange(n)
-
-
-    def _get_current_node(self):
-        if not self._selectionModel:
-            return None
-        selection = self._selectionModel.selectedNodes()
-        return selection[0] if selection else None
-
-    def setSelectionModel(self, selectionModel:NXGraphSelectionModel):
-        @selectionModel.selectionChanged.connect
-        def update_scene_selection(selected: set[Hashable], deselected: set[Hashable]):
-            self.handleCurrentChange(self._get_current_node())
-
-        self._selectionModel = selectionModel
-
-
-
 if __name__ == "__main__":
+    from pylive.QtGraphEditor.nx_inspector_view import NXInspectorView
     class NXWindow(QWidget):
         def __init__(self, parent: QWidget|None=None) -> None:
             super().__init__(parent)
@@ -471,18 +373,21 @@ if __name__ == "__main__":
             self.nodelistview = QListView()
             self.nodelistview.setModel(self.nodelist)
 
-            # self.inspector = NXInspectorView()
-            # self.inspector.setModel(self.model)
-            # self.inspector.setSelectionModel(self.selectionmodel)
+            self.inspector = NXInspectorView()
+            self.inspector.setModel(self.model)
+            self.inspector.setSelectionModel(self.selectionmodel)
 
             mainLayout = QVBoxLayout()
             splitter = QSplitter()
             mainLayout.addWidget(splitter)
             splitter.addWidget(self.graphview)
-            # splitter.addWidget(self.inspector)
-            splitter.addWidget(self.nodelistview)
+            splitter.addWidget(self.inspector)
+            # splitter.addWidget(self.nodelistview)
             splitter.setSizes([splitter.width()//splitter.count() for _ in range(splitter.count())])
             self.setLayout(mainLayout)
+
+        def sizeHint(self) -> QSize:
+            return QSize(920, 520)
 
     app = QApplication()
     window = NXWindow()

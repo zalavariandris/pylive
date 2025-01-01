@@ -129,7 +129,7 @@ class Connect(QObject):
 
 
 class NodeWidget(QGraphicsItem):
-    """A widget that holds multiple TextWidgets arranged in a layout."""
+    """A Node GraphicsItems"""
     def __init__(
         self,
         title:str="Node",
@@ -274,8 +274,7 @@ class EdgeWidget(QGraphicsLineItem):
 
         self._source:QGraphicsItem|None = None
         self._target:QGraphicsItem|None = None
-    
-
+        
         self.setPen(QPen(Qt.GlobalColor.black, 1))
         self._label_item = QGraphicsTextItem(label, parent=self)
         self._label_item.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
