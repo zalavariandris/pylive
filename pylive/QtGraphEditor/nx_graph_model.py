@@ -9,21 +9,21 @@ from pylive.utils.geo import intersect_ray_with_rectangle
 
 
 class NXGraphModel(QObject):
-    nodesAdded = Signal(list)  # List[Hashable]
-    nodesAboutToBeRemoved = Signal(list)  # List[Hashable]
-    nodesPropertiesChanged = Signal(dict)  # Dict[Hashable, Dict[str, Any]]
-    nodesRemoved = Signal(list)
+    nodesAdded:Signal = Signal(list)  # List[Hashable]
+    nodesAboutToBeRemoved:Signal = Signal(list)  # List[Hashable]
+    nodesPropertiesChanged:Signal = Signal(dict)  # Dict[Hashable, Dict[str, Any]]
+    nodesRemoved:Signal = Signal(list)
 
-    edgesAdded = Signal(list)  # List[Tuple[Hashable, Hashable, Hashable]]
-    edgesAboutToBeRemoved = Signal(
+    edgesAdded:Signal = Signal(list)  # List[Tuple[Hashable, Hashable, Hashable]]
+    edgesAboutToBeRemoved:Signal = Signal(
         list
     )  # List[Tuple[Hashable, Hashable, Hashable]]
-    edgesPropertiesChanged = Signal(
+    edgesPropertiesChanged:Signal = Signal(
         dict
     )  # Dict[Tuple[Hashable, Hashable, Hashable], Dict[str, Any]]
-    edgesRemoved = Signal(list)  # List[Tuple[Hashable, Hashable, Hashable]]
+    edgesRemoved:Signal = Signal(list)  # List[Tuple[Hashable, Hashable, Hashable]]
 
-    def __init__(self, G: nx.MultiDiGraph = nx.MultiDiGraph(), parent=None):
+    def __init__(self, G:nx.MultiDiGraph = nx.MultiDiGraph(), parent=None):
         super().__init__(parent=parent)
         self.G = G
 

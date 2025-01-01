@@ -10,10 +10,6 @@ from pylive.QtGraphEditor.nx_graph_graphics_scene import (
     EdgeWidget,
     NodeWidget
 )
-from pylive.QtGraphEditor.infinite_graphicsview_optimized import (
-    InfiniteGraphicsView,
-)
-
 
 from pylive.utils.unique import make_unique_name
 import networkx as nx
@@ -24,18 +20,17 @@ class NXGraphView(QGraphicsView):
         super().__init__(parent=parent)
         self.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
 
-        self._graphScene = NXGraphScene()
+        self._graphScene:NXGraphScene = NXGraphScene()
 
         self.setScene(self._graphScene)
         self._model:NXGraphModel|None = None
         self._selectionModel:NXGraphSelectionModel|None = None
 
-        self._node_to_widget_map = dict()
-        self._widget_to_node_map = dict()
-        self._edge_to_widget_map = dict()
-        self._widget_to_edge_map = dict()
+        self._node_to_widget_map:dict[Hashable, QGraphicsItem] = dict()
+        self._widget_to_node_map:dict[Hashable, QGraphicsItem] = dict()
+        self._edge_to_widget_map:dict[Hashable, QGraphicsItem] = dict()
+        self._widget_to_edge_map:dict[Hashable, QGraphicsItem] = dict()
 
-        @self._graphScene.connected.connect
         def on_edge_connected(edge_widget:EdgeWidget):
             if not self._model:
                 return
@@ -43,6 +38,8 @@ class NXGraphView(QGraphicsView):
             u = self._widget_to_node_map[edge_widget.source()]
             v = self._widget_to_node_map[edge_widget.target()]
             self._model.addEdge(u, v)
+
+        self._graphScene.connected.connect(on_edge_connected)
 
         @self._graphScene.disconnected.connect
         def on_edge_disconnected(edge_widget:EdgeWidget):
@@ -245,6 +242,7 @@ class AttributesTable(QAbstractTableModel):
     def flags(self, index: QModelIndex|QPersistentModelIndex)->Qt.ItemFlag:
         return Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemNeverHasChildren
 
+    @override
     def setData(self, index:QModelIndex|QPersistentModelIndex, value:object|None, role:int=Qt.ItemDataRole.EditRole)->bool:
         # Editable models need to implement setData(), and implement flags() to return a value containing Qt::ItemIsEditable.
         ...
@@ -262,6 +260,8 @@ class AttributesTable(QAbstractTableModel):
                         return ""
             case Qt.Orientation.Vertical:
                 return ""
+            case _:
+                pass
 
     # beginInsertRows()    endInsertRows()
     # beginInsertColumns() endInsertColumns()
@@ -319,6 +319,7 @@ class NodesListProxyModel(QAbstractListModel):
                         return ""
             case Qt.Orientation.Vertical:
                 return f"{section}"
+
 
 class NXInspectorView(QWidget):
     def __init__(self, parent:QWidget|None=None):
