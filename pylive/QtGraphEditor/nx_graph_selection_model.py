@@ -85,7 +85,7 @@ class NXGraphSelectionModel(QObject):
 
     # Properties
     def selectedNodes(self) -> list[Hashable]:
-        return self._selectedNodes
+        return [n for n in self._selectedNodes]
 
     def setSelectedNodes(self, nodes: list[Hashable]):
         oldSelection = [n for n in self._selectedNodes]
