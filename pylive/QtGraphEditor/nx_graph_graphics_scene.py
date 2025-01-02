@@ -128,7 +128,57 @@ class Connect(QObject):
         return super().eventFilter(watched, event)
 
 
-class NodeWidget(QGraphicsItem):
+class AbstractGraphicsNodeItem(QGraphicsItem):
+    def __init__(self, parent:QGraphicsItem|None=None):
+        super().__init__(parent)
+        self._edges:list[AbstractGraphicsEdgeItem] = []
+
+    @override
+    def itemChange(self, change:QGraphicsItem.GraphicsItemChange, value):
+        match change:
+            case QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
+                for edge in self._edges:
+                    edge.updatePosition()
+            case _:
+                return super().itemChange(change, value)
+
+
+class AbstractGraphicsEdgeItem(QGraphicsLineItem):
+    def __init__(
+        self,
+        source: AbstractGraphicsNodeItem | None,
+        target: AbstractGraphicsNodeItem | None
+    ):
+        super().__init__(parent=None)
+        self._source:AbstractGraphicsNodeItem|None = None
+        self._target:AbstractGraphicsNodeItem|None = None
+        self.setSource(source)
+        self.setTarget(target)
+
+    def source(self) -> QGraphicsItem | None:
+        return self._source
+
+    def setSource(self, source: AbstractGraphicsNodeItem | None):
+        assert source is None or hasattr(source, '_edges'), f"got: {source}"
+        if self._source:
+            self._source._edges.remove(self)
+        if source:
+            source._edges.append(self)
+        self._source = source
+
+    def target(self)->AbstractGraphicsNodeItem | None:
+        return self._target
+
+    def setTarget(self, target: AbstractGraphicsNodeItem | None):
+        assert target is None or hasattr(target, '_edges'), f"got: {target}"
+        if self._target:
+            self._target._edges.remove(self)
+        if target:
+            target._edges.append(self)
+        self._target = target
+
+
+class NodeWidget(AbstractGraphicsNodeItem):
     """A Node GraphicsItems"""
     def __init__(
         self,
@@ -139,7 +189,7 @@ class NodeWidget(QGraphicsItem):
         # private variables
         self._title:str = title
         self._isHighlighted:bool = False
-        self._edges:list[EdgeWidget] = []
+        
 
         # Enable selection and movement
         self.setFlag(QGraphicsWidget.GraphicsItemFlag.ItemIsSelectable, True)
@@ -163,15 +213,6 @@ class NodeWidget(QGraphicsItem):
         text_width = fm.horizontalAdvance(self._title)
         text_height = fm.height()
         return QRectF(0,0,text_width+8, text_height+4)
-
-    @override
-    def itemChange(self, change:QGraphicsItem.GraphicsItemChange, value):
-        match change:
-            case QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
-                for edge in self._edges:
-                    edge.updatePosition()
-            case _:
-                return super().itemChange(change, value)
 
     def brush(self):
         palette = QApplication.instance().palette()
@@ -262,100 +303,31 @@ class NodeWidget(QGraphicsItem):
         event.setAccepted(False)
 
 
-class EdgeWidget(QGraphicsLineItem):
+class EdgeWidget(AbstractGraphicsEdgeItem):
     """Graphics item representing an edge in a graph."""
     def __init__(
         self,
-        source: QGraphicsItem | None,
-        target: QGraphicsItem | None,
+        source: AbstractGraphicsNodeItem | None,
+        target: AbstractGraphicsNodeItem | None,
         label: str = "-edge-",
     ):
-        super().__init__(parent=None)
+        super().__init__(source=source, target=target)
 
-        self._source:QGraphicsItem|None = None
-        self._target:QGraphicsItem|None = None
-        
         self.setPen(QPen(Qt.GlobalColor.black, 1.5))
-        self._label_item = QGraphicsTextItem(label, parent=self)
-        self._label_item.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
-        self.updatePosition()
 
         # Enable selecting
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
         self.setAcceptHoverEvents(True)
-
         self.setZValue(-1)
-
-        # self.is_moving_endpoint = False
-        self.setSource(source)
-        self.setTarget(target)
-
         self.setAcceptHoverEvents(True)
 
-    def setLabelText(self, text: str):
-        self._label_item.setPlainText(f"{text}")
-
-    def labelText(self):
-        return self._label_item.toPlainText()
-
-    def source(self) -> QGraphicsItem | None:
-        return self._source
-
-    def setSource(self, source: QGraphicsItem | None):
-        assert source is None or hasattr(source, '_edges'), f"got: {source}"
-        if self._source:
-            self._source._edges.remove(self)
-        if source:
-            source._edges.append(self)
-        self._source = source
+    def setSource(self, source: AbstractGraphicsNodeItem | None):
+        super().setSource(source)
         self.updatePosition()
 
-    def target(self)->QGraphicsItem | None:
-        return self._target
-
-    def setTarget(self, target: QGraphicsItem | None):
-        assert target is None or hasattr(target, '_edges'), f"got: {target}"
-        if self._target:
-            self._target._edges.remove(self)
-        if target:
-            target._edges.append(self)
-        self._target = target
+    def setTarget(self, target: AbstractGraphicsNodeItem | None):
+        super().setTarget(target)
         self.updatePosition()
-
-    def shape(self) -> QPainterPath:
-        """Override shape to provide a wider clickable area."""
-        path = QPainterPath()
-        path.moveTo(self.line().p1())
-        path.lineTo(self.line().p2())
-        stroker = QPainterPathStroker()
-        stroker.setWidth(10)
-        stroker.setCapStyle(Qt.PenCapStyle.RoundCap)
-        stroker.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
-        return stroker.createStroke(path)
-
-    def boundingRect(self) -> QRectF:
-        return self.shape().boundingRect()
-
-    @overload
-    def setLine(self, line: QLine | QLineF) -> None:
-        ...
-
-    @overload
-    def setLine(self, x1: float, y1: float, x2: float, y2: float) -> None:
-        ...
-
-    def setLine(self, *args: QLine | QLineF | float) -> None:
-        # Implementing the logic
-        if len(args) == 1 and isinstance(args[0], (QLine, QLineF)):
-            line = args[0]
-            super().setLine(line)
-        elif len(args) == 4 and all(isinstance(arg, float) for arg in args):
-            x1, y1, x2, y2 = args
-            super().setLine(x1, y1, x2, y2)
-        else:
-            super().setLine(*args)
-
-        self._label_item.setPos(self.line().center())
 
     def updatePosition(self):
         line = self.line()
@@ -382,6 +354,26 @@ class EdgeWidget(QGraphicsLineItem):
             self.setLine(line)
         else:
             return  # nothing to update
+
+    def setLabelText(self, text: str):
+        self._label_item.setPlainText(f"{text}")
+
+    def labelText(self):
+        return self._label_item.toPlainText()
+
+    def shape(self) -> QPainterPath:
+        """Override shape to provide a wider clickable area."""
+        path = QPainterPath()
+        path.moveTo(self.line().p1())
+        path.lineTo(self.line().p2())
+        stroker = QPainterPathStroker()
+        stroker.setWidth(10)
+        stroker.setCapStyle(Qt.PenCapStyle.RoundCap)
+        stroker.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+        return stroker.createStroke(path)
+
+    def boundingRect(self) -> QRectF:
+        return self.shape().boundingRect() 
 
     def paint(self, painter:QPainter, option:QStyleOptionGraphicsItem, widget=None):
         palette:QPalette = option.palette #type: ignore
