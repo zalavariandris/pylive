@@ -8,15 +8,432 @@ from pylive.QtGraphEditor.nx_graph_selection_model import NXGraphSelectionModel
 from pylive.QtGraphEditor.nx_graph_graphics_scene import (
     NXGraphScene,
     EdgeWidget,
-    NodeWidget
+    GraphicsNodeItem,
+    Connect,
+    ConnectionEvent,
+    ConnectionEnterType, ConnectionMoveType, ConnectionLeaveType, ConnectionDropType
 )
 
 from pylive.utils.unique import make_unique_name
 import networkx as nx
 
 
+
 import random
 
+
+class GraphDelegate(QObject):
+    def canLink(self, u, v, k)->bool:
+        return False
+
+    def edgeFactory(self, u, v, k)->QGraphicsItem:
+        ...
+
+    def nodeFactory(self, n)->QGraphicsItem:
+        ...
+
+    def setNodeAttributeModel(self, widget, n, attr)->None:
+        ...
+
+    def setNodeAttributeEditor(self, widget, n, attr)->None:
+        ...
+
+
+class MyNodeWidget(GraphicsNodeItem):
+    def __init__(self, title, view):
+        super().__init__(title=title)
+        self._view = view
+
+    ### UPDATE LINKS POSITION ###
+    @override
+    def itemChange(self, change:QGraphicsItem.GraphicsItemChange, value):
+        match change:
+            case QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
+                graph = cast(NXGraphScene, self.scene())
+                graph.updateNodePosition(self)
+            case _:
+                return super().itemChange(change, value)
+
+    ### INITIATE LINKS ###
+    def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+        # start connection
+        if event.modifiers()==Qt.KeyboardModifier.AltModifier:
+            connect = Connect(self)
+            connect.exec()
+            if target_widget:=connect.target():
+                u = self._view._widget_to_node_map[self]
+                v = self._view._widget_to_node_map[target_widget]
+
+                self._view._model.addEdge(u,v,k="in")
+        else:
+            return super().mousePressEvent(event)
+
+    ### ACCEPT LINKS ###
+    # @override
+    # def sceneEvent(self, event: QEvent) -> bool:
+    #     if event.type() == ConnectionEnterType:
+    #         self.connectionEnterEvent(cast(ConnectionEvent, event))
+    #     elif event.type() == ConnectionLeaveType:
+    #         self.connectionLeaveEvent(cast(ConnectionEvent, event))
+    #     elif event.type() == ConnectionMoveType:
+    #         self.connectionMoveEvent(cast(ConnectionEvent, event))
+    #     elif event.type() == ConnectionDropType:
+    #         self.connectionDropEvent(cast(ConnectionEvent, event))
+    #     else:
+    #         ...
+
+    #     return super().sceneEvent(event)
+
+    # def connectionEnterEvent(self, event:ConnectionEvent) -> None:
+    #     if event.source()!=self:
+    #         event.setAccepted(True)
+    #         self.setHighlighted(True)
+    #         return
+    #     event.setAccepted(False)
+
+    # def connectionLeaveEvent(self, event:ConnectionEvent)->None:
+    #     self.setHighlighted(False)
+
+    # def connectionMoveEvent(self, event:ConnectionEvent)->None:
+    #     ...
+    
+    # def connectionDropEvent(self, event:ConnectionEvent)->None:
+    #     if event.source()!=self:
+    #         self.setHighlighted(False)
+    #         event.setAccepted(True)
+    #         return
+
+    #     event.setAccepted(False)
+
+
+class MyOutletWidget(QGraphicsItem):
+    def __init__(self, view:'NXGraphView', label:str, parent:QGraphicsItem|None=None):
+        super().__init__(parent=parent)
+        self._view = view
+        self._label = label
+
+        self._isHighlighted = False
+        self.setAcceptHoverEvents(True)
+
+    def label(self)->str:
+        return self._label
+
+    def setLabel(self, text:str):
+        self._label = text
+
+    def setHighlighted(self, value):
+        self._isHighlighted = value
+        self.update()
+
+    def isHighlighted(self):
+        return self._isHighlighted
+
+    def boundingRect(self) -> QRectF:
+        try:
+            fm = QFontMetrics( self.scene().font() )
+        except AttributeError:
+            fm = QFontMetrics(QApplication.instance().font())
+
+        ellipse_bbox = QRectF(0,0,10,10)
+        text_width = fm.horizontalAdvance(self._label)
+        text_height = fm.height()
+
+        text_pos = QPointF(12, 0)
+        text_bbox = QRectF(text_pos, QSizeF(text_width, text_height))
+        return ellipse_bbox.united(text_bbox)
+
+    def hoverEnterEvent(self, event):
+        self.setHighlighted(True)
+
+    def hoverLeaveEvent(self, event):
+        self.setHighlighted(False)
+
+    def palette(self)->QPalette:
+        if palette:=getattr(self, '_palette', None):
+            return palette
+        elif parentWidget:=self.parentWidget():
+            return parentWidget.palette()
+        elif scene:=self.scene():
+            return scene.palette()
+        elif app:=QApplication.instance():
+            return app.palette()
+        else:
+            return QPalette()
+
+    def paint(self, painter, option, widget=None):
+        ### draw label
+        try:
+            fm = QFontMetrics( self.scene().font() )
+        except AttributeError:
+            fm = QFontMetrics(QApplication.instance().font())
+
+        painter.setPen(QPen(self.palette().text(), 1))
+        if self.isHighlighted():
+            painter.setPen(QPen(self.palette().accent(), 1))
+        
+
+        text_width = fm.horizontalAdvance(self._label)
+        text_height = fm.height()
+
+        text_pos = QPointF(0, text_height-2)
+        painter.drawText(text_pos, self._label)
+
+        painter.drawEllipse(QRectF(text_width+2,7,6,6))
+
+        # painter.setBrush(Qt.NoBrush)
+        # painter.drawRect(self.boundingRect())
+
+    ### INITIATE LINKS ###
+    def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+        connect = Connect(self)
+        connect.exec()
+
+        if target_widget:=connect.target(): # TODO: Move To Delegatte
+            if isinstance(target_widget, MyInletWidget):
+                if not self._view._model:
+                    return
+                u = self._view._widget_to_node_map[self.parentItem()]
+                v = self._view._widget_to_node_map[target_widget.parentItem()]
+                k = target_widget.label()
+                self._view._model.addEdge(u, v, k)
+
+
+class MyInletWidget(QGraphicsItem):
+    def __init__(self, view:'NXGraphView', label:str, parent:QGraphicsItem|None=None):
+        super().__init__(parent=parent)
+        self._view = view
+        self._label = label
+
+        self._isHighlighted = False
+
+        self.setAcceptHoverEvents(True)
+
+    def setHighlighted(self, value):
+        self._isHighlighted = value
+        self.update()
+
+    def isHighlighted(self):
+        return self._isHighlighted
+
+    def label(self)->str:
+        return self._label
+
+    def setLabel(self, text:str):
+        self._label = text
+
+    def boundingRect(self) -> QRectF:
+        try:
+            fm = QFontMetrics( self.scene().font() )
+        except AttributeError:
+            fm = QFontMetrics(QApplication.instance().font())
+
+        ellipse_bbox = QRectF(0,0,10,10)
+        text_width = fm.horizontalAdvance(self._label)
+        text_height = fm.height()
+
+        text_pos = QPointF(12, 0)
+        text_bbox = QRectF(text_pos, QSizeF(text_width, text_height))
+        return ellipse_bbox.united(text_bbox)
+
+    def hoverEnterEvent(self, event):
+        self.setHighlighted(True)
+
+    def hoverLeaveEvent(self, event):
+        self.setHighlighted(False)
+
+    def palette(self)->QPalette:
+        if palette:=getattr(self, '_palette', None):
+            return palette
+        elif parentWidget:=self.parentWidget():
+            return parentWidget.palette()
+        elif scene:=self.scene():
+            return scene.palette()
+        elif app:=QApplication.instance():
+            return app.palette()
+        else:
+            return QPalette()
+
+    def paint(self, painter, option, widget=None):
+        ### draw label
+        try:
+            fm = QFontMetrics( self.scene().font() )
+        except AttributeError:
+            fm = QFontMetrics(QApplication.instance().font())
+
+        painter.setPen(QPen(self.palette().text(), 1))
+        if self.isHighlighted():
+            painter.setPen(QPen(self.palette().accent(), 1))
+
+        painter.drawEllipse(QRectF(2,7,6,6))
+
+        text_height = fm.height()
+
+        text_pos = QPointF(12, text_height-2)
+        painter.drawText(text_pos, self._label)
+
+    @override
+    def sceneEvent(self, event: QEvent) -> bool:
+        if event.type() == ConnectionEnterType:
+            self.connectionEnterEvent(cast(ConnectionEvent, event))
+        elif event.type() == ConnectionLeaveType:
+            self.connectionLeaveEvent(cast(ConnectionEvent, event))
+        elif event.type() == ConnectionMoveType:
+            self.connectionMoveEvent(cast(ConnectionEvent, event))
+        elif event.type() == ConnectionDropType:
+            self.connectionDropEvent(cast(ConnectionEvent, event))
+        else:
+            ...
+
+        return super().sceneEvent(event)
+
+    def connectionEnterEvent(self, event:ConnectionEvent) -> None:
+        if event.source()!=self:
+            event.setAccepted(True)
+            self.setHighlighted(True)
+            return
+        event.setAccepted(False)
+
+    def connectionLeaveEvent(self, event:ConnectionEvent)->None:
+        self.setHighlighted(False)
+
+    def connectionMoveEvent(self, event:ConnectionEvent)->None:
+        ...
+    
+    def connectionDropEvent(self, event:ConnectionEvent)->None:
+        if event.source()!=self:
+            self.setHighlighted(False)
+            event.setAccepted(True)
+            return
+
+        event.setAccepted(False)
+
+
+class MyNodeWidgetWithPorts(GraphicsNodeItem):
+    def __init__(self, title, view):
+        super().__init__(title=title)
+        self._view = view
+
+        self._inlets = dict()
+        self._outlets = dict()
+
+    @override
+    def itemChange(self, change:QGraphicsItem.GraphicsItemChange, value):
+        match change:
+            case QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
+                graph = cast(NXGraphScene, self.scene())
+                graph.updateNodePosition(self)
+            case _:
+                return super().itemChange(change, value)
+
+    def boundingRect(self) -> QRectF:
+        return super().boundingRect().united(self.childrenBoundingRect()).adjusted(-4,0,4,2)
+
+    def addInlet(self, name:str):
+        inlet_widget = MyInletWidget(self._view, name)
+        inlet_widget.setParentItem(self)
+        self._inlets[name] = inlet_widget
+        self.layoutPorts()
+        self.update()
+        
+    def removeInlet(self, name:str):
+        inlet_widget = self._inlets[name]
+        del self._inlets[inlet_widget]
+        inlet_widget.setParentItem(self)
+        if scene:=inlet_widget.scene():
+            scene.removeItem(inlet_widget)
+        self.layoutPorts()
+        self.update()
+
+    def addOutlet(self, name:str):
+        outlet_widget = MyOutletWidget(self._view, name)
+        outlet_widget.setParentItem(self)
+        self._outlets[name] = outlet_widget
+        self.layoutPorts()
+        self.update()
+        
+    def removeOutlet(self, name:str):
+        outlet_widget = self._outlets[name]
+        del self._outlets[outlet_widget]
+        outlet_widget.setParentItem(self)
+        if scene:=outlet_widget.scene():
+            scene.removeItem(outlet_widget)
+        self.layoutPorts()
+        self.update()
+
+    def layoutPorts(self):
+        y = 14 # header heighn
+        for name, inlet_widget in self._inlets.items():
+            inlet_widget.setPos(4, y)
+            y+=inlet_widget.boundingRect().height()
+
+        for name, outlet_widget in self._outlets.items():
+            outlet_widget.setPos(4, y)
+            y+=outlet_widget.boundingRect().height()
+
+
+
+class MyEdgeWidget(EdgeWidget):
+    def __init__(self, label, view):
+        super().__init__(label=label)
+        self._view = view
+
+    def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+        u,v,k = self._view._widget_to_edge_map[self]
+        
+        d1 = QLineF(self.line().p1(), event.scenePos()).length()
+        d2 = QLineF(self.line().p2(), event.scenePos()).length()
+
+        print("mousepress", d1, d2)
+        
+        if d1>d2:
+            self.hide()
+            connect = Connect(self._view._node_to_widget_map[u])
+            connect.exec()
+            target_widget=connect.target()
+
+            if target_widget and v == self._view._widget_to_node_map[target_widget]:
+                # dropped onto the same target, than do nothing
+                self.show()
+                return
+
+            elif target_widget is None:
+                # dropped on to empty canvas, than remove the edge
+                self._view._model.removeEdge(u,v,k)
+                return
+
+            elif target_widget:
+                # dropped onto another target, than remove this one, and create a new edge
+                print("dopped on another target")
+                self._view._model.removeEdge(u,v,k)
+                self._view._model.addEdge(u, self._view._widget_to_node_map[target_widget] ,k=None)
+
+            else:
+                raise ValueError()
+        else:
+            self.hide()
+            connect = Connect(self._view._node_to_widget_map[v], direction='backward')
+            connect.exec()
+            target_widget=connect.target()
+
+            if target_widget and u == self._view._widget_to_node_map[target_widget]:
+                # dropped onto the same target, than do nothing
+                self.show()
+                return
+
+            elif target_widget is None:
+                # dropped on to empty canvas, than remove the edge
+                self._view._model.removeEdge(u,v,k)
+                return
+
+            elif target_widget:
+                # dropped onto another target, than remove this one, and create a new edge
+                print("dopped on another target")
+                self._view._model.removeEdge(u,v,k)
+                self._view._model.addEdge(self._view._widget_to_node_map[target_widget], v ,k=None)
+
+            else:
+                raise ValueError()
+    
 
 class NXGraphView(QGraphicsView):
     def __init__(self, parent:QWidget|None=None):
@@ -24,12 +441,10 @@ class NXGraphView(QGraphicsView):
         self.setRenderHint(QPainter.RenderHint.Antialiasing, True)
         self.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
         self.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
-
         self.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
 
-        self._graphScene:NXGraphScene = NXGraphScene()
-
-        self.setScene(self._graphScene)
+        self._graphscene = NXGraphScene()
+        self.setScene(self._graphscene)
         self._model:NXGraphModel|None = None
         self._selectionModel:NXGraphSelectionModel|None = None
 
@@ -37,24 +452,6 @@ class NXGraphView(QGraphicsView):
         self._widget_to_node_map:dict[QGraphicsItem, Hashable] = dict()
         self._edge_to_widget_map:dict[tuple[Hashable,Hashable,Hashable], QGraphicsItem] = dict()
         self._widget_to_edge_map:dict[QGraphicsItem, tuple[Hashable,Hashable,Hashable]] = dict()
-
-        @self._graphScene.connected.connect
-        def on_edge_connected(edge_widget:EdgeWidget):
-            if not self._model:
-                return
-            source_widget = edge_widget.source()
-            target_widget = edge_widget.target()
-            assert source_widget and target_widget
-            u = self._widget_to_node_map[source_widget]
-            v = self._widget_to_node_map[target_widget]
-            self._model.addEdge(u, v)
-
-        @self._graphScene.disconnected.connect
-        def on_edge_disconnected(edge_widget:EdgeWidget):
-            if not self._model:
-                return
-            u, v, k = self._widget_to_edge_map[edge_widget]
-            self._model.removeEdge(u, v, k)
 
     @override
     def event(self, event)->bool:
@@ -65,15 +462,16 @@ class NXGraphView(QGraphicsView):
         model.nodesAboutToBeRemoved.connect(self.handleNodesRemoved)
         model.edgesAdded.connect(self.handleEdgesAdded)
         model.edgesAboutToBeRemoved.connect(self.handleEdgesRemoved)
+        model.nodesPropertiesChanged.connect(self.handleNodesPropertiesChanged)
 
-        model.nodesAdded.connect(self.updateLayout)
-        model.nodesRemoved.connect(self.updateLayout)
-        model.edgesAdded.connect(self.updateLayout)
-        model.edgesRemoved.connect(self.updateLayout)
+        model.nodesAdded.connect(self.updateGraphLayout)
+        model.nodesRemoved.connect(self.updateGraphLayout)
+        model.edgesAdded.connect(self.updateGraphLayout)
+        model.edgesRemoved.connect(self.updateGraphLayout)
  
         self._model = model
 
-    def updateLayout(self):
+    def updateGraphLayout(self):
         assert self._model
         G = self._model.G
         # pos = nx.forceatlas2_layout(G, max_iter=100, scaling_ratio=1800, strong_gravity=True)
@@ -116,40 +514,55 @@ class NXGraphView(QGraphicsView):
     @Slot(list)
     def handleNodesAdded(self, nodes: List[Hashable]):
         for n in nodes:
-            widget = NodeWidget(title=f"{n}")
+            widget = MyNodeWidgetWithPorts(title=f"{n}", view=self)
+            widget.addOutlet("out")
             self._node_to_widget_map[n] = widget
             self._widget_to_node_map[widget] = n
-            self._graphScene.addNode(widget)
+            self._graphscene.addNode(widget)
+
+    def handleNodesPropertiesChanged(self, changes:dict[Hashable, dict[str, Any]]):
+        for n, change in changes.items():
+            for attr, value in change.items():
+                node_widget = cast(MyNodeWidgetWithPorts, self._node_to_widget_map[n])
+                if attr not in node_widget._inlets.keys():
+                    # add a new port for the attribute
+                    node_widget.addInlet(attr)
+
+
+                # set the port labe to the value
+                inlet_widget = node_widget._inlets[attr]
+                inlet_widget.setLabel(attr)
+                
+                
+
+
 
     @Slot(list)
     def handleNodesRemoved(self, nodes: List[Hashable]):
         for n in nodes:
             widget = self._node_to_widget_map[n]
-            self._graphScene.removeNode(widget)
+            self._graphscene.removeNode(widget)
             del self._node_to_widget_map[n]
             del self._widget_to_node_map[widget]
 
     @Slot(list)
     def handleEdgesAdded(self, edges: List[Tuple[Hashable, Hashable, str]]):
+        print("handleEdgesAdded")
         for u, v, k in edges:
             if (u,v,k) not in self._edge_to_widget_map:
                 source = self._node_to_widget_map[u]
                 target = self._node_to_widget_map[v]
-                edge_widget = EdgeWidget(source, target)
-                if k:
-                    edge_widget.setLabelText(str(k))
-                else:
-                    edge_widget.setLabelText("")
+                edge_widget = MyEdgeWidget(label=f"'{k!r}'", view=self)
                 self._edge_to_widget_map[(u, v, k)] = edge_widget
                 self._widget_to_edge_map[edge_widget] = (u, v, k)
-                self._graphScene.addEdge(edge_widget)
+                self._graphscene.addEdge(edge_widget, source, target)
 
     @Slot(list)
     def handleEdgesRemoved(self, edges: List[Tuple[Hashable, Hashable, str]]):
         for u, v, k in edges:
             paramname = k
             edge_widget = self._edge_to_widget_map[u, v, k]
-            self._graphScene.removeEdge(edge_widget)
+            self._graphscene.removeEdge(edge_widget)
             del self._edge_to_widget_map[(u, v, k)]
             del self._widget_to_edge_map[edge_widget]
 
@@ -157,13 +570,13 @@ class NXGraphView(QGraphicsView):
         return self._model
 
     def setSelectionModel(self, selectionModel:NXGraphSelectionModel):
-        @self._graphScene.selectionChanged.connect
+        @self._graphscene.selectionChanged.connect
         def update_selection_model():
             assert self._selectionModel
             selected_nodes = [
                 self._widget_to_node_map[widget]
-                for widget in self._graphScene.selectedItems()
-                if isinstance(widget, NodeWidget)
+                for widget in self._graphscene.selectedItems()
+                if isinstance(widget, MyNodeWidgetWithPorts) # TODO: filter for any widget that was added as a node. node_widget in self._widget_to_nodes.keys()
             ]
             self._selectionModel.setSelectedNodes(selected_nodes)
 
@@ -171,14 +584,14 @@ class NXGraphView(QGraphicsView):
         def update_scene_selection(selected: set[Hashable], deselected: set[Hashable]):
             selected_widgets = [self._node_to_widget_map[n] for n in selected]
             deselected_widgets = [self._node_to_widget_map[n] for n in deselected]
-            self._graphScene.blockSignals(True)
+            self._graphscene.blockSignals(True)
             for widget in selected_widgets:
                 widget.setSelected(True)
 
             for widget in deselected_widgets:
                 widget.setSelected(False)
-            self._graphScene.blockSignals(False)
-            self._graphScene.selectionChanged.emit()
+            self._graphscene.blockSignals(False)
+            self._graphscene.selectionChanged.emit()
 
         self._selectionModel = selectionModel
 
@@ -197,38 +610,38 @@ class NXGraphView(QGraphicsView):
         n = make_unique_name("N1", self._model.nodes())
         self._model.addNode(n)
 
-    def contextMenuEvent(self, event:QContextMenuEvent):
-        def create_node_at(scenePos:QPointF):
-            n = make_unique_name("N1", self.model().nodes())
-            self.model().addNode(n)
-            widget = self._node_to_widget_map[n]
-            widget.setPos(scenePos)
+    # def contextMenuEvent(self, event:QContextMenuEvent):
+    #     def create_node_at(scenePos:QPointF):
+    #         n = make_unique_name("N1", self.model().nodes())
+    #         self.model().addNode(n)
+    #         widget = self._node_to_widget_map[n]
+    #         widget.setPos(scenePos)
 
-        def connect_selected_nodes():
-            selection = [item for item in self.scene().selectedItems()]
-            if len(selection) < 2:
-                return
+    #     def connect_selected_nodes():
+    #         selection = [item for item in self.scene().selectedItems()]
+    #         if len(selection) < 2:
+    #             return
 
-            for item in selection[1:]:
-                u = self._widget_to_node_map[selection[0]]
-                v = self._widget_to_node_map[item]
-                self.model().addEdge(u, v)
+    #         for item in selection[1:]:
+    #             u = self._widget_to_node_map[selection[0]]
+    #             v = self._widget_to_node_map[item]
+    #             self.model().addEdge(u, v)
 
-        menu = QMenu(self)
+    #     menu = QMenu(self)
 
-        create_action = QAction(self)
-        create_action.setText("create node")
+    #     create_action = QAction(self)
+    #     create_action.setText("create node")
         
-        create_action.triggered.connect(lambda: create_node_at( self.mapToScene(self.mapFromGlobal(event.globalPos()) )))
-        menu.addAction(create_action)
+    #     create_action.triggered.connect(lambda: create_node_at( self.mapToScene(self.mapFromGlobal(event.globalPos()) )))
+    #     menu.addAction(create_action)
 
-        connect_action = QAction(self)
-        connect_action.setText("connect")
+    #     connect_action = QAction(self)
+    #     connect_action.setText("connect")
 
-        connect_action.triggered.connect(lambda: connect_selected_nodes())
-        menu.addAction(connect_action)
+    #     connect_action.triggered.connect(lambda: connect_selected_nodes())
+    #     menu.addAction(connect_action)
 
-        menu.exec(event.globalPos())
+    #     menu.exec(event.globalPos())
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
         return super().mouseMoveEvent(event)
@@ -287,24 +700,9 @@ class NodesListProxyModel(QAbstractListModel):
                 return f"{section}"
 
 
-class MyLinkTool(QObject):
-    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
-        match event.type():
-            case QEvent.Type.GraphicsSceneMousePress:
-                return True
-            case QEvent.Type.GraphicsSceneMouseMove:
-                return True
-            case QEvent.Type.GraphicsSceneMouseRelease:
-                return True
-            case _:
-                print(event)
-        return super().eventFilter(watched, event)
-
-
-
-
 if __name__ == "__main__":
     from pylive.QtGraphEditor.nx_inspector_view import NXInspectorView
+    from pylive.QtTerminal.terminal_with_exec import Terminal
     class NXWindow(QWidget):
         def __init__(self, parent: QWidget|None=None) -> None:
             super().__init__(parent)
@@ -348,15 +746,26 @@ if __name__ == "__main__":
             self.inspector.setModel(self.model)
             self.inspector.setSelectionModel(self.selectionmodel)
 
+            self.terminal = Terminal()
+            self.terminal.setContext({'app': self})
+
             mainLayout = QVBoxLayout()
             mainLayout.setContentsMargins(0,0,0,0)
             splitter = QSplitter()
             mainLayout.addWidget(splitter)
             splitter.addWidget(self.graphview)
             splitter.addWidget(self.inspector)
+            splitter.addWidget(self.terminal)
             # splitter.addWidget(self.nodelistview)
             splitter.setSizes([splitter.width()//splitter.count() for _ in range(splitter.count())])
             self.setLayout(mainLayout)
+
+            """initial graph"""
+            self.model.addNode("N1")
+            self.model.addNode("N2")
+            self.model.addNode("N3")
+            self.model.setNodeProperties("N2", attr=None)
+            self.model.addEdge("N1", "N2")
 
         def setTool(self, tool:QObject|None):
             print("set tool: ", tool)
@@ -368,7 +777,7 @@ if __name__ == "__main__":
                 self.currentTool = tool
 
         def sizeHint(self) -> QSize:
-            return QSize(920, 520)
+            return QSize(1200, 520)
 
     app = QApplication()
     window = NXWindow()

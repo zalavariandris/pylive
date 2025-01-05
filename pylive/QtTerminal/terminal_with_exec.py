@@ -1,3 +1,5 @@
+
+
 from typing import *
 
 from PySide6.QtGui import *
@@ -7,6 +9,7 @@ from PySide6.QtWidgets import *
 from pylive.QtTerminal.logwindow import LogWindow
 from pylive.QtScriptEditor.components.async_jedi_completer import AsyncJediCompleter
 import ast
+
 class Terminal(QFrame):
     exceptionThrown = Signal(Exception)
     messageSent = Signal(str)
@@ -102,6 +105,7 @@ if __name__ == "__main__":
     import sys
     app = QApplication([])
     window = Terminal()
+    window.setContext({"window": window})
     window.show()
 
     app.exec()
