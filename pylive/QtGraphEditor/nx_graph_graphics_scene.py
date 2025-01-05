@@ -52,6 +52,9 @@ class Connect(QObject):
         self._active_item: QGraphicsItem = item
         self._entered_items:list[QGraphicsItem] = []
 
+    def __str__(self):
+        return f"Connect({self.source()},{self.target()})"
+
     def source(self) -> QGraphicsItem|None:
         return self._source
 
@@ -128,57 +131,7 @@ class Connect(QObject):
         return super().eventFilter(watched, event)
 
 
-class AbstractGraphicsNodeItem(QGraphicsItem):
-    def __init__(self, parent:QGraphicsItem|None=None):
-        super().__init__(parent)
-        self._edges:list[AbstractGraphicsEdgeItem] = []
-
-    @override
-    def itemChange(self, change:QGraphicsItem.GraphicsItemChange, value):
-        match change:
-            case QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
-                for edge in self._edges:
-                    edge.updatePosition()
-            case _:
-                return super().itemChange(change, value)
-
-
-class AbstractGraphicsEdgeItem(QGraphicsLineItem):
-    def __init__(
-        self,
-        source: AbstractGraphicsNodeItem | None,
-        target: AbstractGraphicsNodeItem | None
-    ):
-        super().__init__(parent=None)
-        self._source:AbstractGraphicsNodeItem|None = None
-        self._target:AbstractGraphicsNodeItem|None = None
-        self.setSource(source)
-        self.setTarget(target)
-
-    def source(self) -> QGraphicsItem | None:
-        return self._source
-
-    def setSource(self, source: AbstractGraphicsNodeItem | None):
-        assert source is None or hasattr(source, '_edges'), f"got: {source}"
-        if self._source:
-            self._source._edges.remove(self)
-        if source:
-            source._edges.append(self)
-        self._source = source
-
-    def target(self)->AbstractGraphicsNodeItem | None:
-        return self._target
-
-    def setTarget(self, target: AbstractGraphicsNodeItem | None):
-        assert target is None or hasattr(target, '_edges'), f"got: {target}"
-        if self._target:
-            self._target._edges.remove(self)
-        if target:
-            target._edges.append(self)
-        self._target = target
-
-
-class NodeWidget(AbstractGraphicsNodeItem):
+class NodeWidget(QGraphicsItem):
     """A Node GraphicsItems"""
     def __init__(
         self,
@@ -199,6 +152,15 @@ class NodeWidget(AbstractGraphicsNodeItem):
             QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges
         )
         self.setAcceptHoverEvents(True)
+
+    @override
+    def itemChange(self, change:QGraphicsItem.GraphicsItemChange, value):
+        match change:
+            case QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
+                graph = cast(NXGraphScene, self.scene())
+                graph.updateNodePosition(self)
+            case _:
+                return super().itemChange(change, value)
 
     def __str__(self):
         return f"{self.__class__.__name__}({self._title})"
@@ -282,6 +244,19 @@ class NodeWidget(AbstractGraphicsNodeItem):
 
         return super().sceneEvent(event)
 
+    def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+        # start connection
+        if event.modifiers()==Qt.KeyboardModifier.AltModifier:
+            connect = Connect(self)
+            connect.exec()
+            graphscene = cast(NXGraphScene, self.scene())
+            if target:=connect.target():
+                source = connect.source()
+                assert source
+                graphscene.addEdge(EdgeWidget(), source, target)
+        else:
+            return super().mousePressEvent(event)
+
     def connectionEnterEvent(self, event:ConnectionEvent) -> None:
         if event.source()!=self:
             event.setAccepted(True)
@@ -299,19 +274,18 @@ class NodeWidget(AbstractGraphicsNodeItem):
         if event.source()!=self:
             self.setHighlighted(False)
             event.setAccepted(True)
+            return
 
         event.setAccepted(False)
 
 
-class EdgeWidget(AbstractGraphicsEdgeItem):
+class EdgeWidget(QGraphicsLineItem):
     """Graphics item representing an edge in a graph."""
     def __init__(
         self,
-        source: AbstractGraphicsNodeItem | None,
-        target: AbstractGraphicsNodeItem | None,
         label: str = "-edge-",
     ):
-        super().__init__(source=source, target=target)
+        super().__init__(parent=None)
 
         self.setPen(QPen(Qt.GlobalColor.black, 1.5))
 
@@ -320,40 +294,6 @@ class EdgeWidget(AbstractGraphicsEdgeItem):
         self.setAcceptHoverEvents(True)
         self.setZValue(-1)
         self.setAcceptHoverEvents(True)
-
-    def setSource(self, source: AbstractGraphicsNodeItem | None):
-        super().setSource(source)
-        self.updatePosition()
-
-    def setTarget(self, target: AbstractGraphicsNodeItem | None):
-        super().setTarget(target)
-        self.updatePosition()
-
-    def updatePosition(self):
-        line = self.line()
-        source = self._source
-        target = self._target
-
-        def getConnectionPoint(widget):
-            # try:
-            #   return widget.getConnectionPoint()
-            # except AttributeError:
-            return widget.scenePos() + widget.boundingRect().center()
-
-        if source and target:
-            line.setP1(getConnectionPoint(source))
-            line.setP2(getConnectionPoint(target))
-            self.setLine( makeLineBetweenShapes(source, target) )
-        elif source:
-            line.setP1(getConnectionPoint(source))
-            line.setP2(getConnectionPoint(source))
-            self.setLine(line)
-        elif target:
-            line.setP1(getConnectionPoint(target))
-            line.setP2(getConnectionPoint(target))
-            self.setLine(line)
-        else:
-            return  # nothing to update
 
     def setLabelText(self, text: str):
         self._label_item.setPlainText(f"{text}")
@@ -395,111 +335,135 @@ class EdgeWidget(AbstractGraphicsEdgeItem):
 
 
 class NXGraphScene(QGraphicsScene):
-    connected = Signal(EdgeWidget) # source, target
-    disconnected = Signal(EdgeWidget)  # edge
-    reconnected = Signal(EdgeWidget)
+    connected = Signal(QGraphicsItem, QGraphicsItem) # source, target
+    disconnected = Signal(QGraphicsItem, QGraphicsItem)  # edge
+    # reconnected = Signal(EdgeWidget)
 
     def __init__(self, parent=None):
         super().__init__(parent)
 
         # Create am 'infinite' scene to hold the node and edge graphics
         self.setSceneRect(QRect(-9999 // 2, -9999 // 2, 9999, 9999))
-        self._nodes:set[NodeWidget] = set()
-        self._edges:set[EdgeWidget] = set()
+        self._nodes:set[QGraphicsItem] = set()
+        self._edges:set[QGraphicsItem] = set()
+
+        self._endpoints:dict[QGraphicsItem, tuple[QGraphicsItem, QGraphicsItem]] = dict()
+        self._node_edges:dict[QGraphicsItem, set[QGraphicsItem]] = dict()
 
     def addNode(self, node: NodeWidget):
         self._nodes.add(node)
+        self._node_edges[node] = set()
         self.addItem(node)
 
     def removeNode(self, node: NodeWidget, remove_connected_nodes=True):
         if remove_connected_nodes:
-            for edge in node._edges:
-                self.removeItem(edge)
+            for edge in self._node_edges:
+                self.removeEdge(edge)
+                # self.removeItem(edge)
         self._nodes.remove(node)
+        del self._node_edges[node]
         self.removeItem(node)
 
-    def addEdge(self, edge: EdgeWidget):
+    def addEdge(self, edge: QGraphicsItem, source:QGraphicsItem, target:QGraphicsItem):
         self._edges.add(edge)
+        self._endpoints[edge] = source, target
+        self._node_edges[source].add(edge)
+        self._node_edges[target].add(edge)
         self.addItem(edge)
+        self.updateEdgePosition(edge, source, target)
 
-    def removeEdge(self, edge: EdgeWidget):
+    def removeEdge(self, edge: QGraphicsItem):
         self._edges.remove(edge)
+        source, target = self._endpoints
+        self._node_edges[source].remove(edge)
+        self._node_edges[target].remove(edge)
+        del self._endpoints[edge]
         self.removeItem(edge)
 
-    def nodeAt(self, pos: QPoint | QPointF) -> NodeWidget | None:
+    def updateNodePosition(self, node:QGraphicsItem):
+        for edge in self._node_edges[node]:
+            source, target = self._endpoints[edge]
+            self.updateEdgePosition(edge, source, target)
+
+    def updateEdgePosition(self, edge:QGraphicsItem, source:QGraphicsItem, target:QGraphicsItem):
+        edge = cast(QGraphicsArrowItem, edge)
+        line = makeLineBetweenShapes(source, target)
+        edge.setLine(line)
+
+    def nodeAt(self, pos: QPoint | QPointF) -> QGraphicsItem | None:
         for item in self.items(pos, deviceTransform=QTransform()):
             if item in self._nodes:
                 return item
         return None
 
-    def edgeAt(self, pos: QPoint | QPointF) -> EdgeWidget | None:
+    def edgeAt(self, pos: QPoint | QPointF) -> QGraphicsItem | None:
         for item in self.items(pos, deviceTransform=QTransform()):
-            if item in self._edges:
+            if any(item in edges for edges in self._node_edges.values()):
                 return item
         return None
 
-    def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
-        self._buttonDownItem = self.itemAt(event.buttonDownScenePos(Qt.MouseButton.LeftButton), QTransform())
-        return super().mousePressEvent(event)
+    # def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+    #     self._buttonDownItem = self.itemAt(event.buttonDownScenePos(Qt.MouseButton.LeftButton), QTransform())
+    #     return super().mousePressEvent(event)
 
-    def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent) -> None:
-        if event.buttons()==Qt.MouseButton.LeftButton:
-            if item:=self._buttonDownItem:
-                if event.modifiers()==Qt.KeyboardModifier.AltModifier and item in self._nodes:
-                    if QLineF(event.screenPos(), event.buttonDownScreenPos(Qt.MouseButton.LeftButton)).length() < QApplication.startDragDistance():
-                        return
+    # def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+    #     if event.buttons()==Qt.MouseButton.LeftButton:
+    #         if item:=self._buttonDownItem:
+    #             if item in self._nodes
+    #                 if event.modifiers()==Qt.KeyboardModifier.AltModifier:
+    #                     if QLineF(event.screenPos(), event.buttonDownScreenPos(Qt.MouseButton.LeftButton)).length() < QApplication.startDragDistance():
+    #                         return
 
-                    # start connection
-                    connect = Connect(item)
-                    connect.exec()
-                    
-                    if connect.target():
-                        edge = EdgeWidget(connect.source(), connect.target())
-                        # self.addEdge(edge)
-                        self.connected.emit(edge)
-                    return
+    #                     # start connection
+    #                     connect = Connect(item)
+    #                     connect.exec()
+                        
+    #                     if connect.target():
+    #                         self.connected.emit(connect.source(), connect.target())
 
-                elif item in self._edges:
-                    edge = item
-                    scene = self
-                    if QLineF(event.screenPos(), event.buttonDownScreenPos(Qt.MouseButton.LeftButton)).length() < QApplication.startDragDistance():
-                        return
+    #                     return
 
-                    # # start connection
-                    d1 = QLineF(edge.line().p1(), event.buttonDownScenePos(Qt.MouseButton.LeftButton)).length()
-                    d2 = QLineF(edge.line().p2(), event.buttonDownScenePos(Qt.MouseButton.LeftButton)).length()
+    #             elif item in self._edges:
+    #                 edge = cast(QGraphicsArrowItem, item)
+    #                 scene = self
+    #                 if QLineF(event.screenPos(), event.buttonDownScreenPos(Qt.MouseButton.LeftButton)).length() < QApplication.startDragDistance():
+    #                     return
 
-                    edge.hide()
-                    if d1>d2:
-                        connect = Connect(edge.source())
-                        connect.exec()
-                        if not connect.target():
-                            graphscene = cast(NXGraphScene, scene)
-                            # graphscene.removeEdge(edge)
-                            self.disconnected.emit(edge)
-                        elif connect.target() != edge.target():
-                            # self.removeEdge(edge)
-                            self.disconnected.emit(edge)
-                            new_edge = EdgeWidget(connect.source(), connect.target())
-                            # self.addEdge(new_edge)
-                            self.connected.emit(new_edge)
-                    else:
-                        connect = Connect(edge.target(), direction='backward')
-                        connect.exec()
-                        if not connect.target():
-                            graphscene = cast(NXGraphScene, scene)
-                            self.disconnected.emit(edge)
-                            # graphscene.removeEdge(edge)
-                        elif connect.target() != edge.source():
-                            # self.removeEdge(edge)
-                            self.disconnected.emit(edge)
-                            new_edge = EdgeWidget(connect.target(), connect.source())
-                            # self.addEdge(new_edge)
-                            self.connected.emit(new_edge)
-                    edge.show()
-                    return
+    #                 # # start connection
+    #                 d1 = QLineF(edge.line().p1(), event.buttonDownScenePos(Qt.MouseButton.LeftButton)).length()
+    #                 d2 = QLineF(edge.line().p2(), event.buttonDownScenePos(Qt.MouseButton.LeftButton)).length()
+
+    #                 edge.hide()
+    #                 if d1>d2:
+    #                     connect = Connect(edge.source())
+    #                     connect.exec()
+    #                     if not connect.target():
+    #                         graphscene = cast(NXGraphScene, scene)
+    #                         # graphscene.removeEdge(edge)
+    #                         self.disconnected.emit(edge)
+    #                     elif connect.target() != edge.target():
+    #                         # self.removeEdge(edge)
+    #                         self.disconnected.emit(edge)
+    #                         new_edge = EdgeWidget(connect.source(), connect.target())
+    #                         # self.addEdge(new_edge)
+    #                         self.connected.emit(new_edge)
+    #                 else:
+    #                     connect = Connect(edge.target(), direction='backward')
+    #                     connect.exec()
+    #                     if not connect.target():
+    #                         graphscene = cast(NXGraphScene, scene)
+    #                         self.disconnected.emit(edge)
+    #                         # graphscene.removeEdge(edge)
+    #                     elif connect.target() != edge.source():
+    #                         # self.removeEdge(edge)
+    #                         self.disconnected.emit(edge)
+    #                         new_edge = EdgeWidget(connect.target(), connect.source())
+    #                         # self.addEdge(new_edge)
+    #                         self.connected.emit(new_edge)
+    #                 edge.show()
+    #                 return
         
-        super().mouseMoveEvent(event)
+    #     super().mouseMoveEvent(event)
 
 
 if __name__ == "__main__":
@@ -521,8 +485,8 @@ if __name__ == "__main__":
 
     # create graph scene
     graphscene = NXGraphScene()
-    graphscene.connected.connect(lambda edge: graphscene.addEdge(edge))
-    graphscene.disconnected.connect(lambda edge: graphscene.removeEdge(edge))
+    graphscene.connected.connect(lambda edge, source, target: graphscene.addEdge(edge, source, target))
+    graphscene.disconnected.connect(lambda edge, source, target: graphscene.removeEdge(edge, source, target))
     graphscene.setSceneRect(QRectF(-400, -400, 800, 800))
     graphview.setScene(graphscene)
 
@@ -540,8 +504,8 @@ if __name__ == "__main__":
     write_text_node.moveBy(70, 100)
 
     # create edge1
-    edge1 = EdgeWidget(read_text_node, convert_node)
-    graphscene.addEdge(edge1)
+    edge1 = EdgeWidget()
+    graphscene.addEdge(edge1, read_text_node, convert_node)
 
     # show window
     window.show()

@@ -38,6 +38,7 @@ class NXGraphView(QGraphicsView):
         self._edge_to_widget_map:dict[tuple[Hashable,Hashable,Hashable], QGraphicsItem] = dict()
         self._widget_to_edge_map:dict[QGraphicsItem, tuple[Hashable,Hashable,Hashable]] = dict()
 
+        @self._graphScene.connected.connect
         def on_edge_connected(edge_widget:EdgeWidget):
             if not self._model:
                 return
@@ -47,8 +48,6 @@ class NXGraphView(QGraphicsView):
             u = self._widget_to_node_map[source_widget]
             v = self._widget_to_node_map[target_widget]
             self._model.addEdge(u, v)
-
-        self._graphScene.connected.connect(on_edge_connected)
 
         @self._graphScene.disconnected.connect
         def on_edge_disconnected(edge_widget:EdgeWidget):
@@ -300,6 +299,8 @@ class MyLinkTool(QObject):
             case _:
                 print(event)
         return super().eventFilter(watched, event)
+
+
 
 
 if __name__ == "__main__":
