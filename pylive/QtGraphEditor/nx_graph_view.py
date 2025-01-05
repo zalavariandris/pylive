@@ -22,24 +22,12 @@ import networkx as nx
 import random
 
 
-class GraphDelegate(QObject):
-    def canLink(self, u, v, k)->bool:
-        return False
-
-    def edgeFactory(self, u, v, k)->QGraphicsItem:
-        ...
-
-    def nodeFactory(self, n)->QGraphicsItem:
-        ...
-
-    def setNodeAttributeModel(self, widget, n, attr)->None:
-        ...
-
-    def setNodeAttributeEditor(self, widget, n, attr)->None:
-        ...
+class AcceptLinkEvents:
+    def __init__(self):
+        print("AcceptLinkEvents->__init__")
 
 
-class MyNodeWidget(GraphicsNodeItem):
+class MyNodeWidget(GraphicsNodeItem, AcceptLinkEvents):
     def __init__(self, title, view):
         super().__init__(title=title)
         self._view = view
@@ -313,8 +301,8 @@ class MyNodeWidgetWithPorts(GraphicsNodeItem):
         super().__init__(title=title)
         self._view = view
 
-        self._inlets = dict()
-        self._outlets = dict()
+        self._inlets:list[QGraphicsItem] = []
+        self._outlets:list[QGraphicsItem] = []
 
     @override
     def itemChange(self, change:QGraphicsItem.GraphicsItemChange, value):
@@ -328,32 +316,28 @@ class MyNodeWidgetWithPorts(GraphicsNodeItem):
     def boundingRect(self) -> QRectF:
         return super().boundingRect().united(self.childrenBoundingRect()).adjusted(-4,0,4,2)
 
-    def addInlet(self, name:str):
-        inlet_widget = MyInletWidget(self._view, name)
+    def addInlet(self, inlet_widget:QGraphicsItem):
         inlet_widget.setParentItem(self)
-        self._inlets[name] = inlet_widget
+        self._inlets.append(inlet_widget)
         self.layoutPorts()
         self.update()
         
-    def removeInlet(self, name:str):
-        inlet_widget = self._inlets[name]
-        del self._inlets[inlet_widget]
-        inlet_widget.setParentItem(self)
+    def removeInlet(self, inlet_widget:QGraphicsItem):
+        self._inlets.remove(inlet_widget)
+        inlet_widget.setParentItem(None)
         if scene:=inlet_widget.scene():
             scene.removeItem(inlet_widget)
         self.layoutPorts()
         self.update()
 
-    def addOutlet(self, name:str):
-        outlet_widget = MyOutletWidget(self._view, name)
+    def addOutlet(self, outlet_widget:QGraphicsItem):
         outlet_widget.setParentItem(self)
-        self._outlets[name] = outlet_widget
+        self._outlets.append(outlet_widget)
         self.layoutPorts()
         self.update()
         
-    def removeOutlet(self, name:str):
-        outlet_widget = self._outlets[name]
-        del self._outlets[outlet_widget]
+    def removeOutlet(self, outlet_widget:QGraphicsItem):
+        self._outlets.remove(outlet_widget)
         outlet_widget.setParentItem(self)
         if scene:=outlet_widget.scene():
             scene.removeItem(outlet_widget)
@@ -362,11 +346,11 @@ class MyNodeWidgetWithPorts(GraphicsNodeItem):
 
     def layoutPorts(self):
         y = 14 # header heighn
-        for name, inlet_widget in self._inlets.items():
+        for inlet_widget in self._inlets:
             inlet_widget.setPos(4, y)
             y+=inlet_widget.boundingRect().height()
 
-        for name, outlet_widget in self._outlets.items():
+        for outlet_widget in self._outlets:
             outlet_widget.setPos(4, y)
             y+=outlet_widget.boundingRect().height()
 
@@ -435,13 +419,36 @@ class MyEdgeWidget(EdgeWidget):
                 raise ValueError()
     
 
+
+class GraphDelegate(QObject):
+    def canLink(self, u, v, k)->bool:
+        return False
+
+    def edgeFactory(self, u, v, k)->QGraphicsItem:
+        ...
+
+    def nodeFactory(self, n)->QGraphicsItem:
+        ...
+
+    def setNodeAttributeModel(self, widget, n, attr)->None:
+        ...
+
+    def setNodeAttributeEditor(self, widget, n, attr)->None:
+        ...
+
+    def setEdgeAttributeModel(self, widget, e, attr)->None:
+        ...
+
+    def setEdgeAttributeWidget(self, widget, e, attr)->None:
+        ...
+
 class NXGraphView(QGraphicsView):
     def __init__(self, parent:QWidget|None=None):
         super().__init__(parent=parent)
         self.setRenderHint(QPainter.RenderHint.Antialiasing, True)
         self.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
         self.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
-        self.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
+        # self.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
 
         self._graphscene = NXGraphScene()
         self.setScene(self._graphscene)
@@ -452,10 +459,95 @@ class NXGraphView(QGraphicsView):
         self._widget_to_node_map:dict[QGraphicsItem, Hashable] = dict()
         self._edge_to_widget_map:dict[tuple[Hashable,Hashable,Hashable], QGraphicsItem] = dict()
         self._widget_to_edge_map:dict[QGraphicsItem, tuple[Hashable,Hashable,Hashable]] = dict()
+        self._attribute_to_widget_map:dict[tuple[Hashable, Hashable], QGraphicsItem] = dict()
+        self._widget_to_attribute_map:dict[QGraphicsItem, tuple[Hashable, Hashable]] = dict()
 
-    @override
-    def event(self, event)->bool:
-        return super().event(event)
+        self._acceptLinkEvents = set()
+
+        # self.scene().installEventFilter(self)
+
+    ### DELEGATE >>
+    def createNodeEditor(self, n:Hashable)->QGraphicsItem:
+        node_widget = MyNodeWidgetWithPorts(title=f"{n}", view=self)
+        outlet_widget = MyOutletWidget(self, "out")
+        node_widget.addOutlet(outlet_widget)
+        return node_widget
+
+    def createAttributeEditor(self, node_widget, a:Hashable):
+        inlet_widget = MyInletWidget(self, f"{a}")
+        node_widget.addInlet(inlet_widget)
+        return inlet_widget
+
+    def createEdgeEditor(self, source_widget, target_widget, k)->EdgeWidget:
+        return MyEdgeWidget(label=f"'{k!r}'", view=self)
+
+    # def setNodeEditor(...):
+    #     ...
+    # def setNodeModel(...):
+    #     ...
+    # def setEdgeEditor(...):
+    #     ...
+    # def setEdgeModel(...):
+    #     ...
+    def setNodeAttributeEditor(...):
+        ...
+    def setNodeAttributeModel(...):
+        ...
+    def setEdgeAttributeEditor(...):
+        ...
+    def setEdgeAttributeModel(...):
+        ...
+    def updateEdgeEditorPosition(self, source, target, k):
+        ...
+
+    ### << DELEGATE
+
+    # def mousePressEvent(self, event: QMouseEvent) -> None:
+    #     for item in self.items(event.position().toPoint()):
+    #         if self._widget_to_attribute_map.get(item):
+    #             print("attribute press")
+    #             break
+    #         elif self._widget_to_node_map.get(item):
+    #             print("node press")
+    #             break
+    #         elif self._widget_to_edge_map.get(item):
+    #             print("edge press")
+    #             break
+    #         else:
+    #             ...
+
+    # def mouseMoveEvent(self, event: QMouseEvent) -> None:
+    #     return super().mouseMoveEvent(event)
+
+    # def mouseReleaseEvent(self, event: QMouseEvent) -> None:
+    #     return super().mouseReleaseEvent(event)
+
+    def nodeAt(self, point: QPoint)->Hashable|None:
+        """Returns the model node of the item at the viewport coordinates point."""
+        """If there are several nodes at this position, this function returns the topmost node."""
+        for item in self.items(point):
+            if n:=self._widget_to_node_map.get(item):
+                return n
+
+    def edgeAt(self, point: QPoint)->tuple[Hashable, Hashable, Hashable]|None:
+        """Returns the model node of the item at the viewport coordinates point."""
+        """If there are several nodes at this position, this function returns the topmost node."""
+        for item in self.items(point):
+            if e:=self._widget_to_edge_map.get(item):
+                return e
+
+    def attributeAt(self, point: QPoint)->tuple[Hashable, Hashable]|None:
+        """Returns the model node of the item at the viewport coordinates point."""
+        """If there are several nodes at this position, this function returns the topmost node."""
+        for item in self.items(point):
+            if a:=self._widget_to_attribute_map.get(item):
+                return a
+
+    def setAcceppLinkEvents(self, item:QGraphicsItem, accept:bool):
+        if accept:
+            self._acceptLinkEvents.add(item)
+        else:
+            self._acceptLinkEvents.remove(item)
 
     def setModel(self, model:NXGraphModel):
         model.nodesAdded.connect(self.handleNodesAdded)
@@ -514,8 +606,7 @@ class NXGraphView(QGraphicsView):
     @Slot(list)
     def handleNodesAdded(self, nodes: List[Hashable]):
         for n in nodes:
-            widget = MyNodeWidgetWithPorts(title=f"{n}", view=self)
-            widget.addOutlet("out")
+            widget = self.createNodeEditor(n)
             self._node_to_widget_map[n] = widget
             self._widget_to_node_map[widget] = n
             self._graphscene.addNode(widget)
@@ -524,18 +615,16 @@ class NXGraphView(QGraphicsView):
         for n, change in changes.items():
             for attr, value in change.items():
                 node_widget = cast(MyNodeWidgetWithPorts, self._node_to_widget_map[n])
-                if attr not in node_widget._inlets.keys():
+                if attr not in node_widget._inlets:
                     # add a new port for the attribute
-                    node_widget.addInlet(attr)
+                    inlet_widget = self.createAttributeEditor(node_widget, attr)
+                    self._attribute_to_widget_map[(n, attr)] = inlet_widget
+                    self._widget_to_attribute_map[inlet_widget] = (n, attr)
 
 
-                # set the port labe to the value
-                inlet_widget = node_widget._inlets[attr]
+                # set the port label to the value
+                inlet_widget = cast(MyInletWidget, self._attribute_to_widget_map[(n, attr)])
                 inlet_widget.setLabel(attr)
-                
-                
-
-
 
     @Slot(list)
     def handleNodesRemoved(self, nodes: List[Hashable]):
@@ -552,7 +641,7 @@ class NXGraphView(QGraphicsView):
             if (u,v,k) not in self._edge_to_widget_map:
                 source = self._node_to_widget_map[u]
                 target = self._node_to_widget_map[v]
-                edge_widget = MyEdgeWidget(label=f"'{k!r}'", view=self)
+                edge_widget = self.createEdgeEditor(source, target, k)
                 self._edge_to_widget_map[(u, v, k)] = edge_widget
                 self._widget_to_edge_map[edge_widget] = (u, v, k)
                 self._graphscene.addEdge(edge_widget, source, target)
@@ -563,7 +652,8 @@ class NXGraphView(QGraphicsView):
             paramname = k
             edge_widget = self._edge_to_widget_map[u, v, k]
             self._graphscene.removeEdge(edge_widget)
-            del self._edge_to_widget_map[(u, v, k)]
+            del self._edge_
+            to_widget_map[(u, v, k)]
             del self._widget_to_edge_map[edge_widget]
 
     def model(self):
@@ -643,8 +733,8 @@ class NXGraphView(QGraphicsView):
 
     #     menu.exec(event.globalPos())
 
-    def mouseMoveEvent(self, event: QMouseEvent) -> None:
-        return super().mouseMoveEvent(event)
+    # def mouseMoveEvent(self, event: QMouseEvent) -> None:
+    #     return super().mouseMoveEvent(event)
 
 
 class NodesListProxyModel(QAbstractListModel):
@@ -767,14 +857,14 @@ if __name__ == "__main__":
             self.model.setNodeProperties("N2", attr=None)
             self.model.addEdge("N1", "N2")
 
-        def setTool(self, tool:QObject|None):
-            print("set tool: ", tool)
-            if self.currentTool:
-                self.graphview.scene().removeEventFilter(self.currentTool)
+        # def setTool(self, tool:QObject|None):
+        #     print("set tool: ", tool)
+        #     if self.currentTool:
+        #         self.graphview.scene().removeEventFilter(self.currentTool)
 
-            if tool:
-                self.graphview.scene().installEventFilter(tool)
-                self.currentTool = tool
+        #     if tool:
+        #         self.graphview.scene().installEventFilter(tool)
+        #         self.currentTool = tool
 
         def sizeHint(self) -> QSize:
             return QSize(1200, 520)
