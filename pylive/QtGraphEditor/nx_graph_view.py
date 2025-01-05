@@ -419,29 +419,6 @@ class MyEdgeWidget(EdgeWidget):
                 raise ValueError()
     
 
-
-class GraphDelegate(QObject):
-    def canLink(self, u, v, k)->bool:
-        return False
-
-    def edgeFactory(self, u, v, k)->QGraphicsItem:
-        ...
-
-    def nodeFactory(self, n)->QGraphicsItem:
-        ...
-
-    def setNodeAttributeModel(self, widget, n, attr)->None:
-        ...
-
-    def setNodeAttributeEditor(self, widget, n, attr)->None:
-        ...
-
-    def setEdgeAttributeModel(self, widget, e, attr)->None:
-        ...
-
-    def setEdgeAttributeWidget(self, widget, e, attr)->None:
-        ...
-
 class NXGraphView(QGraphicsView):
     def __init__(self, parent:QWidget|None=None):
         super().__init__(parent=parent)
@@ -563,6 +540,7 @@ class NXGraphView(QGraphicsView):
  
         self._model = model
 
+    @Slot()
     def updateGraphLayout(self):
         assert self._model
         G = self._model.G
