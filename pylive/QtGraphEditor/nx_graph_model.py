@@ -9,21 +9,27 @@ from pylive.utils.geo import intersect_ray_with_rectangle
 
 
 class NXGraphModel(QObject):
-    nodesAdded:Signal = Signal(list)  # List[Hashable]
-    nodesAboutToBeRemoved:Signal = Signal(list)  # List[Hashable]
-    nodesPropertiesChanged:Signal = Signal(dict)  # dict[Hashable, dict[str, Any]]
-    nodesRemoved:Signal = Signal(list)
+    nodesAdded: Signal = Signal(list)  # List[Hashable]
+    nodesAboutToBeRemoved: Signal = Signal(list)  # List[Hashable]
+    nodesPropertiesChanged: Signal = Signal(
+        dict
+    )  # dict[Hashable, dict[str, Any]]
+    nodesRemoved: Signal = Signal(list)
 
-    edgesAdded:Signal = Signal(list)  # List[Tuple[Hashable, Hashable, Hashable]]
-    edgesAboutToBeRemoved:Signal = Signal(
+    edgesAdded: Signal = Signal(
         list
     )  # List[Tuple[Hashable, Hashable, Hashable]]
-    edgesPropertiesChanged:Signal = Signal(
+    edgesAboutToBeRemoved: Signal = Signal(
+        list
+    )  # List[Tuple[Hashable, Hashable, Hashable]]
+    edgesPropertiesChanged: Signal = Signal(
         dict
     )  # dict[Tuple[Hashable, Hashable, Hashable], dict[str, Any]]
-    edgesRemoved:Signal = Signal(list)  # List[Tuple[Hashable, Hashable, Hashable]]
+    edgesRemoved: Signal = Signal(
+        list
+    )  # List[Tuple[Hashable, Hashable, Hashable]]
 
-    def __init__(self, G:nx.MultiDiGraph = nx.MultiDiGraph(), parent=None):
+    def __init__(self, G: nx.MultiDiGraph = nx.MultiDiGraph(), parent=None):
         super().__init__(parent=parent)
         self.G = G
 
@@ -68,10 +74,10 @@ class NXGraphModel(QObject):
         nx.set_node_attributes(self.G, {n: change})
         self.nodesPropertiesChanged.emit({n: change})
 
-    def getNodeProperty(self, n: Hashable, name, /)->object:
+    def getNodeProperty(self, n: Hashable, name, /) -> object:
         return self.G.nodes[n][name]
 
-    def getNodeProperties(self, n:Hashable)->list[str]:
+    def getNodeProperties(self, n: Hashable) -> list[str]:
         return [key for key in self.G.nodes[n].keys()]
 
     def removeNode(self, n: Hashable):
@@ -86,7 +92,9 @@ class NXGraphModel(QObject):
         """retrun incoming edges to the node"""
         return [(u, v, k) for u, v, k in self.G.in_edges(n, keys=True)]
 
-    def outEdges(self, n: Hashable) -> list[tuple[Hashable, Hashable, Hashable]]:
+    def outEdges(
+        self, n: Hashable
+    ) -> list[tuple[Hashable, Hashable, Hashable]]:
         """retrun incoming edges to the node"""
         return [(u, v, k) for u, v, k in self.G.out_edges(n, keys=True)]
 
