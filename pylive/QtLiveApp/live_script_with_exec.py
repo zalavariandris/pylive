@@ -98,37 +98,58 @@ class LiveScriptWithExec(LiveScriptWindow):
     def setupUI(self):
         super().setupUI()
 
-        ### IPython Console widget ###
+        ### Console widget ###
         terminal = Terminal()
         self.setTerminal(terminal)
-        editor = ScriptEditWithCells()
-        self.setEditor(editor)
-
-        self.fileLink = FileLink(editor.document())
-        self.fileLink.filePathChanged.connect(self.updateWindowTitle)
-        editor.document().modificationChanged.connect(self.updateWindowTitle)
-
-        filemenu = self.fileLink.createFileMenu()
-        if self.menuBar().actions():
-            self.menuBar().insertMenu(self.menuBar().actions()[0], filemenu)
-        else:
-            self.menuBar().addMenu(filemenu)
-
-        ### Bind Widgets ###
-        ### bind texteditor to execute cells ###
-        self.editor().cellsContentChanged.connect(
-            lambda indexes: self.execute_cells(indexes)
-        )
-
         terminal.exceptionThrown.connect(
             lambda exc: self.editor().linter.lintException(exc, "underline")
         )
 
         terminal.setContext({"__name__": "__live__"})
 
+        ### Script Editor
+        editor = ScriptEditWithCells()
+        self.setEditor(editor)
+        self.editor().cellsContentChanged.connect(
+            lambda indexes: self.execute_cells(indexes)
+        )
+
+        ### File link
+        self.fileLink = FileLink(editor.document())
+        self.fileLink.filePathChanged.connect(self.updateWindowTitle)
+        editor.document().modificationChanged.connect(self.updateWindowTitle)
+
+        ### File Menu ###
+        filemenu = self.fileLink.createFileMenu()
+        if self.menuBar().actions():
+            self.menuBar().insertMenu(self.menuBar().actions()[0], filemenu)
+        else:
+            self.menuBar().addMenu(filemenu)
+
+        restart_action = QAction("restart", self)
+        restart_action.triggered.connect(lambda: self.restart())
+        self.menuBar().addAction(restart_action)
+
+        ### update widet title
         self.updateWindowTitle()
 
+        ### add shift enter behaviour
         editor.installEventFilter(self)
+
+    def restart(self):
+        import os
+        import sys
+
+        print("ARGTV:", sys.argv)
+        if self.fileLink.filepath:
+            argv = [arg for arg in sys.argv]
+            if len(argv) > 1:
+                argv[1] = self.fileLink.filepath
+            else:
+                argv.append(self.fileLink.filepath)
+            os.execl(sys.executable, os.path.abspath(__file__), *argv)
+        else:
+            os.execl(sys.executable, os.path.abspath(__file__), *sys.argv)
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:
         # run cell on +hift+Enter
@@ -211,28 +232,31 @@ if __name__ == "__main__":
     live = LiveScriptWindow.instance()
     window.show()
 
-    # set initial code
-    from textwrap import dedent
+    if len(sys.argv) > 1:
+        window.fileLink.openFile(sys.argv[1])
+    else:
+        # set initial code
+        from textwrap import dedent
 
-    script = dedent(
-        '''\
-		#%% setup
-		from PySide6.QtWidgets import *
-		from pylive.QtLiveApp import display
+        script = dedent(
+            '''\
+            #%% setup
+            from PySide6.QtWidgets import *
+            from pylive.QtLiveApp import display
 
-		#%% update
-		print(f"Print this {42} to the console!")
+            #%% update
+            print(f"Print this {42} to the console!")
 
-		display("""\\
-		Display this *text*
-		or any *QWidget* 
-		in the preview area.
+            display("""\\
+            Display this *text*
+            or any *QWidget* 
+            in the preview area.
 
-		(here is a nubmer for dragging 10)
-		""")
-	'''
-    )
-    window.editor().setPlainText(script)
+            (here is a nubmer for dragging 10)
+            """)
+        '''
+        )
+        window.editor().setPlainText(script)
 
     # launch QApp
     sys.exit(app.exec())
