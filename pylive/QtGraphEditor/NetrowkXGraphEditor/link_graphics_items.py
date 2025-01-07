@@ -101,7 +101,7 @@ def makeLineToShape(origin:QPointF, shape:QPointF|QRectF|QPainterPath|QGraphicsI
 		case _:
 			raise ValueError
 
-	return QLineF(center, intersection)
+	return QLineF(origin, intersection)
 
 def makeLineBetweenShapes(A:QPointF|QRectF|QPainterPath|QGraphicsItem, B:QPointF|QRectF|QPainterPath|QGraphicsItem)->QLineF:
 	Ac = getShapeCenter(A)

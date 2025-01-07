@@ -107,6 +107,12 @@ class GraphicsVertexItem(BaseItem):
     def __repr__(self):
         return f"{self.__class__.__name__}({self._title!r})"
 
+    def brush(self):
+        baseColor = self.palette().base().color()
+        baseColor.setAlpha(200)
+        brush = QBrush(baseColor)
+        return brush
+
     @override
     def boundingRect(self) -> QRectF:
         fm = QFontMetrics(self.font())
@@ -256,10 +262,14 @@ class GraphicsNodeItem(GraphicsVertexItem):
         super().__init__(title=title, parent=parent)
         self._inlets: list[QGraphicsItem] = []
         self._outlets: list[QGraphicsItem] = []
+        self.ports_margin = -5
+
         for inlet in inlets:
             self._addInlet(inlet)
         for outlet in outlets:
             self._addOutlet(outlet)
+
+        self.ports_margin = -40
 
     def boundingRect(self) -> QRectF:
         return (
@@ -338,6 +348,7 @@ class GraphicsPortItem(BaseItem):
         ### draw label
         fm = QFontMetrics(self.font())
 
+        painter.setBrush(self.brush())
         painter.setPen(self.pen())
         painter.drawEllipse(QRectF(2, 7, 6, 6))
 

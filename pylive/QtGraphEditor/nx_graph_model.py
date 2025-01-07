@@ -125,3 +125,8 @@ class NXGraphModel(QObject):
 
     def getEdgeProperty(self, u: Hashable, v: Hashable, k: Hashable, prop, /):
         return self.G.edges[u, v, k][prop]
+
+    def isEdgeAllowed(self, u:Hashable, v:Hashable, k:Hashable)->bool:
+        if u == v:
+            return False
+        return True
