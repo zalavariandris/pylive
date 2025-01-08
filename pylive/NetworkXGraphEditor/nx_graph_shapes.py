@@ -1,17 +1,29 @@
+##################
+# GRAPHICS ITEMS #
+##################
+
+# QGraphicsItem shapes. purely visual, but interactive.
+# thes are the superclass of the ModelView Widgets for the NXGraphScene
+# ther are no supposed to interact with the model in any way
+# responsible to paint ui items,
+# and can react to mouse or keyboard event, strictly in a vosual way.
+# in MVC these would be the views.
+# in QT ModelView terminology these are self contained widgets,
+# that can be used by the 'Views'
+
+
 from typing import *
 from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
-from pylive.QtGraphEditor.NetrowkXGraphEditor.qgraphics_arrow_item import (
+from pylive.QtGraphEditor.qgraphics_arrow_item import (
     makeArrowShape,
 )
+from pylive.utils.geo import makeLineBetweenShapes
 
-##################
-# GRAPHICS ITEMS #
-##################
 
-class BaseItem(QGraphicsItem):
+class AbstractShape(QGraphicsItem):
     def __init__(self, parent=None):
         super().__init__(parent=parent)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
@@ -37,7 +49,7 @@ class BaseItem(QGraphicsItem):
         self.setHighlighted(False)
 
     def font(self):
-        if font:=getattr(self, "_font", None):
+        if font := getattr(self, "_font", None):
             return font
         elif parentWidget := self.parentWidget():
             return parentWidget.font()
@@ -82,7 +94,7 @@ class BaseItem(QGraphicsItem):
         return pen
 
 
-class GraphicsVertexItem(BaseItem):
+class VertexShape(AbstractShape):
     """A graph 'Vertex' graphics item. no inlets or outlets."""
 
     def __init__(
@@ -139,13 +151,11 @@ class GraphicsVertexItem(BaseItem):
         self.update()
 
 
-class GraphicsLinkItem(BaseItem):
+class LinkShape(AbstractShape):
     """Graphics item representing an edge in a graph."""
 
     def __init__(
-        self,
-        label: str = "-link-",
-        parent:QGraphicsItem|None=None
+        self, label: str = "-link-", parent: QGraphicsItem | None = None
     ):
         super().__init__(parent=None)
         self._label = label
@@ -157,13 +167,13 @@ class GraphicsLinkItem(BaseItem):
 
         self._line: QLineF = QLineF()
 
-    def setLine(self, line: QLineF):
-        self.prepareGeometryChange()
-        self._line = line
-        self.update()
+    # def setLine(self, line: QLineF):
+    #     self.prepareGeometryChange()
+    #     self._line = line
+    #     self.update()
 
-    def line(self) -> QLineF:
-        return self._line
+    # def _line(self) -> QLineF:
+    #     return self._line
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self._label!r})"
@@ -186,12 +196,12 @@ class GraphicsLinkItem(BaseItem):
 
         if self.isHighlighted():
             if self._hoverMousePos:
-                linearGrad = QLinearGradient(self.line().p1(), self.line().p2())
+                linearGrad = QLinearGradient(self._line.p1(), self._line.p2())
                 d1 = QLineF(
-                    self.mapFromParent(self.line().p1()), self._hoverMousePos
+                    self.mapFromParent(self._line.p1()), self._hoverMousePos
                 ).length()
                 d2 = QLineF(
-                    self.mapFromParent(self.line().p2()), self._hoverMousePos
+                    self.mapFromParent(self._line.p2()), self._hoverMousePos
                 ).length()
                 if d1 < d2:
                     linearGrad.setColorAt(0.0, palette.accent().color())
@@ -211,28 +221,25 @@ class GraphicsLinkItem(BaseItem):
         self, painter: QPainter, option: QStyleOptionGraphicsItem, widget=None
     ):
         ### draw arrow shape
-        arrow_shape = makeArrowShape(self.line(), self.pen().widthF())
+        arrow_shape = makeArrowShape(self._line, self.pen().widthF())
 
         # use the pen as brush to draw the arrow shape
-        painter.setPen(Qt.NoPen)  
+        painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(self.pen().brush())
         painter.drawPath(arrow_shape)
-        painter.drawLine(self.line())
+        painter.drawLine(self._line)
 
         ### draw label
-        try:
-            fm = QFontMetrics(self.scene().font())
-        except AttributeError:
-            fm = QFontMetrics(QApplication.instance().font())
+        fm = QFontMetrics(self.font())
 
         painter.setPen(self.pen())
-        painter.drawText(self.line().center() - self.pos(), self._label)
+        painter.drawText(self._line.center() - self.pos(), self._label)
 
     def shape(self) -> QPainterPath:
         """Override shape to provide a wider clickable area."""
         path = QPainterPath()
-        path.moveTo(self.line().p1())
-        path.lineTo(self.line().p2())
+        path.moveTo(self._line.p1())
+        path.lineTo(self._line.p2())
         stroker = QPainterPathStroker()
         stroker.setWidth(10)
         stroker.setCapStyle(Qt.PenCapStyle.RoundCap)
@@ -240,24 +247,40 @@ class GraphicsLinkItem(BaseItem):
         return stroker.createStroke(path)
 
     def boundingRect(self) -> QRectF:
-        try:
-            fm = QFontMetrics(self.scene().font())
-        except AttributeError:
-            fm = QFontMetrics(QApplication.instance().font())
+        fm = QFontMetrics(self.font())
 
         text_width = fm.horizontalAdvance(self._label)
         text_height = fm.height()
 
         shape_bbox = self.shape().boundingRect()
         text_bbox = QRectF(
-            self.line().center() - self.pos()-QPointF(0,text_height), QSizeF(text_width, text_height)
+            self._line.center() - self.pos() - QPointF(0, text_height),
+            QSizeF(text_width, text_height),
         )
 
         m = self.pen().widthF()
         return shape_bbox.united(text_bbox).adjusted(-m, -m, m, m)
 
+    def move(
+        self,
+        source_graphics_item: QGraphicsItem | QPainterPath | QRectF | QPointF,
+        target_graphics_item: QGraphicsItem | QPainterPath | QRectF | QPointF,
+    ):
+        line = makeLineBetweenShapes(source_graphics_item, target_graphics_item)
+        length = line.length()
+        if length > 0:
+            offset = min(8, length / 2)
+            line = QLineF(
+                line.pointAt(offset / length),
+                line.pointAt((length - offset) / length),
+            )
 
-class GraphicsNodeItem(GraphicsVertexItem):
+        self.prepareGeometryChange()
+        self._line = line
+        self.update()
+
+
+class NodeShape(VertexShape):
     def __init__(self, title, inlets, outlets, parent=None):
         super().__init__(title=title, parent=parent)
         self._inlets: list[QGraphicsItem] = []
@@ -287,7 +310,6 @@ class GraphicsNodeItem(GraphicsVertexItem):
 
     def _removeInlet(self, inlet_widget: QGraphicsItem):
         self._inlets.remove(inlet_widget)
-        inlet_widget.setParentItem(None)
         if scene := inlet_widget.scene():
             scene.removeItem(inlet_widget)
         self.layoutPorts()
@@ -318,7 +340,7 @@ class GraphicsNodeItem(GraphicsVertexItem):
             y += outlet_widget.boundingRect().height()
 
 
-class GraphicsPortItem(BaseItem):
+class PortShape(AbstractShape):
     def __init__(
         self,
         label: str,
@@ -374,16 +396,20 @@ if __name__ == "__main__":
     graphview.setScene(graphscene)
 
     ## create graphics
-    vertex_item_1 = GraphicsVertexItem("GraphicsVertexItem1")
+    vertex_item_1 = VertexShape("GraphicsVertexItem1")
     graphscene.addItem(vertex_item_1)
-    vertex_item_1.setPos(0,-150)
+    vertex_item_1.setPos(0, -150)
 
-    node_item_1 = GraphicsNodeItem("GraphicsNodeItem1", inlets=[GraphicsPortItem("GraphicsPortItemm")], outlets=[GraphicsPortItem("GraphicsPortItem")])
+    node_item_1 = NodeShape(
+        "GraphicsNodeItem1",
+        inlets=[PortShape("GraphicsPortItemm")],
+        outlets=[PortShape("GraphicsPortItem")],
+    )
     graphscene.addItem(node_item_1)
-    node_item_1.setPos(0,-120)
+    node_item_1.setPos(0, -120)
 
-    link_item_1 = GraphicsLinkItem("link1")
-    link_item_1.setLine(QLineF(00, -50, 100, -20))
+    link_item_1 = LinkShape("link1")
+    link_item_1.move(QPointF(0, -50), QPointF(100, -20))
     graphscene.addItem(link_item_1)
 
     graphview.show()

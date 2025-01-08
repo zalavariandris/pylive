@@ -74,7 +74,7 @@ class NXGraphModel(QObject):
         nx.set_node_attributes(self.G, {n: change})
         self.nodesPropertiesChanged.emit({n: change})
 
-    def hasNodeProperty(self, n:Hashable, name, /)->bool:
+    def hasNodeProperty(self, n: Hashable, name, /) -> bool:
         return name in self.G.nodes[n]
 
     def getNodeProperty(self, n: Hashable, name, /) -> object:
@@ -126,7 +126,7 @@ class NXGraphModel(QObject):
     def getEdgeProperty(self, u: Hashable, v: Hashable, k: Hashable, prop, /):
         return self.G.edges[u, v, k][prop]
 
-    def isEdgeAllowed(self, u:Hashable, v:Hashable, k:Hashable)->bool:
+    def isEdgeAllowed(self, u: Hashable, v: Hashable, k: Hashable) -> bool:
         if u == v:
             return False
         return True
