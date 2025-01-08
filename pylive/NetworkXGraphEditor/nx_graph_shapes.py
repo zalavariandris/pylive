@@ -266,6 +266,25 @@ class LinkShape(AbstractShape):
         source_graphics_item: QGraphicsItem | QPainterPath | QRectF | QPointF,
         target_graphics_item: QGraphicsItem | QPainterPath | QRectF | QPointF,
     ):
+        """Moves the link to the source and target items
+
+        comments:
+
+        I couldn find a nice way (ther is probalby no nice way)
+        to catch QGraphicsItem scene movements!
+
+        I think the link is responsible (and the target items are not) to move
+        the link to the linked shapes. (This way supporting all QGraphicsItems.)
+        Therefore, to actually update the link geometry, you must call this
+        function.
+
+        There are several ways to cath items moving
+        e.g.: subclassing a QGraphicsItem:
+        - storing connected link, then use the 'itemChange' callback.
+        - or by using QGraphicsWidgets, and connect
+          to the geometryChange signal, (pay attention as this is a local position)
+        """
+
         line = makeLineBetweenShapes(source_graphics_item, target_graphics_item)
         length = line.length()
         if length > 0:

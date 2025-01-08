@@ -157,8 +157,8 @@ class LiveScriptWithExec(LiveScriptWindow):
             keypress = cast(QKeyEvent, event)
             if keypress.key() in {Qt.Key.Key_Return, Qt.Key.Key_Enter}:
                 if keypress.modifiers() == Qt.KeyboardModifier.ShiftModifier:
-                    cell = self.editor().cellAtCursor()
-                    self.execute_cells([cell])
+                    if cell := self.editor().cellAtCursor():
+                        self.execute_cells([cell])
                     return True
 
         return super().eventFilter(watched, event)
