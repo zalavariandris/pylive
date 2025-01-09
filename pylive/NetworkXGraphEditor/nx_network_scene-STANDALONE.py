@@ -68,7 +68,7 @@ class InletId:
 type LinkId = tuple[NodeId, NodeId, tuple[str, str]]
 
 
-class NXGraphScene(QGraphicsScene):
+class NXNetworkScene(QGraphicsScene):
     def __init__(self, model: NXGraphModel):
         super().__init__()
         self._model = model
@@ -109,24 +109,7 @@ class NXGraphScene(QGraphicsScene):
             self.onNodeCreated(nodeId)
 
         for e in self._model.edges():
-            u, v, (o, i) = e
-            assert u in self._node_graphics_objects
-            assert v in self._node_graphics_objects
-            assert (
-                OutletId(u, o) in self._outlet_graphics_objects
-            ), f"Node '{u}' has no outlet '{o}'!"
-            assert (
-                InletId(v, i) in self._inlet_graphics_objects
-            ), f"Node '{v}' has no inlet '{i}'!"
-
-            link = LinkGraphicsObject((u, v, (o, i)))
-            self._link_graphics_objects[(u, v, (o, i))] = link
-            self.addItem(link)
-
-            link.move(
-                self.outletGraphicsObject(OutletId(u, o)),
-                self.inletGraphicsObject(InletId(v, i)),
-            )
+            self.onLinkCreated(e)
 
     def linkGraphicsObject(self, e: LinkId) -> "LinkGraphicsObject":
         return self._link_graphics_objects[e]
@@ -174,9 +157,7 @@ class NXGraphScene(QGraphicsScene):
     def onLinkCreated(self, e: LinkId):
         link = LinkGraphicsObject(e)
         self._link_graphics_objects[e] = link
-        self.addItem(self.linkGraphicsObject(e))
-        self.updateAttachedNodes(e, "in")
-        self.updateAttachedNodes(e, "out")
+        self.addItem(link)
 
         u, v, (o, i) = e
         link.move(
@@ -246,6 +227,8 @@ class NXGraphScene(QGraphicsScene):
             raise NotImplementedError()
 
     def onModelReset(self):
+        self._inlet_graphics_objects.clear()
+        self._outlet_graphics_objects.clear()
         self._link_graphics_objects.clear()
         self._node_graphics_objects.clear()
         self.clear()
@@ -336,7 +319,7 @@ class OutletGraphicsObject(PortShape):
         self._o = o
 
     def graphscene(self) -> "NXGraphScene":
-        return cast(NXGraphScene, self.scene())
+        return cast(NXNetworkScene, self.scene())
 
     def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         self.graphscene().makeDraftLink()
@@ -378,7 +361,7 @@ class InletGraphicsObject(PortShape):
         self._i = i
 
     def graphscene(self) -> "NXGraphScene":
-        return cast(NXGraphScene, self.scene())
+        return cast(NXNetworkScene, self.scene())
 
     def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         self.graphscene().makeDraftLink()
@@ -441,7 +424,7 @@ class NodeGraphicsObject(NodeShape):
         return super().itemChange(change, value)
 
     def graphscene(self) -> "NXGraphScene":
-        return cast(NXGraphScene, self.scene())
+        return cast(NXNetworkScene, self.scene())
 
     def moveLinks(self):
         """responsible to update connected link position"""
@@ -465,7 +448,7 @@ class LinkGraphicsObject(LinkShape):
         self.setZValue(-1)
 
     def graphscene(self) -> "NXGraphScene":
-        return cast(NXGraphScene, self.scene())
+        return cast(NXNetworkScene, self.scene())
 
     def boundingRect(self) -> QRectF:
         return super().boundingRect().adjusted(-50, -50, 50, 50)
@@ -481,7 +464,7 @@ if __name__ == "__main__":
 
     # setup main window
     view = QGraphicsView()
-    view.setWindowTitle("NXGraphScene")
+    view.setWindowTitle("NXNetworkScene")
     view.setRenderHint(QPainter.RenderHint.Antialiasing, True)
     view.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
     view.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
@@ -492,7 +475,7 @@ if __name__ == "__main__":
     graph.addNode("N2", inlets=["in"])
     graph.addNode("N3", inlets=["in"], outlets=["out"])
     graph.addEdge("N1", "N2", ("out", "in"))
-    graphscene = NXGraphScene(graph)
+    graphscene = NXNetworkScene(graph)
     graphscene.setSceneRect(QRectF(-400, -400, 800, 800))
     view.setScene(graphscene)
 

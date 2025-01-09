@@ -155,7 +155,7 @@ class LinkShape(AbstractShape):
     """Graphics item representing an edge in a graph."""
 
     def __init__(
-        self, label: str = "-link-", parent: QGraphicsItem | None = None
+        self, label: str = "link-", parent: QGraphicsItem | None = None
     ):
         super().__init__(parent=None)
         self._label = label
@@ -166,14 +166,6 @@ class LinkShape(AbstractShape):
         # self.setZValue(-1)
 
         self._line: QLineF = QLineF()
-
-    # def setLine(self, line: QLineF):
-    #     self.prepareGeometryChange()
-    #     self._line = line
-    #     self.update()
-
-    # def _line(self) -> QLineF:
-    #     return self._line
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self._label!r})"
@@ -220,20 +212,44 @@ class LinkShape(AbstractShape):
     def paint(
         self, painter: QPainter, option: QStyleOptionGraphicsItem, widget=None
     ):
+        import math
+        ### draw label
+        fm = QFontMetrics(self.font())
+        ellipse_bbox = fm.boundingRect(self.boundingRect().toRect(), Qt.AlignmentFlag.AlignCenter, self._label)
+        f = 1/math.sin(math.radians(45))
+
+        ellipse_bbox.setSize(
+            QSizeF(ellipse_bbox.width()*f, ellipse_bbox.height()*f).toSize())
+        ellipse_bbox.moveCenter(self.boundingRect().center().toPoint())
+        # painter.drawEllipse(text_bbox)
+
+        text_clip = QRegion(self.boundingRect().toRect()) - QRegion(ellipse_bbox, QRegion.RegionType.Ellipse)
+        
+
+        painter.setPen(self.pen())
+        painter.drawText(self.boundingRect(), self._label, QTextOption(Qt.AlignmentFlag.AlignCenter))
+
         ### draw arrow shape
         arrow_shape = makeArrowShape(self._line, self.pen().widthF())
 
+        
+
         # use the pen as brush to draw the arrow shape
+        import math
+        # painter.drawRect(ellipse_bbox)
+        # painter.drawEllipse(ellipse_bbox)
+
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(self.pen().brush())
+        painter.setClipRegion(text_clip)
         painter.drawPath(arrow_shape)
         painter.drawLine(self._line)
 
-        ### draw label
-        fm = QFontMetrics(self.font())
 
-        painter.setPen(self.pen())
-        painter.drawText(self._line.center() - self.pos(), self._label)
+
+
+
+        
 
     def shape(self) -> QPainterPath:
         """Override shape to provide a wider clickable area."""
