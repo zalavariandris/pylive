@@ -20,7 +20,7 @@ from PySide6.QtWidgets import *
 from pylive.QtGraphEditor.qgraphics_arrow_item import (
     makeArrowShape,
 )
-from pylive.utils.geo import makeLineBetweenShapes
+from pylive.utils.geo import getShapeCenter, getShapeRight, getShapeLeft, makeLineBetweenShapes
 
 
 class AbstractShape(QGraphicsItem):
@@ -30,6 +30,7 @@ class AbstractShape(QGraphicsItem):
         self.setAcceptHoverEvents(True)
         self._isHighlighted = False
         self._hoverMousePos: QPointF | None = None
+        self._debug = False
 
     def setHighlighted(self, value):
         self._isHighlighted = value
@@ -286,6 +287,7 @@ class LinkShape(AbstractShape):
         self,
         source_graphics_item: QGraphicsItem | QPainterPath | QRectF | QPointF,
         target_graphics_item: QGraphicsItem | QPainterPath | QRectF | QPointF,
+        /
     ):
         """Moves the link to the source and target items
 
@@ -317,6 +319,181 @@ class LinkShape(AbstractShape):
 
         self.prepareGeometryChange()
         self._line = line
+        self.update()
+
+import math
+def fillet(A: QPointF, B: QPointF, C: QPointF, r: float) -> tuple[QPointF, QPointF, QPointF, float, float]:
+    """
+    Calculate fillet between two lines defined by points A-B and B-C, including arc angles.
+    
+    Args:
+        A: First point of first line
+        B: Corner point (intersection of lines)
+        C: Second point of second line
+        r: Radius of the fillet
+        
+    Returns:
+        Tuple of (tangent_point1, tangent_point2, center_point, start_angle, sweep_angle)
+        Angles are in radians. Sweep angle is positive for counterclockwise direction.
+    """
+    def unit_vector(v: QPointF) -> QPointF:
+        length = math.sqrt(v.x()**2 + v.y()**2)
+        if abs(length) < 1e-10:
+            raise ValueError("Zero length vector")
+        return QPointF(v.x() / length, v.y() / length)
+    
+    def dot_product(v1: QPointF, v2: QPointF) -> float:
+        return v1.x() * v2.x() + v1.y() * v2.y()
+    
+    def vector_angle(v: QPointF) -> float:
+        """Calculate angle of vector from positive x-axis in radians."""
+        angle = math.atan2(v.y(), v.x())
+        return angle if angle >= 0 else angle + 2 * math.pi
+
+    # Input validation
+    if r <= 0:
+        raise ValueError("Radius must be positive")
+    
+    # Get direction vectors for both lines
+    dir1 = unit_vector(QPointF(A.x() - B.x(), A.y() - B.y()))
+    dir2 = unit_vector(QPointF(C.x() - B.x(), C.y() - B.y()))
+    
+    # Calculate angle between lines
+    cos_theta = dot_product(dir1, dir2)
+    if abs(cos_theta - 1) < 1e-10:
+        raise ValueError("Lines are parallel or nearly parallel")
+    
+    # Calculate tangent distance from corner
+    angle = math.acos(cos_theta)
+    tan_distance = r / math.tan(angle / 2)
+    
+    # Calculate tangent points
+    tangent1 = QVector2D(
+        B.x() + dir1.x() * tan_distance,
+        B.y() + dir1.y() * tan_distance
+    )
+    
+    tangent2 = QVector2D(
+        B.x() + dir2.x() * tan_distance,
+        B.y() + dir2.y() * tan_distance
+    )
+    
+    # Calculate center point
+    center_dir = unit_vector(QVector2D(
+        dir1.x() + dir2.x(),
+        dir1.y() + dir2.y()
+    ))
+    
+    center_distance = r / math.sin(angle / 2)
+    
+    center = QPointF(
+        B.x() + center_dir.x() * center_distance,
+        B.y() + center_dir.y() * center_distance
+    )
+    
+    # Calculate arc angles
+    # Vector from center to first tangent point
+    radius_vector1 = QPointF(
+        tangent1.x() - center.x(),
+        tangent1.y() - center.y()
+    )
+    
+    # Calculate start angle (from positive x-axis to first radius vector)
+    start_angle = vector_angle(radius_vector1)
+    
+    # Calculate sweep angle
+    sweep_angle = angle
+    
+    # Determine if we need to sweep clockwise or counterclockwise
+    # Cross product of radius vectors to determine orientation
+    cross_product = (radius_vector1.x() * (tangent2.y() - center.y()) - 
+                    radius_vector1.y() * (tangent2.x() - center.x()))
+    if cross_product < 0:
+        sweep_angle = -sweep_angle
+    
+    return tangent1, tangent2, center, start_angle, sweep_angle
+
+
+class RoundedLinkShape(LinkShape):
+    def __init__(self, label: str = "link-", parent: QGraphicsItem | None = None):
+        super().__init__(parent=None)
+
+        self.polygon = QPolygonF()
+
+    def boundingRect(self):
+        m = 50
+        return self.polygon.boundingRect().adjusted(-m, -m, m, m)
+
+    def paint(self, painter, option, widget=None):
+        if self._debug or True:
+            painter.setPen(QPen(QBrush("red"), 0.5, Qt.PenStyle.DotLine))
+            debug_path = QPainterPath()
+            debug_path.addPolygon(self.polygon)
+            painter.drawPath(debug_path)
+        
+        ### Fillet polygon
+        points = [self.polygon.at(i) for i in range(self.polygon.size())]
+        #r = 35
+        path = QPainterPath()
+        path.moveTo(points[0])
+        for A, B, C, r in zip(points, points[1:], points[2:], self.radii):
+            # calculate ellipse origin
+            try:
+                tangent1, tangent2, O, start_angle, sweep_angle= fillet(A, B, C, r)
+                rect = QRectF(
+                    QPointF(O.x()-r, O.y()-r), 
+                    QSizeF(2*r,2*r)
+                ).normalized()
+
+                if sweep_angle>0:
+                    path.arcTo(rect, -math.degrees(start_angle), math.degrees(sweep_angle)-180)
+                else:
+                    path.arcTo(rect, -math.degrees(start_angle), math.degrees(sweep_angle)+180)
+            except ValueError:
+                path.lineTo(B)
+                
+        path.lineTo(points[-1])
+        color = QColor("lightblue")
+        color.setAlpha(128)
+        painter.setPen(self.pen())
+        painter.drawPath(path)
+        
+
+    def move(
+        self,
+        source: QGraphicsItem | QPainterPath | QRectF | QPointF,
+        target: QGraphicsItem | QPainterPath | QRectF | QPointF,
+        /
+    ):
+        A = getShapeRight(source)
+        B = getShapeLeft(target)
+        
+        dx = B.x()-A.x()
+        dy = B.y()-A.y()
+        if dx>50:
+            r1 = min(50, min(abs(dx)/2, abs(dy)/2))
+            r2 = min(abs(dx), abs(dy))-r1
+            self.radii = [r1, r2]
+            self.polygon = QPolygonF([
+                A, 
+                QPointF(A.x() + self.radii[0], A.y()), 
+                QPointF(A.x() + self.radii[0], B.y()),
+                B
+            ])
+        else:
+            r1 = min(50, abs(dy)/2)
+            r2 = min(abs(dx), abs(dy) )-r1
+            self.radii = [r1, r2]
+            self.polygon = QPolygonF([
+                A, 
+                QPointF(A.x() + r1, A.y()), 
+                QPointF(A.x() + r1, A.y()+2*r1), 
+                QPointF(B.x() - r1, A.y()+2*r1), 
+                QPointF(B.x() - r1, B.y()), 
+                B
+            ])
+
+        self.prepareGeometryChange()
         self.update()
 
 

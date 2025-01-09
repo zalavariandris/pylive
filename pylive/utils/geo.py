@@ -194,6 +194,37 @@ def intersectLineWithPath(
     return None
 
 
+def getShapeRight(shape:QGraphicsItem | QPainterPath | QRectF | QPointF)->QPointF:
+    """return scene position"""
+    match shape:
+        case QGraphicsItem():
+            return shape.mapToScene(QPointF(shape.boundingRect().right(), shape.boundingRect().center().y()))
+        case QPainterPath():
+            rect = shape.boundingRect()
+            return QPointF(rect.right(), rect.center().y())
+        case QRectF():
+            return QPointF(shape.right(), shape.center().y())
+        case QPointF():
+            return shape
+        case _:
+            raise ValueError()
+
+
+def getShapeLeft(shape:QGraphicsItem | QPainterPath | QRectF | QPointF)->QPointF:
+    match shape:
+        case QGraphicsItem():
+            return shape.mapToScene(QPointF(shape.boundingRect().left(), shape.boundingRect().center().y()))#+QPointF(shape.boundingRect().right(), 0)
+        case QPainterPath():
+            rect = shape.boundingRect()
+            return QPointF(rect.left(), rect.center().y())
+        case QRectF():
+            return QPointF(shape.left(), shape.center().y())
+        case QPointF():
+            return shape
+        case _:
+            raise ValueError()
+
+
 def getShapeCenter(shape: QPointF | QRectF | QPainterPath | QGraphicsItem):
     match shape:
         case QPointF():
