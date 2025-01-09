@@ -109,7 +109,9 @@ class NXGraphModel(QObject):
         if v not in self.G.nodes:
             self.addNode(v)
 
-        self.G.add_edge(u, v, k, **props)
+        k = self.G.add_edge(
+            u, v, k, **props
+        )  # note: if k is none, networkx will return a default value for k.
         self.edgesAdded.emit([(u, v, k)])
 
     def removeEdge(self, u: Hashable, v: Hashable, k: Hashable):

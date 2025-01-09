@@ -57,23 +57,23 @@ type LinkId = tuple[NodeId, NodeId, Hashable]
 class NXGraphScene(QGraphicsScene):
     def __init__(self, model: NXGraphModel):
         super().__init__()
-        self._model:NXGraphModel = model
+        self._model: NXGraphModel = model
         self._node_graphics_objects: dict[NodeId, VertexGraphicsObject] = dict()
         self._link_graphics_objects: dict[LinkId, LinkGraphicsObject] = dict()
         self._draft_link: LinkGraphicsObject | None = None
 
         self.setItemIndexMethod(QGraphicsScene.ItemIndexMethod.NoIndex)
 
-        _=self._model.nodesAdded.connect(
+        _ = self._model.nodesAdded.connect(
             lambda nodes: [self.onNodeCreated(n) for n in nodes]
         )
-        _=self._model.nodesAboutToBeRemoved.connect(
+        _ = self._model.nodesAboutToBeRemoved.connect(
             lambda nodes: [self.onNodeDeleted(n) for n in nodes]
         )
-        _=self._model.edgesAdded.connect(
+        _ = self._model.edgesAdded.connect(
             lambda edges: [self.onLinkCreated(e) for e in edges]
         )
-        _=self._model.edgesAboutToBeRemoved.connect(
+        _ = self._model.edgesAboutToBeRemoved.connect(
             lambda edges: [self.onLinkDeleted(e) for e in edges]
         )
 
@@ -89,7 +89,7 @@ class NXGraphScene(QGraphicsScene):
             self.onNodeCreated(nodeId)
 
         for e in self._model.edges():
-        	self.onLinkCreated(e)
+            self.onLinkCreated(e)
 
     def linkGraphicsObject(self, e: LinkId) -> "LinkGraphicsObject":
         return self._link_graphics_objects[e]
@@ -97,11 +97,11 @@ class NXGraphScene(QGraphicsScene):
     def nodeGraphicsObject(self, n: NodeId) -> "VertexGraphicsObject":
         return self._node_graphics_objects[n]
 
-    def sourceGraphicsObject(self, e:LinkId)->QGraphicsItem:
+    def sourceGraphicsObject(self, e: LinkId) -> QGraphicsItem:
         u, v, k = e
         return self.nodeGraphicsObject(u)
 
-    def targetGraphicsObject(self, e:LinkId)->QGraphicsItem:
+    def targetGraphicsObject(self, e: LinkId) -> QGraphicsItem:
         u, v, k = e
         return self.nodeGraphicsObject(u)
 
@@ -128,14 +128,12 @@ class NXGraphScene(QGraphicsScene):
         link = LinkGraphicsObject(e)
         self._link_graphics_objects[e] = link
         self.addItem(self.linkGraphicsObject(e))
-        self.updateAttachedNodes(e, "in")
-        self.updateAttachedNodes(e, "out")
 
         u, v, k = e
-        link.move(
-            self.sourceGraphicsObject(e),
-            self.targetGraphicsObject(e)
-        )
+        link.move(self.sourceGraphicsObject(e), self.targetGraphicsObject(e))
+
+        self.updateAttachedNodes(e, "in")
+        self.updateAttachedNodes(e, "out")
 
     def makeDraftLink(self):
         self.draft = LinkShape()
@@ -264,9 +262,7 @@ class VertexGraphicsObject(VertexShape):
 
             if target := self.graphscene().nodeAt(event.scenePos()):
                 scene = self.graphscene()
-                scene._model.addEdge(
-                    self._n, target._n
-                )
+                scene._model.addEdge(self._n, target._n)
 
             return super().mouseReleaseEvent(event)
 
