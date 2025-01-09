@@ -36,5 +36,6 @@ dependencies = [
     "colour-science",
     "matplotlib",
     "scipy",
-    "colour-science"
+    "colour-science",
+    "bidict"
 ]

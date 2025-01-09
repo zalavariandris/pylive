@@ -3,7 +3,7 @@ from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
-from pylive.QtGraphEditor.nx_graph_model import NXGraphModel
+from pylive.NetworkXGraphEditor.nx_graph_model import NXGraphModel
 from enum import StrEnum
 
 

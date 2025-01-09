@@ -21,67 +21,60 @@ from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
-
-ConnectionEnterType = QEvent.Type(QEvent.registerEventType())
-ConnectionLeaveType = QEvent.Type(QEvent.registerEventType())
-ConnectionMoveType = QEvent.Type(QEvent.registerEventType())
-ConnectionDropType = QEvent.Type(QEvent.registerEventType())
-
-import numpy as np
-import networkx as nx
-
-
-##################
-# GRAPHICS ITEMS #
-##################
-
 from pylive.NetworkXGraphEditor.nx_graph_shapes import (
     NodeShape,
     LinkShape,
     PortShape,
 )
 
-
 ##############
 # GRAPHSCENE #
 ##############
 
+from bidict import bidict
 from pylive.NetworkXGraphEditor.nx_graph_model import NXGraphModel
+from pylive.NetworkXGraphEditor.nx_graph_selection_model import (
+    NXGraphSelectionModel,
+)
 
 from dataclasses import dataclass
 
+# define to NXGraphModel schema
 type NodeId = Hashable
-type LinkId = tuple[NodeId, NodeId, tuple[str, str]]
+type SourceId = tuple[NodeId, str]
+type TargetId = tuple[NodeId, str]
+type EdgeId = tuple[Hashable, Hashable, Hashable]
 
 
-@dataclass(frozen=True)
-class OutletId:
-    nodeId: NodeId
-    name: str
+def edgeSource(e: EdgeId) -> SourceId:
+    u, v, (o, i) = e
+    return (u, o)
 
 
-@dataclass(frozen=True)
-class InletId:
-    nodeId: NodeId
-    name: str
+def edgeTarget(e: EdgeId) -> TargetId:
+    u, v, (o, i) = e
+    return (v, i)
 
 
 class NXNetworkScene(QGraphicsScene):
-    def __init__(self, model: NXGraphModel):
+    def __init__(self, model: NXGraphModel, selection_model: NXGraphSelectionModel):
         super().__init__()
-        self._model = model
-        self._node_graphics_objects: dict[NodeId, NodeGraphicsObject] = dict()
-        self._source_graphics_objects: dict[
-            OutletId, OutletGraphicsObject
-        ] = dict()
-        self._target_graphics_objects: dict[
-            InletId, InletGraphicsObject
-        ] = dict()
-        self._link_graphics_objects: dict[LinkId, LinkGraphicsObject] = dict()
-        self._draft_link: LinkGraphicsObject | None = None
-
+        # configure QGraphicsScene
         self.setItemIndexMethod(QGraphicsScene.ItemIndexMethod.NoIndex)
 
+        # store model widget relations
+        self._node_graphics_objects: bidict[NodeId, NodeGraphicsObject] = bidict()
+        self._source_graphics_objects: bidict[SourceId, OutletGraphicsObject] = bidict()
+        self._target_graphics_objects: bidict[TargetId, InletGraphicsObject] = bidict()
+        self._link_graphics_objects: bidict[EdgeId, LinkGraphicsObject] = bidict()
+        self._draft_link: LinkGraphicsObject | None = None
+
+        # draft link: # TODO: consider moving it to the GraphView.
+        # GraphView is supposed to be responsible for user interactions
+        self.draft: LinkShape | None = None  # todo use the widget itself?
+
+        # set model
+        self._model = model
         _ = self._model.nodesAdded.connect(
             lambda nodes: [self.onNodeCreated(n) for n in nodes]
         )
@@ -89,14 +82,40 @@ class NXNetworkScene(QGraphicsScene):
             lambda nodes: [self.onNodeDeleted(n) for n in nodes]
         )
         _ = self._model.edgesAdded.connect(
-            lambda edges: [self.onLinkCreated(e) for e in edges]
+            lambda edges: [self.onEdgeCreated(e) for e in edges]
         )
         _ = self._model.edgesAboutToBeRemoved.connect(
-            lambda edges: [self.onLinkDeleted(e) for e in edges]
+            lambda edges: [self.onEdgeDeleted(e) for e in edges]
         )
 
+        # set selection model
+        self._selection_model = selection_model
+
+        @self.selectionChanged.connect
+        def update_selection_model():
+            assert self._selection_model
+            selected_nodes = [
+                self._node_graphics_objects.inverse[cast(NodeGraphicsObject, node)]
+                for node in self.selectedItems()
+                if node in self._node_graphics_objects.values()
+            ]
+            self._selection_model.setSelectedNodes(selected_nodes)
+
+        @selection_model.selectionChanged.connect
+        def update_scene_selection(selected: set[Hashable], deselected: set[Hashable]):
+            selected_widgets = [self.nodeGraphicsObject(n) for n in selected]
+            deselected_widgets = [self.nodeGraphicsObject(n) for n in deselected]
+            self.blockSignals(True)
+            for widget in selected_widgets:
+                widget.setSelected(True)
+
+            for widget in deselected_widgets:
+                widget.setSelected(False)
+            self.blockSignals(False)
+            self.selectionChanged.emit()
+
+        # populate with initial model
         self.traverseGraphAndPopulateGraphicsObjects()
-        self.draft: LinkShape | None = None  # todo use the widget itself
         self.layout()
 
     def traverseGraphAndPopulateGraphicsObjects(self):
@@ -107,65 +126,43 @@ class NXNetworkScene(QGraphicsScene):
             self.onNodeCreated(nodeId)
 
         for e in self._model.edges():
-            self.onLinkCreated(e)
+            self.onEdgeCreated(e)
 
-    def linkGraphicsObject(self, e: LinkId) -> "LinkGraphicsObject":
+    def linkGraphicsObject(self, e: EdgeId) -> "LinkGraphicsObject":
         return self._link_graphics_objects[e]
 
     def nodeGraphicsObject(self, n: NodeId) -> "NodeGraphicsObject":
         return self._node_graphics_objects[n]
 
-    def targetGraphicsObject(self, e: LinkId) -> QGraphicsItem:
-        u, v, (o, i) = e
-        return self._target_graphics_objects[InletId(v, i)]
+    def targetGraphicsObject(self, targetId: TargetId) -> QGraphicsItem:
+        return self._target_graphics_objects[targetId]
 
-    def sourceGraphicsObject(self, e: LinkId) -> QGraphicsItem:
-        u, v, (o, y) = e
-        return self._source_graphics_objects[OutletId(u, o)]
-
-    def updateAttachedTarget(self, e: LinkId):
-        if node := self.targetGraphicsObject(e):
-            node.update()
-
-    def updateAttachedSource(self, e: LinkId):
-        if node := self.sourceGraphicsObject(e):
-            node.update()
-
-    # def isLinked(self, port: InletId | OutletId) -> bool:
-    #     match port:
-    #         case InletId():
-    #             for u, v, (o, i) in self._model.inEdges(port.nodeId):
-    #                 if i == port.name:
-    #                     return True
-    #         case OutletId():
-    #             for u, v, (o, i) in self._model.outEdges(port.nodeId):
-    #                 if o == port.name:
-    #                     return True
-    #     return False
+    def sourceGraphicsObject(self, sourceId: SourceId) -> QGraphicsItem:
+        return self._source_graphics_objects[sourceId]
 
     ### Handle Model Signals >>>
-    def onLinkDeleted(self, e: LinkId):
+    def onEdgeDeleted(self, e: tuple[Hashable, Hashable, Hashable]):
+        sourceId = e[0], f"{e[2][0]}"
+        targetId = e[1], f"{e[2][1]}"
         self.removeItem(self.linkGraphicsObject(e))
         if e in self._link_graphics_objects:
             del self._link_graphics_objects[e]
 
-        self.updateAttachedSource(e)
-        self.updateAttachedTarget(e)
-
-    def onLinkCreated(self, e: LinkId):
+    def onEdgeCreated(self, e: tuple[Hashable, Hashable, Hashable]):
+        sourceId = e[0], f"{e[2][0]}"
+        targetId = e[1], f"{e[2][1]}"
         link = LinkGraphicsObject(e)
-        u, v, (o, i) = e
-        link.setLabelText(f"{o}->{i}")
+        link.setLabelText(f"{e[2]}")
 
         self._link_graphics_objects[e] = link
         self.addItem(link)
 
-        link.move(self.sourceGraphicsObject(e), self.targetGraphicsObject(e))
+        link.move(
+            self.sourceGraphicsObject(sourceId),
+            self.targetGraphicsObject(targetId),
+        )
 
-        self.updateAttachedSource(e)
-        self.updateAttachedTarget(e)
-
-    def onNodeCreated(self, n: NodeId):
+    def onNodeCreated(self, n: Hashable):
         node = NodeGraphicsObject(n, inlets=[], outlets=[])
         self._node_graphics_objects[n] = node
         self.addItem(self.nodeGraphicsObject(n))
@@ -176,7 +173,7 @@ class NXNetworkScene(QGraphicsScene):
                 isinstance(_, str) for _ in inletNames
             )
             for inletName in inletNames:
-                inlet = self.onTargetCreated(n, inletName)
+                inlet = self.onInletCreated(n, inletName)
 
         if self._model.hasNodeProperty(n, "outlets"):
             outletNames = self._model.getNodeProperty(n, "outlets")
@@ -184,20 +181,22 @@ class NXNetworkScene(QGraphicsScene):
                 isinstance(_, str) for _ in outletNames
             )
             for outletName in outletNames:
-                outlet_graphics_object = self.onSourceCreated(n, outletName)
+                outlet_graphics_object = self.onOutletCreated(n, outletName)
 
-    def onSourceCreated(self, n: NodeId, source_name: str):
+    def onOutletCreated(self, n: Hashable, source_name: str):
+        sourceId: SourceId = (n, source_name)
         node = self.nodeGraphicsObject(n)
-        outlet = OutletGraphicsObject(OutletId(n, source_name))
+        outlet = OutletGraphicsObject((n, source_name))
         node._addOutlet(outlet)
-        self._source_graphics_objects[OutletId(n, source_name)] = outlet
+        self._source_graphics_objects[(n, source_name)] = outlet
         return outlet
 
-    def onTargetCreated(self, n: NodeId, target_name):
+    def onInletCreated(self, n: Hashable, target_name: str):
+        target_id: TargetId = (n, target_name)
         node = self.nodeGraphicsObject(n)
-        inlet = InletGraphicsObject(InletId(n, target_name))
+        inlet = InletGraphicsObject(target_id)
         node._addInlet(inlet)
-        self._target_graphics_objects[InletId(n, target_name)] = inlet
+        self._target_graphics_objects[target_id] = inlet
         return inlet
 
     def makeDraftLink(self):
@@ -213,7 +212,7 @@ class NXNetworkScene(QGraphicsScene):
         self.removeItem(self.draft)
         self.draft = None
 
-    def onNodeDeleted(self, n: NodeId):
+    def onNodeDeleted(self, n: Hashable):
         if n in self._node_graphics_objects:
             node_graphics_object = self.nodeGraphicsObject(n)
             raise NotImplementedError()
@@ -228,35 +227,55 @@ class NXNetworkScene(QGraphicsScene):
         self.traverseGraphAndPopulateGraphicsObjects()
 
     ### <<< Handle Model Signals
-    def _findGraphItemAt(self, klass, position: QPointF):
-        # find outlet under mouse
+    def sourceAt(self, position: QPointF) -> SourceId | None:
+        # find source (model) under mouse
         for item in self.items(position, deviceTransform=QTransform()):
-            if isinstance(item, klass):
-                return item
+            try:
+                return self._source_graphics_objects.inverse[
+                    cast(OutletGraphicsObject, item)
+                ]
+            except KeyError:
+                return None
 
-    def outletAt(self, position: QPointF) -> "OutletGraphicsObject":
-        return cast(
-            OutletGraphicsObject,
-            self._findGraphItemAt(OutletGraphicsObject, position),
-        )
+    def targetAt(self, position: QPointF) -> TargetId | None:
+        # find source (model) under mouse
+        for item in self.items(position, deviceTransform=QTransform()):
+            try:
+                return self._target_graphics_objects.inverse[
+                    cast(InletGraphicsObject, item)
+                ]
+            except KeyError:
+                return None
 
-    def inletAt(self, position: QPointF) -> "InletGraphicsObject":
-        return cast(
-            InletGraphicsObject,
-            self._findGraphItemAt(InletGraphicsObject, position),
-        )
+    # def _findGraphItemAt(self, klass, position: QPointF):
+    #     # find outlet under mouse
+    #     for item in self.items(position, deviceTransform=QTransform()):
+    #         if isinstance(item, klass):
+    #             return item
 
-    def nodeAt(self, position: QPointF) -> "NodeGraphicsObject":
-        return cast(
-            NodeGraphicsObject,
-            self._findGraphItemAt(NodeGraphicsObject, position),
-        )
+    # def _outletEditorAt(self, position: QPointF) -> "OutletGraphicsObject":
+    #     return cast(
+    #         OutletGraphicsObject,
+    #         self._findGraphItemAt(OutletGraphicsObject, position),
+    #     )
 
-    def linkAt(self, position: QPointF) -> "LinkGraphicsObject":
-        return cast(
-            LinkGraphicsObject,
-            self._findGraphItemAt(LinkGraphicsObject, position),
-        )
+    # def _inletEditorAt(self, position: QPointF) -> "InletGraphicsObject":
+    #     return cast(
+    #         InletGraphicsObject,
+    #         self._findGraphItemAt(InletGraphicsObject, position),
+    #     )
+
+    # def nodeAt(self, position: QPointF) -> "NodeGraphicsObject":
+    #     return cast(
+    #         NodeGraphicsObject,
+    #         self._findGraphItemAt(NodeGraphicsObject, position),
+    #     )
+
+    # def linkAt(self, position: QPointF) -> "LinkGraphicsObject":
+    #     return cast(
+    #         LinkGraphicsObject,
+    #         self._findGraphItemAt(LinkGraphicsObject, position),
+    #     )
 
     def layout(self):
         from pylive.utils.graph_layout import hiearchical_layout_with_nx
@@ -266,6 +285,13 @@ class NXNetworkScene(QGraphicsScene):
             widget = self.nodeGraphicsObject(N)
             widget.setPos(x, y)
 
+    # def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+    #     item = self.itemAt(event.scenePos(), QTransform())
+    #     if item in self._node_graphics_objects.values():
+    #         print("node clicked")
+    #     else:
+    #         return super().mousePressEvent(event)
+
 
 ###########################
 # Active Graphics Objects #
@@ -273,69 +299,68 @@ class NXNetworkScene(QGraphicsScene):
 
 
 class OutletGraphicsObject(PortShape):
-    def __init__(self, o: OutletId):
-        super().__init__(label=f"{o.name}")
-        self._o = o
+    def __init__(self, sourceId: SourceId):
+        super().__init__(label=f"{sourceId}")
+        self.sourceId = sourceId
 
     def graphscene(self) -> "NXNetworkScene":
         return cast(NXNetworkScene, self.scene())
 
     def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         self.graphscene().makeDraftLink()
-        self.grabMouse()
 
     def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         draft = self.graphscene().draft
         assert draft is not None
 
-        if inlet := self.graphscene().inletAt(event.scenePos()):
-            draft.move(self, inlet)
+        # if inletId := self.graphscene()._inletEditorAt(event.scenePos()):
+        if inletId := self.graphscene().targetAt(event.scenePos()):
+            draft.move(self, self.graphscene().targetGraphicsObject(inletId))
         else:
             draft.move(self, event.scenePos())
         return super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event: QGraphicsSceneMouseEvent) -> None:
-        self.ungrabMouse()
         self.graphscene().resetDraftLink()
 
-        if inlet := self.graphscene().inletAt(event.scenePos()):
+        if targetId := self.graphscene().targetAt(event.scenePos()):
             scene = self.graphscene()
+
             scene._model.addEdge(
-                self._o.nodeId, inlet._i.nodeId, (self._o.name, inlet._i.name)
+                self.sourceId[0], targetId[0], (self.sourceId[1], targetId[1])
             )
 
         return super().mouseReleaseEvent(event)
 
 
 class InletGraphicsObject(PortShape):
-    def __init__(self, i: InletId):
-        super().__init__(label=f"{i.name}")
-        self._i = i
+    def __init__(self, targetId: TargetId):
+        super().__init__(label=f"{targetId}")
+        self.targetId = targetId
 
     def graphscene(self) -> "NXNetworkScene":
         return cast(NXNetworkScene, self.scene())
 
     def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         self.graphscene().makeDraftLink()
-        self.grabMouse()
 
     def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         draft = self.graphscene().draft
         assert draft is not None
 
-        if outlet := self.graphscene().outletAt(event.scenePos()):
-            draft.move(outlet, self)
+        if sourceId := self.graphscene().sourceAt(event.scenePos()):
+            draft.move(self.graphscene().sourceGraphicsObject(sourceId), self)
         else:
             draft.move(event.scenePos(), self)
         return super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event: QGraphicsSceneMouseEvent) -> None:
-        self.ungrabMouse()
         self.graphscene().resetDraftLink()
 
-        if outlet := self.graphscene().outletAt(event.scenePos()):
-            self.graphscene()._model.addEdge(
-                outlet._o.nodeId, self._i.nodeId, (outlet._o.name, self._i.name)
+        if sourceId := self.graphscene().sourceAt(event.scenePos()):
+            scene = self.graphscene()
+            scene._model.addEdge(
+                sourceId[0], self.targetId[0], (sourceId[1], self.targetId[1])
             )
 
         return super().mouseReleaseEvent(event)
@@ -358,13 +383,8 @@ class NodeGraphicsObject(NodeShape):
         self._n = n
         self.setAcceptHoverEvents(False)
 
-    def itemChange(
-        self, change: QGraphicsItem.GraphicsItemChange, value: Any
-    ) -> Any:
-        if (
-            change
-            == QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged
-        ):
+    def itemChange(self, change: QGraphicsItem.GraphicsItemChange, value: Any) -> Any:
+        if change == QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
             self.moveLinks()
         return super().itemChange(change, value)
 
@@ -378,15 +398,18 @@ class NodeGraphicsObject(NodeShape):
         for e in all_edges:
             # assert isinstance(e[2], tuple) and len(e[2]) == 2
             # u, v, (o, i) = e
+            sourceId = e[0], f"{e[2][0]}"
+            targetId = e[1], f"{e[2][1]}"
             self.graphscene()
-            outlet = self.graphscene().sourceGraphicsObject(e)
-            inlet = self.graphscene().targetGraphicsObject(e)
-            edge = self.graphscene().linkGraphicsObject(e)
+
+            outlet = self.graphscene().sourceGraphicsObject(sourceId)
+            inlet = self.graphscene().targetGraphicsObject(targetId)
+            edge = self.graphscene().linkGraphicsObject((sourceId, targetId))
             edge.move(outlet, inlet)
 
 
 class LinkGraphicsObject(LinkShape):
-    def __init__(self, e: LinkId, parent: QGraphicsItem | None = None):
+    def __init__(self, e: EdgeId, parent: QGraphicsItem | None = None):
         super().__init__(label=f"{e}", parent=parent)
         self._e = e
         self.setZValue(-1)
@@ -396,6 +419,62 @@ class LinkGraphicsObject(LinkShape):
 
     def boundingRect(self) -> QRectF:
         return super().boundingRect().adjusted(-50, -50, 50, 50)
+
+    def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+        ...
+        # if event.button() == Qt.MouseButton.LeftButton:
+        #     self.grabMouse()
+        # else:
+        #     self.ungrabMouse()
+
+    def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+        print("mouse move event")
+        _, thisTargetId = self._e
+        if outletId := self.graphscene().sourceAt(event.scenePos()):
+            self.move(self.graphscene().sourceGraphicsObject(outletId), self)
+        else:
+            self.move(
+                event.scenePos(),
+                self.graphscene().targetGraphicsObject(thisTargetId),
+            )
+        return super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+        model = self.graphscene()._model
+        target = self.graphscene().targetAt(event.scenePos())
+        thisSourceId, thisTargetId = self._e
+        if Qt.MouseButton.RightButton in event.buttons():
+            # cancel
+            self.move(
+                self.graphscene().sourceGraphicsObject(thisSourceId),
+                self.graphscene().targetGraphicsObject(thisTargetId),
+            )
+            self.ungrabMouse()
+        else:
+            # TODO: add an addMethod to the graphview, to convert from the graph edge representation to the model;s
+
+            if target and target != self._e[1]:
+                u, o = thisSourceId
+                v, i = thisTargetId
+                model.removeEdge(u, v, (o, i))
+                model.addEdge(thisSourceId[0], target[0], (thisTargetId[1], target[1]))
+
+            elif target == None:
+                u, o = thisSourceId
+                v, i = thisTargetId
+                model.removeEdge(u, v, (o, i))
+
+            elif target == thisTargetId:
+                # cancel
+
+                self.move(
+                    self.graphscene().sourceGraphicsObject(thisSourceId),
+                    self.graphscene().targetGraphicsObject(thisTargetId),
+                )
+            else:
+                raise Exception("")
+
+            return super().mouseReleaseEvent(event)
 
 
 ###########
@@ -420,7 +499,7 @@ if __name__ == "__main__":
     graph.addNode("N2", inlets=["in"])
     graph.addNode("N3", inlets=["in"], outlets=["out"])
     graph.addEdge("N1", "N2", ("out", "in"))
-    graphscene = NXNetworkScene(graph)
+    graphscene = NXNetworkScene(graph, NXGraphSelectionModel(graph))
     graphscene.setSceneRect(QRectF(-400, -400, 800, 800))
     view.setScene(graphscene)
 
