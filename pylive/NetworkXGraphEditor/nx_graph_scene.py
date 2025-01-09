@@ -57,23 +57,23 @@ type LinkId = tuple[NodeId, NodeId, Hashable]
 class NXGraphScene(QGraphicsScene):
     def __init__(self, model: NXGraphModel):
         super().__init__()
-        self._model = model
+        self._model:NXGraphModel = model
         self._node_graphics_objects: dict[NodeId, VertexGraphicsObject] = dict()
         self._link_graphics_objects: dict[LinkId, LinkGraphicsObject] = dict()
         self._draft_link: LinkGraphicsObject | None = None
 
         self.setItemIndexMethod(QGraphicsScene.ItemIndexMethod.NoIndex)
 
-        self._model.nodesAdded.connect(
+        _=self._model.nodesAdded.connect(
             lambda nodes: [self.onNodeCreated(n) for n in nodes]
         )
-        self._model.nodesAboutToBeRemoved.connect(
+        _=self._model.nodesAboutToBeRemoved.connect(
             lambda nodes: [self.onNodeDeleted(n) for n in nodes]
         )
-        self._model.edgesAdded.connect(
+        _=self._model.edgesAdded.connect(
             lambda edges: [self.onLinkCreated(e) for e in edges]
         )
-        self._model.edgesAboutToBeRemoved.connect(
+        _=self._model.edgesAboutToBeRemoved.connect(
             lambda edges: [self.onLinkDeleted(e) for e in edges]
         )
 
@@ -96,6 +96,14 @@ class NXGraphScene(QGraphicsScene):
 
     def nodeGraphicsObject(self, n: NodeId) -> "VertexGraphicsObject":
         return self._node_graphics_objects[n]
+
+    def sourceGraphicsObject(self, e:LinkId)->QGraphicsItem:
+        u, v, k = e
+        return self.nodeGraphicsObject(u)
+
+    def targetGraphicsObject(self, e:LinkId)->QGraphicsItem:
+        u, v, k = e
+        return self.nodeGraphicsObject(u)
 
     def updateAttachedNodes(self, e: LinkId, kind: Literal["in", "out"]):
         u, v, k = e
@@ -125,8 +133,8 @@ class NXGraphScene(QGraphicsScene):
 
         u, v, k = e
         link.move(
-            self.nodeGraphicsObject(u),
-            self.nodeGraphicsObject(v)
+            self.sourceGraphicsObject(e),
+            self.targetGraphicsObject(e)
         )
 
     def makeDraftLink(self):
@@ -229,30 +237,38 @@ class VertexGraphicsObject(VertexShape):
             edge.move(source, target)
 
     def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
-        self.graphscene().makeDraftLink()
-        self.grabMouse()
+        if self.isSelected():
+            super().mousePressEvent(event)
+        else:
+            self.graphscene().makeDraftLink()
+            self.grabMouse()
 
     def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent) -> None:
-        draft = self.graphscene().draft
-        assert draft is not None
-
-        if node := self.graphscene().nodeAt(event.scenePos()):
-            draft.move(self, node)
+        if self.isSelected():
+            super().mouseMoveEvent(event)
         else:
-            draft.move(self, event.scenePos())
-        # return super().mouseMoveEvent(event)
+            draft = self.graphscene().draft
+            assert draft is not None
+
+            if node := self.graphscene().nodeAt(event.scenePos()):
+                draft.move(self, node)
+            else:
+                draft.move(self, event.scenePos())
 
     def mouseReleaseEvent(self, event: QGraphicsSceneMouseEvent) -> None:
-        self.ungrabMouse()
-        self.graphscene().resetDraftLink()
+        if self.isSelected():
+            super().mouseReleaseEvent(event)
+        else:
+            self.ungrabMouse()
+            self.graphscene().resetDraftLink()
 
-        if target := self.graphscene().nodeAt(event.scenePos()):
-            scene = self.graphscene()
-            scene._model.addEdge(
-                self._n, target._n
-            )
+            if target := self.graphscene().nodeAt(event.scenePos()):
+                scene = self.graphscene()
+                scene._model.addEdge(
+                    self._n, target._n
+                )
 
-        return super().mouseReleaseEvent(event)
+            return super().mouseReleaseEvent(event)
 
 
 class LinkGraphicsObject(LinkShape):
@@ -279,6 +295,7 @@ if __name__ == "__main__":
 
     # setup main window
     view = QGraphicsView()
+    view.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
     view.setWindowTitle("NXGraphScene")
     view.setRenderHint(QPainter.RenderHint.Antialiasing, True)
     view.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)

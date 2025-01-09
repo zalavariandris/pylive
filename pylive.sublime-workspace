@@ -4,516 +4,516 @@
 		"selected_items":
 		[
 			[
-				"NXGr",
+				"dragmode",
+				"DragMode"
+			],
+			[
+				"conn",
+				"connected"
+			],
+			[
+				"NXG",
 				"NXGraphScene"
 			],
 			[
-				"nx",
-				"nx_graph_scene"
+				"buttonD",
+				"buttonDownScenePos"
 			],
 			[
-				"pyl",
-				"pylive"
+				"_en",
+				"_entered_items"
 			],
 			[
-				"top",
-				"topLeft"
+				"Key",
+				"KeyboardModifier"
 			],
 			[
-				"text",
-				"text_bbox"
-			],
-			[
-				"_",
-				"_label"
-			],
-			[
-				"Verte",
-				"VertexGraphicsObject"
-			],
-			[
-				"NotImpl",
-				"NotImplementedError"
-			],
-			[
-				"child",
-				"childrenBoundingRect"
-			],
-			[
-				"oute",
-				"outletAt"
-			],
-			[
-				"Qpoin",
-				"QPointF"
-			],
-			[
-				"Outlet",
-				"OutletGraphicsObject"
-			],
-			[
-				"setAcc",
-				"setAcceptHoverEvents"
-			],
-			[
-				"item",
+				"it",
 				"itemAt"
 			],
 			[
-				"ungrab",
+				"sceneEvent",
+				"sceneEventFilter"
+			],
+			[
+				"remove",
+				"removeSceneEventFilter"
+			],
+			[
+				"ItemScene",
+				"ItemSceneChange"
+			],
+			[
+				"ungra",
 				"ungrabMouse"
 			],
 			[
-				"Link",
-				"LinkGraphicsObject"
-			],
-			[
-				"NotIm",
-				"NotImplementedError"
-			],
-			[
-				"isin",
-				"isinstance"
-			],
-			[
-				"outlet",
-				"outletGraphicsObject"
-			],
-			[
-				"mapFro",
-				"mapFromScene"
-			],
-			[
-				"Inlet",
-				"InletGraphicsObject"
-			],
-			[
-				"GraphicsSceneMou",
-				"GraphicsSceneMousePress"
-			],
-			[
-				"scene",
-				"_scene"
-			],
-			[
-				"GraphicsN",
-				"GraphicsNodeItem"
-			],
-			[
-				"NXGraphScen",
-				"NXGraphSceneMouseTool"
-			],
-			[
-				"make",
-				"make_fillet_path"
-			],
-			[
-				"ar",
-				"arcMoveTo"
-			],
-			[
-				"mapFrom",
-				"mapFromParent"
-			],
-			[
-				"arcTo",
-				"arcMoveTo"
-			],
-			[
-				"out",
-				"_outlet_graphics_objects"
-			],
-			[
-				"_in",
-				"_inlet_graphics_objects"
-			],
-			[
-				"_inl",
-				"_inlet_graphics_objects"
-			],
-			[
-				"nx_grp",
-				"nx_graph_graphics_items"
-			],
-			[
-				"Gra",
-				"GraphicsPortItem"
-			],
-			[
-				"Graphics",
-				"GraphicsVertexItem"
-			],
-			[
-				"graph",
-				"graphscene"
-			],
-			[
-				"onNode",
-				"onNodeDeleted"
-			],
-			[
-				"onC",
-				"onNodeCreated"
-			],
-			[
-				"node",
-				"nodesAdded"
-			],
-			[
-				"onLink",
-				"onLinkDeleted"
-			],
-			[
-				"edge",
-				"edgesAdded"
-			],
-			[
-				"inde",
-				"ItemIndexMethod"
-			],
-			[
-				"add",
-				"addNode"
-			],
-			[
-				"update",
-				"updateAttachedNodes"
-			],
-			[
-				"getN",
-				"getNodeProperty"
-			],
-			[
-				"Nx",
-				"NXGraphModel"
-			],
-			[
-				"Connection",
-				"ConnectionType"
-			],
-			[
-				"Node",
-				"NodeGraphicsObject"
-			],
-			[
-				"Item",
-				"ItemScenePositionHasChanged"
-			],
-			[
-				"Vertex",
-				"VertexElement"
-			],
-			[
-				"Fla",
-				"GraphicsItemFlag"
-			],
-			[
-				"setAcce",
-				"setAcceptHoverEvents"
-			],
-			[
-				"gr",
-				"createItemGroup"
-			],
-			[
-				"GraphicsO",
-				"GraphicsPortItem"
-			],
-			[
-				"setL",
-				"setLine"
-			],
-			[
-				"QFo",
-				"QFont"
-			],
-			[
-				"create",
-				"createAttributeEditor"
-			],
-			[
-				"mous",
-				"mouseMoveEvent"
-			],
-			[
-				"Mous",
-				"MouseButtonPress"
-			],
-			[
-				"T",
-				"Type"
-			],
-			[
-				"ins",
-				"installEventFilter"
-			],
-			[
-				"_a",
-				"_attribute_to_widget_map"
-			],
-			[
-				"parent",
-				"parentItem"
-			],
-			[
-				"QFileO",
-				"QFileDialog"
-			],
-			[
-				"edge_",
-				"_edge_to_widget_map"
-			],
-			[
-				"_widget_to",
-				"_widget_to_node_map"
-			],
-			[
-				"up",
-				"updateEdgePosition"
+				"setAccept",
+				"setAcceptedMouseButtons"
 			],
 			[
 				"setAccep",
 				"setAcceptHoverEvents"
 			],
 			[
-				"Att",
-				"AttributeError"
+				"PE_FrameL",
+				"PE_FrameDefaultButton"
 			],
 			[
-				"hei",
-				"height"
+				"QSTyleOption",
+				"QStyleOptionComplex"
 			],
 			[
-				"setB",
-				"setBrush"
+				"C",
+				"ComplexControl"
 			],
 			[
-				"chil",
-				"childrenBoundingRect"
+				"Connection",
+				"ConnectionDropType"
 			],
 			[
-				"NXGra",
-				"NXGraphView"
+				"Pe_st",
+				"PE_FrameStatusBarItem"
 			],
 			[
-				"_wi",
-				"_widget_to_node_map"
+				"fr",
+				"CE_ShapedFrame"
 			],
 			[
-				"nodes",
-				"nodesPropertiesChanged"
+				"Con",
+				"ControlElement"
 			],
 			[
-				"setP",
-				"setParentItem"
+				"draw",
+				"drawComplexControl"
 			],
 			[
-				"_widg",
-				"_widget_to_node_map"
+				"connection",
+				"connectionEnterEvent"
 			],
 			[
-				"remove",
-				"removeEdge"
+				"ConnectionDr",
+				"ConnectionDropType"
 			],
 			[
-				"hover",
-				"hoverMoveEvent"
+				"ConnectionLe",
+				"ConnectionLeaveType"
 			],
 			[
-				"isEnd",
-				"_isEndHighlighted"
+				"ConnectionEvent",
+				"ConnectionEventType"
 			],
 			[
-				"widget_t",
-				"_widget_to_edge_map"
+				"Conne",
+				"ConnectionEnter"
 			],
 			[
-				"shape",
-				"shape_bbox"
+				"ConnectionEn",
+				"ConnectionEventType"
 			],
 			[
-				"Connect",
-				"ConnectionEvent"
+				"connectionE",
+				"connectionEnterEvent"
 			],
 			[
-				"model",
-				"_model"
+				"scene",
+				"sceneTransform"
+			],
+			[
+				"QGraphicsI",
+				"QGraphicsItem"
+			],
+			[
+				"ConnectionEve",
+				"ConnectionEventType"
+			],
+			[
+				"QGraphicsSc",
+				"QGraphicsSceneEvent"
+			],
+			[
+				"acc",
+				"isAccepted"
+			],
+			[
+				"over",
+				"override"
+			],
+			[
+				"sen",
+				"sendEvent"
+			],
+			[
+				"QGraphicsScene",
+				"QGraphicsSceneEvent"
+			],
+			[
+				"send",
+				"sendEvent"
+			],
+			[
+				"sc",
+				"scene"
+			],
+			[
+				"ex",
+				"exit"
+			],
+			[
+				"byt",
+				"bytes"
+			],
+			[
+				"graph",
+				"graphscene"
+			],
+			[
+				"dragmo",
+				"GraphicsSceneDragMove"
+			],
+			[
+				"dragL",
+				"_dragline"
+			],
+			[
+				"QGraphicsCi",
+				"QGraphicsRectItem"
+			],
+			[
+				"GraphicsSceneMouse",
+				"GraphicsSceneMouseRelease"
+			],
+			[
+				"GraphicsSceneMou",
+				"GraphicsSceneMousePress"
+			],
+			[
+				"Mouse",
+				"MouseButtonPress"
 			],
 			[
 				"widget_",
 				"_widget_to_node_map"
 			],
 			[
-				"QGraphicsS",
-				"QGraphicsScene"
+				"edge",
+				"edgeDropped"
 			],
 			[
-				"ConnectionL",
-				"ConnectionLeaveType"
+				"_is",
+				"_mouse_is_dragging"
 			],
 			[
-				"setSiz",
-				"setSizePolicy"
+				"_cu",
+				"_current_connection_event"
 			],
 			[
-				"se",
-				"setAlignment"
+				"_is_",
+				"_mouse_is_dragging"
 			],
 			[
-				"main",
-				"main_layout"
+				"InletW",
+				"InletWidget"
 			],
 			[
-				"header",
-				"header_widget"
+				"Outle",
+				"OutletWidget"
 			],
 			[
-				"outlet_",
-				"outlet_row"
+				"NotImpl",
+				"NotImplementedError"
 			],
 			[
-				"QGraphicsLi",
-				"QGraphicsLinearLayout"
+				"up",
+				"updatePosition"
 			],
 			[
-				"inlet_r",
-				"inlet_row_layout"
+				"NXGraph",
+				"NXGraphSelectionModel"
 			],
 			[
-				"QGraphicsLine",
-				"QGraphicsLinearLayout"
+				"graphS",
+				"_graphScene"
 			],
 			[
-				"QGraph",
-				"QGraphicsLayout"
+				"nodes",
+				"nodesAdded"
 			],
 			[
-				"Q",
-				"QGraphicsLinearLayout"
+				"add",
+				"addNode"
 			],
 			[
-				"size",
-				"sizeHint"
+				"make_un",
+				"make_unique_name"
 			],
 			[
-				"inlet",
-				"inlet_layout"
+				"NXGr",
+				"NXGraphSelectionModel"
+			],
+			[
+				"NX",
+				"NXGraphSelectionModel"
+			],
+			[
+				"nx_grap",
+				"nx_graph_selection_model"
+			],
+			[
+				"sele",
+				"selected_nodes"
+			],
+			[
+				"grap",
+				"_graphmodel"
+			],
+			[
+				"get",
+				"getNodeProperty"
+			],
+			[
+				"targ",
+				"targetInlet"
+			],
+			[
+				"in",
+				"interactive_edge"
 			],
 			[
 				"inle",
-				"inlet_layout"
+				"_inlets"
 			],
 			[
-				"GraphicsMou",
-				"GraphicsSceneMousePress"
+				"create",
+				"create_node"
 			],
 			[
-				"sceneEven",
-				"sceneEventFilter"
+				"handle",
+				"handleNodesPropertiesChanged"
 			],
 			[
-				"instal",
-				"installSceneEventFilter"
-			],
-			[
-				"NodeW",
-				"NodeWidget2"
-			],
-			[
-				"Arrow",
-				"QGraphicsArrowItem"
-			],
-			[
-				"_node",
-				"_node_edges"
-			],
-			[
-				"trigg",
-				"triggered"
-			],
-			[
-				"tri",
-				"triggered"
-			],
-			[
-				"setS",
-				"setStyle"
+				"unique",
+				"make_unique_name"
 			],
 			[
 				"QMenu",
 				"QMenuBar"
 			],
 			[
-				"_edg",
-				"_edge_targets"
+				"Node",
+				"NodeWidget"
 			],
 			[
-				"ce",
-				"cellWidget"
+				"itemi",
+				"ItemIsSelectable"
 			],
 			[
-				"itemA",
-				"itemAt"
+				"item",
+				"_item_to_widget_map"
 			],
 			[
-				"QTableW",
-				"QTableWidgetItem"
+				"mapF",
+				"mapFromGlobal"
 			],
 			[
-				"QTable",
-				"QTableWidgetItem"
+				"map",
+				"mapFromGlobal"
 			],
 			[
-				"on_",
-				"on_item_changed"
+				"dra",
+				"DragMode"
 			],
 			[
-				"clear",
-				"clearContents"
+				"geom",
+				"geometryChanged"
 			],
 			[
-				"QAbleW",
-				"QTableWidgetItem"
+				"Graphics",
+				"GraphicsItemFlag"
 			],
 			[
-				"setVer",
-				"setVerticalHeaderItem"
+				"geome",
+				"geometryChanged"
 			],
 			[
-				"inser",
-				"insertRow"
+				"Fla",
+				"GraphicsItemFlag"
 			],
 			[
 				"set",
-				"setText"
+				"setColor"
 			],
 			[
-				"upda",
-				"updateView"
+				"addR",
+				"addRoundedRect"
 			],
 			[
-				"patch_",
-				"patch_list"
+				"circl",
+				"circle_shape"
 			],
 			[
-				"dic",
-				"dict_diff"
+				"makeL",
+				"makeLineBetweenShapes"
 			],
 			[
-				"begin",
-				"beginInsertRows"
+				"sceneP",
+				"scenePositionChanged"
 			],
 			[
-				"nodelist",
-				"nodelistview"
+				"rec",
+				"rect_shape"
 			],
 			[
-				"nodel",
-				"nodelist"
+				"Qpoint",
+				"QPointF"
 			],
 			[
-				"QStan",
-				"QStandardItemModel"
+				"Qpoin",
+				"QPointF"
+			],
+			[
+				"QLine",
+				"QLineF"
+			],
+			[
+				"inters",
+				"intersectLineWithRectangle"
+			],
+			[
+				"Qpainter",
+				"QPainterPath"
+			],
+			[
+				"getEd",
+				"getEdgeSource"
+			],
+			[
+				"geometry",
+				"geometryChanged"
+			],
+			[
+				"Standa",
+				"StandardNodeItem"
+			],
+			[
+				"_",
+				"_item_to_widget_map"
+			],
+			[
+				"gra",
+				"graph_model"
+			],
+			[
+				"gr",
+				"graph_model"
+			],
+			[
+				"editor",
+				"editor_layout"
+			],
+			[
+				"setu",
+				"setupUI"
+			],
+			[
+				"split",
+				"split_cells"
+			],
+			[
+				"block",
+				"blockNumber"
+			],
+			[
+				"cell",
+				"cell_at_line"
+			],
+			[
+				"Inde",
+				"IndexError"
+			],
+			[
+				"cell_",
+				"cell_at_line"
+			],
+			[
+				"text",
+				"textwrap"
+			],
+			[
+				"setPla",
+				"setPlainText"
+			],
+			[
+				"cells",
+				"cells_view"
+			],
+			[
+				"setPl",
+				"setPlainText"
+			],
+			[
+				"Sc",
+				"ScriptEdit"
+			],
+			[
+				"pre",
+				"preview_area"
+			],
+			[
+				"preview",
+				"preview_area"
+			],
+			[
+				"class",
+				"classmethod"
+			],
+			[
+				"gc",
+				"get_context"
+			],
+			[
+				"per",
+				"perf_counter_ns"
+			],
+			[
+				"pain",
+				"painting"
+			],
+			[
+				"setSwap",
+				"setSwapBehavior"
+			],
+			[
+				"setSw",
+				"setSwapInterval"
+			],
+			[
+				"call",
+				"callback"
+			],
+			[
+				"glEnableVerte",
+				"glEnableVertexAttribArray"
+			],
+			[
+				"QOpenGLShader",
+				"QOpenGLShaderProgram"
+			],
+			[
+				"GL",
+				"GLCanvas"
+			],
+			[
+				"reques",
+				"requestUpdate"
+			],
+			[
+				"initi",
+				"initializeOpenGLFunctions"
+			],
+			[
+				"reque",
+				"requestedFormat"
 			]
 		]
 	},
@@ -523,1453 +523,1975 @@
 			"file": "pylive/NetworkXGraphEditor/nx_graph_scene.py",
 			"settings":
 			{
-				"buffer_size": 9267,
+				"buffer_size": 9879,
 				"encoding": "UTF-8",
-				"line_ending": "Windows"
+				"line_ending": "Unix"
 			},
 			"undo_stack":
 			[
 				[
-					5,
-					1,
-					"paste",
-					null,
-					"AQAAAAAAAAAAAAAAwB0AAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					9,
-					1,
-					"paste",
-					null,
-					"AgAAAAAAAAAAAAAAZz8AAAAAAAAAAAAAZz8AAAAAAABnPwAAAAAAAMgdAABpbXBvcnQgc3lzCmZyb20gUHlTaWRlNi5RdEd1aSBpbXBvcnQgKgpmcm9tIFB5U2lkZTYuUXRDb3JlIGltcG9ydCAqCmZyb20gUHlTaWRlNi5RdFdpZGdldHMgaW1wb3J0ICoKZnJvbSB0eXBpbmcgaW1wb3J0ICoKCmZyb20gcHlsaXZlLmRlY2xlcmF0aXZlX3dpZGdldHMgaW1wb3J0IFBhbmVsCmZyb20gcHlsaXZlLlF0R3JhcGhFZGl0b3IuZ3JhcGhtb2RlbF9jb2x1bW5iYXNlZCBpbXBvcnQgKAoJR3JhcGhNb2RlbCwgCglOb2RlUmVmLCBJbmxldFJlZiwgT3V0bGV0UmVmLCBFZGdlUmVmLCAKCU5vZGVBdHRyaWJ1dGUsIElubGV0QXR0cmlidXRlLCBPdXRsZXRBdHRyaWJ1dGUsIEVkZ2VBdHRyaWJ1dGUKKQoKCmNsYXNzIE1pbmlUYWJsZVZpZXcoUVRhYmxlVmlldyk6CglkZWYgX19pbml0X18oc2VsZiwgcGFyZW50PU5vbmUpOgoJCXN1cGVyKCkuX19pbml0X18ocGFyZW50KQoJCXNlbGYuc2V0U2VsZWN0aW9uQmVoYXZpb3IoUVRhYmxlVmlldy5TZWxlY3Rpb25CZWhhdmlvci5TZWxlY3RSb3dzKQoJCXNlbGYudmVydGljYWxIZWFkZXIoKS5zZXRTZWN0aW9uUmVzaXplTW9kZShRSGVhZGVyVmlldy5SZXNpemVNb2RlLlJlc2l6ZVRvQ29udGVudHMpCgkJc2VsZi5ob3Jpem9udGFsSGVhZGVyKCkuc2V0U2VjdGlvblJlc2l6ZU1vZGUoUUhlYWRlclZpZXcuUmVzaXplTW9kZS5SZXNpemVUb0NvbnRlbnRzKQoJCQoJCSMgc2VsZi5zZXRTaXplUG9saWN5KFFTaXplUG9saWN5Lk1heGltdW0sIFFTaXplUG9saWN5Lk1heGltdW0pCgoKY2xhc3MgR3JhcGhEZXRhaWxzVmlldyhRV2lkZ2V0KToKCWRlZiBfX2luaXRfXyhzZWxmLCBwYXJlbnQ9Tm9uZSk6CgkJc3VwZXIoKS5fX2luaXRfXyhwYXJlbnQpCgoJCXNlbGYuX21vZGVsID0gTm9uZQoJCSMgY3JlYXRlIG5vZGUgZGV0YWlscyBlZGl0b3IKCgkJIyBub2RlIGRhdGEgZWRpdG9ycwoJCXNlbGYuaWRfbGFiZWwgPSAgUUxhYmVsKCkKCQlzZWxmLm5hbWVfZWRpdCA9IFFMaW5lRWRpdCgpCgkJc2VsZi5wb3N4X2VkaXQgPSBRU3BpbkJveCgpCgkJc2VsZi5wb3N4X2VkaXQuc2V0UmFuZ2UoLTk5OTksIDk5OTkpCgkJc2VsZi5wb3N5X2VkaXQgPSBRU3BpbkJveCgpCgkJc2VsZi5wb3N5X2VkaXQuc2V0UmFuZ2UoLTk5OTksIDk5OTkpCgoJCSMjIyBJbmxldHMgVGFibGUgIyMjCgkJc2VsZi5pbmxldHNfc2hlZXRfZWRpdG9yID0gTWluaVRhYmxlVmlldygpCgoJCXNlbGYuaW5sZXRzX21lbnViYXIgPSBRTWVudUJhcigpCgkJYWRkSW5sZXRBY3Rpb24gPSBRQWN0aW9uKCLvvIsiLCBzZWxmKQoJCWFkZElubGV0QWN0aW9uLnRyaWdnZXJlZC5jb25uZWN0KHNlbGYuYWRkSW5sZXRUb0N1cnJlbnROb2RlKQoJCXJlbW92ZUlubGV0QWN0aW9uID0gUUFjdGlvbigi77yNIiwgc2VsZikKCQlyZW1vdmVJbmxldEFjdGlvbi50cmlnZ2VyZWQuY29ubmVjdChzZWxmLnJlbW92ZVNlbGVjdGVkSW5sZXRzKQoJCXNlbGYuaW5sZXRzX21lbnViYXIuYWRkQWN0aW9uKGFkZElubGV0QWN0aW9uKQoJCXNlbGYuaW5sZXRzX21lbnViYXIuYWRkQWN0aW9uKHJlbW92ZUlubGV0QWN0aW9uKQoKCQkKCQkjIyMgT3V0bGV0cyBUYWJsZSAjIyMKCQlzZWxmLm91dGxldHNfc2hlZXRfZWRpdG9yID0gTWluaVRhYmxlVmlldygpCgoJCXNlbGYub3V0bGV0c19tZW51YmFyID0gUU1lbnVCYXIoKQoJCWFkZE91dGxldEFjdGlvbiA9IFFBY3Rpb24oIu+8iyIsIHNlbGYpCgkJYWRkT3V0bGV0QWN0aW9uLnRyaWdnZXJlZC5jb25uZWN0KHNlbGYuYWRkT3V0bGV0VG9DdXJyZW50Tm9kZSkKCQlhZGRPdXRsZXRBY3Rpb24udHJpZ2dlcmVkLmNvbm5lY3Qoc2VsZi5yZW1vdmVTZWxlY3RlZE91dGxldHMpCgkJcmVtb3ZlT3V0bGV0QWN0aW9uID0gUUFjdGlvbigi77yNIiwgc2VsZikKCQlzZWxmLm91dGxldHNfbWVudWJhci5hZGRBY3Rpb24oYWRkT3V0bGV0QWN0aW9uKQoJCXNlbGYub3V0bGV0c19tZW51YmFyLmFkZEFjdGlvbihyZW1vdmVPdXRsZXRBY3Rpb24pCgkJCgoJCWZvcm1MYXlvdXQgPSBRRm9ybUxheW91dCgpCgkJIyBzZWxmLmxheW91dCgpLnNldEZpZWxkR3Jvd3RoUG9saWN5KFFGb3JtTGF5b3V0LkZpZWxkc1N0YXlBdFNpemVIaW50KQoJCWZvcm1MYXlvdXQuYWRkUm93KCJOYW1lOiIsIHNlbGYubmFtZV9lZGl0KQoJCWZvcm1MYXlvdXQuYWRkUm93KCJQb3MgWDoiLCBzZWxmLnBvc3hfZWRpdCkKCQlmb3JtTGF5b3V0LmFkZFJvdygiUG9zIFk6Iiwgc2VsZi5wb3N5X2VkaXQpCgkJZm9ybUxheW91dC5hZGRSb3coIklubGV0czoiLCBQYW5lbChkaXJlY3Rpb249UUJveExheW91dC5EaXJlY3Rpb24uVG9wVG9Cb3R0b20sCgkJCWNoaWxkcmVuPVsKCQkJCXNlbGYuaW5sZXRzX3NoZWV0X2VkaXRvcgoJCQldLAoJCQltZW51QmFyPXNlbGYuaW5sZXRzX21lbnViYXIKCQkpKQoJCWZvcm1MYXlvdXQuYWRkUm93KCJPdXRsZXRzOiIsIFBhbmVsKGRpcmVjdGlvbj1RQm94TGF5b3V0LkRpcmVjdGlvbi5Ub3BUb0JvdHRvbSwKCQkJY2hpbGRyZW49WwoJCQkJc2VsZi5vdXRsZXRzX3NoZWV0X2VkaXRvcgoJCQldLAoJCQltZW51QmFyPXNlbGYub3V0bGV0c19tZW51YmFyCgkJKSkKCQlzZWxmLnBhbmVsID0gUVdpZGdldCgpCgkJc2VsZi5wYW5lbC5zZXRMYXlvdXQoZm9ybUxheW91dCkKCgkJc2VsZi5tYXBwZXIgPSBRRGF0YVdpZGdldE1hcHBlcigpCgkJc2VsZi5tYXBwZXIuc2V0U3VibWl0UG9saWN5KFFEYXRhV2lkZ2V0TWFwcGVyLlN1Ym1pdFBvbGljeS5BdXRvU3VibWl0KQoKCQkjIHNlbGYucGFuZWwgPSBQYW5lbCgKCQkjIAlkaXJlY3Rpb249UUJveExheW91dC5Ub3BUb0JvdHRvbSwKCQkjIAljaGlsZHJlbj1bCgkJIyAJCXNlbGYuaWRfbGFiZWwsCgkJIyAJCXNlbGYubmFtZV9lZGl0LAoJCSMgCQlzZWxmLnBvc3hfZWRpdCwKCQkjIAkJc2VsZi5wb3N5X2VkaXQsCgkJIyAJCXNlbGYuaW5sZXRzX3NoZWV0X2VkaXRvciwKCQkjIAkJc2VsZi5vdXRsZXRzX3NoZWV0X2VkaXRvciwKCQkjIAldCgkJIyApCgoJCW1haW5fbGF5b3V0ID0gUVZCb3hMYXlvdXQoKQoJCXNlbGYuc2V0TGF5b3V0KG1haW5fbGF5b3V0KQoJCW1haW5fbGF5b3V0LmFkZFdpZGdldChzZWxmLnBhbmVsKQoJCW1haW5fbGF5b3V0LmFkZFN0cmV0Y2goKQoKCWRlZiBhZGRPdXRsZXRUb0N1cnJlbnROb2RlKHNlbGYpOgoJCWlmIHNlbGYuX21vZGVsIGFuZCBzZWxmLm5vZGVzX3NlbGVjdGlvbm1vZGVsOgoJCQlub2RlID0gTm9kZVJlZihzZWxmLm5vZGVzX3NlbGVjdGlvbm1vZGVsLmN1cnJlbnRJbmRleCgpKQoJCQlvdXRsZXQgPSBzZWxmLl9tb2RlbC5hZGRPdXRsZXQobm9kZSwgIjxvdXQ+IikKCQkJc2VsZi5vdXRsZXRzX3NoZWV0X2VkaXRvci5zZWxlY3RSb3cob3V0bGV0LnJvdygpKQoJCQlzZWxmLm91dGxldHNfc2hlZXRfZWRpdG9yLnNldEN1cnJlbnRJbmRleChvdXRsZXQpCgoJZGVmIGFkZElubGV0VG9DdXJyZW50Tm9kZShzZWxmKToKCQlpZiBzZWxmLl9tb2RlbCBhbmQgc2VsZi5ub2Rlc19zZWxlY3Rpb25tb2RlbDoKCQkJbm9kZSA9IE5vZGVSZWYoc2VsZi5ub2Rlc19zZWxlY3Rpb25tb2RlbC5jdXJyZW50SW5kZXgoKSwgc2VsZi5fbW9kZWwpCgkJCWlubGV0ID0gc2VsZi5fbW9kZWwuYWRkSW5sZXQobm9kZSwgIjxpbj4iKQoJCQlzZWxmLmlubGV0c19zaGVldF9lZGl0b3Iuc2VsZWN0Um93KGlubGV0LnJvdygpKQoJCQlzZWxmLmlubGV0c19zaGVldF9lZGl0b3Iuc2V0Q3VycmVudEluZGV4KGlubGV0KQoKCWRlZiByZW1vdmVTZWxlY3RlZElubGV0cyhzZWxmKToKCQlpZiBzZWxmLl9tb2RlbDoKCQkJaW5sZXRzID0gW0lubGV0UmVmKGlkeCwgc2VsZi5fbW9kZWwpIGZvciBpZHggaW4gc2VsZi5pbmxldHNfc2hlZXRfZWRpdG9yLnNlbGVjdGVkSW5kZXhlcygpIGlmIGlkeC5jb2x1bW4oKT09MF0KCQkJcHJpbnQoInJlbW92ZVNlbGVjdGVkSW5sZXRzOiB7c2VsZWN0ZWRJbmRleGVzfSIpCgkJCXNlbGYuX21vZGVsLnJlbW92ZUlubGV0cyhpbmxldHMpCgoJZGVmIHJlbW92ZVNlbGVjdGVkT3V0bGV0cyhzZWxmKToKCQlpZiBzZWxmLl9tb2RlbDoKCQkJb3V0bGV0cyA9IFtPdXRsZXRSZWYoaWR4LCBzZWxmLl9tb2RlbCkgZm9yIGlkeCBpbiBzZWxmLm91dGxldHNfc2hlZXRfZWRpdG9yLnNlbGVjdGVkSW5kZXhlcygpIGlmIGlkeC5jb2x1bW4oKT09MF0KCQkJc2VsZi5fbW9kZWwucmVtb3ZlT3V0bGV0cyhvdXRsZXRzKQoKCWRlZiBtb2RlbChzZWxmKToKCQlyZXR1cm4gc2VsZi5fbW9kZWwKCglkZWYgc2V0TW9kZWwoc2VsZiwgZ3JhcGhtb2RlbDpHcmFwaE1vZGVsKToKCQlzZWxmLl9tb2RlbCA9IGdyYXBobW9kZWwKCgkJIyBtYXBwZXIKCQkKCQlzZWxmLm1hcHBlci5zZXRNb2RlbChncmFwaG1vZGVsLl9ub2RlVGFibGUpCgkJIyBzZWxmLm1hcHBlci5hZGRNYXBwaW5nKHNlbGYuaWRfbGFiZWwsIDApCgkJc2VsZi5tYXBwZXIuYWRkTWFwcGluZyhzZWxmLm5hbWVfZWRpdCwgMSkKCQlzZWxmLm1hcHBlci5hZGRNYXBwaW5nKHNlbGYucG9zeF9lZGl0LCAyKQoJCXNlbGYubWFwcGVyLmFkZE1hcHBpbmcoc2VsZi5wb3N5X2VkaXQsIDMpCgoJCSMgaW5sZXRzIGxpc3QKCQlzZWxmLnNlbGVjdGVkX25vZGVfaW5sZXRzID0gUVNvcnRGaWx0ZXJQcm94eU1vZGVsKCkgICMgTm9kZSBjb2x1bW4gaXMgMSAoZm9yIG5vZGUgbmFtZSkKCQlzZWxmLnNlbGVjdGVkX25vZGVfaW5sZXRzLnNldFNvdXJjZU1vZGVsKGdyYXBobW9kZWwuX2lubGV0VGFibGUpCgkJc2VsZi5zZWxlY3RlZF9ub2RlX2lubGV0cy5zZXRGaWx0ZXJLZXlDb2x1bW4oR3JhcGhNb2RlbC5JbmxldERhdGFDb2x1bW4uT3duZXIpCgkJc2VsZi5pbmxldHNfc2hlZXRfZWRpdG9yLnNldE1vZGVsKHNlbGYuc2VsZWN0ZWRfbm9kZV9pbmxldHMpCgkJCgoJCSMgb3V0bGV0cyBsaXN0CgkJc2VsZi5zZWxlY3RlZF9ub2RlX291dGxldHMgPSBRU29ydEZpbHRlclByb3h5TW9kZWwoKSAgIyBOb2RlIGNvbHVtbiBpcyAxIChmb3Igbm9kZSBuYW1lKQoJCXNlbGYuc2VsZWN0ZWRfbm9kZV9vdXRsZXRzLnNldFNvdXJjZU1vZGVsKGdyYXBobW9kZWwuX291dGxldFRhYmxlKQoJCXNlbGYuc2VsZWN0ZWRfbm9kZV9vdXRsZXRzLnNldEZpbHRlcktleUNvbHVtbihHcmFwaE1vZGVsLk91dGxldERhdGFDb2x1bW4uT3duZXIpCgkJc2VsZi5vdXRsZXRzX3NoZWV0X2VkaXRvci5zZXRNb2RlbChzZWxmLnNlbGVjdGVkX25vZGVfb3V0bGV0cykKCgkJIyBzZXQgbm8gcm93cwoJCXNlbGYuc2V0Q3VycmVudE1vZGVsSW5kZXgoTm9uZSkKCglkZWYgc2V0Tm9kZXNTZWxlY3Rpb25Nb2RlbChzZWxmLCBub2Rlc19zZWxlY3Rpb25tb2RlbDpRSXRlbVNlbGVjdGlvbk1vZGVsKToKCQlzZWxmLm5vZGVzX3NlbGVjdGlvbm1vZGVsID0gbm9kZXNfc2VsZWN0aW9ubW9kZWwKCQlzZWxmLm5vZGVzX3NlbGVjdGlvbm1vZGVsLmN1cnJlbnRSb3dDaGFuZ2VkLmNvbm5lY3Qoc2VsZi5zZXRDdXJyZW50TW9kZWxJbmRleCkKCglkZWYgc2V0Q3VycmVudE1vZGVsSW5kZXgoc2VsZiwgbm9kZTpOb2RlUmVmKToKCQlpZiBub3Qgc2VsZi5fbW9kZWw6CgkJCXJldHVybgoKCQlpZiBub2RlLmlzVmFsaWQoKToKCQkJc2VsZi5pZF9sYWJlbC5zZXRUZXh0KG5vZGUuZGF0YSgpKQoJCQlzZWxmLm1hcHBlci5zZXRDdXJyZW50TW9kZWxJbmRleChub2RlKSAgIyBVcGRhdGUgdGhlIG1hcHBlcidzIGN1cnJlbnQgaW5kZXgKCQkJbm9kZV9uYW1lID0gc2VsZi5fbW9kZWwuX25vZGVUYWJsZS5pdGVtRnJvbUluZGV4KGluZGV4KS50ZXh0KCkgICMgR2V0IHRoZSBzZWxlY3RlZCBub2RlJ3MgbmFtZQoJCQlzZWxmLnNlbGVjdGVkX25vZGVfaW5sZXRzLnNldEZpbHRlckZpeGVkU3RyaW5nKG5vZGVfbmFtZSkgIyB1cGRhdGUgaW5sZXQgZmlsdGVycwoJCQlzZWxmLnNlbGVjdGVkX25vZGVfb3V0bGV0cy5zZXRGaWx0ZXJGaXhlZFN0cmluZyhub2RlX25hbWUpICMgdXBkYXRlIG91dGxldCBmaWx0ZXJzCgkJCXNlbGYucGFuZWwuc2hvdygpCgkJZWxzZToKCQkJc2VsZi5wYW5lbC5oaWRlKCkKCQkJIyBjbGVhciB3aWRnZXRzCgkJCXNlbGYubmFtZV9lZGl0LnNldFRleHQoIiIpCgkJCXNlbGYuc2VsZWN0ZWRfbm9kZV9pbmxldHMuc2V0RmlsdGVyRml4ZWRTdHJpbmcoIlNPTUVUSElORyBDT01QTElDQVRFRCBFTk9VR0hUIE5PVCBUTyBNQVRDIEFOWSBOT0RFIE5BTUVTIikgIyB1cGRhdGUgaW5sZXQgZmlsdGVycwoJCQlzZWxmLnNlbGVjdGVkX25vZGVfb3V0bGV0cy5zZXRGaWx0ZXJGaXhlZFN0cmluZygiU09NRVRISU5HIENPTVBMSUNBVEVEIEVOT1VHSFQgTk9UIFRPIE1BVEMgQU5ZIE5PREUgTkFNRVMiKSAjIHVwZGF0ZSBvdXRsZXQgZmlsdGVycwoKCQlzZWxmLmxheW91dCgpLmludmFsaWRhdGUoKQoKaWYgX19uYW1lX18gPT0gIl9fbWFpbl9fIjoKCWZyb20gdGFibGV2aWV3X2NvbHVtbmJhc2VkIGltcG9ydCBHcmFwaFRhYmxlVmlldwoJY2xhc3MgTWFpbldpbmRvdyhRV2lkZ2V0KToKCQlkZWYgX19pbml0X18oc2VsZik6CgkJCXN1cGVyKCkuX19pbml0X18oKQoKCQkJc2VsZi5zZXRXaW5kb3dUaXRsZSgiR3JhcGggRGV0YWlscyBWaWV3IEV4YW1wbGUiKQoKCQkJIyBJbml0aWFsaXplIHRoZSBHcmFwaE1vZGVsCgkJCXNlbGYuZ3JhcGhfbW9kZWwgPSBHcmFwaE1vZGVsKCkKCQkJc2VsZi5ub2Rlc19zZWxlY3Rpb25tb2RlbCA9IFFJdGVtU2VsZWN0aW9uTW9kZWwoc2VsZi5ncmFwaF9tb2RlbC5fbm9kZVRhYmxlKQoKCQkJIyBBZGQgc29tZSBleGFtcGxlIG5vZGVzIGFuZCBlZGdlcwoJCQlzdGFydF9ub2RlID0gc2VsZi5ncmFwaF9tb2RlbC5hZGROb2RlKCJTdGFydE5vZGUiLCAwLCAwKQoJCQlmaW5pc2hfbm9kZSA9IHNlbGYuZ3JhcGhfbW9kZWwuYWRkTm9kZSgiRmluaXNoTm9kZSIsIDEwLCAyMDApCgkJCW91dGxldF9pZCA9IHNlbGYuZ3JhcGhfbW9kZWwuYWRkT3V0bGV0KHN0YXJ0X25vZGUsICJPdXQiKQoJCQlpbmxldF9pZCA9IHNlbGYuZ3JhcGhfbW9kZWwuYWRkSW5sZXQoZmluaXNoX25vZGUsICJJbiIpCgkJCWVkZ2UgPSBzZWxmLmdyYXBoX21vZGVsLmFkZEVkZ2Uob3V0bGV0X2lkLCBpbmxldF9pZCkKCgkJCSMgU2V0IHVwIHRoZSBub2RlIGVkaXRvciB2aWV3CgkJCXNlbGYuZ3JhcGhfdGFibGVfdmlldyA9IEdyYXBoVGFibGVWaWV3KCkKCQkJc2VsZi5ncmFwaF90YWJsZV92aWV3LnNldE1vZGVsKHNlbGYuZ3JhcGhfbW9kZWwpCgkJCXNlbGYuZ3JhcGhfdGFibGVfdmlldy5zZXROb2Rlc1NlbGVjdGlvbk1vZGVsKHNlbGYubm9kZXNfc2VsZWN0aW9ubW9kZWwpCgkJCXNlbGYuZ3JhcGhfZGV0YWlsc192aWV3ID0gR3JhcGhEZXRhaWxzVmlldygpCgkJCXNlbGYuZ3JhcGhfZGV0YWlsc192aWV3LnNldE1vZGVsKHNlbGYuZ3JhcGhfbW9kZWwpCgkJCXNlbGYuZ3JhcGhfZGV0YWlsc192aWV3LnNldE5vZGVzU2VsZWN0aW9uTW9kZWwoc2VsZi5ub2Rlc19zZWxlY3Rpb25tb2RlbCkKCQkJCgkJCW1haW5fbGF5b3V0ID0gUUhCb3hMYXlvdXQoKQoJCQlzZWxmLnNldExheW91dChtYWluX2xheW91dCkKCQkJbWFpbl9sYXlvdXQuYWRkV2lkZ2V0KHNlbGYuZ3JhcGhfdGFibGVfdmlldywgMSkKCQkJbWFpbl9sYXlvdXQuYWRkV2lkZ2V0KHNlbGYuZ3JhcGhfZGV0YWlsc192aWV3LCAxKQoKCWFwcCA9IFFBcHBsaWNhdGlvbihzeXMuYXJndikKCXdpbmRvdyA9IE1haW5XaW5kb3coKQoJd2luZG93LnNob3coKQoJc3lzLmV4aXQoYXBwLmV4ZWMoKSkK",
-					"AQAAAAAAAAABAAAAAAAAAAAAAADAHQAAAAAAAAAAAAAAAPC/"
-				],
-				[
 					21,
-					3,
-					"left_delete",
-					null,
-					"BgAAACk+AAAAAAAAKT4AAAAAAAANAAAAaW5sZXRzPVsiaW4iXQI+AAAAAAAAAj4AAAAAAAANAAAAaW5sZXRzPVsiaW4iXRs+AAAAAAAAGz4AAAAAAAABAAAAIAE+AAAAAAAAAT4AAAAAAAABAAAAIBk+AAAAAAAAGT4AAAAAAAABAAAALAA+AAAAAAAAAD4AAAAAAAABAAAALA",
-					"AQAAAAAAAAACAAAAAj4AAAAAAAAPPgAAAAAAAAAAAAAAAPC/KT4AAAAAAAA2PgAAAAAAAAAAAAAAAPC/"
+					1,
+					"insert",
+					{
+						"characters": "_="
+					},
+					"AgAAAPcGAAAAAAAA+AYAAAAAAAAAAAAA+AYAAAAAAAD5BgAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA9wYAAAAAAAD3BgAAAAAAAAAAAAAAAPC/"
 				],
 				[
 					26,
 					1,
-					"left_delete",
+					"paste",
 					null,
-					"AQAAANc9AAAAAAAA1z0AAAAAAAARAAAALCBvdXRsZXRzPVsib3V0Il0",
-					"AQAAAAAAAAABAAAA6D0AAAAAAADXPQAAAAAAAAAAAAAAAPC/"
+					"AQAAAGwHAAAAAAAAbgcAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAbAcAAAAAAABsBwAAAAAAAAAAAAAAAPC/"
 				],
 				[
 					29,
 					1,
-					"left_delete",
+					"paste",
 					null,
-					"AQAAAAc+AAAAAAAABz4AAAAAAAARAAAALCBvdXRsZXRzPVsib3V0Il0",
-					"AQAAAAAAAAABAAAABz4AAAAAAAAYPgAAAAAAAAAAAAAAAPC/"
+					"AQAAAOwHAAAAAAAA7gcAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA7AcAAAAAAADsBwAAAAAAAAAAAAAAAPC/"
 				],
 				[
-					33,
-					2,
-					"left_delete",
+					32,
+					1,
+					"paste",
 					null,
-					"AgAAACY+AAAAAAAAJj4AAAAAAAAOAAAAICgib3V0IiwgImluIiklPgAAAAAAACU+AAAAAAAAAQAAACw",
-					"AQAAAAAAAAABAAAAJj4AAAAAAAA0PgAAAAAAAAAAAAAAAPC/"
+					"AQAAAGEIAAAAAAAAYwgAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAYQgAAAAAAABhCAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					44,
+					1,
+					"insert",
+					{
+						"characters": ":"
+					},
+					"AQAAAMEFAAAAAAAAwgUAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAwQUAAAAAAADBBQAAAAAAAAAAAAAAAPC/"
 				],
 				[
 					45,
-					4,
+					1,
+					"paste",
+					null,
+					"AQAAAMIFAAAAAAAAzgUAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAwgUAAAAAAADCBQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					51,
+					1,
 					"left_delete",
 					null,
-					"BAAAABIFAAAAAAAAEgUAAAAAAACUAAAAQGRhdGFjbGFzcyhmcm96ZW49VHJ1ZSkKY2xhc3MgT3V0bGV0SWQ6CiAgICBub2RlSWQ6IE5vZGVJZAogICAgbmFtZTogc3RyCgoKQGRhdGFjbGFzcyhmcm96ZW49VHJ1ZSkKY2xhc3MgSW5sZXRJZDoKICAgIG5vZGVJZDogTm9kZUlkCiAgICBuYW1lOiBzdHIKChEFAAAAAAAAEQUAAAAAAAABAAAAChAFAAAAAAAAEAUAAAAAAAABAAAACg8FAAAAAAAADwUAAAAAAAABAAAACg",
-					"AQAAAAAAAAABAAAApgUAAAAAAAASBQAAAAAAAAAAAAAAAPC/"
+					"AQAAAD4PAAAAAAAAPg8AAAAAAAABAAAAaw",
+					"AQAAAAAAAAABAAAAPw8AAAAAAAA/DwAAAAAAAAAAAAAAAPC/"
 				],
 				[
-					50,
-					2,
+					52,
+					1,
+					"insert",
+					{
+						"characters": "_"
+					},
+					"AQAAAD4PAAAAAAAAPw8AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAPg8AAAAAAAA+DwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					57,
+					1,
 					"left_delete",
 					null,
-					"AgAAAOIpAAAAAAAA4ikAAAAAAAA4CgAACmNsYXNzIE91dGxldEdyYXBoaWNzT2JqZWN0KFBvcnRTaGFwZSk6CiAgICBkZWYgX19pbml0X18oc2VsZiwgbzogT3V0bGV0SWQpOgogICAgICAgIHN1cGVyKCkuX19pbml0X18obGFiZWw9ZiJ7by5uYW1lfSIpCiAgICAgICAgc2VsZi5fbyA9IG8KCiAgICBkZWYgZ3JhcGhzY2VuZShzZWxmKSAtPiAiTlhHcmFwaFNjZW5lIjoKICAgICAgICByZXR1cm4gY2FzdChOWEdyYXBoU2NlbmUsIHNlbGYuc2NlbmUoKSkKCiAgICBkZWYgbW91c2VQcmVzc0V2ZW50KHNlbGYsIGV2ZW50OiBRR3JhcGhpY3NTY2VuZU1vdXNlRXZlbnQpIC0+IE5vbmU6CiAgICAgICAgc2VsZi5ncmFwaHNjZW5lKCkubWFrZURyYWZ0TGluaygpCiAgICAgICAgc2VsZi5ncmFiTW91c2UoKQoKICAgIGRlZiBtb3VzZU1vdmVFdmVudChzZWxmLCBldmVudDogUUdyYXBoaWNzU2NlbmVNb3VzZUV2ZW50KSAtPiBOb25lOgogICAgICAgIGRyYWZ0ID0gc2VsZi5ncmFwaHNjZW5lKCkuZHJhZnQKICAgICAgICBhc3NlcnQgZHJhZnQgaXMgbm90IE5vbmUKCiAgICAgICAgaWYgaW5sZXQgOj0gc2VsZi5ncmFwaHNjZW5lKCkuaW5sZXRBdChldmVudC5zY2VuZVBvcygpKToKICAgICAgICAgICAgZHJhZnQubW92ZShzZWxmLCBpbmxldCkKICAgICAgICBlbHNlOgogICAgICAgICAgICBkcmFmdC5tb3ZlKHNlbGYsIGV2ZW50LnNjZW5lUG9zKCkpCiAgICAgICAgcmV0dXJuIHN1cGVyKCkubW91c2VNb3ZlRXZlbnQoZXZlbnQpCgogICAgZGVmIG1vdXNlUmVsZWFzZUV2ZW50KHNlbGYsIGV2ZW50OiBRR3JhcGhpY3NTY2VuZU1vdXNlRXZlbnQpIC0+IE5vbmU6CiAgICAgICAgc2VsZi51bmdyYWJNb3VzZSgpCiAgICAgICAgc2VsZi5ncmFwaHNjZW5lKCkucmVzZXREcmFmdExpbmsoKQoKICAgICAgICBpZiBpbmxldCA6PSBzZWxmLmdyYXBoc2NlbmUoKS5pbmxldEF0KGV2ZW50LnNjZW5lUG9zKCkpOgogICAgICAgICAgICBzY2VuZSA9IHNlbGYuZ3JhcGhzY2VuZSgpCiAgICAgICAgICAgIHNjZW5lLl9tb2RlbC5hZGRFZGdlKAogICAgICAgICAgICAgICAgc2VsZi5fby5ub2RlSWQsIGlubGV0Ll9pLm5vZGVJZCwgKHNlbGYuX28ubmFtZSwgaW5sZXQuX2kubmFtZSkKICAgICAgICAgICAgKQoKICAgICAgICByZXR1cm4gc3VwZXIoKS5tb3VzZVJlbGVhc2VFdmVudChldmVudCkKCiAgICBkZWYgYnJ1c2goc2VsZik6CiAgICAgICAgYnJ1c2ggPSBzdXBlcigpLmJydXNoKCkKICAgICAgICBpZiBzZWxmLmdyYXBoc2NlbmUoKS5pc0xpbmtlZChzZWxmLl9vKToKICAgICAgICAgICAgYnJ1c2ggPSBzZWxmLnBhbGV0dGUoKS50ZXh0KCkKCiAgICAgICAgcmV0dXJuIGJydXNoCgoKY2xhc3MgSW5sZXRHcmFwaGljc09iamVjdChQb3J0U2hhcGUpOgogICAgZGVmIF9faW5pdF9fKHNlbGYsIGk6IElubGV0SWQpOgogICAgICAgIHN1cGVyKCkuX19pbml0X18obGFiZWw9ZiJ7aS5uYW1lfSIpCiAgICAgICAgc2VsZi5faSA9IGkKCiAgICBkZWYgZ3JhcGhzY2VuZShzZWxmKSAtPiAiTlhHcmFwaFNjZW5lIjoKICAgICAgICByZXR1cm4gY2FzdChOWEdyYXBoU2NlbmUsIHNlbGYuc2NlbmUoKSkKCiAgICBkZWYgbW91c2VQcmVzc0V2ZW50KHNlbGYsIGV2ZW50OiBRR3JhcGhpY3NTY2VuZU1vdXNlRXZlbnQpIC0+IE5vbmU6CiAgICAgICAgc2VsZi5ncmFwaHNjZW5lKCkubWFrZURyYWZ0TGluaygpCiAgICAgICAgc2VsZi5ncmFiTW91c2UoKQoKICAgIGRlZiBtb3VzZU1vdmVFdmVudChzZWxmLCBldmVudDogUUdyYXBoaWNzU2NlbmVNb3VzZUV2ZW50KSAtPiBOb25lOgogICAgICAgIGRyYWZ0ID0gc2VsZi5ncmFwaHNjZW5lKCkuZHJhZnQKICAgICAgICBhc3NlcnQgZHJhZnQgaXMgbm90IE5vbmUKCiAgICAgICAgaWYgb3V0bGV0IDo9IHNlbGYuZ3JhcGhzY2VuZSgpLm91dGxldEF0KGV2ZW50LnNjZW5lUG9zKCkpOgogICAgICAgICAgICBkcmFmdC5tb3ZlKG91dGxldCwgc2VsZikKICAgICAgICBlbHNlOgogICAgICAgICAgICBkcmFmdC5tb3ZlKGV2ZW50LnNjZW5lUG9zKCksIHNlbGYpCiAgICAgICAgcmV0dXJuIHN1cGVyKCkubW91c2VNb3ZlRXZlbnQoZXZlbnQpCgogICAgZGVmIG1vdXNlUmVsZWFzZUV2ZW50KHNlbGYsIGV2ZW50OiBRR3JhcGhpY3NTY2VuZU1vdXNlRXZlbnQpIC0+IE5vbmU6CiAgICAgICAgc2VsZi51bmdyYWJNb3VzZSgpCiAgICAgICAgc2VsZi5ncmFwaHNjZW5lKCkucmVzZXREcmFmdExpbmsoKQoKICAgICAgICBpZiBvdXRsZXQgOj0gc2VsZi5ncmFwaHNjZW5lKCkub3V0bGV0QXQoZXZlbnQuc2NlbmVQb3MoKSk6CiAgICAgICAgICAgIHNlbGYuZ3JhcGhzY2VuZSgpLl9tb2RlbC5hZGRFZGdlKAogICAgICAgICAgICAgICAgb3V0bGV0Ll9vLm5vZGVJZCwgc2VsZi5faS5ub2RlSWQsIChvdXRsZXQuX28ubmFtZSwgc2VsZi5faS5uYW1lKQogICAgICAgICAgICApCgogICAgICAgIHJldHVybiBzdXBlcigpLm1vdXNlUmVsZWFzZUV2ZW50KGV2ZW50KQoKICAgIGRlZiBicnVzaChzZWxmKToKICAgICAgICBicnVzaCA9IHN1cGVyKCkuYnJ1c2goKQogICAgICAgIGlmIHNlbGYuZ3JhcGhzY2VuZSgpLmlzTGlua2VkKHNlbGYuX2kpOgogICAgICAgICAgICBicnVzaCA9IHNlbGYucGFsZXR0ZSgpLnRleHQoKQoKICAgICAgICByZXR1cm4gYnJ1c2gK4SkAAAAAAADhKQAAAAAAAAEAAAAK",
-					"AQAAAAAAAAABAAAA4ikAAAAAAAAaNAAAAAAAAAAAAAAAAPC/"
+					"AQAAAD4PAAAAAAAAPg8AAAAAAAABAAAAXw",
+					"AQAAAAAAAAABAAAAPw8AAAAAAAA/DwAAAAAAAAAAAAAAAPC/"
 				],
 				[
-					59,
+					58,
 					1,
 					"insert",
 					{
-						"characters": "Verte"
+						"characters": "k"
 					},
-					"BgAAAPwpAAAAAAAA/SkAAAAAAAAAAAAA/SkAAAAAAAD9KQAAAAAAAAkAAABOb2RlU2hhcGX9KQAAAAAAAP4pAAAAAAAAAAAAAP4pAAAAAAAA/ykAAAAAAAAAAAAA/ykAAAAAAAAAKgAAAAAAAAAAAAAAKgAAAAAAAAEqAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAA/CkAAAAAAAAFKgAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					60,
-					1,
-					"insert",
-					{
-						"characters": " x"
-					},
-					"AgAAAAEqAAAAAAAAAioAAAAAAAAAAAAAAioAAAAAAAADKgAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAASoAAAAAAAABKgAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					61,
-					2,
-					"left_delete",
-					null,
-					"AgAAAAIqAAAAAAAAAioAAAAAAAABAAAAeAEqAAAAAAAAASoAAAAAAAABAAAAIA",
-					"AQAAAAAAAAABAAAAAyoAAAAAAAADKgAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					62,
-					1,
-					"insert",
-					{
-						"characters": "xShape"
-					},
-					"BgAAAAEqAAAAAAAAAioAAAAAAAAAAAAAAioAAAAAAAADKgAAAAAAAAAAAAADKgAAAAAAAAQqAAAAAAAAAAAAAAQqAAAAAAAABSoAAAAAAAAAAAAABSoAAAAAAAAGKgAAAAAAAAAAAAAGKgAAAAAAAAcqAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAASoAAAAAAAABKgAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					67,
-					1,
-					"insert",
-					{
-						"characters": "VertexGraph"
-					},
-					"DAAAAOkpAAAAAAAA6ikAAAAAAAAAAAAA6ikAAAAAAADqKQAAAAAAABIAAABOb2RlR3JhcGhpY3NPYmplY3TqKQAAAAAAAOspAAAAAAAAAAAAAOspAAAAAAAA7CkAAAAAAAAAAAAA7CkAAAAAAADtKQAAAAAAAAAAAADtKQAAAAAAAO4pAAAAAAAAAAAAAO4pAAAAAAAA7ykAAAAAAAAAAAAA7ykAAAAAAADwKQAAAAAAAAAAAADwKQAAAAAAAPEpAAAAAAAAAAAAAPEpAAAAAAAA8ikAAAAAAAAAAAAA8ikAAAAAAADzKQAAAAAAAAAAAADzKQAAAAAAAPQpAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAA6SkAAAAAAAD7KQAAAAAAAAAAAAAAAPC/"
+					"AQAAAD4PAAAAAAAAPw8AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAPg8AAAAAAAA+DwAAAAAAAAAAAAAAAPC/"
 				],
 				[
 					68,
 					1,
 					"insert",
 					{
-						"characters": "icsObjec"
+						"characters": "\n\n"
 					},
-					"CAAAAPQpAAAAAAAA9SkAAAAAAAAAAAAA9SkAAAAAAAD2KQAAAAAAAAAAAAD2KQAAAAAAAPcpAAAAAAAAAAAAAPcpAAAAAAAA+CkAAAAAAAAAAAAA+CkAAAAAAAD5KQAAAAAAAAAAAAD5KQAAAAAAAPopAAAAAAAAAAAAAPopAAAAAAAA+ykAAAAAAAAAAAAA+ykAAAAAAAD8KQAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAA9CkAAAAAAAD0KQAAAAAAAAAAAAAAAPC/"
+					"BQAAAIwLAAAAAAAAjQsAAAAAAAAAAAAAjQsAAAAAAACVCwAAAAAAAAAAAACVCwAAAAAAAJYLAAAAAAAAAAAAAJYLAAAAAAAAngsAAAAAAAAAAAAAjQsAAAAAAACNCwAAAAAAAAgAAAAgICAgICAgIA",
+					"AQAAAAAAAAABAAAAjAsAAAAAAACMCwAAAAAAAAAAAAAAAPC/"
 				],
 				[
 					69,
 					1,
+					"left_delete",
+					null,
+					"AQAAAJILAAAAAAAAkgsAAAAAAAAEAAAAICAgIA",
+					"AQAAAAAAAAABAAAAlgsAAAAAAACWCwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					70,
+					1,
 					"insert",
 					{
-						"characters": "t"
+						"characters": "def"
 					},
-					"AQAAAPwpAAAAAAAA/SkAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAA/CkAAAAAAAD8KQAAAAAAAAAAAAAAAPC/"
+					"AwAAAJILAAAAAAAAkwsAAAAAAAAAAAAAkwsAAAAAAACUCwAAAAAAAAAAAACUCwAAAAAAAJULAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAkgsAAAAAAACSCwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					71,
+					1,
+					"insert",
+					{
+						"characters": " source"
+					},
+					"BwAAAJULAAAAAAAAlgsAAAAAAAAAAAAAlgsAAAAAAACXCwAAAAAAAAAAAACXCwAAAAAAAJgLAAAAAAAAAAAAAJgLAAAAAAAAmQsAAAAAAAAAAAAAmQsAAAAAAACaCwAAAAAAAAAAAACaCwAAAAAAAJsLAAAAAAAAAAAAAJsLAAAAAAAAnAsAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAlQsAAAAAAACVCwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					72,
+					1,
+					"insert",
+					{
+						"characters": "GraphicsOb"
+					},
+					"CgAAAJwLAAAAAAAAnQsAAAAAAAAAAAAAnQsAAAAAAACeCwAAAAAAAAAAAACeCwAAAAAAAJ8LAAAAAAAAAAAAAJ8LAAAAAAAAoAsAAAAAAAAAAAAAoAsAAAAAAAChCwAAAAAAAAAAAAChCwAAAAAAAKILAAAAAAAAAAAAAKILAAAAAAAAowsAAAAAAAAAAAAAowsAAAAAAACkCwAAAAAAAAAAAACkCwAAAAAAAKULAAAAAAAAAAAAAKULAAAAAAAApgsAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAnAsAAAAAAACcCwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					73,
+					1,
+					"insert",
+					{
+						"characters": "ject"
+					},
+					"BAAAAKYLAAAAAAAApwsAAAAAAAAAAAAApwsAAAAAAACoCwAAAAAAAAAAAACoCwAAAAAAAKkLAAAAAAAAAAAAAKkLAAAAAAAAqgsAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAApgsAAAAAAACmCwAAAAAAAAAAAAAAAPC/"
 				],
 				[
 					74,
-					2,
-					"left_delete",
-					null,
-					"AgAAAD8qAAAAAAAAPyoAAAAAAABXAAAAICAgICAgICBpbmxldHM6IGxpc3RbSW5sZXRHcmFwaGljc09iamVjdF0sCiAgICAgICAgb3V0bGV0czogbGlzdFtPdXRsZXRHcmFwaGljc09iamVjdF0sPioAAAAAAAA+KgAAAAAAAAEAAAAK",
-					"AQAAAAAAAAABAAAAlioAAAAAAAA/KgAAAAAAAAAAAAAAAPC/"
+					1,
+					"insert_snippet",
+					{
+						"contents": "($0)"
+					},
+					"AQAAAKoLAAAAAAAArAsAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAqgsAAAAAAACqCwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					75,
+					1,
+					"insert",
+					{
+						"characters": "self,"
+					},
+					"BQAAAKsLAAAAAAAArAsAAAAAAAAAAAAArAsAAAAAAACtCwAAAAAAAAAAAACtCwAAAAAAAK4LAAAAAAAAAAAAAK4LAAAAAAAArwsAAAAAAAAAAAAArwsAAAAAAACwCwAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAqwsAAAAAAACrCwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					76,
+					1,
+					"insert",
+					{
+						"characters": " "
+					},
+					"AQAAALALAAAAAAAAsQsAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAsAsAAAAAAACwCwAAAAAAAAAAAAAAAPC/"
 				],
 				[
 					77,
-					2,
-					"left_delete",
-					null,
-					"AgAAAKkqAAAAAAAAqSoAAAAAAAA3AAAAICAgICAgICAgICAgaW5sZXRzPWlubGV0cywKICAgICAgICAgICAgb3V0bGV0cz1vdXRsZXRzLKgqAAAAAAAAqCoAAAAAAAABAAAACg",
-					"AQAAAAAAAAABAAAA4CoAAAAAAACpKgAAAAAAAAAAAAAAAPC/"
+					1,
+					"insert",
+					{
+						"characters": "e:"
+					},
+					"AgAAALELAAAAAAAAsgsAAAAAAAAAAAAAsgsAAAAAAACzCwAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAsQsAAAAAAACxCwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					78,
+					1,
+					"insert",
+					{
+						"characters": "Link"
+					},
+					"BAAAALMLAAAAAAAAtAsAAAAAAAAAAAAAtAsAAAAAAAC1CwAAAAAAAAAAAAC1CwAAAAAAALYLAAAAAAAAAAAAALYLAAAAAAAAtwsAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAswsAAAAAAACzCwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					79,
+					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":1,\"session_name\":\"LSP-basedpyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "LinkId"
+					},
+					"AgAAALMLAAAAAAAAswsAAAAAAAAEAAAATGlua7MLAAAAAAAAuQsAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAtwsAAAAAAAC3CwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					81,
+					1,
+					"insert",
+					{
+						"characters": "->"
+					},
+					"AgAAALoLAAAAAAAAuwsAAAAAAAAAAAAAuwsAAAAAAAC8CwAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAugsAAAAAAAC6CwAAAAAAAAAAAAAAAPC/"
 				],
 				[
 					82,
 					1,
 					"insert",
 					{
-						"characters": "VertexS"
+						"characters": "QGraphics"
 					},
-					"CAAAADcEAAAAAAAAOAQAAAAAAAAAAAAAOAQAAAAAAAA4BAAAAAAAAAkAAABOb2RlU2hhcGU4BAAAAAAAADkEAAAAAAAAAAAAADkEAAAAAAAAOgQAAAAAAAAAAAAAOgQAAAAAAAA7BAAAAAAAAAAAAAA7BAAAAAAAADwEAAAAAAAAAAAAADwEAAAAAAAAPQQAAAAAAAAAAAAAPQQAAAAAAAA+BAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAANwQAAAAAAABABAAAAAAAAAAAAAAAAPC/"
+					"CQAAALwLAAAAAAAAvQsAAAAAAAAAAAAAvQsAAAAAAAC+CwAAAAAAAAAAAAC+CwAAAAAAAL8LAAAAAAAAAAAAAL8LAAAAAAAAwAsAAAAAAAAAAAAAwAsAAAAAAADBCwAAAAAAAAAAAADBCwAAAAAAAMILAAAAAAAAAAAAAMILAAAAAAAAwwsAAAAAAAAAAAAAwwsAAAAAAADECwAAAAAAAAAAAADECwAAAAAAAMULAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAvAsAAAAAAAC8CwAAAAAAAAAAAAAAAPC/"
 				],
 				[
 					83,
 					1,
+					"insert",
+					{
+						"characters": "Object"
+					},
+					"BgAAAMULAAAAAAAAxgsAAAAAAAAAAAAAxgsAAAAAAADHCwAAAAAAAAAAAADHCwAAAAAAAMgLAAAAAAAAAAAAAMgLAAAAAAAAyQsAAAAAAAAAAAAAyQsAAAAAAADKCwAAAAAAAAAAAADKCwAAAAAAAMsLAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAxQsAAAAAAADFCwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					84,
+					1,
+					"insert",
+					{
+						"characters": ":"
+					},
+					"AQAAAMsLAAAAAAAAzAsAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAywsAAAAAAADLCwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					85,
+					1,
+					"insert",
+					{
+						"characters": "\n"
+					},
+					"AwAAAMwLAAAAAAAAzQsAAAAAAAAAAAAAzQsAAAAAAADRCwAAAAAAAAAAAADRCwAAAAAAANULAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAzAsAAAAAAADMCwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					90,
+					1,
+					"insert",
+					{
+						"characters": "QGrap"
+					},
+					"BwAAALwLAAAAAAAAvQsAAAAAAAAAAAAAvQsAAAAAAAC9CwAAAAAAAA8AAABRR3JhcGhpY3NPYmplY3S/CwAAAAAAAL8LAAAAAAAACAAAACAgICAgICAgvQsAAAAAAAC+CwAAAAAAAAAAAAC+CwAAAAAAAL8LAAAAAAAAAAAAAL8LAAAAAAAAwAsAAAAAAAAAAAAAwAsAAAAAAADBCwAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAvAsAAAAAAADLCwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					91,
+					1,
+					"insert",
+					{
+						"characters": "hicsI"
+					},
+					"BQAAAMELAAAAAAAAwgsAAAAAAAAAAAAAwgsAAAAAAADDCwAAAAAAAAAAAADDCwAAAAAAAMQLAAAAAAAAAAAAAMQLAAAAAAAAxQsAAAAAAAAAAAAAxQsAAAAAAADGCwAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAwQsAAAAAAADBCwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					92,
+					1,
 					"insert_completion",
 					{
-						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-pyright\"}",
+						"completion": "lsp_select_completion {\"index\":4,\"session_name\":\"LSP-basedpyright\"}",
 						"format": "command",
 						"keep_prefix": false,
 						"must_insert": false,
-						"trigger": "VertexShape"
+						"trigger": "QGraphicsItem"
 					},
-					"AgAAADcEAAAAAAAANwQAAAAAAAAHAAAAVmVydGV4UzcEAAAAAAAAQgQAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAPgQAAAAAAAA+BAAAAAAAAAAAAAAAAPC/"
+					"AgAAALwLAAAAAAAAvAsAAAAAAAAKAAAAUUdyYXBoaWNzSbwLAAAAAAAAyQsAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAxgsAAAAAAADGCwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					103,
+					1,
+					"paste",
+					null,
+					"AQAAAMsLAAAAAAAAQgwAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAywsAAAAAAADLCwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					107,
+					1,
+					"insert",
+					{
+						"characters": "\t\t"
+					},
+					"AgAAAMsLAAAAAAAAzwsAAAAAAAAAAAAAzwsAAAAAAADTCwAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAywsAAAAAAADLCwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					110,
+					1,
+					"insert",
+					{
+						"characters": "\nreturn"
+					},
+					"CAAAAN4LAAAAAAAA3wsAAAAAAAAAAAAA3wsAAAAAAADnCwAAAAAAAAAAAADnCwAAAAAAAOgLAAAAAAAAAAAAAOgLAAAAAAAA6QsAAAAAAAAAAAAA6QsAAAAAAADqCwAAAAAAAAAAAADqCwAAAAAAAOsLAAAAAAAAAAAAAOsLAAAAAAAA7AsAAAAAAAAAAAAA7AsAAAAAAADtCwAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA3gsAAAAAAADeCwAAAAAAAAAAAAAAAPC/"
 				],
 				[
 					111,
 					1,
 					"insert",
 					{
-						"characters": "k"
+						"characters": " "
 					},
-					"AgAAAMUtAAAAAAAAxi0AAAAAAAAAAAAAxi0AAAAAAADGLQAAAAAAAAYAAAAobywgaSk",
-					"AQAAAAAAAAABAAAAyy0AAAAAAADFLQAAAAAAAAAAAAAAAPC/"
+					"AQAAAO0LAAAAAAAA7gsAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA7QsAAAAAAADtCwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					114,
+					1,
+					"cut",
+					null,
+					"AQAAAA4MAAAAAAAADgwAAAAAAAAaAAAAc2VsZi5ub2RlR3JhcGhpY3NPYmplY3QodSk",
+					"AQAAAAAAAAABAAAAKAwAAAAAAAAODAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					117,
+					1,
+					"paste",
+					null,
+					"AQAAAO4LAAAAAAAACAwAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA7gsAAAAAAADuCwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					118,
+					1,
+					"insert",
+					{
+						"characters": "\n\n"
+					},
+					"BQAAAAgMAAAAAAAACQwAAAAAAAAAAAAACQwAAAAAAAARDAAAAAAAAAAAAAARDAAAAAAAABIMAAAAAAAAAAAAABIMAAAAAAAAGgwAAAAAAAAAAAAACQwAAAAAAAAJDAAAAAAAAAgAAAAgICAgICAgIA",
+					"AQAAAAAAAAABAAAACAwAAAAAAAAIDAAAAAAAAAAAAAAAAPC/"
 				],
 				[
 					119,
 					1,
+					"left_delete",
+					null,
+					"AQAAAA4MAAAAAAAADgwAAAAAAAAEAAAAICAgIA",
+					"AQAAAAAAAAABAAAAEgwAAAAAAAASDAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					120,
+					1,
 					"insert",
 					{
-						"characters": "source"
+						"characters": "def"
 					},
-					"BwAAAPUtAAAAAAAA9i0AAAAAAAAAAAAA9i0AAAAAAAD2LQAAAAAAAAYAAABvdXRsZXT2LQAAAAAAAPctAAAAAAAAAAAAAPctAAAAAAAA+C0AAAAAAAAAAAAA+C0AAAAAAAD5LQAAAAAAAAAAAAD5LQAAAAAAAPotAAAAAAAAAAAAAPotAAAAAAAA+y0AAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAA9S0AAAAAAAD7LQAAAAAAAAAAAAAAAPC/"
+					"AwAAAA4MAAAAAAAADwwAAAAAAAAAAAAADwwAAAAAAAAQDAAAAAAAAAAAAAAQDAAAAAAAABEMAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAADgwAAAAAAAAODAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					121,
+					1,
+					"insert",
+					{
+						"characters": " target"
+					},
+					"BwAAABEMAAAAAAAAEgwAAAAAAAAAAAAAEgwAAAAAAAATDAAAAAAAAAAAAAATDAAAAAAAABQMAAAAAAAAAAAAABQMAAAAAAAAFQwAAAAAAAAAAAAAFQwAAAAAAAAWDAAAAAAAAAAAAAAWDAAAAAAAABcMAAAAAAAAAAAAABcMAAAAAAAAGAwAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAEQwAAAAAAAARDAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					122,
+					1,
+					"insert",
+					{
+						"characters": "Graphics"
+					},
+					"CAAAABgMAAAAAAAAGQwAAAAAAAAAAAAAGQwAAAAAAAAaDAAAAAAAAAAAAAAaDAAAAAAAABsMAAAAAAAAAAAAABsMAAAAAAAAHAwAAAAAAAAAAAAAHAwAAAAAAAAdDAAAAAAAAAAAAAAdDAAAAAAAAB4MAAAAAAAAAAAAAB4MAAAAAAAAHwwAAAAAAAAAAAAAHwwAAAAAAAAgDAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAGAwAAAAAAAAYDAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					123,
+					1,
+					"insert",
+					{
+						"characters": "Object"
+					},
+					"BgAAACAMAAAAAAAAIQwAAAAAAAAAAAAAIQwAAAAAAAAiDAAAAAAAAAAAAAAiDAAAAAAAACMMAAAAAAAAAAAAACMMAAAAAAAAJAwAAAAAAAAAAAAAJAwAAAAAAAAlDAAAAAAAAAAAAAAlDAAAAAAAACYMAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAIAwAAAAAAAAgDAAAAAAAAAAAAAAAAPC/"
 				],
 				[
 					124,
 					1,
+					"insert_snippet",
+					{
+						"contents": "($0)"
+					},
+					"AQAAACYMAAAAAAAAKAwAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAJgwAAAAAAAAmDAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					125,
+					1,
 					"insert",
 					{
-						"characters": "target"
+						"characters": "self,"
 					},
-					"BwAAAEEuAAAAAAAAQi4AAAAAAAAAAAAAQi4AAAAAAABCLgAAAAAAAAUAAABpbmxldEIuAAAAAAAAQy4AAAAAAAAAAAAAQy4AAAAAAABELgAAAAAAAAAAAABELgAAAAAAAEUuAAAAAAAAAAAAAEUuAAAAAAAARi4AAAAAAAAAAAAARi4AAAAAAABHLgAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAQS4AAAAAAABGLgAAAAAAAAAAAAAAAPC/"
+					"BQAAACcMAAAAAAAAKAwAAAAAAAAAAAAAKAwAAAAAAAApDAAAAAAAAAAAAAApDAAAAAAAACoMAAAAAAAAAAAAACoMAAAAAAAAKwwAAAAAAAAAAAAAKwwAAAAAAAAsDAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAJwwAAAAAAAAnDAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					126,
+					1,
+					"insert",
+					{
+						"characters": " e:LinkI"
+					},
+					"CAAAACwMAAAAAAAALQwAAAAAAAAAAAAALQwAAAAAAAAuDAAAAAAAAAAAAAAuDAAAAAAAAC8MAAAAAAAAAAAAAC8MAAAAAAAAMAwAAAAAAAAAAAAAMAwAAAAAAAAxDAAAAAAAAAAAAAAxDAAAAAAAADIMAAAAAAAAAAAAADIMAAAAAAAAMwwAAAAAAAAAAAAAMwwAAAAAAAA0DAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAALAwAAAAAAAAsDAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					127,
+					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-basedpyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "LinkId"
+					},
+					"AgAAAC8MAAAAAAAALwwAAAAAAAAFAAAATGlua0kvDAAAAAAAADUMAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAANAwAAAAAAAA0DAAAAAAAAAAAAAAAAPC/"
 				],
 				[
 					129,
 					1,
 					"insert",
 					{
-						"characters": "nodeGr"
+						"characters": "->QGr"
 					},
-					"BwAAABAuAAAAAAAAES4AAAAAAAAAAAAAES4AAAAAAAARLgAAAAAAABQAAABvdXRsZXRHcmFwaGljc09iamVjdBEuAAAAAAAAEi4AAAAAAAAAAAAAEi4AAAAAAAATLgAAAAAAAAAAAAATLgAAAAAAABQuAAAAAAAAAAAAABQuAAAAAAAAFS4AAAAAAAAAAAAAFS4AAAAAAAAWLgAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAEC4AAAAAAAAkLgAAAAAAAAAAAAAAAPC/"
+					"BQAAADYMAAAAAAAANwwAAAAAAAAAAAAANwwAAAAAAAA4DAAAAAAAAAAAAAA4DAAAAAAAADkMAAAAAAAAAAAAADkMAAAAAAAAOgwAAAAAAAAAAAAAOgwAAAAAAAA7DAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAANgwAAAAAAAA2DAAAAAAAAAAAAAAAAPC/"
 				],
 				[
 					130,
 					1,
+					"insert",
+					{
+						"characters": "aphics"
+					},
+					"BgAAADsMAAAAAAAAPAwAAAAAAAAAAAAAPAwAAAAAAAA9DAAAAAAAAAAAAAA9DAAAAAAAAD4MAAAAAAAAAAAAAD4MAAAAAAAAPwwAAAAAAAAAAAAAPwwAAAAAAABADAAAAAAAAAAAAABADAAAAAAAAEEMAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAOwwAAAAAAAA7DAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					131,
+					1,
+					"insert",
+					{
+						"characters": "Item:"
+					},
+					"BQAAAEEMAAAAAAAAQgwAAAAAAAAAAAAAQgwAAAAAAABDDAAAAAAAAAAAAABDDAAAAAAAAEQMAAAAAAAAAAAAAEQMAAAAAAAARQwAAAAAAAAAAAAARQwAAAAAAABGDAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAQQwAAAAAAABBDAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					132,
+					1,
+					"insert",
+					{
+						"characters": "\n"
+					},
+					"AwAAAEYMAAAAAAAARwwAAAAAAAAAAAAARwwAAAAAAABLDAAAAAAAAAAAAABLDAAAAAAAAE8MAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAARgwAAAAAAABGDAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					138,
+					1,
+					"paste",
+					null,
+					"AQAAAE8MAAAAAAAAhAwAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAATwwAAAAAAABPDAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					141,
+					2,
+					"left_delete",
+					null,
+					"AgAAAIUMAAAAAAAAhQwAAAAAAABRAAAAICAgICAgICBsaW5rLm1vdmUoCiAgICAgICAgICAgICwKICAgICAgICAgICAgc2VsZi5ub2RlR3JhcGhpY3NPYmplY3QodikKICAgICAgICAphAwAAAAAAACEDAAAAAAAAAEAAAAK",
+					"AQAAAAAAAAABAAAA1gwAAAAAAACFDAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					148,
+					1,
+					"insert",
+					{
+						"characters": "\nself.sour"
+					},
+					"DQAAAE4QAAAAAAAATxAAAAAAAAAAAAAATxAAAAAAAABXEAAAAAAAAAAAAABPEAAAAAAAAE8QAAAAAAAACAAAACAgICAgICAgTxAAAAAAAABbEAAAAAAAAAAAAABbEAAAAAAAAFwQAAAAAAAAAAAAAFwQAAAAAAAAXRAAAAAAAAAAAAAAXRAAAAAAAABeEAAAAAAAAAAAAABeEAAAAAAAAF8QAAAAAAAAAAAAAF8QAAAAAAAAYBAAAAAAAAAAAAAAYBAAAAAAAABhEAAAAAAAAAAAAABhEAAAAAAAAGIQAAAAAAAAAAAAAGIQAAAAAAAAYxAAAAAAAAAAAAAAYxAAAAAAAABkEAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAThAAAAAAAABOEAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					149,
+					1,
+					"insert",
+					{
+						"characters": "ceG"
+					},
+					"AwAAAGQQAAAAAAAAZRAAAAAAAAAAAAAAZRAAAAAAAABmEAAAAAAAAAAAAABmEAAAAAAAAGcQAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAZBAAAAAAAABkEAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					150,
+					1,
 					"insert_completion",
 					{
-						"completion": "lsp_select_completion {\"index\":1,\"session_name\":\"LSP-pyright\"}",
+						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-basedpyright\"}",
 						"format": "command",
 						"keep_prefix": false,
 						"must_insert": false,
-						"trigger": "nodeGraphicsObject"
+						"trigger": "sourceGraphicsObject"
 					},
-					"AgAAABAuAAAAAAAAEC4AAAAAAAAGAAAAbm9kZUdyEC4AAAAAAAAiLgAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAFi4AAAAAAAAWLgAAAAAAAAAAAAAAAPC/"
+					"AgAAAGAQAAAAAAAAYBAAAAAAAAAHAAAAc291cmNlR2AQAAAAAAAAdBAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAZxAAAAAAAABnEAAAAAAAAAAAAAAAAPC/"
 				],
 				[
-					133,
+					151,
+					1,
+					"insert_snippet",
+					{
+						"contents": "($0)"
+					},
+					"AQAAAHQQAAAAAAAAdhAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAdBAAAAAAAAB0EAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					152,
 					1,
 					"insert",
 					{
 						"characters": "u"
 					},
-					"AgAAACMuAAAAAAAAJC4AAAAAAAAAAAAAJC4AAAAAAAAkLgAAAAAAAA4AAABPdXRsZXRJZCh1LCBvKQ",
-					"AQAAAAAAAAABAAAAMS4AAAAAAAAjLgAAAAAAAAAAAAAAAPC/"
+					"AQAAAHUQAAAAAAAAdhAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAdRAAAAAAAAB1EAAAAAAAAAAAAAAAAPC/"
 				],
 				[
-					143,
-					1,
-					"paste",
-					null,
-					"AgAAAE0uAAAAAAAAXy4AAAAAAAAAAAAAXy4AAAAAAABfLgAAAAAAABMAAABpbmxldEdyYXBoaWNzT2JqZWN0",
-					"AQAAAAAAAAABAAAATS4AAAAAAABgLgAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					146,
+					154,
 					1,
 					"insert",
 					{
-						"characters": "v"
+						"characters": ","
 					},
-					"AgAAAGAuAAAAAAAAYS4AAAAAAAAAAAAAYS4AAAAAAABhLgAAAAAAAA0AAABJbmxldElkKHYsIGkp",
-					"AQAAAAAAAAABAAAAYC4AAAAAAABtLgAAAAAAAAAAAAAAAPC/"
+					"AQAAAHcQAAAAAAAAeBAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAdxAAAAAAAAB3EAAAAAAAAAAAAAAAAPC/"
 				],
 				[
-					151,
+					155,
 					1,
 					"insert",
 					{
-						"characters": "source"
+						"characters": "\nself.targ"
 					},
-					"BwAAALQuAAAAAAAAtS4AAAAAAAAAAAAAtS4AAAAAAAC1LgAAAAAAAAYAAABvdXRsZXS1LgAAAAAAALYuAAAAAAAAAAAAALYuAAAAAAAAty4AAAAAAAAAAAAAty4AAAAAAAC4LgAAAAAAAAAAAAC4LgAAAAAAALkuAAAAAAAAAAAAALkuAAAAAAAAui4AAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAtC4AAAAAAAC6LgAAAAAAAAAAAAAAAPC/"
+					"CwAAAHgQAAAAAAAAeRAAAAAAAAAAAAAAeRAAAAAAAACFEAAAAAAAAAAAAACFEAAAAAAAAIYQAAAAAAAAAAAAAIYQAAAAAAAAhxAAAAAAAAAAAAAAhxAAAAAAAACIEAAAAAAAAAAAAACIEAAAAAAAAIkQAAAAAAAAAAAAAIkQAAAAAAAAihAAAAAAAAAAAAAAihAAAAAAAACLEAAAAAAAAAAAAACLEAAAAAAAAIwQAAAAAAAAAAAAAIwQAAAAAAAAjRAAAAAAAAAAAAAAjRAAAAAAAACOEAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAeBAAAAAAAAB4EAAAAAAAAAAAAAAAAPC/"
 				],
 				[
 					156,
 					1,
 					"insert",
 					{
-						"characters": "target"
+						"characters": "etG"
 					},
-					"BwAAALwuAAAAAAAAvS4AAAAAAAAAAAAAvS4AAAAAAAC9LgAAAAAAAAUAAABpbmxldL0uAAAAAAAAvi4AAAAAAAAAAAAAvi4AAAAAAAC/LgAAAAAAAAAAAAC/LgAAAAAAAMAuAAAAAAAAAAAAAMAuAAAAAAAAwS4AAAAAAAAAAAAAwS4AAAAAAADCLgAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAvC4AAAAAAADBLgAAAAAAAAAAAAAAAPC/"
+					"AwAAAI4QAAAAAAAAjxAAAAAAAAAAAAAAjxAAAAAAAACQEAAAAAAAAAAAAACQEAAAAAAAAJEQAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAjhAAAAAAAACOEAAAAAAAAAAAAAAAAPC/"
 				],
 				[
-					170,
+					157,
+					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-basedpyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "targetGraphicsObject"
+					},
+					"AgAAAIoQAAAAAAAAihAAAAAAAAAHAAAAdGFyZ2V0R4oQAAAAAAAAnhAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAkRAAAAAAAACREAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					158,
 					1,
 					"insert",
 					{
-						"characters": "Vertex"
+						"characters": ")"
 					},
-					"BwAAAAMGAAAAAAAABAYAAAAAAAAAAAAABAYAAAAAAAAEBgAAAAAAABIAAABOb2RlR3JhcGhpY3NPYmplY3QEBgAAAAAAAAUGAAAAAAAAAAAAAAUGAAAAAAAABgYAAAAAAAAAAAAABgYAAAAAAAAHBgAAAAAAAAAAAAAHBgAAAAAAAAgGAAAAAAAAAAAAAAgGAAAAAAAACQYAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAAwYAAAAAAAAVBgAAAAAAAAAAAAAAAPC/"
+					"AQAAAJ4QAAAAAAAAnxAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAnhAAAAAAAACeEAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					159,
+					1,
+					"left_delete",
+					null,
+					"AQAAAJ4QAAAAAAAAnhAAAAAAAAABAAAAKQ",
+					"AQAAAAAAAAABAAAAnxAAAAAAAACfEAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					160,
+					1,
+					"insert_snippet",
+					{
+						"contents": "($0)"
+					},
+					"AQAAAJ4QAAAAAAAAoBAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAnhAAAAAAAACeEAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					161,
+					1,
+					"insert",
+					{
+						"characters": "v"
+					},
+					"AQAAAJ8QAAAAAAAAoBAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAnxAAAAAAAACfEAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					166,
+					1,
+					"left_delete",
+					null,
+					"AQAAAKEQAAAAAAAAoRAAAAAAAABPAAAACiAgICAgICAgICAgIHNlbGYubm9kZUdyYXBoaWNzT2JqZWN0KHUpLAogICAgICAgICAgICBzZWxmLm5vZGVHcmFwaGljc09iamVjdCh2KQ",
+					"AQAAAAAAAAABAAAA8BAAAAAAAAChEAAAAAAAAAAAAAAAAPC/"
 				],
 				[
 					171,
 					1,
-					"insert",
-					{
-						"characters": "G"
-					},
-					"AQAAAAkGAAAAAAAACgYAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAACQYAAAAAAAAJBgAAAAAAAAAAAAAAAPC/"
+					"left_delete",
+					null,
+					"AQAAAHUQAAAAAAAAdRAAAAAAAAABAAAAdQ",
+					"AQAAAAAAAAABAAAAdhAAAAAAAAB2EAAAAAAAAAAAAAAAAPC/"
 				],
 				[
 					172,
 					1,
-					"insert_completion",
+					"insert",
 					{
-						"completion": "lsp_select_completion {\"index\":1,\"session_name\":\"LSP-pyright\"}",
-						"format": "command",
-						"keep_prefix": false,
-						"must_insert": false,
-						"trigger": "VertexGraphicsObject"
+						"characters": "e"
 					},
-					"AgAAAAMGAAAAAAAAAwYAAAAAAAAHAAAAVmVydGV4RwMGAAAAAAAAFwYAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAACgYAAAAAAAAKBgAAAAAAAAAAAAAAAPC/"
+					"AQAAAHUQAAAAAAAAdhAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAdRAAAAAAAAB1EAAAAAAAAAAAAAAAAPC/"
 				],
 				[
-					181,
-					2,
+					175,
+					1,
 					"left_delete",
 					null,
-					"AgAAACIGAAAAAAAAIgYAAAAAAADSAAAAICAgICAgICBzZWxmLl9pbmxldF9ncmFwaGljc19vYmplY3RzOiBkaWN0WwogICAgICAgICAgICBJbmxldElkLCBJbmxldEdyYXBoaWNzT2JqZWN0CiAgICAgICAgXSA9IGRpY3QoKQogICAgICAgIHNlbGYuX291dGxldF9ncmFwaGljc19vYmplY3RzOiBkaWN0WwogICAgICAgICAgICBPdXRsZXRJZCwgT3V0bGV0R3JhcGhpY3NPYmplY3QKICAgICAgICBdID0gZGljdCgpIQYAAAAAAAAhBgAAAAAAAAEAAAAK",
-					"AQAAAAAAAAABAAAA9AYAAAAAAAAiBgAAAAAAAAAAAAAAAPC/"
+					"AQAAAJ8QAAAAAAAAnxAAAAAAAAABAAAAdg",
+					"AQAAAAAAAAABAAAAoBAAAAAAAACgEAAAAAAAAAAAAAAAEHFA"
 				],
 				[
-					185,
-					2,
-					"left_delete",
-					null,
-					"AgAAAPsKAAAAAAAA+woAAAAAAAAKAQAAICAgICAgICAgICAgYXNzZXJ0ICgKICAgICAgICAgICAgICAgIE91dGxldElkKHUsIG8pIGluIHNlbGYuX291dGxldF9ncmFwaGljc19vYmplY3RzCiAgICAgICAgICAgICksIGYiTm9kZSAne3V9JyBoYXMgbm8gb3V0bGV0ICd7b30nISIKICAgICAgICAgICAgYXNzZXJ0ICgKICAgICAgICAgICAgICAgIElubGV0SWQodiwgaSkgaW4gc2VsZi5faW5sZXRfZ3JhcGhpY3Nfb2JqZWN0cwogICAgICAgICAgICApLCBmIk5vZGUgJ3t2fScgaGFzIG5vIGlubGV0ICd7aX0nISL6CgAAAAAAAPoKAAAAAAAAAQAAAAo",
-					"AQAAAAAAAAABAAAABQwAAAAAAAD7CgAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					190,
+					176,
 					1,
 					"insert",
 					{
-						"characters": "nodeG"
+						"characters": "e"
 					},
-					"BgAAAL0LAAAAAAAAvgsAAAAAAAAAAAAAvgsAAAAAAAC+CwAAAAAAABQAAABvdXRsZXRHcmFwaGljc09iamVjdL4LAAAAAAAAvwsAAAAAAAAAAAAAvwsAAAAAAADACwAAAAAAAAAAAADACwAAAAAAAMELAAAAAAAAAAAAAMELAAAAAAAAwgsAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAvQsAAAAAAADRCwAAAAAAAAAAAAAAAPC/"
+					"AQAAAJ8QAAAAAAAAoBAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAnxAAAAAAAACfEAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					186,
+					1,
+					"insert",
+					{
+						"characters": "\nview.setDra"
+					},
+					"DQAAAMUiAAAAAAAAxiIAAAAAAAAAAAAAxiIAAAAAAADKIgAAAAAAAAAAAADKIgAAAAAAAMsiAAAAAAAAAAAAAMsiAAAAAAAAzCIAAAAAAAAAAAAAzCIAAAAAAADNIgAAAAAAAAAAAADNIgAAAAAAAM4iAAAAAAAAAAAAAM4iAAAAAAAAzyIAAAAAAAAAAAAAzyIAAAAAAADQIgAAAAAAAAAAAADQIgAAAAAAANEiAAAAAAAAAAAAANEiAAAAAAAA0iIAAAAAAAAAAAAA0iIAAAAAAADTIgAAAAAAAAAAAADTIgAAAAAAANQiAAAAAAAAAAAAANQiAAAAAAAA1SIAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAxSIAAAAAAADFIgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					187,
+					1,
+					"insert",
+					{
+						"characters": "gMode"
+					},
+					"BQAAANUiAAAAAAAA1iIAAAAAAAAAAAAA1iIAAAAAAADXIgAAAAAAAAAAAADXIgAAAAAAANgiAAAAAAAAAAAAANgiAAAAAAAA2SIAAAAAAAAAAAAA2SIAAAAAAADaIgAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA1SIAAAAAAADVIgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					188,
+					1,
+					"insert_snippet",
+					{
+						"contents": "($0)"
+					},
+					"AQAAANoiAAAAAAAA3CIAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA2iIAAAAAAADaIgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					189,
+					1,
+					"insert",
+					{
+						"characters": "self"
+					},
+					"BAAAANsiAAAAAAAA3CIAAAAAAAAAAAAA3CIAAAAAAADdIgAAAAAAAAAAAADdIgAAAAAAAN4iAAAAAAAAAAAAAN4iAAAAAAAA3yIAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA2yIAAAAAAADbIgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					190,
+					4,
+					"left_delete",
+					null,
+					"BAAAAN4iAAAAAAAA3iIAAAAAAAABAAAAZt0iAAAAAAAA3SIAAAAAAAABAAAAbNwiAAAAAAAA3CIAAAAAAAABAAAAZdsiAAAAAAAA2yIAAAAAAAABAAAAcw",
+					"AQAAAAAAAAABAAAA3yIAAAAAAADfIgAAAAAAAAAAAAAAAPC/"
 				],
 				[
 					191,
 					1,
+					"insert",
+					{
+						"characters": "QGraphicsView"
+					},
+					"DQAAANsiAAAAAAAA3CIAAAAAAAAAAAAA3CIAAAAAAADdIgAAAAAAAAAAAADdIgAAAAAAAN4iAAAAAAAAAAAAAN4iAAAAAAAA3yIAAAAAAAAAAAAA3yIAAAAAAADgIgAAAAAAAAAAAADgIgAAAAAAAOEiAAAAAAAAAAAAAOEiAAAAAAAA4iIAAAAAAAAAAAAA4iIAAAAAAADjIgAAAAAAAAAAAADjIgAAAAAAAOQiAAAAAAAAAAAAAOQiAAAAAAAA5SIAAAAAAAAAAAAA5SIAAAAAAADmIgAAAAAAAAAAAADmIgAAAAAAAOciAAAAAAAAAAAAAOciAAAAAAAA6CIAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA2yIAAAAAAADbIgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					192,
+					1,
+					"insert",
+					{
+						"characters": ".dr"
+					},
+					"AwAAAOgiAAAAAAAA6SIAAAAAAAAAAAAA6SIAAAAAAADqIgAAAAAAAAAAAADqIgAAAAAAAOsiAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA6CIAAAAAAADoIgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					193,
+					1,
+					"insert",
+					{
+						"characters": "agmo"
+					},
+					"BAAAAOsiAAAAAAAA7CIAAAAAAAAAAAAA7CIAAAAAAADtIgAAAAAAAAAAAADtIgAAAAAAAO4iAAAAAAAAAAAAAO4iAAAAAAAA7yIAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA6yIAAAAAAADrIgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					198,
+					1,
+					"insert",
+					{
+						"characters": "de"
+					},
+					"AgAAAO8iAAAAAAAA8CIAAAAAAAAAAAAA8CIAAAAAAADxIgAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA7yIAAAAAAADvIgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					201,
+					1,
 					"insert_completion",
 					{
-						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-pyright\"}",
+						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-basedpyright\"}",
 						"format": "command",
 						"keep_prefix": false,
 						"must_insert": false,
-						"trigger": "nodeGraphicsObject"
+						"trigger": "DragMode"
 					},
-					"AgAAAL0LAAAAAAAAvQsAAAAAAAAFAAAAbm9kZUe9CwAAAAAAAM8LAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAwgsAAAAAAADCCwAAAAAAAAAAAAAAAPC/"
+					"AgAAAOkiAAAAAAAA6SIAAAAAAAAIAAAAZHJhZ21vZGXpIgAAAAAAAPEiAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA8SIAAAAAAADxIgAAAAAAAAAAAAAAAPC/"
 				],
 				[
-					196,
-					2,
-					"right_delete",
-					null,
-					"AgAAANALAAAAAAAA0AsAAAAAAAAIAAAAT3V0bGV0SWTQCwAAAAAAANALAAAAAAAAAQAAACg",
-					"AQAAAAAAAAABAAAA0AsAAAAAAADYCwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					199,
-					4,
-					"left_delete",
-					null,
-					"BAAAANQLAAAAAAAA1AsAAAAAAAABAAAAKdMLAAAAAAAA0wsAAAAAAAABAAAAb9ILAAAAAAAA0gsAAAAAAAABAAAAINELAAAAAAAA0QsAAAAAAAABAAAALA",
-					"AQAAAAAAAAABAAAA1QsAAAAAAADVCwAAAAAAAAAAAAAAAPC/"
+					202,
+					1,
+					"insert",
+					{
+						"characters": "."
+					},
+					"AQAAAPEiAAAAAAAA8iIAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA8SIAAAAAAADxIgAAAAAAAAAAAAAAAPC/"
 				],
 				[
 					204,
-					2,
-					"right_delete",
-					null,
-					"AgAAAP0LAAAAAAAA/QsAAAAAAAAHAAAASW5sZXRJZP0LAAAAAAAA/QsAAAAAAAABAAAAKA",
-					"AQAAAAAAAAABAAAA/QsAAAAAAAAEDAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					207,
-					4,
-					"left_delete",
-					null,
-					"BAAAAAEMAAAAAAAAAQwAAAAAAAABAAAAKQAMAAAAAAAAAAwAAAAAAAABAAAAaf8LAAAAAAAA/wsAAAAAAAABAAAAIP4LAAAAAAAA/gsAAAAAAAABAAAALA",
-					"AQAAAAAAAAABAAAAAgwAAAAAAAACDAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					212,
-					1,
-					"left_delete",
-					null,
-					"AQAAAP8LAAAAAAAA/wsAAAAAAAABAAAALA",
-					"AQAAAAAAAAABAAAAAAwAAAAAAAAADAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					219,
-					1,
-					"insert",
-					{
-						"characters": "VertexGra"
-					},
-					"CgAAALMMAAAAAAAAtAwAAAAAAAAAAAAAtAwAAAAAAAC0DAAAAAAAABIAAABOb2RlR3JhcGhpY3NPYmplY3S0DAAAAAAAALUMAAAAAAAAAAAAALUMAAAAAAAAtgwAAAAAAAAAAAAAtgwAAAAAAAC3DAAAAAAAAAAAAAC3DAAAAAAAALgMAAAAAAAAAAAAALgMAAAAAAAAuQwAAAAAAAAAAAAAuQwAAAAAAAC6DAAAAAAAAAAAAAC6DAAAAAAAALsMAAAAAAAAAAAAALsMAAAAAAAAvAwAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAswwAAAAAAADFDAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					220,
-					1,
-					"insert",
-					{
-						"characters": "p"
-					},
-					"AQAAALwMAAAAAAAAvQwAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAvAwAAAAAAAC8DAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					221,
 					1,
 					"insert_completion",
 					{
-						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-pyright\"}",
+						"completion": "lsp_select_completion {\"index\":1,\"session_name\":\"LSP-basedpyright\"}",
 						"format": "command",
 						"keep_prefix": false,
-						"must_insert": false,
-						"trigger": "VertexGraphicsObject"
+						"must_insert": true,
+						"trigger": "RubberBandDrag"
 					},
-					"AgAAALMMAAAAAAAAswwAAAAAAAAKAAAAVmVydGV4R3JhcLMMAAAAAAAAxwwAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAvQwAAAAAAAC9DAAAAAAAAAAAAAAAAPC/"
+					"AQAAAPIiAAAAAAAAACMAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA8iIAAAAAAADyIgAAAAAAAAAAAAAAAPC/"
 				],
 				[
-					233,
+					223,
+					1,
+					"insert",
+					{
+						"characters": "\nif"
+					},
+					"BQAAAFIdAAAAAAAAUx0AAAAAAAAAAAAAUx0AAAAAAABXHQAAAAAAAAAAAABXHQAAAAAAAFsdAAAAAAAAAAAAAFsdAAAAAAAAXB0AAAAAAAAAAAAAXB0AAAAAAABdHQAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAUh0AAAAAAABSHQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					224,
+					1,
+					"insert",
+					{
+						"characters": " self.i"
+					},
+					"BwAAAF0dAAAAAAAAXh0AAAAAAAAAAAAAXh0AAAAAAABfHQAAAAAAAAAAAABfHQAAAAAAAGAdAAAAAAAAAAAAAGAdAAAAAAAAYR0AAAAAAAAAAAAAYR0AAAAAAABiHQAAAAAAAAAAAABiHQAAAAAAAGMdAAAAAAAAAAAAAGMdAAAAAAAAZB0AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAXR0AAAAAAABdHQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					225,
+					1,
+					"insert",
+					{
+						"characters": "s"
+					},
+					"AQAAAGQdAAAAAAAAZR0AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAZB0AAAAAAABkHQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					226,
 					2,
 					"left_delete",
 					null,
-					"AgAAAPgMAAAAAAAA+AwAAAAAAADzAAAACiAgICBkZWYgaW5sZXRHcmFwaGljc09iamVjdChzZWxmLCBpOiBJbmxldElkKSAtPiAiSW5sZXRHcmFwaGljc09iamVjdCI6CiAgICAgICAgcmV0dXJuIHNlbGYuX2lubGV0X2dyYXBoaWNzX29iamVjdHNbaV0KCiAgICBkZWYgb3V0bGV0R3JhcGhpY3NPYmplY3Qoc2VsZiwgbzogT3V0bGV0SWQpIC0+ICJPdXRsZXRHcmFwaGljc09iamVjdCI6CiAgICAgICAgcmV0dXJuIHNlbGYuX291dGxldF9ncmFwaGljc19vYmplY3RzW29d9wwAAAAAAAD3DAAAAAAAAAEAAAAK",
-					"AQAAAAAAAAABAAAA6w0AAAAAAAD4DAAAAAAAAAAAAAAAAPC/"
+					"AgAAAGQdAAAAAAAAZB0AAAAAAAABAAAAc2MdAAAAAAAAYx0AAAAAAAABAAAAaQ",
+					"AQAAAAAAAAABAAAAZR0AAAAAAABlHQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					227,
+					1,
+					"insert",
+					{
+						"characters": "isS"
+					},
+					"AwAAAGMdAAAAAAAAZB0AAAAAAAAAAAAAZB0AAAAAAABlHQAAAAAAAAAAAABlHQAAAAAAAGYdAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAYx0AAAAAAABjHQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					228,
+					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":3,\"session_name\":\"LSP-basedpyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "isSelected"
+					},
+					"AgAAAGMdAAAAAAAAYx0AAAAAAAADAAAAaXNTYx0AAAAAAABtHQAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAZh0AAAAAAABmHQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					229,
+					1,
+					"insert_snippet",
+					{
+						"contents": "($0)"
+					},
+					"AQAAAG0dAAAAAAAAbx0AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAbR0AAAAAAABtHQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					231,
+					1,
+					"insert",
+					{
+						"characters": ":"
+					},
+					"AQAAAG8dAAAAAAAAcB0AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAbx0AAAAAAABvHQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					232,
+					1,
+					"insert",
+					{
+						"characters": "\n"
+					},
+					"AwAAAHAdAAAAAAAAcR0AAAAAAAAAAAAAcR0AAAAAAAB5HQAAAAAAAAAAAAB5HQAAAAAAAH0dAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAcB0AAAAAAABwHQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					235,
+					1,
+					"insert",
+					{
+						"characters": "super"
+					},
+					"BQAAAH0dAAAAAAAAfh0AAAAAAAAAAAAAfh0AAAAAAAB/HQAAAAAAAAAAAAB/HQAAAAAAAIAdAAAAAAAAAAAAAIAdAAAAAAAAgR0AAAAAAAAAAAAAgR0AAAAAAACCHQAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAfR0AAAAAAAB9HQAAAAAAAAAAAAAAAFVA"
+				],
+				[
+					236,
+					1,
+					"insert_snippet",
+					{
+						"contents": "($0)"
+					},
+					"AQAAAIIdAAAAAAAAhB0AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAgh0AAAAAAACCHQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					238,
+					1,
+					"insert",
+					{
+						"characters": "m"
+					},
+					"AQAAAIQdAAAAAAAAhR0AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAhB0AAAAAAACEHQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					239,
+					1,
+					"left_delete",
+					null,
+					"AQAAAIQdAAAAAAAAhB0AAAAAAAABAAAAbQ",
+					"AQAAAAAAAAABAAAAhR0AAAAAAACFHQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					240,
+					1,
+					"insert",
+					{
+						"characters": ".mouseP"
+					},
+					"BwAAAIQdAAAAAAAAhR0AAAAAAAAAAAAAhR0AAAAAAACGHQAAAAAAAAAAAACGHQAAAAAAAIcdAAAAAAAAAAAAAIcdAAAAAAAAiB0AAAAAAAAAAAAAiB0AAAAAAACJHQAAAAAAAAAAAACJHQAAAAAAAIodAAAAAAAAAAAAAIodAAAAAAAAix0AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAhB0AAAAAAACEHQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					241,
+					1,
+					"insert_completion",
+					{
+						"completion": "mousePressEvent",
+						"format": "text",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "mousePressEvent"
+					},
+					"AgAAAIUdAAAAAAAAhR0AAAAAAAAGAAAAbW91c2VQhR0AAAAAAACUHQAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAix0AAAAAAACLHQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					242,
+					1,
+					"insert_snippet",
+					{
+						"contents": "($0)"
+					},
+					"AQAAAJQdAAAAAAAAlh0AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAlB0AAAAAAACUHQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					244,
+					1,
+					"insert",
+					{
+						"characters": "\n"
+					},
+					"AgAAAJYdAAAAAAAAlx0AAAAAAAAAAAAAlx0AAAAAAACjHQAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAlh0AAAAAAACWHQAAAAAAAAAAAAAAAPC/"
 				],
 				[
 					245,
 					1,
-					"paste",
+					"left_delete",
 					null,
-					"AgAAAOkLAAAAAAAA+wsAAAAAAAAAAAAA+wsAAAAAAAD7CwAAAAAAABMAAABpbmxldEdyYXBoaWNzT2JqZWN0",
-					"AQAAAAAAAAABAAAA6QsAAAAAAAD8CwAAAAAAAAAAAAAAAPC/"
+					"AQAAAJ8dAAAAAAAAnx0AAAAAAAAEAAAAICAgIA",
+					"AQAAAAAAAAABAAAAox0AAAAAAACjHQAAAAAAAAAAAAAAAPC/"
 				],
 				[
-					256,
+					246,
 					1,
 					"insert",
 					{
-						"characters": "nodeIs"
+						"characters": "else:"
 					},
-					"BwAAAHAOAAAAAAAAcQ4AAAAAAAAAAAAAcQ4AAAAAAABxDgAAAAAAAAIAAABpc3EOAAAAAAAAcg4AAAAAAAAAAAAAcg4AAAAAAABzDgAAAAAAAAAAAABzDgAAAAAAAHQOAAAAAAAAAAAAAHQOAAAAAAAAdQ4AAAAAAAAAAAAAdQ4AAAAAAAB2DgAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAcg4AAAAAAABwDgAAAAAAAAAAAAAAAPC/"
+					"BQAAAJ8dAAAAAAAAoB0AAAAAAAAAAAAAoB0AAAAAAAChHQAAAAAAAAAAAAChHQAAAAAAAKIdAAAAAAAAAAAAAKIdAAAAAAAAox0AAAAAAAAAAAAAox0AAAAAAACkHQAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAnx0AAAAAAACfHQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					249,
+					1,
+					"indent",
+					null,
+					"AgAAAKUdAAAAAAAAqR0AAAAAAAAAAAAA0x0AAAAAAADXHQAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA5x0AAAAAAAClHQAAAAAAAAAAAAAAAPC/"
 				],
 				[
 					259,
 					1,
 					"insert",
 					{
-						"characters": "are"
+						"characters": "\nif"
 					},
-					"BAAAAHAOAAAAAAAAcQ4AAAAAAAAAAAAAcQ4AAAAAAABxDgAAAAAAAAYAAABub2RlSXNxDgAAAAAAAHIOAAAAAAAAAAAAAHIOAAAAAAAAcw4AAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAdg4AAAAAAABwDgAAAAAAAAAAAAAAAPC/"
+					"BQAAADceAAAAAAAAOB4AAAAAAAAAAAAAOB4AAAAAAAA8HgAAAAAAAAAAAAA8HgAAAAAAAEAeAAAAAAAAAAAAAEAeAAAAAAAAQR4AAAAAAAAAAAAAQR4AAAAAAABCHgAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAANx4AAAAAAAA3HgAAAAAAAAAAAAAAAPC/"
 				],
 				[
 					260,
-					3,
-					"left_delete",
-					null,
-					"AwAAAHIOAAAAAAAAcg4AAAAAAAABAAAAZXEOAAAAAAAAcQ4AAAAAAAABAAAAcnAOAAAAAAAAcA4AAAAAAAABAAAAYQ",
-					"AQAAAAAAAAABAAAAcw4AAAAAAABzDgAAAAAAAAAAAAAAAPC/"
+					1,
+					"insert",
+					{
+						"characters": " self.isS"
+					},
+					"CQAAAEIeAAAAAAAAQx4AAAAAAAAAAAAAQx4AAAAAAABEHgAAAAAAAAAAAABEHgAAAAAAAEUeAAAAAAAAAAAAAEUeAAAAAAAARh4AAAAAAAAAAAAARh4AAAAAAABHHgAAAAAAAAAAAABHHgAAAAAAAEgeAAAAAAAAAAAAAEgeAAAAAAAASR4AAAAAAAAAAAAASR4AAAAAAABKHgAAAAAAAAAAAABKHgAAAAAAAEseAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAQh4AAAAAAABCHgAAAAAAAAAAAAAAAPC/"
 				],
 				[
 					261,
 					1,
-					"insert",
+					"insert_completion",
 					{
-						"characters": "has"
+						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-basedpyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "isSelected"
 					},
-					"AwAAAHAOAAAAAAAAcQ4AAAAAAAAAAAAAcQ4AAAAAAAByDgAAAAAAAAAAAAByDgAAAAAAAHMOAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAcA4AAAAAAABwDgAAAAAAAAAAAAAAAPC/"
+					"AgAAAEgeAAAAAAAASB4AAAAAAAADAAAAaXNTSB4AAAAAAABSHgAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAASx4AAAAAAABLHgAAAAAAAAAAAAAAAPC/"
 				],
 				[
-					263,
-					2,
-					"left_delete",
-					null,
-					"AgAAAHgOAAAAAAAAeA4AAAAAAAABAAAAZHcOAAAAAAAAdw4AAAAAAAABAAAAZQ",
-					"AQAAAAAAAAABAAAAeQ4AAAAAAAB5DgAAAAAAAAAAAAAAAPC/"
+					262,
+					1,
+					"insert_snippet",
+					{
+						"contents": "($0)"
+					},
+					"AQAAAFIeAAAAAAAAVB4AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAUh4AAAAAAABSHgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					264,
+					1,
+					"insert",
+					{
+						"characters": ":"
+					},
+					"AQAAAFQeAAAAAAAAVR4AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAVB4AAAAAAABUHgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					265,
+					1,
+					"insert",
+					{
+						"characters": "\nsuper"
+					},
+					"CAAAAFUeAAAAAAAAVh4AAAAAAAAAAAAAVh4AAAAAAABeHgAAAAAAAAAAAABeHgAAAAAAAGIeAAAAAAAAAAAAAGIeAAAAAAAAYx4AAAAAAAAAAAAAYx4AAAAAAABkHgAAAAAAAAAAAABkHgAAAAAAAGUeAAAAAAAAAAAAAGUeAAAAAAAAZh4AAAAAAAAAAAAAZh4AAAAAAABnHgAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAVR4AAAAAAABVHgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					266,
+					1,
+					"insert_snippet",
+					{
+						"contents": "($0)"
+					},
+					"AQAAAGceAAAAAAAAaR4AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAZx4AAAAAAABnHgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					268,
+					1,
+					"insert",
+					{
+						"characters": ".mousem"
+					},
+					"BwAAAGkeAAAAAAAAah4AAAAAAAAAAAAAah4AAAAAAABrHgAAAAAAAAAAAABrHgAAAAAAAGweAAAAAAAAAAAAAGweAAAAAAAAbR4AAAAAAAAAAAAAbR4AAAAAAABuHgAAAAAAAAAAAABuHgAAAAAAAG8eAAAAAAAAAAAAAG8eAAAAAAAAcB4AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAaR4AAAAAAABpHgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					269,
+					1,
+					"insert_completion",
+					{
+						"completion": "mouseMoveEvent",
+						"format": "text",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "mouseMoveEvent"
+					},
+					"AgAAAGoeAAAAAAAAah4AAAAAAAAGAAAAbW91c2Vtah4AAAAAAAB4HgAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAcB4AAAAAAABwHgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					270,
+					1,
+					"insert_snippet",
+					{
+						"contents": "($0)"
+					},
+					"AQAAAHgeAAAAAAAAeh4AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAeB4AAAAAAAB4HgAAAAAAAAAAAAAAAPC/"
 				],
 				[
 					271,
 					1,
 					"insert",
 					{
-						"characters": "node"
+						"characters": "event"
 					},
-					"BAAAAHAOAAAAAAAAcQ4AAAAAAAAAAAAAcQ4AAAAAAAByDgAAAAAAAAAAAAByDgAAAAAAAHMOAAAAAAAAAAAAAHMOAAAAAAAAdA4AAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAcA4AAAAAAABwDgAAAAAAAAAAAAAAAPC/"
+					"BQAAAHkeAAAAAAAAeh4AAAAAAAAAAAAAeh4AAAAAAAB7HgAAAAAAAAAAAAB7HgAAAAAAAHweAAAAAAAAAAAAAHweAAAAAAAAfR4AAAAAAAAAAAAAfR4AAAAAAAB+HgAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAeR4AAAAAAAB5HgAAAAAAAAAAAAAAAPC/"
 				],
 				[
-					273,
+					275,
+					1,
+					"insert",
+					{
+						"characters": "event"
+					},
+					"BQAAAJUdAAAAAAAAlh0AAAAAAAAAAAAAlh0AAAAAAACXHQAAAAAAAAAAAACXHQAAAAAAAJgdAAAAAAAAAAAAAJgdAAAAAAAAmR0AAAAAAAAAAAAAmR0AAAAAAACaHQAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAlR0AAAAAAACVHQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					278,
+					1,
+					"insert",
+					{
+						"characters": "\n"
+					},
+					"AgAAAIQeAAAAAAAAhR4AAAAAAAAAAAAAhR4AAAAAAACRHgAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAhB4AAAAAAACEHgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					279,
 					1,
 					"left_delete",
 					null,
-					"AQAAAHQOAAAAAAAAdA4AAAAAAAABAAAAaA",
-					"AQAAAAAAAAABAAAAdQ4AAAAAAAB1DgAAAAAAAAAAAAAAAPC/"
+					"AQAAAI0eAAAAAAAAjR4AAAAAAAAEAAAAICAgIA",
+					"AQAAAAAAAAABAAAAkR4AAAAAAACRHgAAAAAAAAAAAAAAAPC/"
 				],
 				[
-					274,
+					280,
 					1,
 					"insert",
 					{
-						"characters": "H"
+						"characters": "else:"
 					},
-					"AQAAAHQOAAAAAAAAdQ4AAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAdA4AAAAAAAB0DgAAAAAAAAAAAAAAAPC/"
+					"BQAAAI0eAAAAAAAAjh4AAAAAAAAAAAAAjh4AAAAAAACPHgAAAAAAAAAAAACPHgAAAAAAAJAeAAAAAAAAAAAAAJAeAAAAAAAAkR4AAAAAAAAAAAAAkR4AAAAAAACSHgAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAjR4AAAAAAACNHgAAAAAAAAAAAAAAAPC/"
 				],
 				[
-					284,
+					283,
 					1,
-					"insert",
-					{
-						"characters": "Hashable"
-					},
-					"CQAAAIgOAAAAAAAAiQ4AAAAAAAAAAAAAiQ4AAAAAAACJDgAAAAAAAAcAAABJbmxldElkiQ4AAAAAAACKDgAAAAAAAAAAAACKDgAAAAAAAIsOAAAAAAAAAAAAAIsOAAAAAAAAjA4AAAAAAAAAAAAAjA4AAAAAAACNDgAAAAAAAAAAAACNDgAAAAAAAI4OAAAAAAAAAAAAAI4OAAAAAAAAjw4AAAAAAAAAAAAAjw4AAAAAAACQDgAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAiA4AAAAAAACPDgAAAAAAAAAAAAAAAPC/"
+					"indent",
+					null,
+					"BwAAAJMeAAAAAAAAlx4AAAAAAAAAAAAAvx4AAAAAAADDHgAAAAAAAAAAAADlHgAAAAAAAOkeAAAAAAAAAAAAACgfAAAAAAAALB8AAAAAAAAAAAAATx8AAAAAAABTHwAAAAAAAAAAAABhHwAAAAAAAGUfAAAAAAAAAAAAAJQfAAAAAAAAmB8AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAqh8AAAAAAACTHgAAAAAAAAAAAAAAAPC/"
 				],
 				[
 					287,
 					1,
 					"left_delete",
 					null,
-					"AQAAAJAOAAAAAAAAkA4AAAAAAAALAAAAIHwgT3V0bGV0SWQ",
-					"AQAAAAAAAAABAAAAkA4AAAAAAACbDgAAAAAAAAAAAAAAAPC/"
+					"AQAAAJMfAAAAAAAAkx8AAAAAAAAzAAAACiAgICAgICAgICAgICMgcmV0dXJuIHN1cGVyKCkubW91c2VNb3ZlRXZlbnQoZXZlbnQp",
+					"AQAAAAAAAAABAAAAxh8AAAAAAACTHwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					290,
+					1,
+					"insert",
+					{
+						"characters": "\nif"
+					},
+					"BQAAAN4fAAAAAAAA3x8AAAAAAAAAAAAA3x8AAAAAAADjHwAAAAAAAAAAAADjHwAAAAAAAOcfAAAAAAAAAAAAAOcfAAAAAAAA6B8AAAAAAAAAAAAA6B8AAAAAAADpHwAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA3h8AAAAAAADeHwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					291,
+					1,
+					"insert",
+					{
+						"characters": " mouse"
+					},
+					"BgAAAOkfAAAAAAAA6h8AAAAAAAAAAAAA6h8AAAAAAADrHwAAAAAAAAAAAADrHwAAAAAAAOwfAAAAAAAAAAAAAOwfAAAAAAAA7R8AAAAAAAAAAAAA7R8AAAAAAADuHwAAAAAAAAAAAADuHwAAAAAAAO8fAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA6R8AAAAAAADpHwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					292,
+					5,
+					"left_delete",
+					null,
+					"BQAAAO4fAAAAAAAA7h8AAAAAAAABAAAAZe0fAAAAAAAA7R8AAAAAAAABAAAAc+wfAAAAAAAA7B8AAAAAAAABAAAAdesfAAAAAAAA6x8AAAAAAAABAAAAb+ofAAAAAAAA6h8AAAAAAAABAAAAbQ",
+					"AQAAAAAAAAABAAAA7x8AAAAAAADvHwAAAAAAAAAAAAAAAPC/"
 				],
 				[
 					293,
 					1,
 					"insert",
 					{
-						"characters": "n"
+						"characters": "sle"
 					},
-					"AgAAAIIOAAAAAAAAgw4AAAAAAAAAAAAAgw4AAAAAAACDDgAAAAAAAAQAAABwb3J0",
-					"AQAAAAAAAAABAAAAgg4AAAAAAACGDgAAAAAAAAAAAAAAAPC/"
+					"AwAAAOofAAAAAAAA6x8AAAAAAAAAAAAA6x8AAAAAAADsHwAAAAAAAAAAAADsHwAAAAAAAO0fAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA6h8AAAAAAADqHwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					294,
+					2,
+					"left_delete",
+					null,
+					"AgAAAOwfAAAAAAAA7B8AAAAAAAABAAAAZesfAAAAAAAA6x8AAAAAAAABAAAAbA",
+					"AQAAAAAAAAABAAAA7R8AAAAAAADtHwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					295,
+					1,
+					"insert",
+					{
+						"characters": "elf.isS"
+					},
+					"BwAAAOsfAAAAAAAA7B8AAAAAAAAAAAAA7B8AAAAAAADtHwAAAAAAAAAAAADtHwAAAAAAAO4fAAAAAAAAAAAAAO4fAAAAAAAA7x8AAAAAAAAAAAAA7x8AAAAAAADwHwAAAAAAAAAAAADwHwAAAAAAAPEfAAAAAAAAAAAAAPEfAAAAAAAA8h8AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA6x8AAAAAAADrHwAAAAAAAAAAAAAAAPC/"
 				],
 				[
 					296,
 					1,
-					"insert",
+					"insert_completion",
 					{
-						"characters": "\ns"
+						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-basedpyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "isSelected"
 					},
-					"BAAAAJcOAAAAAAAAmA4AAAAAAAAAAAAAmA4AAAAAAACcDgAAAAAAAAAAAACcDgAAAAAAAJ0OAAAAAAAAAAAAAJ0OAAAAAAAAng4AAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAlw4AAAAAAACXDgAAAAAAAAAAAAAAAPC/"
+					"AgAAAO8fAAAAAAAA7x8AAAAAAAADAAAAaXNT7x8AAAAAAAD5HwAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA8h8AAAAAAADyHwAAAAAAAAAAAAAAAPC/"
 				],
 				[
 					297,
 					1,
-					"left_delete",
-					null,
-					"AQAAAJ0OAAAAAAAAnQ4AAAAAAAABAAAAcw",
-					"AQAAAAAAAAABAAAAng4AAAAAAACeDgAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					298,
-					1,
-					"insert",
+					"insert_snippet",
 					{
-						"characters": "if"
+						"contents": "($0)"
 					},
-					"AgAAAJ0OAAAAAAAAng4AAAAAAAAAAAAAng4AAAAAAACfDgAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAnQ4AAAAAAACdDgAAAAAAAAAAAAAAAPC/"
+					"AQAAAPkfAAAAAAAA+x8AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA+R8AAAAAAAD5HwAAAAAAAAAAAAAAAPC/"
 				],
 				[
 					299,
 					1,
 					"insert",
 					{
-						"characters": " sel"
+						"characters": " else"
 					},
-					"BAAAAJ8OAAAAAAAAoA4AAAAAAAAAAAAAoA4AAAAAAAChDgAAAAAAAAAAAAChDgAAAAAAAKIOAAAAAAAAAAAAAKIOAAAAAAAAow4AAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAnw4AAAAAAACfDgAAAAAAAAAAAAAAAPC/"
+					"BQAAAPsfAAAAAAAA/B8AAAAAAAAAAAAA/B8AAAAAAAD9HwAAAAAAAAAAAAD9HwAAAAAAAP4fAAAAAAAAAAAAAP4fAAAAAAAA/x8AAAAAAAAAAAAA/x8AAAAAAAAAIAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA+x8AAAAAAAD7HwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					300,
+					5,
+					"left_delete",
+					null,
+					"BQAAAP8fAAAAAAAA/x8AAAAAAAABAAAAZf4fAAAAAAAA/h8AAAAAAAABAAAAc/0fAAAAAAAA/R8AAAAAAAABAAAAbPwfAAAAAAAA/B8AAAAAAAABAAAAZfsfAAAAAAAA+x8AAAAAAAABAAAAIA",
+					"AQAAAAAAAAABAAAAACAAAAAAAAAAIAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					301,
+					1,
+					"insert",
+					{
+						"characters": ":"
+					},
+					"AQAAAPsfAAAAAAAA/B8AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA+x8AAAAAAAD7HwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					302,
+					1,
+					"insert",
+					{
+						"characters": "\nsuper"
+					},
+					"CAAAAPwfAAAAAAAA/R8AAAAAAAAAAAAA/R8AAAAAAAAFIAAAAAAAAAAAAAAFIAAAAAAAAAkgAAAAAAAAAAAAAAkgAAAAAAAACiAAAAAAAAAAAAAACiAAAAAAAAALIAAAAAAAAAAAAAALIAAAAAAAAAwgAAAAAAAAAAAAAAwgAAAAAAAADSAAAAAAAAAAAAAADSAAAAAAAAAOIAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA/B8AAAAAAAD8HwAAAAAAAAAAAAAAAPC/"
 				],
 				[
 					303,
 					1,
+					"insert_snippet",
+					{
+						"contents": "($0)"
+					},
+					"AQAAAA4gAAAAAAAAECAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAADiAAAAAAAAAOIAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					305,
+					1,
 					"insert",
 					{
-						"characters": "s"
+						"characters": "."
 					},
-					"AQAAAHsOAAAAAAAAfA4AAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAew4AAAAAAAB7DgAAAAAAAAAAAAAAAPC/"
+					"AQAAABAgAAAAAAAAESAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAECAAAAAAAAAQIAAAAAAAAAAAAAAAAPC/"
 				],
 				[
 					306,
-					3,
-					"left_delete",
-					null,
-					"AwAAAGgOAAAAAAAAaA4AAAAAAADBAQAAICAgIGRlZiBub2RlSGFzTGlua3Moc2VsZiwgbjogSGFzaGFibGUpIC0+IGJvb2w6CiAgICAJaWYgc2VsCiAgICAgICAgbWF0Y2ggcG9ydDoKICAgICAgICAgICAgY2FzZSBJbmxldElkKCk6CiAgICAgICAgICAgICAgICBmb3IgdSwgdiwgKG8sIGkpIGluIHNlbGYuX21vZGVsLmluRWRnZXMocG9ydC5ub2RlSWQpOgogICAgICAgICAgICAgICAgICAgIGlmIGkgPT0gcG9ydC5uYW1lOgogICAgICAgICAgICAgICAgICAgICAgICByZXR1cm4gVHJ1ZQogICAgICAgICAgICBjYXNlIE91dGxldElkKCk6CiAgICAgICAgICAgICAgICBmb3IgdSwgdiwgKG8sIGkpIGluIHNlbGYuX21vZGVsLm91dEVkZ2VzKHBvcnQubm9kZUlkKToKICAgICAgICAgICAgICAgICAgICBpZiBvID09IHBvcnQubmFtZToKICAgICAgICAgICAgICAgICAgICAgICAgcmV0dXJuIFRydWUKICAgICAgICByZXR1cm4gRmFsc2VnDgAAAAAAAGcOAAAAAAAAAQAAAApmDgAAAAAAAGYOAAAAAAAAAQAAAAo",
-					"AQAAAAAAAAABAAAAKRAAAAAAAABoDgAAAAAAAAAAAAAAAPC/"
+					1,
+					"insert",
+					{
+						"characters": "mouseR"
+					},
+					"BgAAABEgAAAAAAAAEiAAAAAAAAAAAAAAEiAAAAAAAAATIAAAAAAAAAAAAAATIAAAAAAAABQgAAAAAAAAAAAAABQgAAAAAAAAFSAAAAAAAAAAAAAAFSAAAAAAAAAWIAAAAAAAAAAAAAAWIAAAAAAAABcgAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAESAAAAAAAAARIAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					307,
+					1,
+					"insert_completion",
+					{
+						"completion": "mouseReleaseEvent",
+						"format": "text",
+						"keep_prefix": false,
+						"must_insert": false,
+						"trigger": "mouseReleaseEvent"
+					},
+					"AgAAABEgAAAAAAAAESAAAAAAAAAGAAAAbW91c2VSESAAAAAAAAAiIAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAFyAAAAAAAAAXIAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					308,
+					1,
+					"insert_snippet",
+					{
+						"contents": "($0)"
+					},
+					"AQAAACIgAAAAAAAAJCAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAIiAAAAAAAAAiIAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					309,
+					1,
+					"insert",
+					{
+						"characters": "event"
+					},
+					"BQAAACMgAAAAAAAAJCAAAAAAAAAAAAAAJCAAAAAAAAAlIAAAAAAAAAAAAAAlIAAAAAAAACYgAAAAAAAAAAAAACYgAAAAAAAAJyAAAAAAAAAAAAAAJyAAAAAAAAAoIAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAIyAAAAAAAAAjIAAAAAAAAAAAAAAAAPC/"
 				],
 				[
 					311,
 					1,
 					"insert",
 					{
-						"characters": "nodeG"
+						"characters": "\n"
 					},
-					"BgAAANcQAAAAAAAA2BAAAAAAAAAAAAAA2BAAAAAAAADYEAAAAAAAABQAAABvdXRsZXRHcmFwaGljc09iamVjdNgQAAAAAAAA2RAAAAAAAAAAAAAA2RAAAAAAAADaEAAAAAAAAAAAAADaEAAAAAAAANsQAAAAAAAAAAAAANsQAAAAAAAA3BAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAA1xAAAAAAAADrEAAAAAAAAAAAAAAAAPC/"
+					"AgAAACkgAAAAAAAAKiAAAAAAAAAAAAAAKiAAAAAAAAA2IAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAKSAAAAAAAAApIAAAAAAAAAAAAAAAAPC/"
 				],
 				[
 					312,
 					1,
-					"insert_completion",
-					{
-						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-pyright\"}",
-						"format": "command",
-						"keep_prefix": false,
-						"must_insert": false,
-						"trigger": "nodeGraphicsObject"
-					},
-					"AgAAANcQAAAAAAAA1xAAAAAAAAAFAAAAbm9kZUfXEAAAAAAAAOkQAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAA3BAAAAAAAADcEAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					322,
-					1,
-					"paste",
-					null,
-					"AgAAAAwRAAAAAAAAHhEAAAAAAAAAAAAAHhEAAAAAAAAeEQAAAAAAABMAAABpbmxldEdyYXBoaWNzT2JqZWN0",
-					"AQAAAAAAAAABAAAADBEAAAAAAAAfEQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					326,
-					1,
 					"left_delete",
 					null,
-					"AgAAAB8RAAAAAAAAHxEAAAAAAAAIAAAASW5sZXRJZCjqEAAAAAAAAOoQAAAAAAAACAAAAE91dGxldElk",
-					"AQAAAAAAAAACAAAA6hAAAAAAAADyEAAAAAAAAAAAAAAAAPC/HxEAAAAAAAAnEQAAAAAAAAAAAAAAAPC/"
+					"AQAAADIgAAAAAAAAMiAAAAAAAAAEAAAAICAgIA",
+					"AQAAAAAAAAABAAAANiAAAAAAAAA2IAAAAAAAAAAAAAAAAPC/"
 				],
 				[
-					331,
-					1,
-					"left_delete",
-					null,
-					"AQAAAOoQAAAAAAAA6hAAAAAAAAABAAAAKA",
-					"AQAAAAAAAAABAAAA6xAAAAAAAADrEAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					335,
-					2,
-					"left_delete",
-					null,
-					"BAAAABgRAAAAAAAAGBEAAAAAAAADAAAAIGkp7BAAAAAAAADsEAAAAAAAAAMAAAAgbykUEQAAAAAAABQRAAAAAAAAAQAAACzrEAAAAAAAAOsQAAAAAAAAAQAAACw",
-					"AQAAAAAAAAACAAAA7BAAAAAAAADvEAAAAAAAAAAAAAAAAPC/GBEAAAAAAAAbEQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					338,
-					1,
-					"left_delete",
-					null,
-					"AQAAABQRAAAAAAAAFBEAAAAAAAABAAAALA",
-					"AQAAAAAAAAABAAAAFREAAAAAAAAVEQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					343,
-					3,
-					"left_delete",
-					null,
-					"AwAAAIsTAAAAAAAAixMAAAAAAADWBAAAICAgICAgICBpbmxldHMgPSBbXQogICAgICAgIGlmIHNlbGYuX21vZGVsLmhhc05vZGVQcm9wZXJ0eShuLCAiaW5sZXRzIik6CiAgICAgICAgICAgIGlubGV0TmFtZXMgPSBzZWxmLl9tb2RlbC5nZXROb2RlUHJvcGVydHkobiwgImlubGV0cyIpCiAgICAgICAgICAgIGFzc2VydCBpc2luc3RhbmNlKGlubGV0TmFtZXMsIGxpc3QpIGFuZCBhbGwoCiAgICAgICAgICAgICAgICBpc2luc3RhbmNlKF8sIHN0cikgZm9yIF8gaW4gaW5sZXROYW1lcwogICAgICAgICAgICApCiAgICAgICAgICAgIGZvciBpbmxldE5hbWUgaW4gaW5sZXROYW1lczoKICAgICAgICAgICAgICAgIGlubGV0X2dyYXBoaWNzX29iamVjdCA9IElubGV0R3JhcGhpY3NPYmplY3QoCiAgICAgICAgICAgICAgICAgICAgSW5sZXRJZChuLCBpbmxldE5hbWUpCiAgICAgICAgICAgICAgICApCiAgICAgICAgICAgICAgICBzZWxmLl9pbmxldF9ncmFwaGljc19vYmplY3RzWwogICAgICAgICAgICAgICAgICAgIElubGV0SWQobiwgaW5sZXROYW1lKQogICAgICAgICAgICAgICAgXSA9IGlubGV0X2dyYXBoaWNzX29iamVjdAogICAgICAgICAgICAgICAgaW5sZXRzLmFwcGVuZChpbmxldF9ncmFwaGljc19vYmplY3QpCgogICAgICAgIG91dGxldHMgPSBbXQogICAgICAgIGlmIHNlbGYuX21vZGVsLmhhc05vZGVQcm9wZXJ0eShuLCAib3V0bGV0cyIpOgogICAgICAgICAgICBvdXRsZXROYW1lcyA9IHNlbGYuX21vZGVsLmdldE5vZGVQcm9wZXJ0eShuLCAib3V0bGV0cyIpCiAgICAgICAgICAgIGFzc2VydCBpc2luc3RhbmNlKG91dGxldE5hbWVzLCBsaXN0KSBhbmQgYWxsKAogICAgICAgICAgICAgICAgaXNpbnN0YW5jZShfLCBzdHIpIGZvciBfIGluIG91dGxldE5hbWVzCiAgICAgICAgICAgICkKICAgICAgICAgICAgZm9yIG91dGxldE5hbWUgaW4gb3V0bGV0TmFtZXM6CiAgICAgICAgICAgICAgICBvdXRsZXRfZ3JhcGhpY3Nfb2JqZWN0ID0gT3V0bGV0R3JhcGhpY3NPYmplY3QoCiAgICAgICAgICAgICAgICAgICAgT3V0bGV0SWQobiwgb3V0bGV0TmFtZSkKICAgICAgICAgICAgICAgICkKICAgICAgICAgICAgICAgIHNlbGYuX291dGxldF9ncmFwaGljc19vYmplY3RzWwogICAgICAgICAgICAgICAgICAgIE91dGxldElkKG4sIG91dGxldE5hbWUpCiAgICAgICAgICAgICAgICBdID0gb3V0bGV0X2dyYXBoaWNzX29iamVjdAogICAgICAgICAgICAgICAgb3V0bGV0cy5hcHBlbmQob3V0bGV0X2dyYXBoaWNzX29iamVjdCmKEwAAAAAAAIoTAAAAAAAAAQAAAAqJEwAAAAAAAIkTAAAAAAAAAQAAAAo",
-					"AQAAAAAAAAABAAAAYRgAAAAAAACLEwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					348,
+					313,
 					1,
 					"insert",
 					{
-						"characters": "VertexGra"
+						"characters": "else:"
 					},
-					"CgAAALQTAAAAAAAAtRMAAAAAAAAAAAAAtRMAAAAAAAC1EwAAAAAAABIAAABOb2RlR3JhcGhpY3NPYmplY3S1EwAAAAAAALYTAAAAAAAAAAAAALYTAAAAAAAAtxMAAAAAAAAAAAAAtxMAAAAAAAC4EwAAAAAAAAAAAAC4EwAAAAAAALkTAAAAAAAAAAAAALkTAAAAAAAAuhMAAAAAAAAAAAAAuhMAAAAAAAC7EwAAAAAAAAAAAAC7EwAAAAAAALwTAAAAAAAAAAAAALwTAAAAAAAAvRMAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAtBMAAAAAAADGEwAAAAAAAAAAAAAAAPC/"
+					"BQAAADIgAAAAAAAAMyAAAAAAAAAAAAAAMyAAAAAAAAA0IAAAAAAAAAAAAAA0IAAAAAAAADUgAAAAAAAAAAAAADUgAAAAAAAANiAAAAAAAAAAAAAANiAAAAAAAAA3IAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAMiAAAAAAAAAyIAAAAAAAAAAAAAAAAPC/"
 				],
 				[
-					349,
+					316,
 					1,
-					"insert_completion",
-					{
-						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-pyright\"}",
-						"format": "command",
-						"keep_prefix": false,
-						"must_insert": false,
-						"trigger": "VertexGraphicsObject"
-					},
-					"AgAAALQTAAAAAAAAtBMAAAAAAAAJAAAAVmVydGV4R3JhtBMAAAAAAADIEwAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAvRMAAAAAAAC9EwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					352,
-					1,
-					"left_delete",
+					"indent",
 					null,
-					"AQAAANcTAAAAAAAA1xMAAAAAAAAgAAAALCBpbmxldHM9aW5sZXRzLCBvdXRsZXRzPW91dGxldHM",
-					"AQAAAAAAAAABAAAA9xMAAAAAAADXEwAAAAAAAAAAAAAAAPC/"
-				],
+					"CAAAADggAAAAAAAAPCAAAAAAAAAAAAAAVyAAAAAAAABbIAAAAAAAAAAAAACHIAAAAAAAAIsgAAAAAAAAAAAAAMwgAAAAAAAA0CAAAAAAAAAAAAAA9iAAAAAAAAD6IAAAAAAAAAAAAAAcIQAAAAAAACAhAAAAAAAAAAAAAEMhAAAAAAAARyEAAAAAAAAAAAAAViEAAAAAAABaIQAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAaSEAAAAAAAA4IAAAAAAAAAAAAAAAAPC/"
+				]
+			]
+		},
+		{
+			"file": "pylive/NetworkXGraphEditor/nx_network_scene-SUBCLASS.py",
+			"settings":
+			{
+				"buffer_size": 8839,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			},
+			"undo_stack":
+			[
 				[
-					355,
-					2,
-					"left_delete",
-					null,
-					"AgAAAMoTAAAAAAAAyhMAAAAAAAAMAAAAICAgICAgICAgICAgyRMAAAAAAADJEwAAAAAAAAEAAAAK",
-					"AQAAAAAAAAABAAAA1hMAAAAAAADKEwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					358,
-					2,
-					"left_delete",
-					null,
-					"AgAAAMsTAAAAAAAAyxMAAAAAAAAIAAAAICAgICAgICDKEwAAAAAAAMoTAAAAAAAAAQAAAAo",
-					"AQAAAAAAAAABAAAA0xMAAAAAAADLEwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					361,
-					1,
-					"left_delete",
-					null,
-					"AQAAAOcSAAAAAAAA5xIAAAAAAACiAAAAICAgICAgICBpbmxldF9uYW1lcyA9ICgKICAgICAgICAgICAgc2VsZi5fbW9kZWwuZ2V0Tm9kZVByb3BlcnR5KG4sICJpbmxldHMiKQogICAgICAgICAgICBpZiBzZWxmLl9tb2RlbC5oYXNOb2RlUHJvcGVydHkobiwgImlubGV0cyIpCiAgICAgICAgICAgIGVsc2UgW10KICAgICAgICAp",
-					"AQAAAAAAAAABAAAAiRMAAAAAAADnEgAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					362,
-					2,
-					"right_delete",
-					null,
-					"AgAAAOcSAAAAAAAA5xIAAAAAAAABAAAACucSAAAAAAAA5xIAAAAAAAABAAAACg",
-					"AQAAAAAAAAABAAAA5xIAAAAAAADnEgAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					365,
-					1,
-					"left_delete",
-					null,
-					"AQAAACcTAAAAAAAAJxMAAAAAAAABAAAACg",
-					"AQAAAAAAAAABAAAAKBMAAAAAAAAoEwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					373,
-					1,
-					"insert",
-					{
-						"characters": "nodeGrap"
-					},
-					"CQAAANcTAAAAAAAA2BMAAAAAAAAAAAAA2BMAAAAAAADYEwAAAAAAABYAAABfbm9kZV9ncmFwaGljc19vYmplY3Rz2BMAAAAAAADZEwAAAAAAAAAAAADZEwAAAAAAANoTAAAAAAAAAAAAANoTAAAAAAAA2xMAAAAAAAAAAAAA2xMAAAAAAADcEwAAAAAAAAAAAADcEwAAAAAAAN0TAAAAAAAAAAAAAN0TAAAAAAAA3hMAAAAAAAAAAAAA3hMAAAAAAADfEwAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAA1xMAAAAAAADtEwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					374,
-					1,
-					"insert_completion",
-					{
-						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-pyright\"}",
-						"format": "command",
-						"keep_prefix": false,
-						"must_insert": false,
-						"trigger": "nodeGraphicsObject"
-					},
-					"AgAAANcTAAAAAAAA1xMAAAAAAAAIAAAAbm9kZUdyYXDXEwAAAAAAAOkTAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAA3xMAAAAAAADfEwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					375,
-					1,
-					"insert",
-					{
-						"characters": "("
-					},
-					"AQAAAOkTAAAAAAAA6hMAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAA6RMAAAAAAADpEwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					376,
-					1,
-					"right_delete",
-					null,
-					"AQAAAOoTAAAAAAAA6hMAAAAAAAABAAAAWw",
-					"AQAAAAAAAAABAAAA6hMAAAAAAADqEwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					378,
-					1,
-					"left_delete",
-					null,
-					"AQAAAOsTAAAAAAAA6xMAAAAAAAABAAAAXQ",
-					"AQAAAAAAAAABAAAA7BMAAAAAAADsEwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					379,
-					1,
-					"insert",
-					{
-						"characters": ")"
-					},
-					"AQAAAOsTAAAAAAAA7BMAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAA6xMAAAAAAADrEwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					384,
-					1,
-					"left_delete",
-					null,
-					"AQAAAJ4UAAAAAAAAnhQAAAAAAAABAAAACg",
-					"AQAAAAAAAAABAAAAnxQAAAAAAACfFAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					388,
-					3,
-					"left_delete",
-					null,
-					"AwAAAOEVAAAAAAAA4RUAAAAAAACOAQAAICAgIGRlZiBvdXRsZXRBdChzZWxmLCBwb3NpdGlvbjogUVBvaW50RikgLT4gIk91dGxldEdyYXBoaWNzT2JqZWN0IjoKICAgICAgICByZXR1cm4gY2FzdCgKICAgICAgICAgICAgT3V0bGV0R3JhcGhpY3NPYmplY3QsCiAgICAgICAgICAgIHNlbGYuX2ZpbmRHcmFwaEl0ZW1BdChPdXRsZXRHcmFwaGljc09iamVjdCwgcG9zaXRpb24pLAogICAgICAgICkKCiAgICBkZWYgaW5sZXRBdChzZWxmLCBwb3NpdGlvbjogUVBvaW50RikgLT4gIklubGV0R3JhcGhpY3NPYmplY3QiOgogICAgICAgIHJldHVybiBjYXN0KAogICAgICAgICAgICBJbmxldEdyYXBoaWNzT2JqZWN0LAogICAgICAgICAgICBzZWxmLl9maW5kR3JhcGhJdGVtQXQoSW5sZXRHcmFwaGljc09iamVjdCwgcG9zaXRpb24pLAogICAgICAgICngFQAAAAAAAOAVAAAAAAAAAQAAAArfFQAAAAAAAN8VAAAAAAAAAQAAAAo",
-					"AQAAAAAAAAABAAAAbxcAAAAAAADhFQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					393,
-					1,
-					"insert",
-					{
-						"characters": "Verte"
-					},
-					"BgAAAEMWAAAAAAAARBYAAAAAAAAAAAAARBYAAAAAAABEFgAAAAAAABIAAABOb2RlR3JhcGhpY3NPYmplY3REFgAAAAAAAEUWAAAAAAAAAAAAAEUWAAAAAAAARhYAAAAAAAAAAAAARhYAAAAAAABHFgAAAAAAAAAAAABHFgAAAAAAAEgWAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAQxYAAAAAAABVFgAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					395,
-					1,
-					"insert_completion",
-					{
-						"completion": "lsp_select_completion {\"index\":5,\"session_name\":\"LSP-pyright\"}",
-						"format": "command",
-						"keep_prefix": false,
-						"must_insert": false,
-						"trigger": "VertexGraphicsObject"
-					},
-					"AgAAAEMWAAAAAAAAQxYAAAAAAAAFAAAAVmVydGVDFgAAAAAAAFcWAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAASBYAAAAAAABIFgAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					405,
-					1,
-					"paste",
-					null,
-					"AgAAAA0WAAAAAAAAIRYAAAAAAAAAAAAAIRYAAAAAAAAhFgAAAAAAABIAAABOb2RlR3JhcGhpY3NPYmplY3Q",
-					"AQAAAAAAAAABAAAADRYAAAAAAAAfFgAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					410,
-					1,
-					"paste",
-					null,
-					"AgAAAH0WAAAAAAAAkRYAAAAAAAAAAAAAkRYAAAAAAACRFgAAAAAAABIAAABOb2RlR3JhcGhpY3NPYmplY3Q",
-					"AQAAAAAAAAABAAAAfRYAAAAAAACPFgAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					414,
-					1,
-					"insert",
-					{
-						"characters": "ve"
-					},
-					"AwAAAOkVAAAAAAAA6hUAAAAAAAAAAAAA6hUAAAAAAADqFQAAAAAAAAQAAABub2Rl6hUAAAAAAADrFQAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAA7RUAAAAAAADpFQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					415,
-					1,
-					"insert",
-					{
-						"characters": "rt"
-					},
-					"AgAAAOsVAAAAAAAA7BUAAAAAAAAAAAAA7BUAAAAAAADtFQAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAA6xUAAAAAAADrFQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					416,
-					3,
-					"left_delete",
-					null,
-					"AwAAAOwVAAAAAAAA7BUAAAAAAAABAAAAdOsVAAAAAAAA6xUAAAAAAAABAAAAcuoVAAAAAAAA6hUAAAAAAAABAAAAZQ",
-					"AQAAAAAAAAABAAAA7RUAAAAAAADtFQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					417,
-					1,
-					"insert",
-					{
-						"characters": "e"
-					},
-					"AQAAAOoVAAAAAAAA6xUAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAA6hUAAAAAAADqFQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					418,
-					2,
-					"left_delete",
-					null,
-					"AgAAAOoVAAAAAAAA6hUAAAAAAAABAAAAZekVAAAAAAAA6RUAAAAAAAABAAAAdg",
-					"AQAAAAAAAAABAAAA6xUAAAAAAADrFQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					419,
-					1,
-					"insert",
-					{
-						"characters": "node"
-					},
-					"BAAAAOkVAAAAAAAA6hUAAAAAAAAAAAAA6hUAAAAAAADrFQAAAAAAAAAAAADrFQAAAAAAAOwVAAAAAAAAAAAAAOwVAAAAAAAA7RUAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAA6RUAAAAAAADpFQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					432,
-					1,
-					"insert",
-					{
-						"characters": "for"
-					},
-					"BAAAAIkXAAAAAAAAihcAAAAAAAAAAAAAihcAAAAAAACKFwAAAAAAAEEFAABkZWYgaGllYXJjaGljYWxfbGF5b3V0X3dpdGhfZ3JhbmRhbGYoRywgc2NhbGU9MSk6CiAgICAgICAgICAgIGltcG9ydCBncmFuZGFsZgogICAgICAgICAgICBmcm9tIGdyYW5kYWxmLmxheW91dHMgaW1wb3J0IFN1Z2l5YW1hTGF5b3V0CgogICAgICAgICAgICBnID0gZ3JhbmRhbGYudXRpbHMuY29udmVydF9uZXh0d29ya3hfZ3JhcGhfdG9fZ3JhbmRhbGYoRykKCiAgICAgICAgICAgIGNsYXNzIGRlZmF1bHR2aWV3KG9iamVjdCk6ICAjIHNlZSBSRUFETUUgb2YgZ3JhbmRhbGYncyBnaXRodWIKICAgICAgICAgICAgICAgIHcsIGggPSBzY2FsZSwgc2NhbGUKCiAgICAgICAgICAgIGZvciB2IGluIGcuQ1swXS5zVjoKICAgICAgICAgICAgICAgIHYudmlldyA9IGRlZmF1bHR2aWV3KCkKICAgICAgICAgICAgc3VnID0gU3VnaXlhbWFMYXlvdXQoZy5DWzBdKQogICAgICAgICAgICBzdWcuaW5pdF9hbGwoKSAgIyByb290cz1bVlswXV0pCiAgICAgICAgICAgIHN1Zy5kcmF3KCkKICAgICAgICAgICAgcmV0dXJuIHsKICAgICAgICAgICAgICAgIHYuZGF0YTogKHYudmlldy54eVswXSwgdi52aWV3Lnh5WzFdKSBmb3IgdiBpbiBnLkNbMF0uc1YKICAgICAgICAgICAgfSAgIyBFeHRyYWN0cyB0aGUgcG9zaXRpb25zCgogICAgICAgIGRlZiBoaWVhcmNoaWNhbF9sYXlvdXRfd2l0aF9ueChHLCBzY2FsZT0xMDApOgogICAgICAgICAgICBmb3IgbGF5ZXIsIG5vZGVzIGluIGVudW1lcmF0ZSgKICAgICAgICAgICAgICAgIHJldmVyc2VkKHR1cGxlKG54LnRvcG9sb2dpY2FsX2dlbmVyYXRpb25zKEcpKSkKICAgICAgICAgICAgKToKICAgICAgICAgICAgICAgICMgYG11bHRpcGFydGl0ZV9sYXlvdXRgIGV4cGVjdHMgdGhlIGxheWVyIGFzIGEgbm9kZSBhdHRyaWJ1dGUsIHNvIGFkZCB0aGUKICAgICAgICAgICAgICAgICMgbnVtZXJpYyBsYXllciB2YWx1ZSBhcyBhIG5vZGUgYXR0cmlidXRlCiAgICAgICAgICAgICAgICBmb3Igbm9kZSBpbiBub2RlczoKICAgICAgICAgICAgICAgICAgICBHLm5vZGVzW25vZGVdWyJsYXllciJdID0gLWxheWVyCgogICAgICAgICAgICAjIENvbXB1dGUgdGhlIG11bHRpcGFydGl0ZV9sYXlvdXQgdXNpbmcgdGhlICJsYXllciIgbm9kZSBhdHRyaWJ1dGUKICAgICAgICAgICAgcG9zID0gbngubXVsdGlwYXJ0aXRlX2xheW91dCgKICAgICAgICAgICAgICAgIEcsIHN1YnNldF9rZXk9ImxheWVyIiwgYWxpZ249Imhvcml6b250YWwiCiAgICAgICAgICAgICkKICAgICAgICAgICAgZm9yIG4sIHAgaW4gcG9zLml0ZW1zKCk6CiAgICAgICAgICAgICAgICBwb3Nbbl0gPSBwWzBdICogc2NhbGUsIHBbMV0gKiBzY2FsZQogICAgICAgICAgICByZXR1cm4gcG9zihcAAAAAAACLFwAAAAAAAAAAAACLFwAAAAAAAIwXAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAyhwAAAAAAACJFwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					433,
-					2,
-					"left_delete",
-					null,
-					"AgAAAIsXAAAAAAAAixcAAAAAAAABAAAAcooXAAAAAAAAihcAAAAAAAABAAAAbw",
-					"AQAAAAAAAAABAAAAjBcAAAAAAACMFwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					434,
-					1,
-					"insert",
-					{
-						"characters": "rom"
-					},
-					"AwAAAIoXAAAAAAAAixcAAAAAAAAAAAAAixcAAAAAAACMFwAAAAAAAAAAAACMFwAAAAAAAI0XAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAihcAAAAAAACKFwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					435,
-					1,
-					"insert",
-					{
-						"characters": " pylive.uti"
-					},
-					"CwAAAI0XAAAAAAAAjhcAAAAAAAAAAAAAjhcAAAAAAACPFwAAAAAAAAAAAACPFwAAAAAAAJAXAAAAAAAAAAAAAJAXAAAAAAAAkRcAAAAAAAAAAAAAkRcAAAAAAACSFwAAAAAAAAAAAACSFwAAAAAAAJMXAAAAAAAAAAAAAJMXAAAAAAAAlBcAAAAAAAAAAAAAlBcAAAAAAACVFwAAAAAAAAAAAACVFwAAAAAAAJYXAAAAAAAAAAAAAJYXAAAAAAAAlxcAAAAAAAAAAAAAlxcAAAAAAACYFwAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAjRcAAAAAAACNFwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					436,
-					1,
-					"insert_completion",
-					{
-						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-pyright\"}",
-						"format": "command",
-						"keep_prefix": false,
-						"must_insert": false,
-						"trigger": "utils"
-					},
-					"AgAAAJUXAAAAAAAAlRcAAAAAAAADAAAAdXRplRcAAAAAAACaFwAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAmBcAAAAAAACYFwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					437,
-					1,
-					"insert",
-					{
-						"characters": ".grap"
-					},
-					"BQAAAJoXAAAAAAAAmxcAAAAAAAAAAAAAmxcAAAAAAACcFwAAAAAAAAAAAACcFwAAAAAAAJ0XAAAAAAAAAAAAAJ0XAAAAAAAAnhcAAAAAAAAAAAAAnhcAAAAAAACfFwAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAmhcAAAAAAACaFwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					438,
-					1,
-					"insert_completion",
-					{
-						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-pyright\"}",
-						"format": "command",
-						"keep_prefix": false,
-						"must_insert": false,
-						"trigger": "graph_layout"
-					},
-					"AgAAAJsXAAAAAAAAmxcAAAAAAAAEAAAAZ3JhcJsXAAAAAAAApxcAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAnxcAAAAAAACfFwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					439,
-					1,
-					"insert",
-					{
-						"characters": " import"
-					},
-					"BwAAAKcXAAAAAAAAqBcAAAAAAAAAAAAAqBcAAAAAAACpFwAAAAAAAAAAAACpFwAAAAAAAKoXAAAAAAAAAAAAAKoXAAAAAAAAqxcAAAAAAAAAAAAAqxcAAAAAAACsFwAAAAAAAAAAAACsFwAAAAAAAK0XAAAAAAAAAAAAAK0XAAAAAAAArhcAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAApxcAAAAAAACnFwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					440,
-					1,
-					"insert",
-					{
-						"characters": " "
-					},
-					"AQAAAK4XAAAAAAAArxcAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAArhcAAAAAAACuFwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					449,
-					1,
-					"paste",
-					null,
-					"AQAAAK8XAAAAAAAAyRcAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAArxcAAAAAAACvFwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					460,
-					1,
-					"paste",
-					null,
-					"AgAAAK8XAAAAAAAAyRcAAAAAAAAAAAAAyRcAAAAAAADJFwAAAAAAABoAAABoaWVhcmNoaWNhbF9sYXlvdXRfd2l0aF9ueA",
-					"AQAAAAAAAAABAAAArxcAAAAAAADJFwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					473,
-					1,
-					"insert",
-					{
-						"characters": "k"
-					},
-					"AgAAAIgKAAAAAAAAiQoAAAAAAAAAAAAAiQoAAAAAAACJCgAAAAAAAAYAAAAobywgaSk",
-					"AQAAAAAAAAABAAAAjgoAAAAAAACICgAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					479,
-					1,
-					"insert",
-					{
-						"characters": "k"
-					},
-					"AgAAACQLAAAAAAAAJQsAAAAAAAAAAAAAJQsAAAAAAAAlCwAAAAAAAAYAAAAobywgaSk",
-					"AQAAAAAAAAABAAAAJAsAAAAAAAAqCwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					482,
-					1,
-					"insert",
-					{
-						"characters": "k"
-					},
-					"AgAAAFcLAAAAAAAAWAsAAAAAAAAAAAAAWAsAAAAAAABYCwAAAAAAAAYAAAAobywgaSk",
-					"AQAAAAAAAAABAAAAVwsAAAAAAABdCwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					491,
-					1,
-					"insert",
-					{
-						"characters": "e"
-					},
-					"AgAAAB0LAAAAAAAAHgsAAAAAAAAAAAAAHgsAAAAAAAAeCwAAAAAAAAkAAAAodSwgdiwgayk",
-					"AQAAAAAAAAABAAAAHQsAAAAAAAAmCwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					496,
-					1,
-					"insert",
-					{
-						"characters": "e"
-					},
-					"AgAAAEgLAAAAAAAASQsAAAAAAAAAAAAASQsAAAAAAABJCwAAAAAAAAkAAAAodSwgdiwgayk",
-					"AQAAAAAAAAABAAAASAsAAAAAAABRCwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					504,
-					1,
-					"insert",
-					{
-						"characters": "k"
-					},
-					"AgAAABkeAAAAAAAAGh4AAAAAAAAAAAAAGh4AAAAAAAAaHgAAAAAAAAYAAAAobywgaSk",
-					"AQAAAAAAAAABAAAAHx4AAAAAAAAZHgAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					511,
-					1,
-					"left_delete",
-					null,
-					"AQAAAEAeAAAAAAAAQB4AAAAAAAAIAAAAe299LT57aX0",
-					"AQAAAAAAAAABAAAASB4AAAAAAABAHgAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					513,
-					1,
-					"insert_snippet",
-					{
-						"contents": "{$0}"
-					},
-					"AQAAAEAeAAAAAAAAQh4AAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAQB4AAAAAAABAHgAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					514,
-					1,
-					"insert",
-					{
-						"characters": "k"
-					},
-					"AQAAAEEeAAAAAAAAQh4AAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAQR4AAAAAAABBHgAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					524,
-					2,
-					"left_delete",
-					null,
-					"AgAAAE0cAAAAAAAATRwAAAAAAAA9AAAAICAgICAgICAgICAgYXNzZXJ0IGlzaW5zdGFuY2UoZVsyXSwgdHVwbGUpIGFuZCBsZW4oZVsyXSkgPT0gMkwcAAAAAAAATBwAAAAAAAABAAAACg",
-					"AQAAAAAAAAABAAAAihwAAAAAAABNHAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					537,
+					11,
 					1,
 					"insert",
 					{
 						"characters": "\n\n"
 					},
-					"BQAAAF0dAAAAAAAAXh0AAAAAAAAAAAAAXh0AAAAAAABqHQAAAAAAAAAAAABqHQAAAAAAAGsdAAAAAAAAAAAAAGsdAAAAAAAAdx0AAAAAAAAAAAAAXh0AAAAAAABeHQAAAAAAAAwAAAAgICAgICAgICAgICA",
-					"AQAAAAAAAAABAAAAXR0AAAAAAABdHQAAAAAAAAAAAAAAAPC/"
+					"BQAAAE4DAAAAAAAATwMAAAAAAAAAAAAATwMAAAAAAABXAwAAAAAAAAAAAABXAwAAAAAAAFgDAAAAAAAAAAAAAFgDAAAAAAAAYAMAAAAAAAAAAAAATwMAAAAAAABPAwAAAAAAAAgAAAAgICAgICAgIA",
+					"AQAAAAAAAAABAAAATgMAAAAAAABOAwAAAAAAAAAAAAAAAPC/"
 				],
 				[
-					538,
-					8,
+					12,
+					1,
 					"left_delete",
 					null,
-					"CAAAAGodAAAAAAAAah0AAAAAAAABAAAAIGkdAAAAAAAAaR0AAAAAAAABAAAAIGgdAAAAAAAAaB0AAAAAAAABAAAAIGcdAAAAAAAAZx0AAAAAAAABAAAAIGYdAAAAAAAAZh0AAAAAAAABAAAAIGUdAAAAAAAAZR0AAAAAAAABAAAAIGQdAAAAAAAAZB0AAAAAAAABAAAAIGMdAAAAAAAAYx0AAAAAAAABAAAAIA",
-					"AQAAAAAAAAABAAAAax0AAAAAAABrHQAAAAAAAAAAAAAAAPC/"
+					"AQAAAFQDAAAAAAAAVAMAAAAAAAAEAAAAICAgIA",
+					"AQAAAAAAAAABAAAAWAMAAAAAAABYAwAAAAAAAAAAAAAAAPC/"
 				],
 				[
-					539,
+					13,
 					1,
 					"paste",
 					null,
-					"AQAAAGMdAAAAAAAA9yAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAYx0AAAAAAABjHQAAAAAAAAAAAAAAAPC/"
+					"AQAAAFQDAAAAAAAASgQAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAVAMAAAAAAABUAwAAAAAAAAAAAAAAAPC/"
 				],
 				[
-					542,
-					4,
+					16,
+					1,
 					"left_delete",
 					null,
-					"BAAAAGYdAAAAAAAAZh0AAAAAAAABAAAAIGUdAAAAAAAAZR0AAAAAAAABAAAAIGQdAAAAAAAAZB0AAAAAAAABAAAAIGMdAAAAAAAAYx0AAAAAAAABAAAAIA",
-					"AQAAAAAAAAABAAAAZx0AAAAAAABnHQAAAAAAAAAAAAAAAPC/"
+					"AQAAAFQDAAAAAAAAVAMAAAAAAAAEAAAAICAgIA",
+					"AQAAAAAAAAABAAAAWAMAAAAAAABYAwAAAAAAAAAAAAAAAPC/"
 				],
 				[
-					548,
-					1,
-					"insert",
-					{
-						"characters": "node"
-					},
-					"BQAAAKIeAAAAAAAAox4AAAAAAAAAAAAAox4AAAAAAACjHgAAAAAAAAcAAABpbmxldEF0ox4AAAAAAACkHgAAAAAAAAAAAACkHgAAAAAAAKUeAAAAAAAAAAAAAKUeAAAAAAAAph4AAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAoh4AAAAAAACpHgAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					549,
-					1,
-					"insert_completion",
-					{
-						"completion": "lsp_select_completion {\"index\":4,\"session_name\":\"LSP-pyright\"}",
-						"format": "command",
-						"keep_prefix": false,
-						"must_insert": false,
-						"trigger": "nodeAt"
-					},
-					"AgAAAKIeAAAAAAAAoh4AAAAAAAAEAAAAbm9kZaIeAAAAAAAAqB4AAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAph4AAAAAAACmHgAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					554,
-					1,
-					"insert",
-					{
-						"characters": "node"
-					},
-					"BQAAAIceAAAAAAAAiB4AAAAAAAAAAAAAiB4AAAAAAACIHgAAAAAAAAUAAABpbmxldIgeAAAAAAAAiR4AAAAAAAAAAAAAiR4AAAAAAACKHgAAAAAAAAAAAACKHgAAAAAAAIseAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAhx4AAAAAAACMHgAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					566,
+					22,
 					1,
 					"paste",
 					null,
-					"AgAAANgeAAAAAAAA3B4AAAAAAAAAAAAA3B4AAAAAAADcHgAAAAAAAAUAAABpbmxldA",
-					"AQAAAAAAAAABAAAA2B4AAAAAAADdHgAAAAAAAAAAAAAAAPC/"
+					"AgAAAJUDAAAAAAAApQMAAAAAAAAAAAAApQMAAAAAAAClAwAAAAAAAAsAAAB1LCB2LCBrID0gZQ",
+					"AQAAAAAAAAABAAAAoAMAAAAAAACVAwAAAAAAAAAAAAAAAPC/"
 				],
 				[
-					574,
-					1,
-					"insert",
-					{
-						"characters": "nodeAt"
-					},
-					"BwAAAAAgAAAAAAAAASAAAAAAAAAAAAAAASAAAAAAAAABIAAAAAAAAAcAAABpbmxldEF0ASAAAAAAAAACIAAAAAAAAAAAAAACIAAAAAAAAAMgAAAAAAAAAAAAAAMgAAAAAAAABCAAAAAAAAAAAAAABCAAAAAAAAAFIAAAAAAAAAAAAAAFIAAAAAAAAAYgAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAACAAAAAAAAAHIAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					583,
-					4,
-					"left_delete",
-					null,
-					"BAAAAHogAAAAAAAAeiAAAAAAAAAGAAAAbm9kZUlkeSAAAAAAAAB5IAAAAAAAAAEAAAAueCAAAAAAAAB4IAAAAAAAAAEAAABvdyAAAAAAAAB3IAAAAAAAAAEAAABf",
-					"AQAAAAAAAAABAAAAeiAAAAAAAACAIAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					584,
-					1,
-					"insert",
-					{
-						"characters": "._n"
-					},
-					"AwAAAHcgAAAAAAAAeCAAAAAAAAAAAAAAeCAAAAAAAAB5IAAAAAAAAAAAAAB5IAAAAAAAAHogAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAdyAAAAAAAAB3IAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					585,
-					3,
-					"left_delete",
-					null,
-					"AwAAAHkgAAAAAAAAeSAAAAAAAAABAAAAbnggAAAAAAAAeCAAAAAAAAABAAAAX3cgAAAAAAAAdyAAAAAAAAABAAAALg",
-					"AQAAAAAAAAABAAAAeiAAAAAAAAB6IAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					586,
-					1,
-					"insert",
-					{
-						"characters": "_n"
-					},
-					"AgAAAHcgAAAAAAAAeCAAAAAAAAAAAAAAeCAAAAAAAAB5IAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAdyAAAAAAAAB3IAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					590,
-					1,
-					"insert",
-					{
-						"characters": "_n"
-					},
-					"AwAAAIEgAAAAAAAAgiAAAAAAAAAAAAAAgiAAAAAAAACCIAAAAAAAAAkAAABfaS5ub2RlSWSCIAAAAAAAAIMgAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAiiAAAAAAAACBIAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					599,
-					1,
-					"insert",
-					{
-						"characters": "target`"
-					},
-					"CAAAAOUfAAAAAAAA5h8AAAAAAAAAAAAA5h8AAAAAAADmHwAAAAAAAAUAAABpbmxldOYfAAAAAAAA5x8AAAAAAAAAAAAA5x8AAAAAAADoHwAAAAAAAAAAAADoHwAAAAAAAOkfAAAAAAAAAAAAAOkfAAAAAAAA6h8AAAAAAAAAAAAA6h8AAAAAAADrHwAAAAAAAAAAAADrHwAAAAAAAOwfAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAA5R8AAAAAAADqHwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					605,
-					1,
-					"left_delete",
-					null,
-					"AQAAAOsfAAAAAAAA6x8AAAAAAAABAAAAYA",
-					"AQAAAAAAAAABAAAA7B8AAAAAAADsHwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					615,
+					25,
 					1,
 					"paste",
 					null,
-					"AgAAAHwgAAAAAAAAgiAAAAAAAAAAAAAAgiAAAAAAAACCIAAAAAAAAAUAAABpbmxldA",
-					"AQAAAAAAAAABAAAAfCAAAAAAAACBIAAAAAAAAAAAAAAAAPC/"
+					"AgAAABYEAAAAAAAAJgQAAAAAAAAAAAAAJgQAAAAAAAAmBAAAAAAAAAsAAAB1LCB2LCBrID0gZQ",
+					"AQAAAAAAAAABAAAAIQQAAAAAAAAWBAAAAAAAAAAAAAAAAPC/"
 				],
 				[
-					620,
+					28,
+					1,
+					"cut",
+					null,
+					"AQAAACIFAAAAAAAAIgUAAAAAAAAoAAAAZWxmLm91dGxldEdyYXBoaWNzT2JqZWN0KE91dGxldElkKHUsIG8pKQ",
+					"AQAAAAAAAAABAAAASgUAAAAAAAAiBQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					31,
 					1,
 					"paste",
 					null,
-					"AgAAAJYgAAAAAAAAnCAAAAAAAAAAAAAAnCAAAAAAAACcIAAAAAAAAAUAAABpbmxldA",
-					"AQAAAAAAAAABAAAAliAAAAAAAACbIAAAAAAAAAAAAAAAAPC/"
+					"AgAAALUDAAAAAAAA3QMAAAAAAAAAAAAA3QMAAAAAAADdAwAAAAAAABoAAABzZWxmLm5vZGVHcmFwaGljc09iamVjdCh1KQ",
+					"AQAAAAAAAAABAAAAzwMAAAAAAAC1AwAAAAAAAAAAAAAAAPC/"
 				],
 				[
-					623,
-					3,
+					34,
+					1,
+					"insert",
+					{
+						"characters": "s"
+					},
+					"AQAAALUDAAAAAAAAtgMAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAtQMAAAAAAAC1AwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					37,
+					1,
+					"cut",
+					null,
+					"AQAAAD8FAAAAAAAAPwUAAAAAAAAoAAAAc2VsZi5pbmxldEdyYXBoaWNzT2JqZWN0KElubGV0SWQodiwgaSkpLA",
+					"AQAAAAAAAAABAAAAZwUAAAAAAAA/BQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					40,
+					1,
+					"paste",
+					null,
+					"AgAAAEUEAAAAAAAAbQQAAAAAAAAAAAAAbQQAAAAAAABtBAAAAAAAABoAAABzZWxmLm5vZGVHcmFwaGljc09iamVjdCh1KQ",
+					"AQAAAAAAAAABAAAAXwQAAAAAAABFBAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					41,
+					1,
 					"left_delete",
 					null,
-					"AwAAAIcgAAAAAAAAhyAAAAAAAAAeAAAAKHNlbGYuX28ubmFtZSwgdGFyZ2V0Ll9pLm5hbWUphiAAAAAAAACGIAAAAAAAAAEAAAAghSAAAAAAAACFIAAAAAAAAAEAAAAs",
-					"AQAAAAAAAAABAAAAhyAAAAAAAAClIAAAAAAAAAAAAAAAAPC/"
+					"AQAAAGwEAAAAAAAAbAQAAAAAAAABAAAALA",
+					"AQAAAAAAAAABAAAAbQQAAAAAAABtBAAAAAAAAAAAAAAAAPC/"
 				],
 				[
-					628,
-					1,
-					"insert",
-					{
-						"characters": "k"
-					},
-					"AgAAAIkQAAAAAAAAihAAAAAAAAAAAAAAihAAAAAAAACKEAAAAAAAAAYAAAAobywgaSk",
-					"AQAAAAAAAAABAAAAjxAAAAAAAACJEAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					645,
-					1,
-					"insert",
-					{
-						"characters": "Hashable"
-					},
-					"CQAAADYFAAAAAAAANwUAAAAAAAAAAAAANwUAAAAAAAA3BQAAAAAAAA8AAAB0dXBsZVtzdHIsIHN0cl03BQAAAAAAADgFAAAAAAAAAAAAADgFAAAAAAAAOQUAAAAAAAAAAAAAOQUAAAAAAAA6BQAAAAAAAAAAAAA6BQAAAAAAADsFAAAAAAAAAAAAADsFAAAAAAAAPAUAAAAAAAAAAAAAPAUAAAAAAAA9BQAAAAAAAAAAAAA9BQAAAAAAAD4FAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAARQUAAAAAAAA2BQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					664,
-					1,
-					"toggle_comment",
-					{
-						"block": false
-					},
-					"AQAAABcfAAAAAAAAGR8AAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAOx8AAAAAAAA7HwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					700,
-					1,
-					"insert",
-					{
-						"characters": "\nself.o"
-					},
-					"CQAAAG4KAAAAAAAAbwoAAAAAAAAAAAAAbwoAAAAAAAB3CgAAAAAAAAAAAAB3CgAAAAAAAHgKAAAAAAAAAAAAAHgKAAAAAAAAeQoAAAAAAAAAAAAAeQoAAAAAAAB6CgAAAAAAAAAAAAB6CgAAAAAAAHsKAAAAAAAAAAAAAHsKAAAAAAAAfAoAAAAAAAAAAAAAfAoAAAAAAAB9CgAAAAAAAAAAAAB9CgAAAAAAAH4KAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAbgoAAAAAAABuCgAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					701,
-					1,
-					"insert",
-					{
-						"characters": "nEd"
-					},
-					"AwAAAH4KAAAAAAAAfwoAAAAAAAAAAAAAfwoAAAAAAACACgAAAAAAAAAAAACACgAAAAAAAIEKAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAfgoAAAAAAAB+CgAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					702,
-					1,
-					"insert",
-					{
-						"characters": "ge"
-					},
-					"AgAAAIEKAAAAAAAAggoAAAAAAAAAAAAAggoAAAAAAACDCgAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAgQoAAAAAAACBCgAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					703,
+					44,
 					2,
 					"left_delete",
 					null,
-					"AgAAAIIKAAAAAAAAggoAAAAAAAABAAAAZYEKAAAAAAAAgQoAAAAAAAABAAAAZw",
-					"AQAAAAAAAAABAAAAgwoAAAAAAACDCgAAAAAAAAAAAAAAAPC/"
+					"AgAAAG4EAAAAAAAAbgQAAAAAAADoAAAAICAgIGRlZiBvbkxpbmtDcmVhdGVkKHNlbGYsIGU6IExpbmtJZCk6CiAgICAgICAgbGluayA9IExpbmtHcmFwaGljc09iamVjdChlKQogICAgICAgIHNlbGYuX2xpbmtfZ3JhcGhpY3Nfb2JqZWN0c1tlXSA9IGxpbmsKICAgICAgICBzZWxmLmFkZEl0ZW0obGluaykKCiAgICAgICAgdSwgdiwgKG8sIGkpID0gZQogICAgICAgIGxpbmsubW92ZSgKICAgICAgICAgICAgcywKICAgICAgICAgICAgCiAgICAgICAgKW0EAAAAAAAAbQQAAAAAAAABAAAACg",
+					"AQAAAAAAAAABAAAAVgUAAAAAAABuBAAAAAAAAAAAAAAAAPC/"
 				],
 				[
-					704,
+					55,
 					1,
 					"insert",
 					{
-						"characters": "ge"
+						"characters": "\n\n"
 					},
-					"AgAAAIEKAAAAAAAAggoAAAAAAAAAAAAAggoAAAAAAACDCgAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAgQoAAAAAAACBCgAAAAAAAAAAAAAAAPC/"
+					"AgAAAE8DAAAAAAAAUAMAAAAAAAAAAAAAUAMAAAAAAABRAwAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAATwMAAAAAAABPAwAAAAAAAAAAAAAAAPC/"
 				],
 				[
-					705,
-					4,
+					57,
+					1,
+					"reindent",
+					null,
+					"AQAAAFADAAAAAAAAWAMAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAUAMAAAAAAABQAwAAAAAAAAAAAAAAAAAA"
+				],
+				[
+					58,
+					1,
 					"left_delete",
 					null,
-					"BAAAAIIKAAAAAAAAggoAAAAAAAABAAAAZYEKAAAAAAAAgQoAAAAAAAABAAAAZ4AKAAAAAAAAgAoAAAAAAAABAAAAZH8KAAAAAAAAfwoAAAAAAAABAAAARQ",
-					"AQAAAAAAAAABAAAAgwoAAAAAAACDCgAAAAAAAAAAAAAAAPC/"
+					"AQAAAFQDAAAAAAAAVAMAAAAAAAAEAAAAICAgIA",
+					"AQAAAAAAAAABAAAAWAMAAAAAAABYAwAAAAAAAAAAAAAAAPC/"
 				],
 				[
-					706,
+					59,
+					1,
+					"paste",
+					null,
+					"AQAAAFQDAAAAAAAAQgQAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAVAMAAAAAAABUAwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					63,
 					1,
 					"insert",
 					{
-						"characters": "Link"
+						"characters": "\n\n"
 					},
-					"BAAAAH8KAAAAAAAAgAoAAAAAAAAAAAAAgAoAAAAAAACBCgAAAAAAAAAAAACBCgAAAAAAAIIKAAAAAAAAAAAAAIIKAAAAAAAAgwoAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAfwoAAAAAAAB/CgAAAAAAAAAAAAAAAPC/"
+					"AgAAAGEFAAAAAAAAYgUAAAAAAAAAAAAAYgUAAAAAAABjBQAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAYQUAAAAAAABhBQAAAAAAAAAAAAAAAPC/"
 				],
 				[
-					707,
+					64,
+					1,
+					"paste",
+					null,
+					"AQAAAGMFAAAAAAAAnw8AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAYwUAAAAAAABjBQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					70,
+					1,
+					"insert",
+					{
+						"characters": ","
+					},
+					"AQAAALoAAAAAAAAAuwAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAugAAAAAAAAC6AAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					71,
+					1,
+					"insert",
+					{
+						"characters": " PortShape"
+					},
+					"CgAAALsAAAAAAAAAvAAAAAAAAAAAAAAAvAAAAAAAAAC9AAAAAAAAAAAAAAC9AAAAAAAAAL4AAAAAAAAAAAAAAL4AAAAAAAAAvwAAAAAAAAAAAAAAvwAAAAAAAADAAAAAAAAAAAAAAADAAAAAAAAAAMEAAAAAAAAAAAAAAMEAAAAAAAAAwgAAAAAAAAAAAAAAwgAAAAAAAADDAAAAAAAAAAAAAADDAAAAAAAAAMQAAAAAAAAAAAAAAMQAAAAAAAAAxQAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAuwAAAAAAAAC7AAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					81,
+					1,
+					"left_delete",
+					null,
+					"AQAAAG0FAAAAAAAAbQUAAAAAAAABAAAACg",
+					"AQAAAAAAAAABAAAAbgUAAAAAAABuBQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					85,
+					1,
+					"insert",
+					{
+						"characters": "\n\n"
+					},
+					"BQAAAFkDAAAAAAAAWgMAAAAAAAAAAAAAWgMAAAAAAABiAwAAAAAAAAAAAABiAwAAAAAAAGMDAAAAAAAAAAAAAGMDAAAAAAAAawMAAAAAAAAAAAAAWgMAAAAAAABaAwAAAAAAAAgAAAAgICAgICAgIA",
+					"AQAAAAAAAAABAAAAWQMAAAAAAABZAwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					86,
+					1,
+					"left_delete",
+					null,
+					"AQAAAF8DAAAAAAAAXwMAAAAAAAAEAAAAICAgIA",
+					"AQAAAAAAAAABAAAAYwMAAAAAAABjAwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					87,
+					1,
+					"paste",
+					null,
+					"AQAAAF8DAAAAAAAApQkAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAXwMAAAAAAABfAwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					92,
+					1,
+					"insert",
+					{
+						"characters": "\n\n"
+					},
+					"AgAAALgLAAAAAAAAuQsAAAAAAAAAAAAAuQsAAAAAAAC6CwAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAuAsAAAAAAAC4CwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					94,
+					1,
+					"insert",
+					{
+						"characters": "\n"
+					},
+					"AQAAALkLAAAAAAAAugsAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAuQsAAAAAAAC5CwAAAAAAAAAAAAAAAAAA"
+				],
+				[
+					95,
+					1,
+					"paste",
+					null,
+					"AQAAALoLAAAAAAAARREAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAugsAAAAAAAC6CwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					109,
+					1,
+					"cut",
+					null,
+					"AQAAALgLAAAAAAAAuAsAAAAAAACOBQAACgpjbGFzcyBOb2RlR3JhcGhpY3NPYmplY3QoTm9kZVNoYXBlKToKICAgIGRlZiBfX2luaXRfXygKICAgICAgICBzZWxmLAogICAgICAgIG46IE5vZGVJZCwKICAgICAgICBpbmxldHM6IGxpc3RbSW5sZXRHcmFwaGljc09iamVjdF0sCiAgICAgICAgb3V0bGV0czogbGlzdFtPdXRsZXRHcmFwaGljc09iamVjdF0sCiAgICAgICAgcGFyZW50OiBRR3JhcGhpY3NJdGVtIHwgTm9uZSA9IE5vbmUsCiAgICApOgogICAgICAgIHN1cGVyKCkuX19pbml0X18oCiAgICAgICAgICAgIHRpdGxlPWYiJ3tufSciLAogICAgICAgICAgICBpbmxldHM9aW5sZXRzLAogICAgICAgICAgICBvdXRsZXRzPW91dGxldHMsCiAgICAgICAgICAgIHBhcmVudD1wYXJlbnQsCiAgICAgICAgKQogICAgICAgIHNlbGYuX24gPSBuCiAgICAgICAgc2VsZi5zZXRBY2NlcHRIb3ZlckV2ZW50cyhGYWxzZSkKCiAgICBkZWYgaXRlbUNoYW5nZSgKICAgICAgICBzZWxmLCBjaGFuZ2U6IFFHcmFwaGljc0l0ZW0uR3JhcGhpY3NJdGVtQ2hhbmdlLCB2YWx1ZTogQW55CiAgICApIC0+IEFueToKICAgICAgICBpZiAoCiAgICAgICAgICAgIGNoYW5nZQogICAgICAgICAgICA9PSBRR3JhcGhpY3NJdGVtLkdyYXBoaWNzSXRlbUNoYW5nZS5JdGVtU2NlbmVQb3NpdGlvbkhhc0NoYW5nZWQKICAgICAgICApOgogICAgICAgICAgICBzZWxmLm1vdmVMaW5rcygpCiAgICAgICAgcmV0dXJuIHN1cGVyKCkuaXRlbUNoYW5nZShjaGFuZ2UsIHZhbHVlKQoKICAgIGRlZiBncmFwaHNjZW5lKHNlbGYpIC0+ICJOWEdyYXBoU2NlbmUiOgogICAgICAgIHJldHVybiBjYXN0KE5YTmV0d29ya1NjZW5lLCBzZWxmLnNjZW5lKCkpCgogICAgZGVmIG1vdmVMaW5rcyhzZWxmKToKICAgICAgICAiIiJyZXNwb25zaWJsZSB0byB1cGRhdGUgY29ubmVjdGVkIGxpbmsgcG9zaXRpb24iIiIKICAgICAgICBtb2RlbCA9IHNlbGYuZ3JhcGhzY2VuZSgpLl9tb2RlbAogICAgICAgIGFsbF9lZGdlcyA9IG1vZGVsLmluRWRnZXMoc2VsZi5fbikgKyBtb2RlbC5vdXRFZGdlcyhzZWxmLl9uKQogICAgICAgIGZvciBlIGluIGFsbF9lZGdlczoKICAgICAgICAgICAgYXNzZXJ0IGlzaW5zdGFuY2UoZVsyXSwgdHVwbGUpIGFuZCBsZW4oZVsyXSkgPT0gMgogICAgICAgICAgICB1LCB2LCAobywgaSkgPSBlCiAgICAgICAgICAgIHNlbGYuZ3JhcGhzY2VuZSgpCiAgICAgICAgICAgIG91dGxldCA9IHNlbGYuZ3JhcGhzY2VuZSgpLm91dGxldEdyYXBoaWNzT2JqZWN0KE91dGxldElkKHUsIG8pKQogICAgICAgICAgICBpbmxldCA9IHNlbGYuZ3JhcGhzY2VuZSgpLmlubGV0R3JhcGhpY3NPYmplY3QoSW5sZXRJZCh2LCBpKSkKICAgICAgICAgICAgZWRnZSA9IHNlbGYuZ3JhcGhzY2VuZSgpLmxpbmtHcmFwaGljc09iamVjdChlKQogICAgICAgICAgICBlZGdlLm1vdmUob3V0bGV0LCBpbmxldCkK",
+					"AQAAAAAAAAABAAAAuAsAAAAAAABGEQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					113,
+					1,
+					"insert",
+					{
+						"characters": "\n\n"
+					},
+					"AgAAAPYVAAAAAAAA9xUAAAAAAAAAAAAA9xUAAAAAAAD4FQAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA9hUAAAAAAAD2FQAAAAAAAAAAAAAAAAAA"
+				],
+				[
+					114,
+					1,
+					"paste",
+					null,
+					"AQAAAPgVAAAAAAAAhhsAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA+BUAAAAAAAD4FQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					118,
+					1,
+					"insert",
+					{
+						"characters": "\n\n"
+					},
+					"BQAAAIUbAAAAAAAAhhsAAAAAAAAAAAAAhhsAAAAAAACSGwAAAAAAAAAAAACSGwAAAAAAAJMbAAAAAAAAAAAAAJMbAAAAAAAAnxsAAAAAAAAAAAAAhhsAAAAAAACGGwAAAAAAAAwAAAAgICAgICAgICAgICA",
+					"AQAAAAAAAAABAAAAhRsAAAAAAACFGwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					119,
+					2,
+					"left_delete",
+					null,
+					"AgAAAI8bAAAAAAAAjxsAAAAAAAAEAAAAICAgIIsbAAAAAAAAixsAAAAAAAAEAAAAICAgIA",
+					"AQAAAAAAAAABAAAAkxsAAAAAAACTGwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					120,
+					1,
+					"paste",
+					null,
+					"AQAAAIsbAAAAAAAARR0AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAixsAAAAAAACLGwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					128,
+					1,
+					"cut",
+					null,
+					"AQAAAIsbAAAAAAAAixsAAAAAAAC6AQAAZGVmIGlzTGlua2VkKHNlbGYsIHBvcnQ6IElubGV0SWQgfCBPdXRsZXRJZCkgLT4gYm9vbDoKICAgICAgICBtYXRjaCBwb3J0OgogICAgICAgICAgICBjYXNlIElubGV0SWQoKToKICAgICAgICAgICAgICAgIGZvciB1LCB2LCAobywgaSkgaW4gc2VsZi5fbW9kZWwuaW5FZGdlcyhwb3J0Lm5vZGVJZCk6CiAgICAgICAgICAgICAgICAgICAgaWYgaSA9PSBwb3J0Lm5hbWU6CiAgICAgICAgICAgICAgICAgICAgICAgIHJldHVybiBUcnVlCiAgICAgICAgICAgIGNhc2UgT3V0bGV0SWQoKToKICAgICAgICAgICAgICAgIGZvciB1LCB2LCAobywgaSkgaW4gc2VsZi5fbW9kZWwub3V0RWRnZXMocG9ydC5ub2RlSWQpOgogICAgICAgICAgICAgICAgICAgIGlmIG8gPT0gcG9ydC5uYW1lOgogICAgICAgICAgICAgICAgICAgICAgICByZXR1cm4gVHJ1ZQogICAgICAgIHJldHVybiBGYWxzZQ",
+					"AQAAAAAAAAABAAAARR0AAAAAAACLGwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					129,
+					2,
+					"left_delete",
+					null,
+					"AgAAAIcbAAAAAAAAhxsAAAAAAAAEAAAAICAgIIYbAAAAAAAAhhsAAAAAAAABAAAACg",
+					"AQAAAAAAAAABAAAAixsAAAAAAACLGwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					146,
+					1,
+					"insert",
+					{
+						"characters": "\n\n"
+					},
+					"BQAAALcLAAAAAAAAuAsAAAAAAAAAAAAAuAsAAAAAAADACwAAAAAAAAAAAADACwAAAAAAAMELAAAAAAAAAAAAAMELAAAAAAAAyQsAAAAAAAAAAAAAuAsAAAAAAAC4CwAAAAAAAAgAAAAgICAgICAgIA",
+					"AQAAAAAAAAABAAAAtwsAAAAAAAC3CwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					147,
+					1,
+					"left_delete",
+					null,
+					"AQAAAL0LAAAAAAAAvQsAAAAAAAAEAAAAICAgIA",
+					"AQAAAAAAAAABAAAAwQsAAAAAAADBCwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					148,
+					1,
+					"paste",
+					null,
+					"AQAAAL0LAAAAAAAAdw0AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAvQsAAAAAAAC9CwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					154,
+					1,
+					"insert",
+					{
+						"characters": "\nview.set"
+					},
+					"CgAAAOwdAAAAAAAA7R0AAAAAAAAAAAAA7R0AAAAAAADxHQAAAAAAAAAAAADxHQAAAAAAAPIdAAAAAAAAAAAAAPIdAAAAAAAA8x0AAAAAAAAAAAAA8x0AAAAAAAD0HQAAAAAAAAAAAAD0HQAAAAAAAPUdAAAAAAAAAAAAAPUdAAAAAAAA9h0AAAAAAAAAAAAA9h0AAAAAAAD3HQAAAAAAAAAAAAD3HQAAAAAAAPgdAAAAAAAAAAAAAPgdAAAAAAAA+R0AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA7B0AAAAAAADsHQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					155,
+					1,
+					"insert",
+					{
+						"characters": "DragM"
+					},
+					"BQAAAPkdAAAAAAAA+h0AAAAAAAAAAAAA+h0AAAAAAAD7HQAAAAAAAAAAAAD7HQAAAAAAAPwdAAAAAAAAAAAAAPwdAAAAAAAA/R0AAAAAAAAAAAAA/R0AAAAAAAD+HQAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA+R0AAAAAAAD5HQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					156,
 					1,
 					"insert_completion",
 					{
-						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-pyright\"}",
+						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-basedpyright\"}",
 						"format": "command",
 						"keep_prefix": false,
 						"must_insert": false,
-						"trigger": "onLinkCreated"
+						"trigger": "setDragMode"
 					},
-					"AgAAAH0KAAAAAAAAfQoAAAAAAAAGAAAAb25MaW5rfQoAAAAAAACKCgAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAgwoAAAAAAACDCgAAAAAAAAAAAAAAAPC/"
+					"AgAAAPYdAAAAAAAA9h0AAAAAAAAIAAAAc2V0RHJhZ032HQAAAAAAAAEeAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAA/h0AAAAAAAD+HQAAAAAAAAAAAAAAAPC/"
 				],
 				[
-					708,
+					157,
 					1,
 					"insert_snippet",
 					{
 						"contents": "($0)"
 					},
-					"AQAAAIoKAAAAAAAAjAoAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAigoAAAAAAACKCgAAAAAAAAAAAAAAAPC/"
+					"AQAAAAEeAAAAAAAAAx4AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAAR4AAAAAAAABHgAAAAAAAAAAAAAAAPC/"
 				],
 				[
-					709,
+					158,
 					1,
 					"insert",
 					{
-						"characters": "e"
+						"characters": "sel"
 					},
-					"AQAAAIsKAAAAAAAAjAoAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAiwoAAAAAAACLCgAAAAAAAAAAAAAAAPC/"
+					"AwAAAAIeAAAAAAAAAx4AAAAAAAAAAAAAAx4AAAAAAAAEHgAAAAAAAAAAAAAEHgAAAAAAAAUeAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAAh4AAAAAAAACHgAAAAAAAAAAAAAAAPC/"
 				],
 				[
-					712,
+					159,
+					3,
+					"left_delete",
+					null,
+					"AwAAAAQeAAAAAAAABB4AAAAAAAABAAAAbAMeAAAAAAAAAx4AAAAAAAABAAAAZQIeAAAAAAAAAh4AAAAAAAABAAAAcw",
+					"AQAAAAAAAAABAAAABR4AAAAAAAAFHgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					160,
 					1,
-					"toggle_comment",
+					"insert",
 					{
-						"block": false
+						"characters": "QGraphicsView."
 					},
-					"CgAAAAQMAAAAAAAABgwAAAAAAAAAAAAA2QsAAAAAAADbCwAAAAAAAAAAAACtCwAAAAAAAK8LAAAAAAAAAAAAAJYLAAAAAAAAmAsAAAAAAAAAAAAAdgsAAAAAAAB4CwAAAAAAAAAAAABECwAAAAAAAEYLAAAAAAAAAAAAABsLAAAAAAAAHQsAAAAAAAAAAAAA5goAAAAAAADoCgAAAAAAAAAAAACyCgAAAAAAALQKAAAAAAAAAAAAAJoKAAAAAAAAnAoAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAABQwAAAAAAACOCgAAAAAAAAAAAAAAAPC/"
+					"DgAAAAIeAAAAAAAAAx4AAAAAAAAAAAAAAx4AAAAAAAAEHgAAAAAAAAAAAAAEHgAAAAAAAAUeAAAAAAAAAAAAAAUeAAAAAAAABh4AAAAAAAAAAAAABh4AAAAAAAAHHgAAAAAAAAAAAAAHHgAAAAAAAAgeAAAAAAAAAAAAAAgeAAAAAAAACR4AAAAAAAAAAAAACR4AAAAAAAAKHgAAAAAAAAAAAAAKHgAAAAAAAAseAAAAAAAAAAAAAAseAAAAAAAADB4AAAAAAAAAAAAADB4AAAAAAAANHgAAAAAAAAAAAAANHgAAAAAAAA4eAAAAAAAAAAAAAA4eAAAAAAAADx4AAAAAAAAAAAAADx4AAAAAAAAQHgAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAAh4AAAAAAAACHgAAAAAAAAAAAAAAAPC/"
 				],
 				[
-					717,
+					161,
+					1,
+					"insert",
+					{
+						"characters": "DragMode."
+					},
+					"CQAAABAeAAAAAAAAER4AAAAAAAAAAAAAER4AAAAAAAASHgAAAAAAAAAAAAASHgAAAAAAABMeAAAAAAAAAAAAABMeAAAAAAAAFB4AAAAAAAAAAAAAFB4AAAAAAAAVHgAAAAAAAAAAAAAVHgAAAAAAABYeAAAAAAAAAAAAABYeAAAAAAAAFx4AAAAAAAAAAAAAFx4AAAAAAAAYHgAAAAAAAAAAAAAYHgAAAAAAABkeAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAEB4AAAAAAAAQHgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					162,
+					1,
+					"insert_completion",
+					{
+						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-basedpyright\"}",
+						"format": "command",
+						"keep_prefix": false,
+						"must_insert": true,
+						"trigger": "RubberBandDrag"
+					},
+					"AQAAABkeAAAAAAAAJx4AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAGR4AAAAAAAAZHgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					170,
+					1,
+					"insert",
+					{
+						"characters": "\n\n"
+					},
+					"BQAAAEUdAAAAAAAARh0AAAAAAAAAAAAARh0AAAAAAABSHQAAAAAAAAAAAABSHQAAAAAAAFMdAAAAAAAAAAAAAFMdAAAAAAAAXx0AAAAAAAAAAAAARh0AAAAAAABGHQAAAAAAAAwAAAAgICAgICAgICAgICA",
+					"AQAAAAAAAAABAAAARR0AAAAAAABFHQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					171,
 					2,
 					"left_delete",
 					null,
-					"AgAAAI4KAAAAAAAAjgoAAAAAAACLAQAAICAgICAgICAgICAgIyB1LCB2LCBrID0gZQogICAgICAgICAgICAjIGFzc2VydCB1IGluIHNlbGYuX25vZGVfZ3JhcGhpY3Nfb2JqZWN0cwogICAgICAgICAgICAjIGFzc2VydCB2IGluIHNlbGYuX25vZGVfZ3JhcGhpY3Nfb2JqZWN0cwoKICAgICAgICAgICAgIyBsaW5rID0gTGlua0dyYXBoaWNzT2JqZWN0KGUpCiAgICAgICAgICAgICMgc2VsZi5fbGlua19ncmFwaGljc19vYmplY3RzW2VdID0gbGluawogICAgICAgICAgICAjIHNlbGYuYWRkSXRlbShsaW5rKQoKICAgICAgICAgICAgIyBsaW5rLm1vdmUoCiAgICAgICAgICAgICMgICAgIHNlbGYubm9kZUdyYXBoaWNzT2JqZWN0KHUpLAogICAgICAgICAgICAjICAgICBzZWxmLm5vZGVHcmFwaGljc09iamVjdCh2KQogICAgICAgICAgICAjICmNCgAAAAAAAI0KAAAAAAAAAQAAAAo",
-					"AQAAAAAAAAABAAAAGQwAAAAAAACOCgAAAAAAAAAAAAAAAPC/"
+					"AgAAAE8dAAAAAAAATx0AAAAAAAAEAAAAICAgIEsdAAAAAAAASx0AAAAAAAAEAAAAICAgIA",
+					"AQAAAAAAAAABAAAAUx0AAAAAAABTHQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					172,
+					1,
+					"paste",
+					null,
+					"AQAAAEsdAAAAAAAA1R4AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAASx0AAAAAAABLHQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					183,
+					1,
+					"cut",
+					null,
+					"AQAAAEsdAAAAAAAASx0AAAAAAACKAQAAZGVmIG91dGxldEF0KHNlbGYsIHBvc2l0aW9uOiBRUG9pbnRGKSAtPiAiT3V0bGV0R3JhcGhpY3NPYmplY3QiOgogICAgICAgIHJldHVybiBjYXN0KAogICAgICAgICAgICBPdXRsZXRHcmFwaGljc09iamVjdCwKICAgICAgICAgICAgc2VsZi5fZmluZEdyYXBoSXRlbUF0KE91dGxldEdyYXBoaWNzT2JqZWN0LCBwb3NpdGlvbiksCiAgICAgICAgKQoKICAgIGRlZiBpbmxldEF0KHNlbGYsIHBvc2l0aW9uOiBRUG9pbnRGKSAtPiAiSW5sZXRHcmFwaGljc09iamVjdCI6CiAgICAgICAgcmV0dXJuIGNhc3QoCiAgICAgICAgICAgIElubGV0R3JhcGhpY3NPYmplY3QsCiAgICAgICAgICAgIHNlbGYuX2ZpbmRHcmFwaEl0ZW1BdChJbmxldEdyYXBoaWNzT2JqZWN0LCBwb3NpdGlvbiksCiAgICAgICAgKQ",
+					"AQAAAAAAAAABAAAA1R4AAAAAAABLHQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					184,
+					3,
+					"left_delete",
+					null,
+					"AwAAAEcdAAAAAAAARx0AAAAAAAAEAAAAICAgIEYdAAAAAAAARh0AAAAAAAABAAAACkUdAAAAAAAARR0AAAAAAAABAAAACg",
+					"AQAAAAAAAAABAAAASx0AAAAAAABLHQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					187,
+					3,
+					"left_delete",
+					null,
+					"AwAAALgXAAAAAAAAuBcAAAAAAAABAAAACrcXAAAAAAAAtxcAAAAAAAABAAAACrYXAAAAAAAAthcAAAAAAAABAAAACg",
+					"AQAAAAAAAAABAAAAuRcAAAAAAAC5FwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					190,
+					1,
+					"insert",
+					{
+						"characters": "\n\n"
+					},
+					"BQAAAHcNAAAAAAAAeA0AAAAAAAAAAAAAeA0AAAAAAACADQAAAAAAAAAAAACADQAAAAAAAIENAAAAAAAAAAAAAIENAAAAAAAAiQ0AAAAAAAAAAAAAeA0AAAAAAAB4DQAAAAAAAAgAAAAgICAgICAgIA",
+					"AQAAAAAAAAABAAAAdw0AAAAAAAB3DQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					191,
+					1,
+					"left_delete",
+					null,
+					"AQAAAH0NAAAAAAAAfQ0AAAAAAAAEAAAAICAgIA",
+					"AQAAAAAAAAABAAAAgQ0AAAAAAACBDQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					192,
+					1,
+					"paste",
+					null,
+					"AQAAAH0NAAAAAAAABw8AAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAfQ0AAAAAAAB9DQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					219,
+					1,
+					"cut",
+					null,
+					"AQAAACscAAAAAAAAKxwAAAAAAABZAAAAZGVmIGdyYXBoc2NlbmUoc2VsZikgLT4gIk5YR3JhcGhTY2VuZSI6CiAgICAgICAgcmV0dXJuIGNhc3QoTlhOZXR3b3JrU2NlbmUsIHNlbGYuc2NlbmUoKSk",
+					"AQAAAAAAAAABAAAAhBwAAAAAAAArHAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					220,
+					3,
+					"left_delete",
+					null,
+					"AwAAACccAAAAAAAAJxwAAAAAAAAEAAAAICAgICYcAAAAAAAAJhwAAAAAAAABAAAACiUcAAAAAAAAJRwAAAAAAAABAAAACg",
+					"AQAAAAAAAAABAAAAKxwAAAAAAAArHAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					223,
+					1,
+					"insert",
+					{
+						"characters": "\n\n"
+					},
+					"BQAAAPoaAAAAAAAA+xoAAAAAAAAAAAAA+xoAAAAAAAADGwAAAAAAAAAAAAADGwAAAAAAAAQbAAAAAAAAAAAAAAQbAAAAAAAADBsAAAAAAAAAAAAA+xoAAAAAAAD7GgAAAAAAAAgAAAAgICAgICAgIA",
+					"AQAAAAAAAAABAAAA+hoAAAAAAAD6GgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					224,
+					1,
+					"left_delete",
+					null,
+					"AQAAAAAbAAAAAAAAABsAAAAAAAAEAAAAICAgIA",
+					"AQAAAAAAAAABAAAABBsAAAAAAAAEGwAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					225,
+					1,
+					"paste",
+					null,
+					"AQAAAAAbAAAAAAAAWRsAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAABsAAAAAAAAAGwAAAAAAAAAAAAAAAPC/"
 				]
 			]
 		},
@@ -1978,1395 +2500,10 @@
 			"settings":
 			{
 				"buffer_size": 15560,
-				"encoding": "UTF-8",
-				"line_ending": "Windows"
+				"line_ending": "Unix"
 			},
 			"undo_stack":
 			[
-				[
-					8,
-					1,
-					"insert",
-					{
-						"characters": "Network"
-					},
-					"CAAAAOYFAAAAAAAA5wUAAAAAAAAAAAAA5wUAAAAAAADnBQAAAAAAAAUAAABHcmFwaOcFAAAAAAAA6AUAAAAAAAAAAAAA6AUAAAAAAADpBQAAAAAAAAAAAADpBQAAAAAAAOoFAAAAAAAAAAAAAOoFAAAAAAAA6wUAAAAAAAAAAAAA6wUAAAAAAADsBQAAAAAAAAAAAADsBQAAAAAAAO0FAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAA6wUAAAAAAADmBQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					24,
-					1,
-					"insert",
-					{
-						"characters": "Network"
-					},
-					"CAAAAEsrAAAAAAAATCsAAAAAAAAAAAAATCsAAAAAAABMKwAAAAAAAAUAAABHcmFwaEwrAAAAAAAATSsAAAAAAAAAAAAATSsAAAAAAABOKwAAAAAAAAAAAABOKwAAAAAAAE8rAAAAAAAAAAAAAE8rAAAAAAAAUCsAAAAAAAAAAAAAUCsAAAAAAABRKwAAAAAAAAAAAABRKwAAAAAAAFIrAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAUCsAAAAAAABLKwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					37,
-					1,
-					"paste",
-					null,
-					"AgAAAHAwAAAAAAAAfjAAAAAAAAAAAAAAfjAAAAAAAAB+MAAAAAAAAAwAAABOWEdyYXBoU2NlbmU",
-					"AQAAAAAAAAABAAAAcDAAAAAAAAB8MAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					42,
-					1,
-					"paste",
-					null,
-					"AgAAANk3AAAAAAAA5zcAAAAAAAAAAAAA5zcAAAAAAADnNwAAAAAAAAwAAABOWEdyYXBoU2NlbmU",
-					"AQAAAAAAAAABAAAA2TcAAAAAAADlNwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					47,
-					1,
-					"paste",
-					null,
-					"AgAAAHg7AAAAAAAAhjsAAAAAAAAAAAAAhjsAAAAAAACGOwAAAAAAAAwAAABOWEdyYXBoU2NlbmU",
-					"AQAAAAAAAAABAAAAeDsAAAAAAACEOwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					52,
-					1,
-					"paste",
-					null,
-					"AgAAAL08AAAAAAAAyzwAAAAAAAAAAAAAyzwAAAAAAADLPAAAAAAAAAwAAABOWEdyYXBoU2NlbmU",
-					"AQAAAAAAAAABAAAAvTwAAAAAAADJPAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					57,
-					1,
-					"paste",
-					null,
-					"AgAAAJM+AAAAAAAAoT4AAAAAAAAAAAAAoT4AAAAAAAChPgAAAAAAAAwAAABOWEdyYXBoU2NlbmU",
-					"AQAAAAAAAAABAAAAkz4AAAAAAACfPgAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					75,
-					1,
-					"insert",
-					{
-						"characters": "\n"
-					},
-					"AgAAAJ0fAAAAAAAAnh8AAAAAAAAAAAAAnh8AAAAAAACmHwAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAnR8AAAAAAACdHwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					76,
-					1,
-					"insert",
-					{
-						"characters": "self"
-					},
-					"BAAAAKYfAAAAAAAApx8AAAAAAAAAAAAApx8AAAAAAACoHwAAAAAAAAAAAACoHwAAAAAAAKkfAAAAAAAAAAAAAKkfAAAAAAAAqh8AAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAph8AAAAAAACmHwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					77,
-					7,
-					"left_delete",
-					null,
-					"BwAAAKkfAAAAAAAAqR8AAAAAAAABAAAAZqgfAAAAAAAAqB8AAAAAAAABAAAAbKcfAAAAAAAApx8AAAAAAAABAAAAZaYfAAAAAAAAph8AAAAAAAABAAAAc6IfAAAAAAAAoh8AAAAAAAAEAAAAICAgIJ4fAAAAAAAAnh8AAAAAAAAEAAAAICAgIJ0fAAAAAAAAnR8AAAAAAAABAAAACg",
-					"AQAAAAAAAAABAAAAqh8AAAAAAACqHwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					80,
-					1,
-					"insert",
-					{
-						"characters": "\nself._"
-					},
-					"CQAAAEUfAAAAAAAARh8AAAAAAAAAAAAARh8AAAAAAABKHwAAAAAAAAAAAABKHwAAAAAAAE4fAAAAAAAAAAAAAE4fAAAAAAAATx8AAAAAAAAAAAAATx8AAAAAAABQHwAAAAAAAAAAAABQHwAAAAAAAFEfAAAAAAAAAAAAAFEfAAAAAAAAUh8AAAAAAAAAAAAAUh8AAAAAAABTHwAAAAAAAAAAAABTHwAAAAAAAFQfAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAARR8AAAAAAABFHwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					81,
-					1,
-					"insert",
-					{
-						"characters": "inl"
-					},
-					"AwAAAFQfAAAAAAAAVR8AAAAAAAAAAAAAVR8AAAAAAABWHwAAAAAAAAAAAABWHwAAAAAAAFcfAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAVB8AAAAAAABUHwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					82,
-					1,
-					"insert_completion",
-					{
-						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-pyright\"}",
-						"format": "command",
-						"keep_prefix": false,
-						"must_insert": false,
-						"trigger": "_inlet_graphics_objects"
-					},
-					"AgAAAFMfAAAAAAAAUx8AAAAAAAAEAAAAX2lubFMfAAAAAAAAah8AAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAVx8AAAAAAABXHwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					83,
-					1,
-					"insert",
-					{
-						"characters": ".clear"
-					},
-					"BgAAAGofAAAAAAAAax8AAAAAAAAAAAAAax8AAAAAAABsHwAAAAAAAAAAAABsHwAAAAAAAG0fAAAAAAAAAAAAAG0fAAAAAAAAbh8AAAAAAAAAAAAAbh8AAAAAAABvHwAAAAAAAAAAAABvHwAAAAAAAHAfAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAah8AAAAAAABqHwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					84,
-					1,
-					"insert_snippet",
-					{
-						"contents": "($0)"
-					},
-					"AQAAAHAfAAAAAAAAch8AAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAcB8AAAAAAABwHwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					86,
-					1,
-					"insert",
-					{
-						"characters": "\nself._out"
-					},
-					"CwAAAHIfAAAAAAAAcx8AAAAAAAAAAAAAcx8AAAAAAAB7HwAAAAAAAAAAAAB7HwAAAAAAAHwfAAAAAAAAAAAAAHwfAAAAAAAAfR8AAAAAAAAAAAAAfR8AAAAAAAB+HwAAAAAAAAAAAAB+HwAAAAAAAH8fAAAAAAAAAAAAAH8fAAAAAAAAgB8AAAAAAAAAAAAAgB8AAAAAAACBHwAAAAAAAAAAAACBHwAAAAAAAIIfAAAAAAAAAAAAAIIfAAAAAAAAgx8AAAAAAAAAAAAAgx8AAAAAAACEHwAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAch8AAAAAAAByHwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					87,
-					1,
-					"insert_completion",
-					{
-						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-pyright\"}",
-						"format": "command",
-						"keep_prefix": false,
-						"must_insert": false,
-						"trigger": "_outlet_graphics_objects"
-					},
-					"AgAAAIAfAAAAAAAAgB8AAAAAAAAEAAAAX291dIAfAAAAAAAAmB8AAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAhB8AAAAAAACEHwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					88,
-					1,
-					"insert",
-					{
-						"characters": ".clear"
-					},
-					"BgAAAJgfAAAAAAAAmR8AAAAAAAAAAAAAmR8AAAAAAACaHwAAAAAAAAAAAACaHwAAAAAAAJsfAAAAAAAAAAAAAJsfAAAAAAAAnB8AAAAAAAAAAAAAnB8AAAAAAACdHwAAAAAAAAAAAACdHwAAAAAAAJ4fAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAmB8AAAAAAACYHwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					89,
-					1,
-					"insert_snippet",
-					{
-						"contents": "($0)"
-					},
-					"AQAAAJ4fAAAAAAAAoB8AAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAnh8AAAAAAACeHwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					138,
-					1,
-					"cut",
-					null,
-					"AQAAAOoLAAAAAAAA6gsAAAAAAACyAgAAdSwgdiwgKG8sIGkpID0gZQogICAgICAgICAgICBhc3NlcnQgdSBpbiBzZWxmLl9ub2RlX2dyYXBoaWNzX29iamVjdHMKICAgICAgICAgICAgYXNzZXJ0IHYgaW4gc2VsZi5fbm9kZV9ncmFwaGljc19vYmplY3RzCiAgICAgICAgICAgIGFzc2VydCAoCiAgICAgICAgICAgICAgICBPdXRsZXRJZCh1LCBvKSBpbiBzZWxmLl9vdXRsZXRfZ3JhcGhpY3Nfb2JqZWN0cwogICAgICAgICAgICApLCBmIk5vZGUgJ3t1fScgaGFzIG5vIG91dGxldCAne299JyEiCiAgICAgICAgICAgIGFzc2VydCAoCiAgICAgICAgICAgICAgICBJbmxldElkKHYsIGkpIGluIHNlbGYuX2lubGV0X2dyYXBoaWNzX29iamVjdHMKICAgICAgICAgICAgKSwgZiJOb2RlICd7dn0nIGhhcyBubyBpbmxldCAne2l9JyEiCgogICAgICAgICAgICBsaW5rID0gTGlua0dyYXBoaWNzT2JqZWN0KCh1LCB2LCAobywgaSkpKQogICAgICAgICAgICBzZWxmLl9saW5rX2dyYXBoaWNzX29iamVjdHNbKHUsIHYsIChvLCBpKSldID0gbGluawogICAgICAgICAgICBzZWxmLmFkZEl0ZW0obGluaykKCiAgICAgICAgICAgIGxpbmsubW92ZSgKICAgICAgICAgICAgICAgIHNlbGYub3V0bGV0R3JhcGhpY3NPYmplY3QoT3V0bGV0SWQodSwgbykpLAogICAgICAgICAgICAgICAgc2VsZi5pbmxldEdyYXBoaWNzT2JqZWN0KElubGV0SWQodiwgaSkpLAogICAgICAgICAgICAp",
-					"AQAAAAAAAAABAAAAnA4AAAAAAADqCwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					139,
-					1,
-					"insert",
-					{
-						"characters": "self.onLink"
-					},
-					"CwAAAOoLAAAAAAAA6wsAAAAAAAAAAAAA6wsAAAAAAADsCwAAAAAAAAAAAADsCwAAAAAAAO0LAAAAAAAAAAAAAO0LAAAAAAAA7gsAAAAAAAAAAAAA7gsAAAAAAADvCwAAAAAAAAAAAADvCwAAAAAAAPALAAAAAAAAAAAAAPALAAAAAAAA8QsAAAAAAAAAAAAA8QsAAAAAAADyCwAAAAAAAAAAAADyCwAAAAAAAPMLAAAAAAAAAAAAAPMLAAAAAAAA9AsAAAAAAAAAAAAA9AsAAAAAAAD1CwAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAA6gsAAAAAAADqCwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					140,
-					1,
-					"insert_completion",
-					{
-						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-pyright\"}",
-						"format": "command",
-						"keep_prefix": false,
-						"must_insert": false,
-						"trigger": "onLinkCreated"
-					},
-					"AgAAAO8LAAAAAAAA7wsAAAAAAAAGAAAAb25MaW5r7wsAAAAAAAD8CwAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAA9QsAAAAAAAD1CwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					141,
-					1,
-					"insert_snippet",
-					{
-						"contents": "($0)"
-					},
-					"AQAAAPwLAAAAAAAA/gsAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAA/AsAAAAAAAD8CwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					142,
-					1,
-					"insert",
-					{
-						"characters": "e"
-					},
-					"AQAAAP0LAAAAAAAA/gsAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAA/QsAAAAAAAD9CwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					149,
-					1,
-					"insert",
-					{
-						"characters": "\n\n"
-					},
-					"BQAAAD0TAAAAAAAAPhMAAAAAAAAAAAAAPhMAAAAAAABGEwAAAAAAAAAAAABGEwAAAAAAAEcTAAAAAAAAAAAAAEcTAAAAAAAATxMAAAAAAAAAAAAAPhMAAAAAAAA+EwAAAAAAAAgAAAAgICAgICAgIA",
-					"AQAAAAAAAAABAAAAPRMAAAAAAAA9EwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					150,
-					1,
-					"paste",
-					null,
-					"AQAAAEcTAAAAAAAA+RUAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAARxMAAAAAAABHEwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					154,
-					1,
-					"insert",
-					{
-						"characters": "\t"
-					},
-					"AQAAAEcTAAAAAAAASxMAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAARxMAAAAAAABHEwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					158,
-					1,
-					"cut",
-					null,
-					"AQAAAD8TAAAAAAAAPxMAAAAAAAC+AgAAICAgICAgICAgICAgdSwgdiwgKG8sIGkpID0gZQogICAgICAgICAgICBhc3NlcnQgdSBpbiBzZWxmLl9ub2RlX2dyYXBoaWNzX29iamVjdHMKICAgICAgICAgICAgYXNzZXJ0IHYgaW4gc2VsZi5fbm9kZV9ncmFwaGljc19vYmplY3RzCiAgICAgICAgICAgIGFzc2VydCAoCiAgICAgICAgICAgICAgICBPdXRsZXRJZCh1LCBvKSBpbiBzZWxmLl9vdXRsZXRfZ3JhcGhpY3Nfb2JqZWN0cwogICAgICAgICAgICApLCBmIk5vZGUgJ3t1fScgaGFzIG5vIG91dGxldCAne299JyEiCiAgICAgICAgICAgIGFzc2VydCAoCiAgICAgICAgICAgICAgICBJbmxldElkKHYsIGkpIGluIHNlbGYuX2lubGV0X2dyYXBoaWNzX29iamVjdHMKICAgICAgICAgICAgKSwgZiJOb2RlICd7dn0nIGhhcyBubyBpbmxldCAne2l9JyEiCgogICAgICAgICAgICBsaW5rID0gTGlua0dyYXBoaWNzT2JqZWN0KCh1LCB2LCAobywgaSkpKQogICAgICAgICAgICBzZWxmLl9saW5rX2dyYXBoaWNzX29iamVjdHNbKHUsIHYsIChvLCBpKSldID0gbGluawogICAgICAgICAgICBzZWxmLmFkZEl0ZW0obGluaykKCiAgICAgICAgICAgIGxpbmsubW92ZSgKICAgICAgICAgICAgICAgIHNlbGYub3V0bGV0R3JhcGhpY3NPYmplY3QoT3V0bGV0SWQodSwgbykpLAogICAgICAgICAgICAgICAgc2VsZi5pbmxldEdyYXBoaWNzT2JqZWN0KElubGV0SWQodiwgaSkpLAogICAgICAgICAgICAp",
-					"AQAAAAAAAAABAAAA/RUAAAAAAAA/EwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					161,
-					1,
-					"paste",
-					null,
-					"AgAAAGUSAAAAAAAAIxUAAAAAAAAAAAAAIxUAAAAAAAAjFQAAAAAAAH0BAAAgICAgICAgIGxpbmsgPSBMaW5rR3JhcGhpY3NPYmplY3QoZSkKICAgICAgICBzZWxmLl9saW5rX2dyYXBoaWNzX29iamVjdHNbZV0gPSBsaW5rCiAgICAgICAgc2VsZi5hZGRJdGVtKHNlbGYubGlua0dyYXBoaWNzT2JqZWN0KGUpKQogICAgICAgIHNlbGYudXBkYXRlQXR0YWNoZWROb2RlcyhlLCAiaW4iKQogICAgICAgIHNlbGYudXBkYXRlQXR0YWNoZWROb2RlcyhlLCAib3V0IikKCgoKICAgICAgICB1LCB2LCAobywgaSkgPSBlCiAgICAgICAgbGluay5tb3ZlKAogICAgICAgICAgICBzZWxmLm91dGxldEdyYXBoaWNzT2JqZWN0KE91dGxldElkKHUsIG8pKSwKICAgICAgICAgICAgc2VsZi5pbmxldEdyYXBoaWNzT2JqZWN0KElubGV0SWQodiwgaSkpLAogICAgICAgICk",
-					"AQAAAAAAAAABAAAA4hMAAAAAAABlEgAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					164,
-					1,
-					"unindent",
-					null,
-					"EAAAAGUSAAAAAAAAZRIAAAAAAAAEAAAAICAgIH4SAAAAAAAAfhIAAAAAAAAEAAAAICAgIK4SAAAAAAAArhIAAAAAAAAEAAAAICAgIN4SAAAAAAAA3hIAAAAAAAAEAAAAICAgIO8SAAAAAAAA7xIAAAAAAAAEAAAAICAgICsTAAAAAAAAKxMAAAAAAAAEAAAAICAgIFkTAAAAAAAAWRMAAAAAAAAEAAAAICAgIGoTAAAAAAAAahMAAAAAAAAEAAAAICAgIKQTAAAAAAAApBMAAAAAAAAEAAAAICAgINITAAAAAAAA0hMAAAAAAAAEAAAAICAgIAQUAAAAAAAABBQAAAAAAAAEAAAAICAgID8UAAAAAAAAPxQAAAAAAAAEAAAAICAgIFsUAAAAAAAAWxQAAAAAAAAEAAAAICAgIG4UAAAAAAAAbhQAAAAAAAAEAAAAICAgIKUUAAAAAAAApRQAAAAAAAAEAAAAICAgINoUAAAAAAAA2hQAAAAAAAAEAAAAICAgIA",
-					"AQAAAAAAAAABAAAAIxUAAAAAAABlEgAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					172,
-					1,
-					"insert",
-					{
-						"characters": "e"
-					},
-					"AgAAAPQTAAAAAAAA9RMAAAAAAAAAAAAA9RMAAAAAAAD1EwAAAAAAAA4AAAAodSwgdiwgKG8sIGkpKQ",
-					"AQAAAAAAAAABAAAA9BMAAAAAAAACFAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					175,
-					1,
-					"left_delete",
-					null,
-					"AQAAAH4SAAAAAAAAfhIAAAAAAABSAQAAICAgICAgICBhc3NlcnQgdSBpbiBzZWxmLl9ub2RlX2dyYXBoaWNzX29iamVjdHMKICAgICAgICBhc3NlcnQgdiBpbiBzZWxmLl9ub2RlX2dyYXBoaWNzX29iamVjdHMKICAgICAgICBhc3NlcnQgKAogICAgICAgICAgICBPdXRsZXRJZCh1LCBvKSBpbiBzZWxmLl9vdXRsZXRfZ3JhcGhpY3Nfb2JqZWN0cwogICAgICAgICksIGYiTm9kZSAne3V9JyBoYXMgbm8gb3V0bGV0ICd7b30nISIKICAgICAgICBhc3NlcnQgKAogICAgICAgICAgICBJbmxldElkKHYsIGkpIGluIHNlbGYuX2lubGV0X2dyYXBoaWNzX29iamVjdHMKICAgICAgICApLCBmIk5vZGUgJ3t2fScgaGFzIG5vIGlubGV0ICd7aX0nISI",
-					"AQAAAAAAAAABAAAA0BMAAAAAAAB+EgAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					178,
-					1,
-					"toggle_comment",
-					{
-						"block": false
-					},
-					"AQAAAG0SAAAAAAAAbxIAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAfRIAAAAAAAB9EgAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					181,
-					2,
-					"left_delete",
-					null,
-					"AgAAAIASAAAAAAAAgBIAAAAAAAABAAAACn8SAAAAAAAAfxIAAAAAAAABAAAACg",
-					"AQAAAAAAAAABAAAAgRIAAAAAAACBEgAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					184,
-					1,
-					"insert",
-					{
-						"characters": "e"
-					},
-					"AgAAAMkSAAAAAAAAyhIAAAAAAAAAAAAAyhIAAAAAAADKEgAAAAAAAA4AAAAodSwgdiwgKG8sIGkpKQ",
-					"AQAAAAAAAAABAAAA1xIAAAAAAADJEgAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					187,
-					1,
-					"cut",
-					null,
-					"AQAAAG0SAAAAAAAAbRIAAAAAAAASAAAAIyB1LCB2LCAobywgaSkgPSBl",
-					"AQAAAAAAAAABAAAAfxIAAAAAAABtEgAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					190,
-					1,
-					"insert",
-					{
-						"characters": "\n"
-					},
-					"AQAAANwSAAAAAAAA3RIAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAA3BIAAAAAAADcEgAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					191,
-					1,
-					"reindent",
-					null,
-					"AQAAAN0SAAAAAAAA5RIAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAA3RIAAAAAAADdEgAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					192,
-					1,
-					"paste",
-					null,
-					"AQAAAOUSAAAAAAAA9xIAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAA5RIAAAAAAADlEgAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					196,
-					3,
-					"left_delete",
-					null,
-					"AwAAAGkSAAAAAAAAaRIAAAAAAAAEAAAAICAgIGUSAAAAAAAAZRIAAAAAAAAEAAAAICAgIGQSAAAAAAAAZBIAAAAAAAABAAAACg",
-					"AQAAAAAAAAABAAAAbRIAAAAAAABtEgAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					199,
-					1,
-					"toggle_comment",
-					{
-						"block": false
-					},
-					"AQAAANwSAAAAAAAA3BIAAAAAAAACAAAAIyA",
-					"AQAAAAAAAAABAAAA7hIAAAAAAADuEgAAAAAAAAAAAAAAAPC/"
-				]
-			]
-		},
-		{
-			"file": "pylive/NetworkXGraphEditor/nx_network_scene-SUBCLASS.py",
-			"settings":
-			{
-				"buffer_size": 2048,
-				"encoding": "UTF-8",
-				"line_ending": "Windows"
-			},
-			"undo_stack":
-			[
-				[
-					5,
-					1,
-					"paste",
-					null,
-					"AQAAAAAAAAAAAAAAawAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					8,
-					2,
-					"left_delete",
-					null,
-					"AgAAAEkAAAAAAAAASQAAAAAAAAAfAAAACiAgICBMaW5rU2hhcGUsCgogICAgUG9ydFNoYXBlLEgAAAAAAAAASAAAAAAAAAABAAAACg",
-					"AQAAAAAAAAABAAAAaAAAAAAAAABJAAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					11,
-					2,
-					"left_delete",
-					null,
-					"AgAAAEoAAAAAAAAASgAAAAAAAAABAAAAKUkAAAAAAAAASQAAAAAAAAABAAAACg",
-					"AQAAAAAAAAABAAAASwAAAAAAAABLAAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					16,
-					1,
-					"left_delete",
-					null,
-					"AQAAAEcAAAAAAAAARwAAAAAAAAABAAAALA",
-					"AQAAAAAAAAABAAAASAAAAAAAAABIAAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					19,
-					3,
-					"left_delete",
-					null,
-					"AwAAADkAAAAAAAAAOQAAAAAAAAAFAAAACiAgICA4AAAAAAAAADgAAAAAAAAAAQAAAAo3AAAAAAAAADcAAAAAAAAAAQAAACg",
-					"AQAAAAAAAAABAAAAPgAAAAAAAAA5AAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					23,
-					1,
-					"insert",
-					{
-						"characters": "\n"
-					},
-					"AQAAAEEAAAAAAAAAQgAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAQQAAAAAAAABBAAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					24,
-					1,
-					"paste",
-					null,
-					"AQAAAEIAAAAAAAAA3wAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAQgAAAAAAAABCAAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					27,
-					1,
-					"left_delete",
-					null,
-					"AQAAAH4AAAAAAAAAfgAAAAAAAAABAAAACg",
-					"AQAAAAAAAAABAAAAfwAAAAAAAAB/AAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					30,
-					1,
-					"left_delete",
-					null,
-					"AQAAAGoAAAAAAAAAagAAAAAAAAABAAAACg",
-					"AQAAAAAAAAABAAAAawAAAAAAAABrAAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					33,
-					1,
-					"left_delete",
-					null,
-					"AQAAAFkAAAAAAAAAWQAAAAAAAAABAAAACg",
-					"AQAAAAAAAAABAAAAWgAAAAAAAABaAAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					36,
-					1,
-					"left_delete",
-					null,
-					"AQAAAKcAAAAAAAAApwAAAAAAAAABAAAACg",
-					"AQAAAAAAAAABAAAAqAAAAAAAAACoAAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					39,
-					1,
-					"left_delete",
-					null,
-					"AQAAALYAAAAAAAAAtgAAAAAAAAABAAAACg",
-					"AQAAAAAAAAABAAAAtwAAAAAAAAC3AAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					42,
-					1,
-					"left_delete",
-					null,
-					"AQAAAMkAAAAAAAAAyQAAAAAAAAABAAAACg",
-					"AQAAAAAAAAABAAAAygAAAAAAAADKAAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					47,
-					1,
-					"insert",
-					{
-						"characters": "\n\n"
-					},
-					"AgAAAEEAAAAAAAAAQgAAAAAAAAAAAAAAQgAAAAAAAABDAAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAQQAAAAAAAABBAAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					49,
-					1,
-					"insert",
-					{
-						"characters": "from"
-					},
-					"BAAAAEIAAAAAAAAAQwAAAAAAAAAAAAAAQwAAAAAAAABEAAAAAAAAAAAAAABEAAAAAAAAAEUAAAAAAAAAAAAAAEUAAAAAAAAARgAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAQgAAAAAAAABCAAAAAAAAAAAAAAAAAAAA"
-				],
-				[
-					50,
-					1,
-					"insert",
-					{
-						"characters": " pyl"
-					},
-					"BAAAAEYAAAAAAAAARwAAAAAAAAAAAAAARwAAAAAAAABIAAAAAAAAAAAAAABIAAAAAAAAAEkAAAAAAAAAAAAAAEkAAAAAAAAASgAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAARgAAAAAAAABGAAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					52,
-					1,
-					"insert_completion",
-					{
-						"completion": "lsp_select_completion {\"index\":6,\"session_name\":\"LSP-pyright\"}",
-						"format": "command",
-						"keep_prefix": false,
-						"must_insert": false,
-						"trigger": "pylive"
-					},
-					"AgAAAEcAAAAAAAAARwAAAAAAAAADAAAAcHlsRwAAAAAAAABNAAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAASgAAAAAAAABKAAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					53,
-					1,
-					"insert",
-					{
-						"characters": ".Ne"
-					},
-					"AwAAAE0AAAAAAAAATgAAAAAAAAAAAAAATgAAAAAAAABPAAAAAAAAAAAAAABPAAAAAAAAAFAAAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAATQAAAAAAAABNAAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					54,
-					1,
-					"insert_completion",
-					{
-						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-pyright\"}",
-						"format": "command",
-						"keep_prefix": false,
-						"must_insert": false,
-						"trigger": "NetworkXGraphEditor"
-					},
-					"AgAAAE4AAAAAAAAATgAAAAAAAAACAAAATmVOAAAAAAAAAGEAAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAUAAAAAAAAABQAAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					55,
-					1,
-					"insert",
-					{
-						"characters": ".nx"
-					},
-					"AwAAAGEAAAAAAAAAYgAAAAAAAAAAAAAAYgAAAAAAAABjAAAAAAAAAAAAAABjAAAAAAAAAGQAAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAYQAAAAAAAABhAAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					57,
-					1,
-					"insert_completion",
-					{
-						"completion": "lsp_select_completion {\"index\":4,\"session_name\":\"LSP-pyright\"}",
-						"format": "command",
-						"keep_prefix": false,
-						"must_insert": false,
-						"trigger": "nx_graph_scene"
-					},
-					"AgAAAGIAAAAAAAAAYgAAAAAAAAACAAAAbnhiAAAAAAAAAHAAAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAZAAAAAAAAABkAAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					58,
-					1,
-					"insert",
-					{
-						"characters": " import"
-					},
-					"BwAAAHAAAAAAAAAAcQAAAAAAAAAAAAAAcQAAAAAAAAByAAAAAAAAAAAAAAByAAAAAAAAAHMAAAAAAAAAAAAAAHMAAAAAAAAAdAAAAAAAAAAAAAAAdAAAAAAAAAB1AAAAAAAAAAAAAAB1AAAAAAAAAHYAAAAAAAAAAAAAAHYAAAAAAAAAdwAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAcAAAAAAAAABwAAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					59,
-					1,
-					"insert",
-					{
-						"characters": " NodeI"
-					},
-					"BgAAAHcAAAAAAAAAeAAAAAAAAAAAAAAAeAAAAAAAAAB5AAAAAAAAAAAAAAB5AAAAAAAAAHoAAAAAAAAAAAAAAHoAAAAAAAAAewAAAAAAAAAAAAAAewAAAAAAAAB8AAAAAAAAAAAAAAB8AAAAAAAAAH0AAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAdwAAAAAAAAB3AAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					60,
-					1,
-					"insert_completion",
-					{
-						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-pyright\"}",
-						"format": "command",
-						"keep_prefix": false,
-						"must_insert": false,
-						"trigger": "NodeId"
-					},
-					"AgAAAHgAAAAAAAAAeAAAAAAAAAAFAAAATm9kZUl4AAAAAAAAAH4AAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAfQAAAAAAAAB9AAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					61,
-					1,
-					"insert",
-					{
-						"characters": ","
-					},
-					"AQAAAH4AAAAAAAAAfwAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAfgAAAAAAAAB+AAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					62,
-					1,
-					"insert",
-					{
-						"characters": " NXG"
-					},
-					"BAAAAH8AAAAAAAAAgAAAAAAAAAAAAAAAgAAAAAAAAACBAAAAAAAAAAAAAACBAAAAAAAAAIIAAAAAAAAAAAAAAIIAAAAAAAAAgwAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAfwAAAAAAAAB/AAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					63,
-					1,
-					"insert",
-					{
-						"characters": "r"
-					},
-					"AQAAAIMAAAAAAAAAhAAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAgwAAAAAAAACDAAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					65,
-					1,
-					"insert_completion",
-					{
-						"completion": "lsp_select_completion {\"index\":3,\"session_name\":\"LSP-pyright\"}",
-						"format": "command",
-						"keep_prefix": false,
-						"must_insert": false,
-						"trigger": "NXGraphScene"
-					},
-					"AgAAAIAAAAAAAAAAgAAAAAAAAAAEAAAATlhHcoAAAAAAAAAAjAAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAhAAAAAAAAACEAAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					68,
-					1,
-					"insert",
-					{
-						"characters": "if"
-					},
-					"AgAAACUBAAAAAAAAJgEAAAAAAAAAAAAAJgEAAAAAAAAnAQAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAJQEAAAAAAAAlAQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					69,
-					1,
-					"insert",
-					{
-						"characters": " __name__"
-					},
-					"CQAAACcBAAAAAAAAKAEAAAAAAAAAAAAAKAEAAAAAAAApAQAAAAAAAAAAAAApAQAAAAAAACoBAAAAAAAAAAAAACoBAAAAAAAAKwEAAAAAAAAAAAAAKwEAAAAAAAAsAQAAAAAAAAAAAAAsAQAAAAAAAC0BAAAAAAAAAAAAAC0BAAAAAAAALgEAAAAAAAAAAAAALgEAAAAAAAAvAQAAAAAAAAAAAAAvAQAAAAAAADABAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAJwEAAAAAAAAnAQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					70,
-					1,
-					"insert",
-					{
-						"characters": " =="
-					},
-					"AwAAADABAAAAAAAAMQEAAAAAAAAAAAAAMQEAAAAAAAAyAQAAAAAAAAAAAAAyAQAAAAAAADMBAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAMAEAAAAAAAAwAQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					71,
-					1,
-					"insert",
-					{
-						"characters": " "
-					},
-					"AQAAADMBAAAAAAAANAEAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAMwEAAAAAAAAzAQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					72,
-					1,
-					"insert_snippet",
-					{
-						"contents": "\"$0\""
-					},
-					"AQAAADQBAAAAAAAANgEAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAANAEAAAAAAAA0AQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					73,
-					1,
-					"insert",
-					{
-						"characters": "__m,a"
-					},
-					"BQAAADUBAAAAAAAANgEAAAAAAAAAAAAANgEAAAAAAAA3AQAAAAAAAAAAAAA3AQAAAAAAADgBAAAAAAAAAAAAADgBAAAAAAAAOQEAAAAAAAAAAAAAOQEAAAAAAAA6AQAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAANQEAAAAAAAA1AQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					74,
-					2,
-					"left_delete",
-					null,
-					"AgAAADkBAAAAAAAAOQEAAAAAAAABAAAAYTgBAAAAAAAAOAEAAAAAAAABAAAALA",
-					"AQAAAAAAAAABAAAAOgEAAAAAAAA6AQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					75,
-					1,
-					"insert",
-					{
-						"characters": "ain__"
-					},
-					"BQAAADgBAAAAAAAAOQEAAAAAAAAAAAAAOQEAAAAAAAA6AQAAAAAAAAAAAAA6AQAAAAAAADsBAAAAAAAAAAAAADsBAAAAAAAAPAEAAAAAAAAAAAAAPAEAAAAAAAA9AQAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAOAEAAAAAAAA4AQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					77,
-					1,
-					"insert",
-					{
-						"characters": ":"
-					},
-					"AQAAAD4BAAAAAAAAPwEAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAPgEAAAAAAAA+AQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					78,
-					1,
-					"insert",
-					{
-						"characters": "\n"
-					},
-					"AgAAAD8BAAAAAAAAQAEAAAAAAAAAAAAAQAEAAAAAAABEAQAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAPwEAAAAAAAA/AQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					79,
-					1,
-					"paste",
-					null,
-					"AQAAAEQBAAAAAAAAuQQAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAARAEAAAAAAABEAQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					82,
-					2,
-					"left_delete",
-					null,
-					"AgAAAEABAAAAAAAAQAEAAAAAAAAEAAAAICAgID8BAAAAAAAAPwEAAAAAAAABAAAACg",
-					"AQAAAAAAAAABAAAARAEAAAAAAABEAQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					83,
-					1,
-					"insert",
-					{
-						"characters": "\n"
-					},
-					"AQAAAD8BAAAAAAAAQAEAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAPwEAAAAAAAA/AQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					86,
-					1,
-					"left_delete",
-					null,
-					"AQAAACUBAAAAAAAAJQEAAAAAAAAaAAAAaWYgX19uYW1lX18gPT0gIl9fbWFpbl9fIjo",
-					"AQAAAAAAAAABAAAAPwEAAAAAAAAlAQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					91,
-					4,
-					"left_delete",
-					null,
-					"BAAAANkAAAAAAAAA2QAAAAAAAAABAAAACtgAAAAAAAAA2AAAAAAAAAABAAAACtcAAAAAAAAA1wAAAAAAAAABAAAACtYAAAAAAAAA1gAAAAAAAAABAAAACg",
-					"AQAAAAAAAAABAAAA2gAAAAAAAADaAAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					95,
-					1,
-					"insert",
-					{
-						"characters": "from"
-					},
-					"BAAAAI0AAAAAAAAAjgAAAAAAAAAAAAAAjgAAAAAAAACPAAAAAAAAAAAAAACPAAAAAAAAAJAAAAAAAAAAAAAAAJAAAAAAAAAAkQAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAjQAAAAAAAACNAAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					96,
-					1,
-					"insert",
-					{
-						"characters": " dataclasswes"
-					},
-					"DQAAAJEAAAAAAAAAkgAAAAAAAAAAAAAAkgAAAAAAAACTAAAAAAAAAAAAAACTAAAAAAAAAJQAAAAAAAAAAAAAAJQAAAAAAAAAlQAAAAAAAAAAAAAAlQAAAAAAAACWAAAAAAAAAAAAAACWAAAAAAAAAJcAAAAAAAAAAAAAAJcAAAAAAAAAmAAAAAAAAAAAAAAAmAAAAAAAAACZAAAAAAAAAAAAAACZAAAAAAAAAJoAAAAAAAAAAAAAAJoAAAAAAAAAmwAAAAAAAAAAAAAAmwAAAAAAAACcAAAAAAAAAAAAAACcAAAAAAAAAJ0AAAAAAAAAAAAAAJ0AAAAAAAAAngAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAkQAAAAAAAACRAAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					97,
-					3,
-					"left_delete",
-					null,
-					"AwAAAJ0AAAAAAAAAnQAAAAAAAAABAAAAc5wAAAAAAAAAnAAAAAAAAAABAAAAZZsAAAAAAAAAmwAAAAAAAAABAAAAdw",
-					"AQAAAAAAAAABAAAAngAAAAAAAACeAAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					98,
-					1,
-					"insert",
-					{
-						"characters": "es"
-					},
-					"AgAAAJsAAAAAAAAAnAAAAAAAAAAAAAAAnAAAAAAAAACdAAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAmwAAAAAAAACbAAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					99,
-					1,
-					"insert",
-					{
-						"characters": " import"
-					},
-					"BwAAAJ0AAAAAAAAAngAAAAAAAAAAAAAAngAAAAAAAACfAAAAAAAAAAAAAACfAAAAAAAAAKAAAAAAAAAAAAAAAKAAAAAAAAAAoQAAAAAAAAAAAAAAoQAAAAAAAACiAAAAAAAAAAAAAACiAAAAAAAAAKMAAAAAAAAAAAAAAKMAAAAAAAAApAAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAnQAAAAAAAACdAAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					100,
-					1,
-					"insert",
-					{
-						"characters": " dataclass"
-					},
-					"CgAAAKQAAAAAAAAApQAAAAAAAAAAAAAApQAAAAAAAACmAAAAAAAAAAAAAACmAAAAAAAAAKcAAAAAAAAAAAAAAKcAAAAAAAAAqAAAAAAAAAAAAAAAqAAAAAAAAACpAAAAAAAAAAAAAACpAAAAAAAAAKoAAAAAAAAAAAAAAKoAAAAAAAAAqwAAAAAAAAAAAAAAqwAAAAAAAACsAAAAAAAAAAAAAACsAAAAAAAAAK0AAAAAAAAAAAAAAK0AAAAAAAAArgAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAApAAAAAAAAACkAAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					101,
-					1,
-					"insert",
-					{
-						"characters": "\n\n"
-					},
-					"AgAAAK4AAAAAAAAArwAAAAAAAAAAAAAArwAAAAAAAACwAAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAArgAAAAAAAACuAAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					106,
-					1,
-					"insert",
-					{
-						"characters": "\n\n"
-					},
-					"AgAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAQAAAAAAAAACAAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					108,
-					1,
-					"paste",
-					null,
-					"AQAAAAAAAAAAAAAAbQAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-				],
-				[
-					115,
-					1,
-					"insert",
-					{
-						"characters": "\n\n"
-					},
-					"AgAAALIBAAAAAAAAswEAAAAAAAAAAAAAswEAAAAAAAC0AQAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAsgEAAAAAAACyAQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					117,
-					1,
-					"insert",
-					{
-						"characters": "class"
-					},
-					"BQAAALQBAAAAAAAAtQEAAAAAAAAAAAAAtQEAAAAAAAC2AQAAAAAAAAAAAAC2AQAAAAAAALcBAAAAAAAAAAAAALcBAAAAAAAAuAEAAAAAAAAAAAAAuAEAAAAAAAC5AQAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAtAEAAAAAAAC0AQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					118,
-					1,
-					"insert",
-					{
-						"characters": " NXNe"
-					},
-					"BQAAALkBAAAAAAAAugEAAAAAAAAAAAAAugEAAAAAAAC7AQAAAAAAAAAAAAC7AQAAAAAAALwBAAAAAAAAAAAAALwBAAAAAAAAvQEAAAAAAAAAAAAAvQEAAAAAAAC+AQAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAuQEAAAAAAAC5AQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					119,
-					1,
-					"insert",
-					{
-						"characters": "twork"
-					},
-					"BQAAAL4BAAAAAAAAvwEAAAAAAAAAAAAAvwEAAAAAAADAAQAAAAAAAAAAAADAAQAAAAAAAMEBAAAAAAAAAAAAAMEBAAAAAAAAwgEAAAAAAAAAAAAAwgEAAAAAAADDAQAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAvgEAAAAAAAC+AQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					120,
-					1,
-					"insert",
-					{
-						"characters": "Scene"
-					},
-					"BQAAAMMBAAAAAAAAxAEAAAAAAAAAAAAAxAEAAAAAAADFAQAAAAAAAAAAAADFAQAAAAAAAMYBAAAAAAAAAAAAAMYBAAAAAAAAxwEAAAAAAAAAAAAAxwEAAAAAAADIAQAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAwwEAAAAAAADDAQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					121,
-					1,
-					"insert_snippet",
-					{
-						"contents": "($0)"
-					},
-					"AQAAAMgBAAAAAAAAygEAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAyAEAAAAAAADIAQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					122,
-					1,
-					"insert",
-					{
-						"characters": "NXGraphS"
-					},
-					"CAAAAMkBAAAAAAAAygEAAAAAAAAAAAAAygEAAAAAAADLAQAAAAAAAAAAAADLAQAAAAAAAMwBAAAAAAAAAAAAAMwBAAAAAAAAzQEAAAAAAAAAAAAAzQEAAAAAAADOAQAAAAAAAAAAAADOAQAAAAAAAM8BAAAAAAAAAAAAAM8BAAAAAAAA0AEAAAAAAAAAAAAA0AEAAAAAAADRAQAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAyQEAAAAAAADJAQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					123,
-					1,
-					"insert_completion",
-					{
-						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-pyright\"}",
-						"format": "command",
-						"keep_prefix": false,
-						"must_insert": false,
-						"trigger": "NXGraphScene"
-					},
-					"AgAAAMkBAAAAAAAAyQEAAAAAAAAIAAAATlhHcmFwaFPJAQAAAAAAANUBAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAA0QEAAAAAAADRAQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					125,
-					1,
-					"insert",
-					{
-						"characters": ":"
-					},
-					"AQAAANYBAAAAAAAA1wEAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAA1gEAAAAAAADWAQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					126,
-					1,
-					"insert",
-					{
-						"characters": "\ndef"
-					},
-					"BQAAANcBAAAAAAAA2AEAAAAAAAAAAAAA2AEAAAAAAADcAQAAAAAAAAAAAADcAQAAAAAAAN0BAAAAAAAAAAAAAN0BAAAAAAAA3gEAAAAAAAAAAAAA3gEAAAAAAADfAQAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAA1wEAAAAAAADXAQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					127,
-					1,
-					"insert",
-					{
-						"characters": " __ini"
-					},
-					"BgAAAN8BAAAAAAAA4AEAAAAAAAAAAAAA4AEAAAAAAADhAQAAAAAAAAAAAADhAQAAAAAAAOIBAAAAAAAAAAAAAOIBAAAAAAAA4wEAAAAAAAAAAAAA4wEAAAAAAADkAQAAAAAAAAAAAADkAQAAAAAAAOUBAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAA3wEAAAAAAADfAQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					128,
-					1,
-					"insert_completion",
-					{
-						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-pyright\"}",
-						"format": "command",
-						"keep_prefix": true,
-						"must_insert": false,
-						"query_change_id":
-						[
-							91,
-							127,
-							6
-						],
-						"trigger": "__init__"
-					},
-					"AgAAAOABAAAAAAAA4AEAAAAAAAAFAAAAX19pbmngAQAAAAAAACQCAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAA5QEAAAAAAADlAQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					134,
-					1,
-					"insert",
-					{
-						"characters": "\n"
-					},
-					"AQAAAPsAAAAAAAAA/AAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAA+wAAAAAAAAD7AAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					135,
-					1,
-					"paste",
-					null,
-					"AQAAAPwAAAAAAAAARgEAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAA/AAAAAAAAAD8AAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					138,
-					1,
-					"insert",
-					{
-						"characters": "_model"
-					},
-					"BwAAACQBAAAAAAAAJQEAAAAAAAAAAAAAJQEAAAAAAAAlAQAAAAAAACIAAABfc2NlbmUgaW1wb3J0IE5vZGVJZCwgTlhHcmFwaFNjZW5lJQEAAAAAAAAmAQAAAAAAAAAAAAAmAQAAAAAAACcBAAAAAAAAAAAAACcBAAAAAAAAKAEAAAAAAAAAAAAAKAEAAAAAAAApAQAAAAAAAAAAAAApAQAAAAAAACoBAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAARgEAAAAAAAAkAQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					139,
-					1,
-					"insert",
-					{
-						"characters": " import"
-					},
-					"BwAAACoBAAAAAAAAKwEAAAAAAAAAAAAAKwEAAAAAAAAsAQAAAAAAAAAAAAAsAQAAAAAAAC0BAAAAAAAAAAAAAC0BAAAAAAAALgEAAAAAAAAAAAAALgEAAAAAAAAvAQAAAAAAAAAAAAAvAQAAAAAAADABAAAAAAAAAAAAADABAAAAAAAAMQEAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAKgEAAAAAAAAqAQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					140,
-					1,
-					"insert",
-					{
-						"characters": " NXG"
-					},
-					"BAAAADEBAAAAAAAAMgEAAAAAAAAAAAAAMgEAAAAAAAAzAQAAAAAAAAAAAAAzAQAAAAAAADQBAAAAAAAAAAAAADQBAAAAAAAANQEAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAMQEAAAAAAAAxAQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					141,
-					1,
-					"insert",
-					{
-						"characters": "r"
-					},
-					"AQAAADUBAAAAAAAANgEAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAANQEAAAAAAAA1AQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					142,
-					1,
-					"insert_completion",
-					{
-						"completion": "lsp_select_completion {\"index\":2,\"session_name\":\"LSP-pyright\"}",
-						"format": "command",
-						"keep_prefix": false,
-						"must_insert": false,
-						"trigger": "NXGraphModel"
-					},
-					"AgAAADIBAAAAAAAAMgEAAAAAAAAEAAAATlhHcjIBAAAAAAAAPgEAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAANgEAAAAAAAA2AQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					147,
-					1,
-					"insert",
-					{
-						"characters": "\n"
-					},
-					"AgAAAGcCAAAAAAAAaAIAAAAAAAAAAAAAaAIAAAAAAABwAgAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAZwIAAAAAAABnAgAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					150,
-					1,
-					"insert",
-					{
-						"characters": "\n"
-					},
-					"BAAAAEcCAAAAAAAASAIAAAAAAAAAAAAASAIAAAAAAABMAgAAAAAAAAAAAABMAgAAAAAAAFACAAAAAAAAAAAAAHECAAAAAAAAcQIAAAAAAAAIAAAAICAgICAgICA",
-					"AQAAAAAAAAABAAAARwIAAAAAAABHAgAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					151,
-					1,
-					"paste",
-					null,
-					"AQAAAFACAAAAAAAAHwMAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAUAIAAAAAAABQAgAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					154,
-					1,
-					"left_delete",
-					null,
-					"AQAAAJ0CAAAAAAAAnQIAAAAAAAABAAAACg",
-					"AQAAAAAAAAABAAAAngIAAAAAAACeAgAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					157,
-					1,
-					"left_delete",
-					null,
-					"AQAAAHMCAAAAAAAAcwIAAAAAAAABAAAACg",
-					"AQAAAAAAAAABAAAAdAIAAAAAAAB0AgAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					160,
-					1,
-					"left_delete",
-					null,
-					"AQAAAN0CAAAAAAAA3QIAAAAAAAABAAAACg",
-					"AQAAAAAAAAABAAAA3gIAAAAAAADeAgAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					163,
-					1,
-					"left_delete",
-					null,
-					"AQAAAAgDAAAAAAAACAMAAAAAAAABAAAACg",
-					"AQAAAAAAAAABAAAACQMAAAAAAAAJAwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					168,
-					1,
-					"insert",
-					{
-						"characters": "\n\n"
-					},
-					"BQAAADsDAAAAAAAAPAMAAAAAAAAAAAAAPAMAAAAAAABEAwAAAAAAAAAAAABEAwAAAAAAAEUDAAAAAAAAAAAAAEUDAAAAAAAATQMAAAAAAAAAAAAAPAMAAAAAAAA8AwAAAAAAAAgAAAAgICAgICAgIA",
-					"AQAAAAAAAAABAAAAOwMAAAAAAAA7AwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					169,
-					1,
-					"left_delete",
-					null,
-					"AQAAAEEDAAAAAAAAQQMAAAAAAAAEAAAAICAgIA",
-					"AQAAAAAAAAABAAAARQMAAAAAAABFAwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					170,
-					1,
-					"insert",
-					{
-						"characters": "def"
-					},
-					"AwAAAEEDAAAAAAAAQgMAAAAAAAAAAAAAQgMAAAAAAABDAwAAAAAAAAAAAABDAwAAAAAAAEQDAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAQQMAAAAAAABBAwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					171,
-					1,
-					"insert",
-					{
-						"characters": " on"
-					},
-					"AwAAAEQDAAAAAAAARQMAAAAAAAAAAAAARQMAAAAAAABGAwAAAAAAAAAAAABGAwAAAAAAAEcDAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAARAMAAAAAAABEAwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					172,
-					1,
-					"insert_completion",
-					{
-						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-pyright\"}",
-						"format": "command",
-						"keep_prefix": true,
-						"must_insert": false,
-						"query_change_id":
-						[
-							123,
-							171,
-							3
-						],
-						"trigger": "onLinkCreated"
-					},
-					"AgAAAEUDAAAAAAAARQMAAAAAAAACAAAAb25FAwAAAAAAAIwDAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAARwMAAAAAAABHAwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					176,
-					1,
-					"insert",
-					{
-						"characters": "LinkId,"
-					},
-					"BwAAAO4AAAAAAAAA7wAAAAAAAAAAAAAA7wAAAAAAAADwAAAAAAAAAAAAAADwAAAAAAAAAPEAAAAAAAAAAAAAAPEAAAAAAAAA8gAAAAAAAAAAAAAA8gAAAAAAAADzAAAAAAAAAAAAAADzAAAAAAAAAPQAAAAAAAAAAAAAAPQAAAAAAAAA9QAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAA7gAAAAAAAADuAAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					179,
-					1,
-					"insert",
-					{
-						"characters": " "
-					},
-					"AQAAAO4AAAAAAAAA7wAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAA7gAAAAAAAADuAAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					185,
-					1,
-					"cut",
-					null,
-					"AQAAAPcAAAAAAAAA9wAAAAAAAAAMAAAATlhHcmFwaFNjZW5l",
-					"AQAAAAAAAAABAAAA9wAAAAAAAAADAQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					188,
-					1,
-					"paste",
-					null,
-					"AQAAAOcAAAAAAAAA8wAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAA5wAAAAAAAADnAAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					189,
-					1,
-					"insert",
-					{
-						"characters": ","
-					},
-					"AQAAAPMAAAAAAAAA9AAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAA8wAAAAAAAADzAAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					190,
-					1,
-					"insert",
-					{
-						"characters": " "
-					},
-					"AQAAAPQAAAAAAAAA9QAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAA9AAAAAAAAAD0AAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					193,
-					2,
-					"left_delete",
-					null,
-					"AgAAAAQBAAAAAAAABAEAAAAAAAABAAAAIAMBAAAAAAAAAwEAAAAAAAABAAAALA",
-					"AQAAAAAAAAABAAAABQEAAAAAAAAFAQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					199,
-					1,
-					"paste",
-					null,
-					"AgAAAEkDAAAAAAAAfQQAAAAAAAAAAAAAfQQAAAAAAAB9BAAAAAAAAEsAAABkZWYgb25MaW5rQ3JlYXRlZChzZWxmLCBlOiBMaW5rSWQpOgogICAgICAgIHJldHVybiBzdXBlcigpLm9uTGlua0NyZWF0ZWQoZSk",
-					"AQAAAAAAAAABAAAAlAMAAAAAAABJAwAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					209,
-					1,
-					"insert",
-					{
-						"characters": ","
-					},
-					"AQAAAAMBAAAAAAAABAEAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAAwEAAAAAAAADAQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					210,
-					1,
-					"insert",
-					{
-						"characters": " LinkG"
-					},
-					"BgAAAAQBAAAAAAAABQEAAAAAAAAAAAAABQEAAAAAAAAGAQAAAAAAAAAAAAAGAQAAAAAAAAcBAAAAAAAAAAAAAAcBAAAAAAAACAEAAAAAAAAAAAAACAEAAAAAAAAJAQAAAAAAAAAAAAAJAQAAAAAAAAoBAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAABAEAAAAAAAAEAQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					211,
-					1,
-					"insert_completion",
-					{
-						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-pyright\"}",
-						"format": "command",
-						"keep_prefix": false,
-						"must_insert": false,
-						"trigger": "LinkGraphicsObject"
-					},
-					"AgAAAAUBAAAAAAAABQEAAAAAAAAFAAAATGlua0cFAQAAAAAAABcBAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAACgEAAAAAAAAKAQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					219,
-					1,
-					"insert",
-					{
-						"characters": "Link"
-					},
-					"BQAAAAUBAAAAAAAABgEAAAAAAAAAAAAABgEAAAAAAAAGAQAAAAAAABIAAABMaW5rR3JhcGhpY3NPYmplY3QGAQAAAAAAAAcBAAAAAAAAAAAAAAcBAAAAAAAACAEAAAAAAAAAAAAACAEAAAAAAAAJAQAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAABQEAAAAAAAAXAQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					220,
-					6,
-					"left_delete",
-					null,
-					"BgAAAAgBAAAAAAAACAEAAAAAAAABAAAAawcBAAAAAAAABwEAAAAAAAABAAAAbgYBAAAAAAAABgEAAAAAAAABAAAAaQUBAAAAAAAABQEAAAAAAAABAAAATAQBAAAAAAAABAEAAAAAAAABAAAAIAMBAAAAAAAAAwEAAAAAAAABAAAALA",
-					"AQAAAAAAAAABAAAACQEAAAAAAAAJAQAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					222,
-					1,
-					"insert",
-					{
-						"characters": ","
-					},
-					"AQAAAK8AAAAAAAAAsAAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAArwAAAAAAAACvAAAAAAAAAAAAAAAAUIJA"
-				],
-				[
-					223,
-					1,
-					"insert",
-					{
-						"characters": " LinkS"
-					},
-					"BgAAALAAAAAAAAAAsQAAAAAAAAAAAAAAsQAAAAAAAACyAAAAAAAAAAAAAACyAAAAAAAAALMAAAAAAAAAAAAAALMAAAAAAAAAtAAAAAAAAAAAAAAAtAAAAAAAAAC1AAAAAAAAAAAAAAC1AAAAAAAAALYAAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAsAAAAAAAAACwAAAAAAAAAAAAAAAAAPC/"
-				],
-				[
-					224,
-					1,
-					"insert_completion",
-					{
-						"completion": "lsp_select_completion {\"index\":0,\"session_name\":\"LSP-pyright\"}",
-						"format": "command",
-						"keep_prefix": false,
-						"must_insert": false,
-						"trigger": "LinkShape"
-					},
-					"AgAAALEAAAAAAAAAsQAAAAAAAAAFAAAATGlua1OxAAAAAAAAALoAAAAAAAAAAAAAAA",
-					"AQAAAAAAAAABAAAAtgAAAAAAAAC2AAAAAAAAAAAAAAAAAPC/"
-				]
 			]
 		}
 	],
@@ -3398,16 +2535,12 @@
 		"selected_items":
 		[
 			[
-				"debu",
-				"Debugger: Open"
+				"pyrig",
+				"Preferences: LSP-pyright Settings"
 			],
 			[
-				"debug",
-				"Debugger: Open"
-			],
-			[
-				"install",
-				"Package Control: Install Package"
+				"pyrigh",
+				"Preferences: LSP-pyright Settings"
 			],
 			[
 				"instal",
@@ -3423,6 +2556,10 @@
 			],
 			[
 				"inst",
+				"Package Control: Install Package"
+			],
+			[
+				"install",
 				"Package Control: Install Package"
 			],
 			[
@@ -3498,49 +2635,41 @@
 	},
 	"expanded_folders":
 	[
-		"/C/dev/src/pylive",
-		"/C/dev/src/pylive/pylive",
-		"/C/dev/src/pylive/pylive/NetworkXGraphEditor"
+		"/Users/andris/Documents/GitHub/pylive",
+		"/Users/andris/Documents/GitHub/pylive/pylive",
+		"/Users/andris/Documents/GitHub/pylive/pylive/NetworkXGraphEditor",
+		"/Users/andris/Documents/GitHub/pylive/pylive/NetworkXGraphEditor/__pycache__",
+		"/Users/andris/Documents/GitHub/pylive/pylive/QtLiveApp",
+		"/Users/andris/Documents/GitHub/pylive/pylive/utils"
 	],
 	"file_history":
 	[
-		"/C/dev/src/pylive/pylive/NetworkXGraphEditor/nx_graph_shapes.py",
-		"/C/dev/src/pylive/pylive/utils/graph_layout.py",
-		"/C/dev/src/pylive/pylive/QtTerminal/terminal_with_exec.py",
-		"/C/dev/src/pylive/.venv/Lib/site-packages/networkx/classes/multidigraph.py",
-		"/C/dev/src/pylive/pylive/QtGraphEditor/nx_inspector_view.py",
-		"/C/dev/src/pylive/pylive/QtGraphEditor/nx_graph_view.py",
-		"/C/dev/src/pylive/pylive/QtGraphEditor/nx_graph_model.py",
-		"/C/dev/src/pylive/pylive/QtGraphEditor/nx_graph_graphics_items.py",
-		"/C/dev/src/pylive/pylive/QtGraphEditor/NetrowkXGraphEditor/link_graphics_items.py",
-		"/C/dev/src/pylive/pylive/QtGraphEditor/nx_graph_graphics_scene.py",
-		"/C/dev/src/pylive/pylive/QtGraphEditor/qtpy_nodeeditor.py",
-		"/C/dev/src/pylive/pylive/utils/diff.py",
-		"/C/dev/src/pylive/pylive/QtScriptEditor/components/jedi_completer.py",
-		"/C/dev/src/pylive/expreiments/ipython/embedded_qtconsole.py",
-		"/C/dev/src/pylive/expreiments/display_builtin_icons.py",
-		"/C/dev/src/pylive/pylive/QtGraphEditor/nx_graph_selection_model.py",
-		"/C/dev/src/pylive/tests/test_diff.py",
-		"/C/dev/src/pylive/pylive/utils/unique.py",
-		"/C/dev/src/pylive/pylive/utils/sugiyama_layout.py",
-		"/C/dev/src/pylive/.venv/Lib/site-packages/networkx/drawing/layout.py",
-		"/C/dev/src/pylive/pylive.sublime-project",
-		"/C/dev/src/pylive/.venv/Lib/site-packages/networkx/classes/reportviews.py",
-		"/C/dev/src/pylive/pylive/QtGraphEditor/nx_graph_graphics_scene_with_ports.py",
-		"/C/dev/src/pylive/pylive/QtGraphEditor/NetrowkXGraphEditor/qgraphics_arrow_item.py",
-		"/C/dev/src/pylive/pylive/QtGraphEditor/dag_graph_graphics_scene.py",
+		"/Users/andris/Documents/GitHub/pylive/.venv/lib/python3.12/site-packages/networkx/drawing/layout.py",
+		"/Users/andris/Documents/GitHub/pylive/pylive/QtGraphEditor/nx_graph_view.py",
+		"/Users/andris/Documents/GitHub/pylive/pyrightconfig.json",
+		"/Users/andris/Documents/GitHub/pylive/pylive/QtGraphEditor/nx_graph_model.py",
+		"/Users/andris/Documents/GitHub/pylive/pylive/utils/unique.py",
+		"/Users/andris/Documents/GitHub/pylive/pylive/QtGraphEditor/NetrowkXGraphEditor/link_graphics_items.py",
+		"/Users/andris/Documents/GitHub/pylive/pylive/QtGraphEditor/NetrowkXGraphEditor/qgraphics_arrow_item.py",
+		"/Users/andris/Documents/GitHub/pylive/pylive/QtGraphEditor/nx_graph_graphics_scene.py",
+		"/Users/andris/Documents/GitHub/pylive/pylive/QtGraphEditor/nx_graph_graphics_scene_with_ports.py",
 		"/C/dev/src/pylive/expreiments/qstyle_draw_ptimitive_elements.py",
 		"/C/dev/src/pylive/tests/test_python_graphmodel.py",
 		"/C/dev/src/pylive/pylive/QtGraphEditor/infinite_graphicsview_optimized.py",
 		"/C/Users/andris/AppData/Local/Packages/PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0/LocalCache/local-packages/Python312/site-packages/PySide6/QtCore.pyi",
+		"/C/dev/src/pylive/pylive/QtGraphEditor/NetrowkXGraphEditor/link_graphics_items.py",
+		"/C/dev/src/pylive/pylive/QtGraphEditor/NetrowkXGraphEditor/qgraphics_arrow_item.py",
 		"/C/dev/src/pylive/pylive/examples/python_function_graph/graph_view.py",
 		"/C/dev/src/pylive/pylive/QtGraphEditor/node_connection_tool.py",
+		"/C/dev/src/pylive/pylive/QtGraphEditor/nx_graph_model.py",
 		"/C/dev/src/pylive/pylive/QtGraphEditor/text_widget.py",
 		"/C/dev/src/pylive/pylive/QtGraphEditor/circle_widget.py",
 		"/C/dev/src/pylive/pylive/QtGraphEditor/pin_connection_tool.py",
 		"/C/dev/src/pylive/pylive/examples/python_function_graph/main.py",
 		"/C/dev/src/pylive/pylive/QtGraphEditor/NetrowkXGraphEditor/graphview_with_delegate.py",
+		"/C/dev/src/pylive/pylive/QtGraphEditor/nx_graph_selection_model.py",
 		"/C/dev/src/pylive/pylive/examples/python_function_graph/python_graph_model.py",
+		"/C/dev/src/pylive/pylive/QtGraphEditor/dag_graph_graphics_scene.py",
 		"/C/Users/andris/Downloads/SideFX Houdini 20.5.278 x64 Win/readme.txt",
 		"/C/Users/andris/Documents/Blender/Assets/blender_assets.cats.txt",
 		"/C/dev/src/pylive/pyproject.toml",
@@ -3573,6 +2702,7 @@
 		"/C/dev/src/pylive/pylive/QtLiveFramework/live_framework_with_exec.py",
 		"/C/dev/src/pylive/expreiments/file_textdocument_link.py",
 		"/E/__ANDRIS__/ART/_Applications_/Cynthia Lopez 7000 - 2024/Cynthia Lopez 7000.xlsx",
+		"/C/dev/src/pylive/pylive/QtScriptEditor/components/jedi_completer.py",
 		"/C/dev/src/pylive/expreiments/glcanvas.py",
 		"/C/dev/src/pylive/pylive/render_engine/regl/regl.py",
 		"/C/dev/src/pylive/pylive/QtLiveFramework/live_framework_skeleton.py",
@@ -3631,7 +2761,17 @@
 		"/C/dev/src/pylive/expreiments/visualize_function_dependencies.py",
 		"/C/dev/src/pylive/pylive/QtScriptEditor/components/pygments_syntax_highlighter_OLD.py",
 		"/C/dev/src/pylive/pylive/QtScriptEditor/components/textedit_completer.py",
-		"/C/dev/src/pylive/pylive/QtScriptEditor/components/WhitespaceHighlighter.py"
+		"/C/dev/src/pylive/pylive/QtScriptEditor/components/WhitespaceHighlighter.py",
+		"/C/dev/src/pylive/pylive/QtScriptEditor/highlighters.py",
+		"/C/dev/src/pylive/expreiments/jedi_test.py",
+		"/C/dev/src/pylive/expreiments/live_colorscheme.py",
+		"/C/dev/src/pylive/pylive/QtScriptEditor/components/async_rope_completer_for_textedit.py",
+		"/C/dev/src/pylive/pylive/QtScriptEditor/script_editor_with_async_rope_completion.py",
+		"/C/dev/src/pylive/pylive/QtScriptEditor/simple_script_editor.py",
+		"/C/dev/src/pylive/pylive/QtScriptEditor/components/completer_for_textedit.py",
+		"/C/dev/src/pylive/pylive/QtScriptEditor/components/number_editor.py",
+		"/C/dev/src/pylive/pylive/QtScriptEditor/components/KeywordsCompleter_OLD.py",
+		"/C/dev/src/pylive/pylive/thread_pool_tracker.py"
 	],
 	"find":
 	{
@@ -3647,51 +2787,12 @@
 	},
 	"find_state":
 	{
-		"case_sensitive": false,
+		"case_sensitive": true,
 		"find_history":
 		[
-			"outletGraphicsObject(",
-			"NXGraphModel",
-			"modified",
-			"LinkW",
-			"hoverMoveEvent",
-			"ConnectionEvent",
-			"NodeWidget",
-			"EdgeWidget",
-			"change",
-			"})\n",
-			"handleEdgesRe",
-			"nodespropertyChanged.emit",
-			"Nodewidget",
-			"gradient",
-			"makeArrowS",
-			"EdgeWidget",
-			"addEdge",
-			"EdgeWidget",
-			"targetChanged",
-			"NodeWidget",
-			"makeLine",
-			"setAccepted",
-			"accept",
-			"ConnectionDropType",
-			"connectionEnterEvent",
-			"AlignmentFlag",
 			"print(",
-			"nodeAt",
-			"AttributesTable",
-			"setLabelT",
-			"size",
-			"unchanged",
-			"current",
-			"print",
-			"destroy",
-			"_is_connection_entered",
-			"QPen",
-			"d1 <",
-			"d1 >",
-			"d2 >",
-			"d2>",
-			"d1",
+			"setHigh",
+			"drag",
 			"            \"",
 			"CC_CustomBase",
 			"CE_ShapedFrame",
@@ -3777,7 +2878,46 @@
 			"find",
 			"fin",
 			"clearNo",
-			"showException"
+			"showException",
+			"evalu",
+			"completer",
+			"RopeC",
+			"lineNumberArea",
+			"completer",
+			"print",
+			"new file",
+			"setWindowTitle",
+			"modifie",
+			"setPreviewCollapse",
+			"contentChang",
+			"setupMenui",
+			"NodeW",
+			"self.palette",
+			"threshold",
+			"cancel",
+			"interactive_edge_end_pin",
+			"interactive_edge_start_pin",
+			"interactive_edge_end_pin",
+			"interactive_edge_moving_pin",
+			"interactive_edge_start_pin",
+			"self._pare",
+			".parent_node",
+			"_edges",
+			"GrabThreshold",
+			"center",
+			"HeaderWidget",
+			"palette",
+			"updatePosition",
+			"pinAt",
+			"onNodeEditorChange",
+			"onnodePropertyChange",
+			"updatePin",
+			"EdgeItem",
+			"InletItem",
+			"OutletItem",
+			"PinItem",
+			"inlet",
+			"handleInletsADDED"
 		],
 		"highlight": true,
 		"in_selection": false,
@@ -3785,9 +2925,6 @@
 		"regex": false,
 		"replace_history":
 		[
-			"LinkEvent",
-			"VertexWidget",
-			"LinkWidget",
 			"ConnectionEvent",
 			"interactive_edge_moving_pin",
 			"interactive_edge_fixed_pin",
@@ -3840,15 +2977,15 @@
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 9267,
+						"buffer_size": 9879,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								3685,
-								3685
+								6483,
+								6483
 							]
 						],
 						"settings":
@@ -3866,18 +3003,23 @@
 								{
 									"characters": ".[\"'",
 									"selector": "meta.tag, source - comment - string.quoted.double.block - string.quoted.single.block - string.unquoted.heredoc",
+									"server": "LSP-basedpyright"
+								},
+								{
+									"characters": ".[\"'",
+									"selector": "meta.tag, source - comment - string.quoted.double.block - string.quoted.single.block - string.unquoted.heredoc",
 									"server": "LSP-pyright"
 								}
 							],
 							"lsp_active": true,
-							"lsp_uri": "file:///C:/dev/src/pylive/pylive/NetworkXGraphEditor/nx_graph_scene.py",
+							"lsp_uri": "file:///Users/andris/Documents/GitHub/pylive/pylive/NetworkXGraphEditor/nx_graph_scene.py",
 							"show_definitions": false,
 							"syntax": "Packages/Python/Python.sublime-syntax",
 							"tab_size": 4,
-							"translate_tabs_to_spaces": false
+							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 1473.33333333,
+						"translation.y": 2377.0,
 						"zoom_level": 1.0
 					},
 					"stack_index": 0,
@@ -3891,6 +3033,62 @@
 			[
 				{
 					"buffer": 1,
+					"file": "pylive/NetworkXGraphEditor/nx_network_scene-SUBCLASS.py",
+					"selected": true,
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 8839,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								6845,
+								6845
+							]
+						],
+						"settings":
+						{
+							"auto_complete_triggers":
+							[
+								{
+									"characters": "<",
+									"selector": "text.html, text.xml"
+								},
+								{
+									"rhs_empty": true,
+									"selector": "punctuation.accessor"
+								},
+								{
+									"characters": ".[\"'",
+									"selector": "meta.tag, source - comment - string.quoted.double.block - string.quoted.single.block - string.unquoted.heredoc",
+									"server": "LSP-basedpyright"
+								},
+								{
+									"characters": ".[\"'",
+									"selector": "meta.tag, source - comment - string.quoted.double.block - string.quoted.single.block - string.unquoted.heredoc",
+									"server": "LSP-pyright"
+								}
+							],
+							"lsp_active": true,
+							"lsp_uri": "file:///Users/andris/Documents/GitHub/pylive/pylive/NetworkXGraphEditor/nx_network_scene-SUBCLASS.py",
+							"show_definitions": false,
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 720.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 0,
+					"stack_multiselect": false,
+					"type": "text"
+				},
+				{
+					"buffer": 2,
 					"file": "pylive/NetworkXGraphEditor/nx_network_scene-STANDALONE.py",
 					"semi_transient": false,
 					"settings":
@@ -3902,8 +3100,8 @@
 						"selection":
 						[
 							[
-								4981,
-								4673
+								8151,
+								7757
 							]
 						],
 						"settings":
@@ -3921,72 +3119,26 @@
 								{
 									"characters": ".[\"'",
 									"selector": "meta.tag, source - comment - string.quoted.double.block - string.quoted.single.block - string.unquoted.heredoc",
+									"server": "LSP-basedpyright"
+								},
+								{
+									"characters": ".[\"'",
+									"selector": "meta.tag, source - comment - string.quoted.double.block - string.quoted.single.block - string.unquoted.heredoc",
 									"server": "LSP-pyright"
 								}
 							],
 							"lsp_active": true,
-							"lsp_uri": "file:///C:/dev/src/pylive/pylive/NetworkXGraphEditor/nx_network_scene-STANDALONE.py",
+							"lsp_uri": "file:///Users/andris/Documents/GitHub/pylive/pylive/NetworkXGraphEditor/nx_network_scene-STANDALONE.py",
 							"show_definitions": false,
 							"syntax": "Packages/Python/Python.sublime-syntax",
 							"tab_size": 4,
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 1794.66666667,
+						"translation.y": 3500.0,
 						"zoom_level": 1.0
 					},
 					"stack_index": 1,
-					"stack_multiselect": false,
-					"type": "text"
-				},
-				{
-					"buffer": 2,
-					"file": "pylive/NetworkXGraphEditor/nx_network_scene-SUBCLASS.py",
-					"selected": true,
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 2048,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								432,
-								432
-							]
-						],
-						"settings":
-						{
-							"auto_complete_triggers":
-							[
-								{
-									"characters": "<",
-									"selector": "text.html, text.xml"
-								},
-								{
-									"rhs_empty": true,
-									"selector": "punctuation.accessor"
-								},
-								{
-									"characters": ".[\"'",
-									"selector": "meta.tag, source - comment - string.quoted.double.block - string.quoted.single.block - string.unquoted.heredoc",
-									"server": "LSP-pyright"
-								}
-							],
-							"lsp_active": true,
-							"lsp_uri": "file:///C:/dev/src/pylive/pylive/NetworkXGraphEditor/nx_network_scene-SUBCLASS.py",
-							"show_definitions": false,
-							"syntax": "Packages/Python/Python.sublime-syntax",
-							"tab_size": 4,
-							"translate_tabs_to_spaces": true
-						},
-						"translation.x": 0.0,
-						"translation.y": 0.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 0,
 					"stack_multiselect": false,
 					"type": "text"
 				}
@@ -3995,7 +3147,7 @@
 	],
 	"incremental_find":
 	{
-		"height": 25.3333333333
+		"height": 24.0
 	},
 	"input":
 	{
@@ -4021,7 +3173,7 @@
 		"cols":
 		[
 			0.0,
-			0.36823899371,
+			0.493206062479,
 			1.0
 		],
 		"rows":
@@ -4031,14 +3183,6 @@
 		]
 	},
 	"menu_visible": true,
-	"output.Debugger":
-	{
-		"height": 240.0
-	},
-	"output.Debugger Console":
-	{
-		"height": 240.0
-	},
 	"output.LSP Log Panel":
 	{
 		"height": 0.0
@@ -4057,7 +3201,7 @@
 	},
 	"output.exec":
 	{
-		"height": 300.0
+		"height": 120.0
 	},
 	"output.find_results":
 	{
@@ -4071,7 +3215,7 @@
 	"project": "pylive.sublime-project",
 	"replace":
 	{
-		"height": 46.6666666667
+		"height": 44.0
 	},
 	"save_all_on_build": true,
 	"select_file":
@@ -4081,48 +3225,16 @@
 		"selected_items":
 		[
 			[
-				"graph sh",
-				"pylive\\NetworkXGraphEditor\\nx_graph_shapes.py"
+				"standal",
+				"pylive/NetworkXGraphEditor/nx_network_scene-STANDALONE.py"
 			],
 			[
-				"nx netw",
-				"pylive\\NetworkXGraphEditor\\nx_network_scene.py"
-			],
-			[
-				"nx graph mo",
-				"pylive\\QtGraphEditor\\nx_graph_model.py"
-			],
-			[
-				"icons",
-				"expreiments\\display_builtin_icons.py"
-			],
-			[
-				"nx graph",
-				"pylive\\QtGraphEditor\\nx_graph_graphics_scene.py"
-			],
-			[
-				"nxselection",
-				"pylive\\QtGraphEditor\\nx_graph_selection_model.py"
-			],
-			[
-				"nx graph graphics",
-				"pylive\\QtGraphEditor\\nx_graph_graphics_scene.py"
-			],
-			[
-				"nx graph grap",
-				"pylive\\QtGraphEditor\\nx_graph_view.py"
-			],
-			[
-				"nx gr",
-				"pylive\\QtGraphEditor\\nx_graph_graphics_scene_with_ports.py"
-			],
-			[
-				"nx",
-				"pylive\\QtGraphEditor\\nx_graph_model.py"
+				"nx_graph_mo",
+				"pylive/QtGraphEditor/nx_graph_model.py"
 			],
 			[
 				"arrowi",
-				"pylive\\QtGraphEditor\\NetrowkXGraphEditor\\qgraphics_arrow_item.py"
+				"pylive/QtGraphEditor/NetrowkXGraphEditor/qgraphics_arrow_item.py"
 			],
 			[
 				"link",
@@ -4367,13 +3479,9 @@
 	"select_symbol":
 	{
 		"height": 59.3333333333,
-		"last_filter": "setSelec",
+		"last_filter": "setSource",
 		"selected_items":
 		[
-			[
-				"setSelec",
-				"setSelectionModel"
-			],
 			[
 				"setSource",
 				"setSourceOutlet"
@@ -4394,7 +3502,7 @@
 	"show_open_files": false,
 	"show_tabs": true,
 	"side_bar_visible": true,
-	"side_bar_width": 440.0,
+	"side_bar_width": 232.0,
 	"status_bar_visible": true,
 	"template_settings":
 	{
