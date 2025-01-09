@@ -23,6 +23,8 @@ class MyVertexGraphicsObject(NodeGraphicsObject):
         if self.isSelected():
             super().mousePressEvent(event)
         else:
+            # TODO: (!) mvoe graph linking tool to the graphscene or view,
+            # to make these widgets independent from the model
             self.graphscene().makeDraftLink()
             self.grabMouse()
 
@@ -59,13 +61,14 @@ class MyGraphScene(NXNetworkScene):
         node = MyVertexGraphicsObject(n, inlets=[], outlets=[])
 
         self._node_graphics_objects[n] = node
-        self._target_graphics_objects[n] = node
-        self._source_graphics_objects[n] = node
+        # self._target_graphics_objects[n] = node
+        # self._source_graphics_objects[n] = node
 
         self.addItem(self.nodeGraphicsObject(n))
 
     def onLinkCreated(self, e: LinkId):
         link = LinkGraphicsObject(e)
+        link.setLabelText("")
         self._link_graphics_objects[e] = link
         self.addItem(link)
 
@@ -76,11 +79,11 @@ class MyGraphScene(NXNetworkScene):
 
     def sourceGraphicsObject(self, e: LinkId) -> QGraphicsItem:
         u, v, k = e
-        return self._source_graphics_objects[u]
+        return self._node_graphics_objects[u]
 
     def targetGraphicsObject(self, e: LinkId) -> QGraphicsItem:
         u, v, k = e
-        return self._target_graphics_objects[v]
+        return self._node_graphics_objects[v]
 
 
 ###########

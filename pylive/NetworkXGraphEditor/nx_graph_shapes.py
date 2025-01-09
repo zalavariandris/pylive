@@ -213,43 +213,48 @@ class LinkShape(AbstractShape):
         self, painter: QPainter, option: QStyleOptionGraphicsItem, widget=None
     ):
         import math
+
         ### draw label
         fm = QFontMetrics(self.font())
-        ellipse_bbox = fm.boundingRect(self.boundingRect().toRect(), Qt.AlignmentFlag.AlignCenter, self._label)
-        f = 1/math.sin(math.radians(45))
+        ellipse_bbox = fm.boundingRect(
+            self.boundingRect().toRect(),
+            Qt.AlignmentFlag.AlignCenter,
+            self._label,
+        )
+        f = 1 / math.sin(math.radians(45))
 
         ellipse_bbox.setSize(
-            QSizeF(ellipse_bbox.width()*f, ellipse_bbox.height()*f).toSize())
+            QSizeF(ellipse_bbox.width() * f, ellipse_bbox.height() * f).toSize()
+        )
         ellipse_bbox.moveCenter(self.boundingRect().center().toPoint())
         # painter.drawEllipse(text_bbox)
 
-        text_clip = QRegion(self.boundingRect().toRect()) - QRegion(ellipse_bbox, QRegion.RegionType.Ellipse)
-        
+        text_clip = QRegion(self.boundingRect().toRect()) - QRegion(
+            ellipse_bbox, QRegion.RegionType.Ellipse
+        )
 
         painter.setPen(self.pen())
-        painter.drawText(self.boundingRect(), self._label, QTextOption(Qt.AlignmentFlag.AlignCenter))
+        painter.drawText(
+            self.boundingRect(),
+            self._label,
+            QTextOption(Qt.AlignmentFlag.AlignCenter),
+        )
 
         ### draw arrow shape
         arrow_shape = makeArrowShape(self._line, self.pen().widthF())
 
-        
-
         # use the pen as brush to draw the arrow shape
         import math
+
         # painter.drawRect(ellipse_bbox)
         # painter.drawEllipse(ellipse_bbox)
 
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(self.pen().brush())
-        painter.setClipRegion(text_clip)
+        if self._label:
+            painter.setClipRegion(text_clip)
         painter.drawPath(arrow_shape)
         painter.drawLine(self._line)
-
-
-
-
-
-        
 
     def shape(self) -> QPainterPath:
         """Override shape to provide a wider clickable area."""

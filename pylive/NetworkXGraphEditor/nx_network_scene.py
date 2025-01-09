@@ -154,6 +154,9 @@ class NXNetworkScene(QGraphicsScene):
 
     def onLinkCreated(self, e: LinkId):
         link = LinkGraphicsObject(e)
+        u, v, (o, i) = e
+        link.setLabelText(f"{o}->{i}")
+
         self._link_graphics_objects[e] = link
         self.addItem(link)
 
@@ -161,6 +164,41 @@ class NXNetworkScene(QGraphicsScene):
 
         self.updateAttachedSource(e)
         self.updateAttachedTarget(e)
+
+    def onNodeCreated(self, n: NodeId):
+        node = NodeGraphicsObject(n, inlets=[], outlets=[])
+        self._node_graphics_objects[n] = node
+        self.addItem(self.nodeGraphicsObject(n))
+
+        if self._model.hasNodeProperty(n, "inlets"):
+            inletNames = self._model.getNodeProperty(n, "inlets")
+            assert isinstance(inletNames, list) and all(
+                isinstance(_, str) for _ in inletNames
+            )
+            for inletName in inletNames:
+                inlet = self.onTargetCreated(n, inletName)
+
+        if self._model.hasNodeProperty(n, "outlets"):
+            outletNames = self._model.getNodeProperty(n, "outlets")
+            assert isinstance(outletNames, list) and all(
+                isinstance(_, str) for _ in outletNames
+            )
+            for outletName in outletNames:
+                outlet_graphics_object = self.onSourceCreated(n, outletName)
+
+    def onSourceCreated(self, n: NodeId, source_name: str):
+        node = self.nodeGraphicsObject(n)
+        outlet = OutletGraphicsObject(OutletId(n, source_name))
+        node._addOutlet(outlet)
+        self._source_graphics_objects[OutletId(n, source_name)] = outlet
+        return outlet
+
+    def onTargetCreated(self, n: NodeId, target_name):
+        node = self.nodeGraphicsObject(n)
+        inlet = InletGraphicsObject(InletId(n, target_name))
+        node._addInlet(inlet)
+        self._target_graphics_objects[InletId(n, target_name)] = inlet
+        return inlet
 
     def makeDraftLink(self):
         self.draft = LinkShape()
@@ -174,49 +212,6 @@ class NXNetworkScene(QGraphicsScene):
         assert self.draft is not None
         self.removeItem(self.draft)
         self.draft = None
-
-    def onNodeCreated(self, n: NodeId):
-        inlet_names = (
-            self._model.getNodeProperty(n, "inlets")
-            if self._model.hasNodeProperty(n, "inlets")
-            else []
-        )
-
-        inlets = []
-        if self._model.hasNodeProperty(n, "inlets"):
-            inletNames = self._model.getNodeProperty(n, "inlets")
-            assert isinstance(inletNames, list) and all(
-                isinstance(_, str) for _ in inletNames
-            )
-            for inletName in inletNames:
-                inlet_graphics_object = InletGraphicsObject(
-                    InletId(n, inletName)
-                )
-                self._target_graphics_objects[
-                    InletId(n, inletName)
-                ] = inlet_graphics_object
-                inlets.append(inlet_graphics_object)
-
-        outlets = []
-        if self._model.hasNodeProperty(n, "outlets"):
-            outletNames = self._model.getNodeProperty(n, "outlets")
-            assert isinstance(outletNames, list) and all(
-                isinstance(_, str) for _ in outletNames
-            )
-            for outletName in outletNames:
-                outlet_graphics_object = OutletGraphicsObject(
-                    OutletId(n, outletName)
-                )
-                self._source_graphics_objects[
-                    OutletId(n, outletName)
-                ] = outlet_graphics_object
-                outlets.append(outlet_graphics_object)
-
-        self._node_graphics_objects[n] = NodeGraphicsObject(
-            n, inlets=inlets, outlets=outlets
-        )
-
-        self.addItem(self.nodeGraphicsObject(n))
 
     def onNodeDeleted(self, n: NodeId):
         if n in self._node_graphics_objects:
