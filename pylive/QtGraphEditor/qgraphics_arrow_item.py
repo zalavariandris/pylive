@@ -3,32 +3,7 @@ from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
-def makeArrowShape(line:QLineF, width=1.0):
-	# arrow shape
-	head_width, head_length = width*2, width*4
-	# create an arrow on X+ axis with line length
-
-	vertices = [
-		(0, -width/2),
-		(line.length()-head_length, -width/2),
-		(line.length()-head_length, -head_width),
-		(line.length(), 0),
-		(line.length()-head_length, +head_width),
-		(line.length()-head_length, +width/2),
-		(0, +width/2),
-		(0, -width/2)
-	]
-
-	arrow_polygon = QPolygonF([QPointF(x, y) for x, y in vertices])
-	transform = QTransform()
-	transform.translate(line.p1().x(), line.p1().y())
-	transform.rotate(-line.angle())
-
-	path = QPainterPath()
-	path.addPolygon(transform.map(arrow_polygon))
-
-
-	return path
+from pylive.utils.geo import makeArrowShape
 
 class QGraphicsArrowItem(QGraphicsLineItem):
 	def shape(self)->QPainterPath:

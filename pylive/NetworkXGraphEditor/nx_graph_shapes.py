@@ -20,17 +20,27 @@ from PySide6.QtWidgets import *
 from pylive.QtGraphEditor.qgraphics_arrow_item import (
     makeArrowShape,
 )
-from pylive.utils.geo import getShapeCenter, getShapeRight, getShapeLeft, makeLineBetweenShapes
+from pylive.utils.geo import getShapeCenter, getShapeRight, getShapeLeft, makeLineBetweenShapes, makeRoundedPath
 
 
 class AbstractShape(QGraphicsItem):
-    def __init__(self, parent=None):
+    def __init__(self, label:str="", parent:QGraphicsItem|None=None):
         super().__init__(parent=parent)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
         self.setAcceptHoverEvents(True)
         self._isHighlighted = False
         self._hoverMousePos: QPointF | None = None
         self._debug = False
+        self._label = label
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self._label!r})"
+
+    def label(self) -> str:
+        return self._label
+
+    def setLabel(self, text: str):
+        self._label = text
 
     def setHighlighted(self, value):
         self._isHighlighted = value
@@ -94,32 +104,28 @@ class AbstractShape(QGraphicsItem):
 
         return pen
 
+    def boundingRect(self) -> QRectF:
+        fm = QFontMetrics(self.font())
+
+        text_width = fm.horizontalAdvance(self._label)
+        text_height = fm.height()
+
+        text_pos = QPointF(12, 0)
+        text_bbox = QRectF(text_pos, QSizeF(text_width, text_height))
+        return text_bbox
+
+    def paint(self, painter, option, widget=None):
+        painter.setBrush(self.brush())
+        painter.setPen(self.pen())
+        ### draw label
+        fm = QFontMetrics(self.font())
+        text_height = fm.height()
+        text_pos = QPointF(12, text_height - 2)
+        painter.drawText(text_pos, self._label)
+
 
 class VertexShape(AbstractShape):
     """A graph 'Vertex' graphics item. no inlets or outlets."""
-
-    def __init__(
-        self,
-        title: str = "Node",
-        parent: QGraphicsItem | None = None,
-    ):
-        super().__init__(parent)
-        # private variables
-        self._title: str = title
-        self._isHighlighted: bool = False
-
-        # Enable selection and movement
-        self.setFlag(QGraphicsWidget.GraphicsItemFlag.ItemIsSelectable, True)
-        self.setFlag(QGraphicsWidget.GraphicsItemFlag.ItemIsMovable, True)
-        self.setFlag(QGraphicsWidget.GraphicsItemFlag.ItemIsFocusable, True)
-        self.setFlag(
-            QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges
-        )
-        self.setAcceptHoverEvents(True)
-
-    def __repr__(self):
-        return f"{self.__class__.__name__}({self._title!r})"
-
     def brush(self):
         baseColor = self.palette().base().color()
         baseColor.setAlpha(200)
@@ -128,28 +134,96 @@ class VertexShape(AbstractShape):
 
     @override
     def boundingRect(self) -> QRectF:
-        fm = QFontMetrics(self.font())
-
-        text_width = fm.horizontalAdvance(self._title)
-        text_height = fm.height()
-        return QRectF(0, 0, text_width + 8, text_height + 4)
+        return super().boundingRect().adjusted(-4,-2,4,2)
 
     def paint(
         self, painter: QPainter, option: QStyleOptionGraphicsItem, widget=None
     ):
-        painter.setBrush(self.brush())
-        painter.setPen(self.pen())
         painter.drawRoundedRect(self.boundingRect(), 4, 4)
+        super().paint(painter, option, widget)
 
-        fm = QFontMetrics(self.font())
-        painter.drawText(4, fm.height() - 1, self._title)
 
-    def title(self):
-        return self._title
+class NodeShape(VertexShape):
+    def __init__(self, label, inlets, outlets, parent=None):
+        super().__init__(label=label, parent=parent)
+        self._inlets: list[QGraphicsItem] = []
+        self._outlets: list[QGraphicsItem] = []
+        self.ports_margin = -5
 
-    def setTitle(self, text: str):
-        self._title = text
+        for inlet in inlets:
+            self._addInlet(inlet)
+        for outlet in outlets:
+            self._addOutlet(outlet)
+
+        self.ports_margin = -40
+
+    def boundingRect(self) -> QRectF:
+        return (
+            super()
+            .boundingRect()
+            .united(self.childrenBoundingRect())
+            .adjusted(-4, 0, 4, 2)
+        )
+
+    def _addInlet(self, inlet_widget: QGraphicsItem):
+        inlet_widget.setParentItem(self)
+        self._inlets.append(inlet_widget)
+        self.layoutPorts()
         self.update()
+
+    def _removeInlet(self, inlet_widget: QGraphicsItem):
+        self._inlets.remove(inlet_widget)
+        if scene := inlet_widget.scene():
+            scene.removeItem(inlet_widget)
+        self.layoutPorts()
+        self.update()
+
+    def _addOutlet(self, outlet_widget: QGraphicsItem):
+        outlet_widget.setParentItem(self)
+        self._outlets.append(outlet_widget)
+        self.layoutPorts()
+        self.update()
+
+    def _removeOutlet(self, outlet_widget: QGraphicsItem):
+        self._outlets.remove(outlet_widget)
+        outlet_widget.setParentItem(self)
+        if scene := outlet_widget.scene():
+            scene.removeItem(outlet_widget)
+        self.layoutPorts()
+        self.update()
+
+    def layoutPorts(self):
+        y = 14  # header heighn
+        for inlet_widget in self._inlets:
+            inlet_widget.setPos(4, y)
+            y += inlet_widget.boundingRect().height()
+
+        for outlet_widget in self._outlets:
+            outlet_widget.setPos(4, y)
+            y += outlet_widget.boundingRect().height()
+
+
+class PortShape(AbstractShape):
+    def boundingRect(self) -> QRectF:
+        fm = QFontMetrics(self.font())
+
+        ellipse_bbox = QRectF(0, 0, 10, 10)
+        text_width = fm.horizontalAdvance(self._label)
+        text_height = fm.height()
+
+        text_pos = QPointF(12, 0)
+        text_bbox = QRectF(text_pos, QSizeF(text_width, text_height))
+        return ellipse_bbox.united(text_bbox)
+
+    def paint(self, painter, option, widget=None):
+        super().paint(painter, option, widget)
+        ### draw label
+        fm = QFontMetrics(self.font())
+        painter.drawEllipse(QRectF(2, 7, 6, 6))
+
+        text_height = fm.height()
+        text_pos = QPointF(12, text_height - 2)
+        painter.drawText(text_pos, self._label)
 
 
 class LinkShape(AbstractShape):
@@ -158,14 +232,7 @@ class LinkShape(AbstractShape):
     def __init__(
         self, label: str = "link-", parent: QGraphicsItem | None = None
     ):
-        super().__init__(parent=None)
-        self._label = label
-
-        # Enable selecting
-        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
-        self.setAcceptHoverEvents(True)
-        # self.setZValue(-1)
-
+        super().__init__(label=label, parent=None)
         self._line: QLineF = QLineF()
 
     def __repr__(self):
@@ -255,7 +322,6 @@ class LinkShape(AbstractShape):
         if self._label:
             painter.setClipRegion(text_clip)
         painter.drawPath(arrow_shape)
-        painter.drawLine(self._line)
 
     def shape(self) -> QPainterPath:
         """Override shape to provide a wider clickable area."""
@@ -317,148 +383,100 @@ class LinkShape(AbstractShape):
                 line.pointAt((length - offset) / length),
             )
 
+        self.setLine(line)
+
+    def line(self)->QLineF:
+        return self._line
+
+    def setLine(self, line:QLineF):
         self.prepareGeometryChange()
         self._line = line
         self.update()
 
-import math
-def fillet(A: QPointF, B: QPointF, C: QPointF, r: float) -> tuple[QPointF, QPointF, QPointF, float, float]:
-    """
-    Calculate fillet between two lines defined by points A-B and B-C, including arc angles.
-    
-    Args:
-        A: First point of first line
-        B: Corner point (intersection of lines)
-        C: Second point of second line
-        r: Radius of the fillet
-        
-    Returns:
-        Tuple of (tangent_point1, tangent_point2, center_point, start_angle, sweep_angle)
-        Angles are in radians. Sweep angle is positive for counterclockwise direction.
-    """
-    def unit_vector(v: QPointF) -> QPointF:
-        length = math.sqrt(v.x()**2 + v.y()**2)
-        if abs(length) < 1e-10:
-            raise ValueError("Zero length vector")
-        return QPointF(v.x() / length, v.y() / length)
-    
-    def dot_product(v1: QPointF, v2: QPointF) -> float:
-        return v1.x() * v2.x() + v1.y() * v2.y()
-    
-    def vector_angle(v: QPointF) -> float:
-        """Calculate angle of vector from positive x-axis in radians."""
-        angle = math.atan2(v.y(), v.x())
-        return angle if angle >= 0 else angle + 2 * math.pi
-
-    # Input validation
-    if r <= 0:
-        raise ValueError("Radius must be positive")
-    
-    # Get direction vectors for both lines
-    dir1 = unit_vector(QPointF(A.x() - B.x(), A.y() - B.y()))
-    dir2 = unit_vector(QPointF(C.x() - B.x(), C.y() - B.y()))
-    
-    # Calculate angle between lines
-    cos_theta = dot_product(dir1, dir2)
-    if abs(cos_theta - 1) < 1e-10:
-        raise ValueError("Lines are parallel or nearly parallel")
-    
-    # Calculate tangent distance from corner
-    angle = math.acos(cos_theta)
-    tan_distance = r / math.tan(angle / 2)
-    
-    # Calculate tangent points
-    tangent1 = QVector2D(
-        B.x() + dir1.x() * tan_distance,
-        B.y() + dir1.y() * tan_distance
-    )
-    
-    tangent2 = QVector2D(
-        B.x() + dir2.x() * tan_distance,
-        B.y() + dir2.y() * tan_distance
-    )
-    
-    # Calculate center point
-    center_dir = unit_vector(QVector2D(
-        dir1.x() + dir2.x(),
-        dir1.y() + dir2.y()
-    ))
-    
-    center_distance = r / math.sin(angle / 2)
-    
-    center = QPointF(
-        B.x() + center_dir.x() * center_distance,
-        B.y() + center_dir.y() * center_distance
-    )
-    
-    # Calculate arc angles
-    # Vector from center to first tangent point
-    radius_vector1 = QPointF(
-        tangent1.x() - center.x(),
-        tangent1.y() - center.y()
-    )
-    
-    # Calculate start angle (from positive x-axis to first radius vector)
-    start_angle = vector_angle(radius_vector1)
-    
-    # Calculate sweep angle
-    sweep_angle = angle
-    
-    # Determine if we need to sweep clockwise or counterclockwise
-    # Cross product of radius vectors to determine orientation
-    cross_product = (radius_vector1.x() * (tangent2.y() - center.y()) - 
-                    radius_vector1.y() * (tangent2.x() - center.x()))
-    if cross_product < 0:
-        sweep_angle = -sweep_angle
-    
-    return tangent1, tangent2, center, start_angle, sweep_angle
-
 
 class RoundedLinkShape(LinkShape):
-    def __init__(self, label: str = "link-", parent: QGraphicsItem | None = None):
+    def __init__(
+        self, label: str = "link-", parent: QGraphicsItem | None = None
+    ):
         super().__init__(parent=None)
+        self._label = label
 
-        self.polygon = QPolygonF()
+        # Enable selecting
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
+        
+        # self.setZValue(-1)
+
+        self._line: QLineF = QLineF()
+
+    def line(self)->QLineF:
+        return self._line
+
+    def setLine(self, line:QLineF):
+        self._line = line
+        self.prepareGeometryChange()
+        self.update()
 
     def boundingRect(self):
         m = 50
-        return self.polygon.boundingRect().adjusted(-m, -m, m, m)
+        return self.shape().boundingRect().adjusted(-m, -m, m, m)
 
-    def paint(self, painter, option, widget=None):
-        if self._debug or True:
-            painter.setPen(QPen(QBrush("red"), 0.5, Qt.PenStyle.DotLine))
-            debug_path = QPainterPath()
-            debug_path.addPolygon(self.polygon)
-            painter.drawPath(debug_path)
+    def shape(self)->QPainterPath:
+        path = makeRoundedPath(self.line())
+
+        stroker = QPainterPathStroker()
+        stroker.setWidth(10)
+        stroker.setCapStyle(Qt.PenCapStyle.RoundCap)
+        stroker.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+        return stroker.createStroke(path)
+        return path
+
+    # def paint(self, painter, option, widget=None):
+    #     super().paint(painter, option, widget)
+    #     painter.setBrush(Qt.BrushStyle.NoBrush)
         
-        ### Fillet polygon
-        points = [self.polygon.at(i) for i in range(self.polygon.size())]
-        #r = 35
-        path = QPainterPath()
-        path.moveTo(points[0])
-        for A, B, C, r in zip(points, points[1:], points[2:], self.radii):
-            # calculate ellipse origin
-            try:
-                tangent1, tangent2, O, start_angle, sweep_angle= fillet(A, B, C, r)
-                rect = QRectF(
-                    QPointF(O.x()-r, O.y()-r), 
-                    QSizeF(2*r,2*r)
-                ).normalized()
+    #     painter.drawPath(path)
 
-                if sweep_angle>0:
-                    path.arcTo(rect, -math.degrees(start_angle), math.degrees(sweep_angle)-180)
-                else:
-                    path.arcTo(rect, -math.degrees(start_angle), math.degrees(sweep_angle)+180)
-            except ValueError:
-                path.lineTo(B)
-                
-        path.lineTo(points[-1])
-        color = QColor("lightblue")
-        color.setAlpha(128)
+    def paint(
+        self, painter: QPainter, option: QStyleOptionGraphicsItem, widget=None
+    ):
+        import math
+
+        rounded_shape = makeRoundedPath(self.line())
+
+        ### draw label
+        fm = QFontMetrics(self.font())
+        text_rect = fm.boundingRect(self._label)
+        text_rect.moveTo(rounded_shape.pointAtPercent(0.5).toPoint())
+
+        outer_circle_factor = 1 / math.sin(math.radians(45))
+        text_rect.setWidth(int(text_rect.width() * outer_circle_factor))
+        text_rect.setHeight(int(text_rect.height() * outer_circle_factor))
+        text_rect.moveCenter(rounded_shape.pointAtPercent(0.5).toPoint())
+        # painter.drawEllipse(text_bbox)
+
+        text_clip = QRegion(self.boundingRect().toRect()) - QRegion(
+            text_rect, QRegion.RegionType.Ellipse
+        )
+
+        
         painter.setPen(self.pen())
-        painter.drawPath(path)
+        painter.drawText(text_rect,self._label, QTextOption(Qt.AlignmentFlag.AlignCenter))
+
+        ### draw arrow shape
         
 
+        # use the pen as brush to draw the arrow shape
+        import math
+
+        # painter.drawRect(ellipse_bbox)
+        # painter.drawEllipse(ellipse_bbox)
+
+        painter.setPen(self.pen())
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        if self._label:
+            painter.setClipRegion(text_clip)
+        painter.drawPath(rounded_shape)
+        
     def move(
         self,
         source: QGraphicsItem | QPainterPath | QRectF | QPointF,
@@ -468,132 +486,8 @@ class RoundedLinkShape(LinkShape):
         A = getShapeRight(source)
         B = getShapeLeft(target)
         
-        dx = B.x()-A.x()
-        dy = B.y()-A.y()
-        if dx>50:
-            r1 = min(50, min(abs(dx)/2, abs(dy)/2))
-            r2 = min(abs(dx), abs(dy))-r1
-            self.radii = [r1, r2]
-            self.polygon = QPolygonF([
-                A, 
-                QPointF(A.x() + self.radii[0], A.y()), 
-                QPointF(A.x() + self.radii[0], B.y()),
-                B
-            ])
-        else:
-            r1 = min(50, abs(dy)/2)
-            r2 = min(abs(dx), abs(dy) )-r1
-            self.radii = [r1, r2]
-            self.polygon = QPolygonF([
-                A, 
-                QPointF(A.x() + r1, A.y()), 
-                QPointF(A.x() + r1, A.y()+2*r1), 
-                QPointF(B.x() - r1, A.y()+2*r1), 
-                QPointF(B.x() - r1, B.y()), 
-                B
-            ])
+        self.setLine(QLineF(A, B))
 
-        self.prepareGeometryChange()
-        self.update()
-
-
-class NodeShape(VertexShape):
-    def __init__(self, title, inlets, outlets, parent=None):
-        super().__init__(title=title, parent=parent)
-        self._inlets: list[QGraphicsItem] = []
-        self._outlets: list[QGraphicsItem] = []
-        self.ports_margin = -5
-
-        for inlet in inlets:
-            self._addInlet(inlet)
-        for outlet in outlets:
-            self._addOutlet(outlet)
-
-        self.ports_margin = -40
-
-    def boundingRect(self) -> QRectF:
-        return (
-            super()
-            .boundingRect()
-            .united(self.childrenBoundingRect())
-            .adjusted(-4, 0, 4, 2)
-        )
-
-    def _addInlet(self, inlet_widget: QGraphicsItem):
-        inlet_widget.setParentItem(self)
-        self._inlets.append(inlet_widget)
-        self.layoutPorts()
-        self.update()
-
-    def _removeInlet(self, inlet_widget: QGraphicsItem):
-        self._inlets.remove(inlet_widget)
-        if scene := inlet_widget.scene():
-            scene.removeItem(inlet_widget)
-        self.layoutPorts()
-        self.update()
-
-    def _addOutlet(self, outlet_widget: QGraphicsItem):
-        outlet_widget.setParentItem(self)
-        self._outlets.append(outlet_widget)
-        self.layoutPorts()
-        self.update()
-
-    def _removeOutlet(self, outlet_widget: QGraphicsItem):
-        self._outlets.remove(outlet_widget)
-        outlet_widget.setParentItem(self)
-        if scene := outlet_widget.scene():
-            scene.removeItem(outlet_widget)
-        self.layoutPorts()
-        self.update()
-
-    def layoutPorts(self):
-        y = 14  # header heighn
-        for inlet_widget in self._inlets:
-            inlet_widget.setPos(4, y)
-            y += inlet_widget.boundingRect().height()
-
-        for outlet_widget in self._outlets:
-            outlet_widget.setPos(4, y)
-            y += outlet_widget.boundingRect().height()
-
-
-class PortShape(AbstractShape):
-    def __init__(
-        self,
-        label: str,
-        parent: QGraphicsItem | None = None,
-    ):
-        super().__init__(parent=parent)
-        self._label = label
-
-    def label(self) -> str:
-        return self._label
-
-    def setLabel(self, text: str):
-        self._label = text
-
-    def boundingRect(self) -> QRectF:
-        fm = QFontMetrics(self.font())
-
-        ellipse_bbox = QRectF(0, 0, 10, 10)
-        text_width = fm.horizontalAdvance(self._label)
-        text_height = fm.height()
-
-        text_pos = QPointF(12, 0)
-        text_bbox = QRectF(text_pos, QSizeF(text_width, text_height))
-        return ellipse_bbox.united(text_bbox)
-
-    def paint(self, painter, option, widget=None):
-        ### draw label
-        fm = QFontMetrics(self.font())
-
-        painter.setBrush(self.brush())
-        painter.setPen(self.pen())
-        painter.drawEllipse(QRectF(2, 7, 6, 6))
-
-        text_height = fm.height()
-        text_pos = QPointF(12, text_height - 2)
-        painter.drawText(text_pos, self._label)
 
 
 if __name__ == "__main__":
@@ -616,6 +510,7 @@ if __name__ == "__main__":
     vertex_item_1 = VertexShape("GraphicsVertexItem1")
     graphscene.addItem(vertex_item_1)
     vertex_item_1.setPos(0, -150)
+    vertex_item_1.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable)
 
     node_item_1 = NodeShape(
         "GraphicsNodeItem1",
@@ -628,6 +523,10 @@ if __name__ == "__main__":
     link_item_1 = LinkShape("link1")
     link_item_1.move(QPointF(0, -50), QPointF(100, -20))
     graphscene.addItem(link_item_1)
+
+    link_item_2 = RoundedLinkShape("link2")
+    link_item_2.move(QPointF(-100, -150), QPointF(100, 220))
+    graphscene.addItem(link_item_2)
 
     graphview.show()
     app.exec()

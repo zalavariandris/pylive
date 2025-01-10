@@ -296,3 +296,216 @@ def makeLineBetweenShapes(
     I1 = makeLineToShape(Bc, A).p2()
 
     return QLineF(I1, I2)
+
+
+def makeRoundedPath(line:QLineF):
+    A = line.p1()
+    B = line.p2()
+    Ax, Ay = A.x(), A.y()
+    Bx, By = B.x(), B.y()
+    dx = Bx - Ax
+    dy = By - Ay
+
+    path = QPainterPath()
+    path.moveTo(A)
+    r = 27
+    if dx < 0:
+        r1 = min(r, min(abs(dx/4), abs(dy/4)))
+        r2 = min(abs(dx), abs(dy)-r1*3)
+        # angle = abs(angle)
+        if dy > 0:
+            # pen.setColor("cyan") # upper left DONE
+            angle = math.degrees(math.atan2(dy-(r1+r2)*2, dx-(r1+r2)))
+            path.arcTo(
+                Ax-r1, Ay, r1*2,r1*2, 90, -180
+            )
+            path.arcTo(
+                Bx-r1, 
+                Ay+r2*2+r1*2, 
+                r2*2,
+                -r2*2, 
+                -90, -90
+            )
+            path.arcTo(
+                Bx+r1,
+                By-r1*2,
+                -r1*2,
+                r1*2,
+                0,-90
+            )
+        else:
+            # pen.setColor("yellow") # upper left DONE
+            angle = math.degrees(math.atan2(dy-(r1+r2)*2, dx-(r1+r2)))
+            path.arcTo(
+                Ax-r1, Ay, r1*2,-r1*2, 90, -180
+            )
+            path.arcTo(
+                Bx-r1, 
+                Ay-r2*2-r1*2, 
+                r2*2,
+                r2*2, 
+                -90, -90
+            )
+            path.arcTo(
+                Bx+r1,
+                By+r1*2,
+                -r1*2,
+                -r1*2,
+                0,-90
+            )
+    else:
+        r1 = min(r, min(abs(dx/2), abs(dy/2)))
+        r2 = min(abs(dx), abs(dy))-r1
+        # angle = abs(angle)
+        if dy > 0:
+            # pen.setColor("red") # lower right DONE
+            path.arcTo(
+                Ax-r1, Ay, r1*2,r1*2, 90, -90
+            )
+            path.arcTo(
+                Ax+r1,
+                By-r2*2,
+                r2*2,
+                r2*2,
+                180,
+                90
+            )
+        else:
+            # pen.setColor("green") #upper right DONE
+            r1 = min(r, min(abs(dx/2), abs(dy/2)))
+            r2 = min(abs(dx), abs(dy))-r1
+            path.arcTo(
+                Ax-r1, Ay, r1*2,-r1*2, 90, -90
+            )
+            path.arcTo(
+                Ax+r1,
+                By+r2*2,
+                r2*2,
+                -r2*2,
+                180,
+                90
+            )
+    path.lineTo(B)
+    return path
+
+def makeArrowShape(line:QLineF, width=1.0):
+    # arrow shape
+    head_width, head_length = width*2, width*4
+    # create an arrow on X+ axis with line length
+
+    vertices = [
+        (0, -width/2),
+        (line.length()-head_length, -width/2),
+        (line.length()-head_length, -head_width),
+        (line.length(), 0),
+        (line.length()-head_length, +head_width),
+        (line.length()-head_length, +width/2),
+        (0, +width/2),
+        (0, -width/2)
+    ]
+
+    arrow_polygon = QPolygonF([QPointF(x, y) for x, y in vertices])
+    transform = QTransform()
+    transform.translate(line.p1().x(), line.p1().y())
+    transform.rotate(-line.angle())
+
+    path = QPainterPath()
+    path.addPolygon(transform.map(arrow_polygon))
+
+
+    return path
+
+
+
+# import math
+# def fillet(A: QPointF, B: QPointF, C: QPointF, r: float) -> tuple[QPointF, QPointF, QPointF, float, float]:
+#     """
+#     NOT WOKRING
+#     Calculate fillet between two lines defined by points A-B and B-C, including arc angles.
+    
+#     Args:
+#         A: First point of first line
+#         B: Corner point (intersection of lines)
+#         C: Second point of second line
+#         r: Radius of the fillet
+        
+#     Returns:
+#         Tuple of (tangent_point1, tangent_point2, center_point, start_angle, sweep_angle)
+#         Angles are in radians. Sweep angle is positive for counterclockwise direction.
+#     """
+#     def unit_vector(v: QPointF) -> QPointF:
+#         length = math.sqrt(v.x()**2 + v.y()**2)
+#         if abs(length) < 1e-10:
+#             raise ValueError("Zero length vector")
+#         return QPointF(v.x() / length, v.y() / length)
+    
+#     def dot_product(v1: QPointF, v2: QPointF) -> float:
+#         return v1.x() * v2.x() + v1.y() * v2.y()
+    
+#     def vector_angle(v: QPointF) -> float:
+#         """Calculate angle of vector from positive x-axis in radians."""
+#         angle = math.atan2(v.y(), v.x())
+#         return angle if angle >= 0 else angle + 2 * math.pi
+
+#     # Input validation
+#     if r <= 0:
+#         raise ValueError("Radius must be positive")
+    
+#     # Get direction vectors for both lines
+#     dir1 = unit_vector(QPointF(A.x() - B.x(), A.y() - B.y()))
+#     dir2 = unit_vector(QPointF(C.x() - B.x(), C.y() - B.y()))
+    
+#     # Calculate angle between lines
+#     cos_theta = dot_product(dir1, dir2)
+#     if abs(cos_theta - 1) < 1e-10:
+#         raise ValueError("Lines are parallel or nearly parallel")
+    
+#     # Calculate tangent distance from corner
+#     angle = math.acos(cos_theta)
+#     tan_distance = r / math.tan(angle / 2)
+    
+#     # Calculate tangent points
+#     tangent1 = QVector2D(
+#         B.x() + dir1.x() * tan_distance,
+#         B.y() + dir1.y() * tan_distance
+#     )
+    
+#     tangent2 = QVector2D(
+#         B.x() + dir2.x() * tan_distance,
+#         B.y() + dir2.y() * tan_distance
+#     )
+    
+#     # Calculate center point
+#     center_dir = unit_vector(QVector2D(
+#         dir1.x() + dir2.x(),
+#         dir1.y() + dir2.y()
+#     ))
+    
+#     center_distance = r / math.sin(angle / 2)
+    
+#     center = QPointF(
+#         B.x() + center_dir.x() * center_distance,
+#         B.y() + center_dir.y() * center_distance
+#     )
+    
+#     # Calculate arc angles
+#     # Vector from center to first tangent point
+#     radius_vector1 = QPointF(
+#         tangent1.x() - center.x(),
+#         tangent1.y() - center.y()
+#     )
+    
+#     # Calculate start angle (from positive x-axis to first radius vector)
+#     start_angle = vector_angle(radius_vector1)
+    
+#     # Calculate sweep angle
+#     sweep_angle = angle
+    
+#     # Determine if we need to sweep clockwise or counterclockwise
+#     # Cross product of radius vectors to determine orientation
+#     cross_product = (radius_vector1.x() * (tangent2.y() - center.y()) - 
+#                     radius_vector1.y() * (tangent2.x() - center.x()))
+#     if cross_product < 0:
+#         sweep_angle = -sweep_angle
+    
+#     return tangent1, tangent2, center, start_angle, sweep_angle

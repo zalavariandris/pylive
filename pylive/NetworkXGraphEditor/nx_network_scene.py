@@ -23,7 +23,8 @@ from PySide6.QtWidgets import *
 
 from pylive.NetworkXGraphEditor.nx_graph_shapes import (
     NodeShape,
-    LinkShape, RoundedLinkShape,
+    LinkShape,
+    RoundedLinkShape,
     PortShape,
 )
 
@@ -64,9 +65,9 @@ class NXNetworkScene(QGraphicsScene):
 
         # set model
         # populate with initial model
-        self._model:NXGraphModel|None = None
+        self._model: NXGraphModel | None = None
         self.setModel(model)
-        
+
         # set selection model
         self._selection_model = selection_model
 
@@ -93,13 +94,13 @@ class NXNetworkScene(QGraphicsScene):
             self.blockSignals(False)
             self.selectionChanged.emit()
 
-    def setModel(self, model:NXGraphModel):
+    def setModel(self, model: NXGraphModel):
         if self._model:
             model.nodesAdded.disconnect(self.onNodesCreated)
             model.nodesAboutToBeRemoved.disconnect(self.onNodesDeleted)
             model.edgesAdded.disconnect(self.onEdgesCreated)
             model.edgesAboutToBeRemoved.disconnect(self.onEdgesDeleted)
-        
+
         if model:
             _ = model.nodesAdded.connect(self.onNodesCreated)
             _ = model.nodesAboutToBeRemoved.connect(self.onNodesDeleted)
@@ -110,7 +111,7 @@ class NXNetworkScene(QGraphicsScene):
         ### populate graph
         self.onNodesCreated([n for n in self._model.nodes()])
         self.onEdgesCreated([e for e in self._model.edges()])
-            
+
         # layout items
         self.layout()
 
@@ -158,7 +159,7 @@ class NXNetworkScene(QGraphicsScene):
     def onEdgesCreated(self, edges: list[EdgeId]):
         for e in edges:
             link = LinkGraphicsObject(e)
-            link.setLabelText(f"{e[2]}")
+            link.setLabel(f"{e[2]}")
 
             self._link_graphics_objects[e] = link
             self.addItem(link)
@@ -166,7 +167,7 @@ class NXNetworkScene(QGraphicsScene):
             u, v, k = e
             link.move(
                 self.nodeGraphicsObject(u),
-                self.targetGraphicsObject( (v, k) ),
+                self.targetGraphicsObject((v, k)),
             )
 
     def onNodesDeleted(self, nodes: list[Hashable]):
@@ -187,7 +188,7 @@ class NXNetworkScene(QGraphicsScene):
         ### populate graph
         self.onNodesCreated([n for n in self._model.nodes()])
         self.onEdgesCreated([e for e in self._model.edges()])
-            
+
         # layout items
         self.layout()
 
@@ -247,6 +248,7 @@ class NXNetworkScene(QGraphicsScene):
 # Active Graphics Objects #
 ###########################
 
+
 class InletGraphicsObject(PortShape):
     def __init__(self, targetId: TargetId):
         super().__init__(label=f"{targetId}")
@@ -286,13 +288,18 @@ class NodeGraphicsObject(NodeShape):
         parent: QGraphicsItem | None = None,
     ):
         super().__init__(
-            title=f"'{n}'",
+            label=f"'{n}'",
             inlets=inlets,
             outlets=[],
             parent=parent,
         )
         self.nodeId = n
-        self.setAcceptHoverEvents(False)
+        # Enable selection and movement
+        self.setFlag(QGraphicsWidget.GraphicsItemFlag.ItemIsMovable, True)
+        self.setFlag(QGraphicsWidget.GraphicsItemFlag.ItemIsFocusable, True)
+        self.setFlag(
+            QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges
+        )
 
     def itemChange(self, change: QGraphicsItem.GraphicsItemChange, value: Any) -> Any:
         if change == QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
@@ -310,7 +317,7 @@ class NodeGraphicsObject(NodeShape):
             u, v, k = edgeId
             self.graphscene()
             node = self.graphscene().nodeGraphicsObject(u)
-            inlet = self.graphscene().targetGraphicsObject( (v, k) )
+            inlet = self.graphscene().targetGraphicsObject((v, k))
             edge = self.graphscene().linkGraphicsObject(edgeId)
             edge.move(node, inlet)
 
@@ -321,7 +328,7 @@ class NodeGraphicsObject(NodeShape):
             super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent) -> None:
-        if draft:=self.graphscene().draft:
+        if draft := self.graphscene().draft:
             # if inletId := self.graphscene()._inletEditorAt(event.scenePos()):
             if inletId := self.graphscene().targetAt(event.scenePos()):
                 draft.move(self, self.graphscene().targetGraphicsObject(inletId))
@@ -331,7 +338,7 @@ class NodeGraphicsObject(NodeShape):
             return super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event: QGraphicsSceneMouseEvent) -> None:
-        if draft:=self.graphscene().draft:
+        if draft := self.graphscene().draft:
             self.graphscene().resetDraftLink()
 
             if targetId := self.graphscene().targetAt(event.scenePos()):
@@ -363,14 +370,14 @@ class LinkGraphicsObject(RoundedLinkShape):
 
     def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         print("mouse move event")
-        
+
         if nodeId := self.graphscene().nodeAt(event.scenePos()):
             self.move(self.graphscene().nodeGraphicsObject(nodeId), self)
         else:
-            u, v, k= self.edgeId
+            u, v, k = self.edgeId
             self.move(
                 event.scenePos(),
-                self.graphscene().targetGraphicsObject( (v, k) ),
+                self.graphscene().targetGraphicsObject((v, k)),
             )
         return super().mouseMoveEvent(event)
 
@@ -382,7 +389,7 @@ class LinkGraphicsObject(RoundedLinkShape):
             # cancel
             self.move(
                 self.graphscene().nodeGraphicsObject(u),
-                self.graphscene().targetGraphicsObject( (v, k) ),
+                self.graphscene().targetGraphicsObject((v, k)),
             )
             self.ungrabMouse()
         else:
@@ -399,7 +406,7 @@ class LinkGraphicsObject(RoundedLinkShape):
                 # cancel
                 self.move(
                     self.graphscene().nodeGraphicsObject(u),
-                    self.graphscene().targetGraphicsObject( (v, k) ),
+                    self.graphscene().targetGraphicsObject((v, k)),
                 )
             else:
                 raise Exception("")
