@@ -10,7 +10,7 @@ from nx_inspector_view import NXInspectorView
 from pylive.QtTerminal.terminal_with_exec import Terminal
 
 
-class NetworkEditorWindow(QWidget):
+class GraphEditorWindow(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
 

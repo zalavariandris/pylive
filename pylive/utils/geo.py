@@ -297,97 +297,6 @@ def makeLineBetweenShapes(
 
     return QLineF(I1, I2)
 
-
-def makeRoundedPath(line:QLineF):
-    A = line.p1()
-    B = line.p2()
-    Ax, Ay = A.x(), A.y()
-    Bx, By = B.x(), B.y()
-    dx = Bx - Ax
-    dy = By - Ay
-
-    path = QPainterPath()
-    path.moveTo(A)
-    r = 27
-    if dx < 0:
-        r1 = min(r, min(abs(dx/4), abs(dy/4)))
-        r2 = min(abs(dx), abs(dy)-r1*3)
-        # angle = abs(angle)
-        if dy > 0:
-            # pen.setColor("cyan") # upper left DONE
-            angle = math.degrees(math.atan2(dy-(r1+r2)*2, dx-(r1+r2)))
-            path.arcTo(
-                Ax-r1, Ay, r1*2,r1*2, 90, -180
-            )
-            path.arcTo(
-                Bx-r1, 
-                Ay+r2*2+r1*2, 
-                r2*2,
-                -r2*2, 
-                -90, -90
-            )
-            path.arcTo(
-                Bx+r1,
-                By-r1*2,
-                -r1*2,
-                r1*2,
-                0,-90
-            )
-        else:
-            # pen.setColor("yellow") # upper left DONE
-            angle = math.degrees(math.atan2(dy-(r1+r2)*2, dx-(r1+r2)))
-            path.arcTo(
-                Ax-r1, Ay, r1*2,-r1*2, 90, -180
-            )
-            path.arcTo(
-                Bx-r1, 
-                Ay-r2*2-r1*2, 
-                r2*2,
-                r2*2, 
-                -90, -90
-            )
-            path.arcTo(
-                Bx+r1,
-                By+r1*2,
-                -r1*2,
-                -r1*2,
-                0,-90
-            )
-    else:
-        r1 = min(r, min(abs(dx/2), abs(dy/2)))
-        r2 = min(abs(dx), abs(dy))-r1
-        # angle = abs(angle)
-        if dy > 0:
-            # pen.setColor("red") # lower right DONE
-            path.arcTo(
-                Ax-r1, Ay, r1*2,r1*2, 90, -90
-            )
-            path.arcTo(
-                Ax+r1,
-                By-r2*2,
-                r2*2,
-                r2*2,
-                180,
-                90
-            )
-        else:
-            # pen.setColor("green") #upper right DONE
-            r1 = min(r, min(abs(dx/2), abs(dy/2)))
-            r2 = min(abs(dx), abs(dy))-r1
-            path.arcTo(
-                Ax-r1, Ay, r1*2,-r1*2, 90, -90
-            )
-            path.arcTo(
-                Ax+r1,
-                By+r2*2,
-                r2*2,
-                -r2*2,
-                180,
-                90
-            )
-    path.lineTo(B)
-    return path
-
 def makeArrowShape(line:QLineF, width=1.0):
     # arrow shape
     head_width, head_length = width*2, width*4
@@ -417,95 +326,124 @@ def makeArrowShape(line:QLineF, width=1.0):
 
 
 
-# import math
-# def fillet(A: QPointF, B: QPointF, C: QPointF, r: float) -> tuple[QPointF, QPointF, QPointF, float, float]:
-#     """
-#     NOT WOKRING
-#     Calculate fillet between two lines defined by points A-B and B-C, including arc angles.
-    
-#     Args:
-#         A: First point of first line
-#         B: Corner point (intersection of lines)
-#         C: Second point of second line
-#         r: Radius of the fillet
-        
-#     Returns:
-#         Tuple of (tangent_point1, tangent_point2, center_point, start_angle, sweep_angle)
-#         Angles are in radians. Sweep angle is positive for counterclockwise direction.
-#     """
-#     def unit_vector(v: QPointF) -> QPointF:
-#         length = math.sqrt(v.x()**2 + v.y()**2)
-#         if abs(length) < 1e-10:
-#             raise ValueError("Zero length vector")
-#         return QPointF(v.x() / length, v.y() / length)
-    
-#     def dot_product(v1: QPointF, v2: QPointF) -> float:
-#         return v1.x() * v2.x() + v1.y() * v2.y()
-    
-#     def vector_angle(v: QPointF) -> float:
-#         """Calculate angle of vector from positive x-axis in radians."""
-#         angle = math.atan2(v.y(), v.x())
-#         return angle if angle >= 0 else angle + 2 * math.pi
+from typing import Tuple
+import math
 
-#     # Input validation
-#     if r <= 0:
-#         raise ValueError("Radius must be positive")
+def makeHorizontalRoundedPath(line: QLineF):
+    """Creates a rounded path between two points with automatic radius adjustment.
     
-#     # Get direction vectors for both lines
-#     dir1 = unit_vector(QPointF(A.x() - B.x(), A.y() - B.y()))
-#     dir2 = unit_vector(QPointF(C.x() - B.x(), C.y() - B.y()))
+    Args:
+        line: QLineF defining start and end points
+        direction: Layout direction (default: LeftToRight)
     
-#     # Calculate angle between lines
-#     cos_theta = dot_product(dir1, dir2)
-#     if abs(cos_theta - 1) < 1e-10:
-#         raise ValueError("Lines are parallel or nearly parallel")
+    Returns:
+        QPainterPath: A path with rounded corners connecting the points
+    """
+    A, B = line.p1(), line.p2()
+    dx = B.x() - A.x()
+    dy = B.y() - A.y()
     
-#     # Calculate tangent distance from corner
-#     angle = math.acos(cos_theta)
-#     tan_distance = r / math.tan(angle / 2)
+    path = QPainterPath()
+    path.moveTo(A)
     
-#     # Calculate tangent points
-#     tangent1 = QVector2D(
-#         B.x() + dir1.x() * tan_distance,
-#         B.y() + dir1.y() * tan_distance
-#     )
+    # Base radius with constraints
+    r = 27
+    is_leftward = dx < 0
     
-#     tangent2 = QVector2D(
-#         B.x() + dir2.x() * tan_distance,
-#         B.y() + dir2.y() * tan_distance
-#     )
+    if is_leftward:
+        r1 = min(r, min(abs(dx/4), abs(dy/4)))
+        r2 = min(abs(dx), abs(dy) - r1 * 3)
+    else:
+        r1 = min(r, min(abs(dx/2), abs(dy/2)))
+        r2 = min(abs(dx), abs(dy)) - r1
     
-#     # Calculate center point
-#     center_dir = unit_vector(QVector2D(
-#         dir1.x() + dir2.x(),
-#         dir1.y() + dir2.y()
-#     ))
+    # Define arc parameters based on direction
+    if is_leftward:
+        create_leftward_path(path, A, B, r1, r2, dy > 0)
+    else:
+        create_rightward_path(path, A, B, r1, r2, dy > 0)
     
-#     center_distance = r / math.sin(angle / 2)
+    path.lineTo(B)
+    return path
+
+
+def create_leftward_path(path: QPainterPath, A: QPointF, B: QPointF, r1: float, r2: float, is_downward: bool):
+    """Creates the path segments for leftward movement."""
+    if is_downward:
+        path.arcTo(A.x() - r1, A.y(), r1 * 2, r1 * 2, 90, -180)
+        path.arcTo(B.x() - r1, A.y() + r2 * 2 + r1 * 2, r2 * 2, -r2 * 2, -90, -90)
+        path.arcTo(B.x() + r1, B.y() - r1 * 2, -r1 * 2, r1 * 2, 0, -90)
+    else:
+        path.arcTo(A.x() - r1, A.y(), r1 * 2, -r1 * 2, 90, -180)
+        path.arcTo(B.x() - r1, A.y() - r2 * 2 - r1 * 2, r2 * 2, r2 * 2, -90, -90)
+        path.arcTo(B.x() + r1, B.y() + r1 * 2, -r1 * 2, -r1 * 2, 0, -90)
+
+
+def create_rightward_path(path: QPainterPath, A: QPointF, B: QPointF, r1: float, r2: float, is_downward: bool):
+    """Creates the path segments for rightward movement."""
+    if is_downward:
+        path.arcTo(A.x() - r1, A.y(), r1 * 2, r1 * 2, 90, -90)
+        path.arcTo(A.x() + r1, B.y() - r2 * 2, r2 * 2, r2 * 2, 180, 90)
+    else:
+        path.arcTo(A.x() - r1, A.y(), r1 * 2, -r1 * 2, 90, -90)
+        path.arcTo(A.x() + r1, B.y() + r2 * 2, r2 * 2, -r2 * 2, 180, 90)
+
+
+def makeVerticalRoundedPath(line: QLineF):
+    """Creates a rounded path between two points with automatic radius adjustment.
     
-#     center = QPointF(
-#         B.x() + center_dir.x() * center_distance,
-#         B.y() + center_dir.y() * center_distance
-#     )
+    Args:
+        line: QLineF defining start and end points
+        direction: Layout direction (default: TopToBottom)
     
-#     # Calculate arc angles
-#     # Vector from center to first tangent point
-#     radius_vector1 = QPointF(
-#         tangent1.x() - center.x(),
-#         tangent1.y() - center.y()
-#     )
+    Returns:
+        QPainterPath: A path with rounded corners connecting the points
+    """
+    A, B = line.p1(), line.p2()
+    dx = B.x() - A.x()
+    dy = B.y() - A.y()
     
-#     # Calculate start angle (from positive x-axis to first radius vector)
-#     start_angle = vector_angle(radius_vector1)
+    path = QPainterPath()
+    path.moveTo(A)
     
-#     # Calculate sweep angle
-#     sweep_angle = angle
+    # Base radius with constraints
+    r = 27
+    is_upward = dy < 0
     
-#     # Determine if we need to sweep clockwise or counterclockwise
-#     # Cross product of radius vectors to determine orientation
-#     cross_product = (radius_vector1.x() * (tangent2.y() - center.y()) - 
-#                     radius_vector1.y() * (tangent2.x() - center.x()))
-#     if cross_product < 0:
-#         sweep_angle = -sweep_angle
+    if is_upward:
+        r1 = min(r, min(abs(dy/4), abs(dx/4)))
+        r2 = min(abs(dy), abs(dx) - r1 * 3)
+    else:
+        r1 = min(r, min(abs(dy/2), abs(dx/2)))
+        r2 = min(abs(dy), abs(dx)) - r1
     
-#     return tangent1, tangent2, center, start_angle, sweep_angle
+    # Define arc parameters based on direction
+    if is_upward:
+        create_upward_path(path, A, B, r1, r2, dx > 0)
+    else:
+        create_downward_path(path, A, B, r1, r2, dx > 0)
+    
+    path.lineTo(B)
+    return path
+
+
+def create_downward_path(path: QPainterPath, A: QPointF, B: QPointF, r1: float, r2: float, is_rightward: bool):
+    """Creates the path segments for downward movement."""
+    if is_rightward:
+        path.arcTo(A.x(), A.y() - r1, r1 * 2, r1 * 2, 180, 90)
+        path.arcTo(B.x()-r2*2,  A.y() + r1, r2 * 2, r2 * 2, 90, -90)
+    else:
+        path.arcTo(A.x(), A.y() - r1, -r1 * 2, r1 * 2, 180, 90)
+        path.arcTo(B.x() + r2 * 2, A.y() + r1, -r2 * 2, r2 * 2, 90, -90)
+
+
+def create_upward_path(path: QPainterPath, A: QPointF, B: QPointF, r1: float, r2: float, is_rightward: bool):
+    """Creates the path segments for upward movement."""
+    if is_rightward:
+        path.arcTo(A.x(), A.y() - r1, r1 * 2, r1 * 2, 180, 180)
+        path.arcTo(A.x() + r2 * 2 + r1 * 2, B.y() - r1, -r2 * 2, r2 * 2, 0, 90)
+        path.arcTo(B.x() - r1 * 2, B.y() + r1, r1 * 2, -r1 * 2, 270, 90)
+    else:
+        path.arcTo(A.x(), A.y() - r1, -r1 * 2, r1 * 2, 180, 180)
+        path.arcTo(A.x() - r2 * 2 - r1 * 2, B.y() - r1, r2 * 2, r2 * 2, 0, 90)
+        path.arcTo(B.x() + r1 * 2, B.y() + r1, -r1 * 2, -r1 * 2, 270, 90)

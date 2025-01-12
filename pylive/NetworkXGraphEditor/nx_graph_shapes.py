@@ -20,30 +20,24 @@ from PySide6.QtWidgets import *
 from pylive.QtGraphEditor.qgraphics_arrow_item import (
     makeArrowShape,
 )
-from pylive.utils.geo import getShapeCenter, getShapeRight, getShapeLeft, makeLineBetweenShapes, makeRoundedPath
+from pylive.utils.geo import getShapeCenter, getShapeRight, getShapeLeft, makeLineBetweenShapes, makeVerticalRoundedPath
 
 
 class AbstractShape(QGraphicsItem):
-    def __init__(self, label:str="", parent:QGraphicsItem|None=None):
+    def __init__(self, parent:QGraphicsItem|None=None):
         super().__init__(parent=parent)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
         self.setAcceptHoverEvents(True)
         self._isHighlighted = False
         self._hoverMousePos: QPointF | None = None
         self._debug = False
-        self._label = label
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self._label!r})"
 
-    def label(self) -> str:
-        return self._label
-
-    def setLabel(self, text: str):
-        self._label = text
-
     def setHighlighted(self, value):
         self._isHighlighted = value
+        self.prepareGeometryChange()
         self.update()
 
     def isHighlighted(self):
@@ -51,13 +45,16 @@ class AbstractShape(QGraphicsItem):
 
     def hoverEnterEvent(self, event: QGraphicsSceneHoverEvent):
         self.setHighlighted(True)
+        return super().hoverEnterEvent(event)
 
     def hoverMoveEvent(self, event: QGraphicsSceneHoverEvent) -> None:
         self._hoverMousePos = event.pos()
         self.update()
+        return super().hoverMoveEvent(event)
 
     def hoverLeaveEvent(self, event: QGraphicsSceneHoverEvent):
         self.setHighlighted(False)
+        super().hoverLeaveEvent(event)
 
     def font(self):
         if font := getattr(self, "_font", None):
@@ -104,48 +101,40 @@ class AbstractShape(QGraphicsItem):
 
         return pen
 
-    def boundingRect(self) -> QRectF:
-        fm = QFontMetrics(self.font())
-
-        text_width = fm.horizontalAdvance(self._label)
-        text_height = fm.height()
-
-        text_pos = QPointF(12, 0)
-        text_bbox = QRectF(text_pos, QSizeF(text_width, text_height))
-        return text_bbox
-
     def paint(self, painter, option, widget=None):
         painter.setBrush(self.brush())
         painter.setPen(self.pen())
-        ### draw label
-        fm = QFontMetrics(self.font())
-        text_height = fm.height()
-        text_pos = QPointF(12, text_height - 2)
-        painter.drawText(text_pos, self._label)
 
 
 class VertexShape(AbstractShape):
+    def __init__(self, name:str, parent=None):
+        super().__init__(parent=parent)
+        self._nameitem = QGraphicsTextItem(f"{name}")
+        self._nameitem.setParentItem(self)
+        self._nameitem.installSceneEventFilter(self)
+
     """A graph 'Vertex' graphics item. no inlets or outlets."""
     def brush(self):
-        baseColor = self.palette().base().color()
-        baseColor.setAlpha(200)
-        brush = QBrush(baseColor)
-        return brush
+        color = self.palette().window().color()
+        color.setAlpha(255)
+        return QBrush(color)
+        return self.palette().base()
 
     @override
     def boundingRect(self) -> QRectF:
-        return super().boundingRect().adjusted(-4,-2,4,2)
+        return self.childrenBoundingRect().adjusted(-4,-2,4,2)
 
     def paint(
         self, painter: QPainter, option: QStyleOptionGraphicsItem, widget=None
     ):
-        painter.drawRoundedRect(self.boundingRect(), 4, 4)
+        
         super().paint(painter, option, widget)
+        painter.drawRoundedRect(self.boundingRect(), 4, 4)
 
 
 class NodeShape(VertexShape):
-    def __init__(self, label, inlets, outlets, parent=None):
-        super().__init__(label=label, parent=parent)
+    def __init__(self, name, inlets, outlets, parent=None):
+        super().__init__(name, parent=parent)
         self._inlets: list[QGraphicsItem] = []
         self._outlets: list[QGraphicsItem] = []
         self.ports_margin = -5
@@ -157,13 +146,16 @@ class NodeShape(VertexShape):
 
         self.ports_margin = -40
 
+    def pen(self):
+        pen = super().pen()
+        pen.setWidth(1.5)
+        return pen
+
     def boundingRect(self) -> QRectF:
-        return (
-            super()
-            .boundingRect()
-            .united(self.childrenBoundingRect())
-            .adjusted(-4, 0, 4, 2)
-        )
+        bbox = self._nameitem.boundingRect().adjusted(-4, 0, 4, 2)
+        if bbox.width()<60:
+            bbox.setWidth(60)
+        return bbox
 
     def _addInlet(self, inlet_widget: QGraphicsItem):
         inlet_widget.setParentItem(self)
@@ -193,57 +185,89 @@ class NodeShape(VertexShape):
         self.update()
 
     def layoutPorts(self):
-        y = 14  # header heighn
-        for inlet_widget in self._inlets:
-            inlet_widget.setPos(4, y)
-            y += inlet_widget.boundingRect().height()
+        def distribute_items(items, rect:QRectF):
+            num_items = len(items)
+            
+            if num_items < 1:
+                return
 
-        for outlet_widget in self._outlets:
-            outlet_widget.setPos(4, y)
-            y += outlet_widget.boundingRect().height()
+            if num_items <2:
+                items[0].setX(rect.center().x())
+                return
+
+            # Calculate horizontal spacing
+            spacing = rect.width() / (num_items - 1)
+            for i, item in enumerate(items):
+                x = rect.left() + i * spacing
+                item.setX(x)
+
+        def layout_vertical():
+            y = 14  # header heighn
+            for inlet_widget in self._inlets:
+                inlet_widget.setPos(4, y)
+                inlet_widget.setRotation(-45)
+                y += inlet_widget.boundingRect().height()
+
+            for outlet_widget in self._outlets:
+                outlet_widget.setRotation(-45)
+                outlet_widget.setPos(4, y)
+                y += outlet_widget.boundingRect().height()
+
+        distribute_items(self._inlets, self.boundingRect().adjusted(12, 0, -12, 0))
+        distribute_items(self._outlets, self.boundingRect().adjusted(12, 0, -12, 0))
+        for item in self._inlets:
+            item.setY(self.boundingRect().top()-5)
+            # item.setRotation(-45)
+        for item in self._outlets:
+            item.setY(self.boundingRect().bottom()+5)
+            # item.setRotation(+45)
 
 
 class PortShape(AbstractShape):
+    def __init__(self, name:str, parent:QGraphicsItem|None=None):
+        super().__init__(parent)
+        self._nameitem = QGraphicsTextItem(f"{name}")
+        self._nameitem.setParentItem(self)
+        self._nameitem.setPos(-6,-26)
+        self._nameitem.hide()
+        self.setFiltersChildEvents(True)
+
+    def hoverEnterEvent(self, event: QGraphicsSceneHoverEvent):
+        self._nameitem.show()
+
+    def hoverLeaveEvent(self, event: QGraphicsSceneHoverEvent):
+        self._nameitem.hide()
+
     def boundingRect(self) -> QRectF:
-        fm = QFontMetrics(self.font())
+        ellipse_bbox = QRectF(-10,-10,20,20)
+        return ellipse_bbox
 
-        ellipse_bbox = QRectF(0, 0, 10, 10)
-        text_width = fm.horizontalAdvance(self._label)
-        text_height = fm.height()
-
-        text_pos = QPointF(12, 0)
-        text_bbox = QRectF(text_pos, QSizeF(text_width, text_height))
-        return ellipse_bbox.united(text_bbox)
+    def brush(self):
+        return QBrush( self.palette().text() )
 
     def paint(self, painter, option, widget=None):
-        super().paint(painter, option, widget)
-        ### draw label
-        fm = QFontMetrics(self.font())
-        painter.drawEllipse(QRectF(2, 7, 6, 6))
+        # painter.drawLine(-5, 0, 5, 0)
+        # painter.drawLine(0, -5, 0, 5)
+        # painter.drawRect(self.boundingRect())
 
-        text_height = fm.height()
-        text_pos = QPointF(12, text_height - 2)
-        painter.drawText(text_pos, self._label)
+        painter.setBrush(self.brush())
+        painter.setPen(self.pen())
+        r = 2
+        painter.drawEllipse(-r,-r, r*2, r*2)
 
 
-class LinkShape(AbstractShape):
+class ArrowLinkShape(AbstractShape):
     """Graphics item representing an edge in a graph."""
 
     def __init__(
-        self, label: str = "link-", parent: QGraphicsItem | None = None
+        self, label:str, parent: QGraphicsItem | None = None
     ):
-        super().__init__(label=label, parent=None)
+        super().__init__(parent=None)
         self._line: QLineF = QLineF()
+        self._label = label
 
-    def __repr__(self):
-        return f"{self.__class__.__name__}({self._label!r})"
-
-    def setLabelText(self, text: str):
+    def setLabelText(self, text):
         self._label = text
-        self.update()
-
-    def labelText(self):
-        return self._label
 
     def pen(self):
         """override to indicate endpoints under mouse"""
@@ -335,19 +359,9 @@ class LinkShape(AbstractShape):
         return stroker.createStroke(path)
 
     def boundingRect(self) -> QRectF:
-        fm = QFontMetrics(self.font())
-
-        text_width = fm.horizontalAdvance(self._label)
-        text_height = fm.height()
-
         shape_bbox = self.shape().boundingRect()
-        text_bbox = QRectF(
-            self._line.center() - self.pos() - QPointF(0, text_height),
-            QSizeF(text_width, text_height),
-        )
-
         m = self.pen().widthF()
-        return shape_bbox.united(text_bbox).adjusted(-m, -m, m, m)
+        return shape_bbox.adjusted(-m, -m, m, m)
 
     def move(
         self,
@@ -359,7 +373,7 @@ class LinkShape(AbstractShape):
 
         comments:
 
-        I couldn find a nice way (ther is probalby no nice way)
+        I couldn find a nice way (ther is probalby no nice way) 
         to catch QGraphicsItem scene movements!
 
         I think the link is responsible (and the target items are not) to move
@@ -377,7 +391,7 @@ class LinkShape(AbstractShape):
         line = makeLineBetweenShapes(source_graphics_item, target_graphics_item)
         length = line.length()
         if length > 0:
-            offset = min(8, length / 2)
+            offset = min(0, length / 2)
             line = QLineF(
                 line.pointAt(offset / length),
                 line.pointAt((length - offset) / length),
@@ -394,7 +408,7 @@ class LinkShape(AbstractShape):
         self.update()
 
 
-class RoundedLinkShape(LinkShape):
+class RoundedLinkShape(AbstractShape):
     def __init__(
         self, label: str = "link-", parent: QGraphicsItem | None = None
     ):
@@ -405,8 +419,11 @@ class RoundedLinkShape(LinkShape):
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
         
         # self.setZValue(-1)
-
         self._line: QLineF = QLineF()
+
+    def setLabelText(self, text:str):
+        self._label = text
+        self.update()
 
     def line(self)->QLineF:
         return self._line
@@ -417,11 +434,11 @@ class RoundedLinkShape(LinkShape):
         self.update()
 
     def boundingRect(self):
-        m = 50
+        m = 2
         return self.shape().boundingRect().adjusted(-m, -m, m, m)
 
     def shape(self)->QPainterPath:
-        path = makeRoundedPath(self.line())
+        path = makeVerticalRoundedPath(self.line())
 
         stroker = QPainterPathStroker()
         stroker.setWidth(10)
@@ -430,28 +447,22 @@ class RoundedLinkShape(LinkShape):
         return stroker.createStroke(path)
         return path
 
-    # def paint(self, painter, option, widget=None):
-    #     super().paint(painter, option, widget)
-    #     painter.setBrush(Qt.BrushStyle.NoBrush)
-        
-    #     painter.drawPath(path)
-
     def paint(
         self, painter: QPainter, option: QStyleOptionGraphicsItem, widget=None
     ):
         import math
 
-        rounded_shape = makeRoundedPath(self.line())
+        path = makeVerticalRoundedPath(self.line())
 
         ### draw label
         fm = QFontMetrics(self.font())
         text_rect = fm.boundingRect(self._label)
-        text_rect.moveTo(rounded_shape.pointAtPercent(0.5).toPoint())
+        text_rect.moveTo(path.pointAtPercent(0.55).toPoint())
 
         outer_circle_factor = 1 / math.sin(math.radians(45))
         text_rect.setWidth(int(text_rect.width() * outer_circle_factor))
         text_rect.setHeight(int(text_rect.height() * outer_circle_factor))
-        text_rect.moveCenter(rounded_shape.pointAtPercent(0.5).toPoint())
+        text_rect.moveCenter(path.pointAtPercent(0.55).toPoint())
         # painter.drawEllipse(text_bbox)
 
         text_clip = QRegion(self.boundingRect().toRect()) - QRegion(
@@ -461,7 +472,7 @@ class RoundedLinkShape(LinkShape):
         
         painter.setPen(self.pen())
         painter.drawText(text_rect,self._label, QTextOption(Qt.AlignmentFlag.AlignCenter))
-
+ 
         ### draw arrow shape
         
 
@@ -475,18 +486,45 @@ class RoundedLinkShape(LinkShape):
         painter.setBrush(Qt.BrushStyle.NoBrush)
         if self._label:
             painter.setClipRegion(text_clip)
-        painter.drawPath(rounded_shape)
+        painter.drawPath(path)
+
+        triangle = QPolygonF([
+            QPointF(-4, 4),
+            QPointF(0,0),
+            QPointF(-4, -4)
+        ])
+        tr = QTransform()
+        P = path.pointAtPercent(0.45)
+        tr.translate(P.x(), P.y())
+        tr.rotate(-path.angleAtPercent(0.45))
+        painter.setBrush(painter.pen().color())
+        painter.drawPolygon(tr.map(triangle))
         
     def move(
         self,
-        source: QGraphicsItem | QPainterPath | QRectF | QPointF,
-        target: QGraphicsItem | QPainterPath | QRectF | QPointF,
+        source: QGraphicsItem | QPointF,
+        target: QGraphicsItem | QPointF,
         /
     ):
-        A = getShapeRight(source)
-        B = getShapeLeft(target)
+        line = QLineF()
+
+        match source:
+            case QGraphicsItem():
+                line.setP1(source.mapToScene(
+                    source.boundingRect().center()
+                ))
+            case QPointF():
+                line.setP1(source)
+
+        match target:
+            case QGraphicsItem():
+                line.setP2(target.mapToScene(
+                    target.boundingRect().center()
+                ))
+            case QPointF():
+                line.setP2(target)
         
-        self.setLine(QLineF(A, B))
+        self.setLine(line)
 
 
 
@@ -495,38 +533,51 @@ if __name__ == "__main__":
 
     app = QApplication(sys.argv)
 
-    graphview = QGraphicsView()
-    graphview.setWindowTitle("HraphicsItem for NodeEditor")
-    graphview.setRenderHint(QPainter.RenderHint.Antialiasing, True)
-    graphview.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
-    graphview.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
+    view = QGraphicsView()
+    view.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
+    view.setWindowTitle("HraphicsItem for NodeEditor")
+    view.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+    view.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
+    view.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
 
     # create graph scene
-    graphscene = QGraphicsScene()
-    graphscene.setSceneRect(QRectF(-400, -400, 800, 800))
-    graphview.setScene(graphscene)
+    scene = QGraphicsScene()
+    scene.setSceneRect(QRectF(-400, -400, 800, 800))
+    view.setScene(scene)
 
     ## create graphics
-    vertex_item_1 = VertexShape("GraphicsVertexItem1")
-    graphscene.addItem(vertex_item_1)
-    vertex_item_1.setPos(0, -150)
-    vertex_item_1.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable)
+    # vertex_item_1 = VertexShape("GraphicsVertexItem1")
+    # graphscene.addItem(vertex_item_1)
+    # vertex_item_1.setPos(0, -150)
+    # vertex_item_1.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable)
 
-    node_item_1 = NodeShape(
-        "GraphicsNodeItem1",
-        inlets=[PortShape("GraphicsPortItemm")],
-        outlets=[PortShape("GraphicsPortItem")],
-    )
-    graphscene.addItem(node_item_1)
-    node_item_1.setPos(0, -120)
+    def node_factory(name="node", pos=QPointF()):
+        node = NodeShape(name=name,
+            inlets=[
+                PortShape("in1"), 
+                PortShape("in2"),
+                PortShape("in2")
+            ],
+            outlets=[
+                PortShape("out")
+            ],
+        )
+        node.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable)
+        scene.addItem(node)
+        node.setPos(pos)
+        return node
 
-    link_item_1 = LinkShape("link1")
-    link_item_1.move(QPointF(0, -50), QPointF(100, -20))
-    graphscene.addItem(link_item_1)
 
-    link_item_2 = RoundedLinkShape("link2")
-    link_item_2.move(QPointF(-100, -150), QPointF(100, 220))
-    graphscene.addItem(link_item_2)
+    # link_item_1 = LinkShape("link1")
+    # link_item_1.move(QPointF(0, -50), QPointF(100, -20))
+    # graphscene.addItem(link_item_1)
 
-    graphview.show()
+    node1 = node_factory("N1")
+    node2 = node_factory("N2", QPointF(100, 300))
+
+    link = RoundedLinkShape("link2")
+    link.move(node1, node2)
+    scene.addItem(link)
+
+    view.show()
     app.exec()

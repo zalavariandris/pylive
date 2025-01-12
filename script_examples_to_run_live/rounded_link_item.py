@@ -18,293 +18,191 @@ import math
 from typing import Tuple
 import math
 
-def makeRoundedPath(line:QLineF):
-    A = line.p1()
-    B = line.p2()
-    Ax, Ay = A.x(), A.y()
-    Bx, By = B.x(), B.y()
-    dx = Bx - Ax
-    dy = By - Ay
-
+def makeHorizontalRoundedPath(line: QLineF):
+    """Creates a rounded path between two points with automatic radius adjustment.
+    
+    Args:
+        line: QLineF defining start and end points
+        direction: Layout direction (default: LeftToRight)
+    
+    Returns:
+        QPainterPath: A path with rounded corners connecting the points
+    """
+    A, B = line.p1(), line.p2()
+    dx = B.x() - A.x()
+    dy = B.y() - A.y()
+    
     path = QPainterPath()
     path.moveTo(A)
+    
+    # Base radius with constraints
     r = 27
-    if dx < 0:
+    is_leftward = dx < 0
+    
+    if is_leftward:
         r1 = min(r, min(abs(dx/4), abs(dy/4)))
-        r2 = min(abs(dx), abs(dy)-r1*3)
-        # angle = abs(angle)
-        if dy > 0:
-            # pen.setColor("cyan") # upper left DONE
-            angle = math.degrees(math.atan2(dy-(r1+r2)*2, dx-(r1+r2)))
-            path.arcTo(
-                Ax-r1, Ay, r1*2,r1*2, 90, -180
-            )
-            path.arcTo(
-                Bx-r1, 
-                Ay+r2*2+r1*2, 
-                r2*2,
-                -r2*2, 
-                -90, -90
-            )
-            path.arcTo(
-                Bx+r1,
-                By-r1*2,
-                -r1*2,
-                r1*2,
-                0,-90
-            )
-        else:
-            # pen.setColor("yellow") # upper left DONE
-            angle = math.degrees(math.atan2(dy-(r1+r2)*2, dx-(r1+r2)))
-            path.arcTo(
-                Ax-r1, Ay, r1*2,-r1*2, 90, -180
-            )
-            path.arcTo(
-                Bx-r1, 
-                Ay-r2*2-r1*2, 
-                r2*2,
-                r2*2, 
-                -90, -90
-            )
-            path.arcTo(
-                Bx+r1,
-                By+r1*2,
-                -r1*2,
-                -r1*2,
-                0,-90
-            )
+        r2 = min(abs(dx), abs(dy) - r1 * 3)
     else:
         r1 = min(r, min(abs(dx/2), abs(dy/2)))
-        r2 = min(abs(dx), abs(dy))-r1
-        # angle = abs(angle)
-        if dy > 0:
-            # pen.setColor("red") # lower right DONE
-            path.arcTo(
-                Ax-r1, Ay, r1*2,r1*2, 90, -90
-            )
-            path.arcTo(
-                Ax+r1,
-                By-r2*2,
-                r2*2,
-                r2*2,
-                180,
-                90
-            )
-        else:
-            # pen.setColor("green") #upper right DONE
-            r1 = min(r, min(abs(dx/2), abs(dy/2)))
-            r2 = min(abs(dx), abs(dy))-r1
-            path.arcTo(
-                Ax-r1, Ay, r1*2,-r1*2, 90, -90
-            )
-            path.arcTo(
-                Ax+r1,
-                By+r2*2,
-                r2*2,
-                -r2*2,
-                180,
-                90
-            )
+        r2 = min(abs(dx), abs(dy)) - r1
+    
+    # Define arc parameters based on direction
+    if is_leftward:
+        create_leftward_path(path, A, B, r1, r2, dy > 0)
+    else:
+        create_rightward_path(path, A, B, r1, r2, dy > 0)
+    
     path.lineTo(B)
     return path
 
+def create_leftward_path(path: QPainterPath, A: QPointF, B: QPointF, r1: float, r2: float, is_downward: bool):
+    """Creates the path segments for leftward movement."""
+    if is_downward:
+        path.arcTo(A.x() - r1, A.y(), r1 * 2, r1 * 2, 90, -180)
+        path.arcTo(B.x() - r1, A.y() + r2 * 2 + r1 * 2, r2 * 2, -r2 * 2, -90, -90)
+        path.arcTo(B.x() + r1, B.y() - r1 * 2, -r1 * 2, r1 * 2, 0, -90)
+    else:
+        path.arcTo(A.x() - r1, A.y(), r1 * 2, -r1 * 2, 90, -180)
+        path.arcTo(B.x() - r1, A.y() - r2 * 2 - r1 * 2, r2 * 2, r2 * 2, -90, -90)
+        path.arcTo(B.x() + r1, B.y() + r1 * 2, -r1 * 2, -r1 * 2, 0, -90)
 
-class RoundedLink(QGraphicsItem):
-    def __init__(self, source, target):
-        super().__init__(parent=None)
-        source._links.append(self)
-        target._links.append(self)
-        self.source = source
-        self.target = target
+def create_rightward_path(path: QPainterPath, A: QPointF, B: QPointF, r1: float, r2: float, is_downward: bool):
+    """Creates the path segments for rightward movement."""
+    if is_downward:
+        path.arcTo(A.x() - r1, A.y(), r1 * 2, r1 * 2, 90, -90)
+        path.arcTo(A.x() + r1, B.y() - r2 * 2, r2 * 2, r2 * 2, 180, 90)
+    else:
+        path.arcTo(A.x() - r1, A.y(), r1 * 2, -r1 * 2, 90, -90)
+        path.arcTo(A.x() + r1, B.y() + r2 * 2, r2 * 2, -r2 * 2, 180, 90)
 
-        self.polygon = QPolygonF()
-        self.move()
+def makeVerticalRoundedPath(line: QLineF):
+    """Creates a rounded path between two points with automatic radius adjustment.
+    
+    Args:
+        line: QLineF defining start and end points
+        direction: Layout direction (default: TopToBottom)
+    
+    Returns:
+        QPainterPath: A path with rounded corners connecting the points
+    """
+    A, B = line.p1(), line.p2()
+    dx = B.x() - A.x()
+    dy = B.y() - A.y()
+    
+    path = QPainterPath()
+    path.moveTo(A)
+    
+    # Base radius with constraints
+    r = 27
+    is_upward = dy < 0
+    
+    if is_upward:
+        r1 = min(r, min(abs(dy/4), abs(dx/4)))
+        r2 = min(abs(dy), abs(dx) - r1 * 3)
+    else:
+        r1 = min(r, min(abs(dy/2), abs(dx/2)))
+        r2 = min(abs(dy), abs(dx)) - r1
+    
+    # Define arc parameters based on direction
+    if is_upward:
+        create_upward_path(path, A, B, r1, r2, dx > 0)
+    else:
+        create_downward_path(path, A, B, r1, r2, dx > 0)
+    
+    path.lineTo(B)
+    return path
 
-    def boundingRect(self):
-        m = 200
-        return self.polygon.boundingRect().adjusted(-m, -m, m, m)
+def create_downward_path(path: QPainterPath, A: QPointF, B: QPointF, r1: float, r2: float, is_rightward: bool):
+    """Creates the path segments for downward movement."""
+    if is_rightward:
+        path.arcTo(A.x(), A.y() - r1, r1 * 2, r1 * 2, 180, 90)
+        path.arcTo(B.x()-r2*2,  A.y() + r1, r2 * 2, r2 * 2, 90, -90)
+    else:
+        path.arcTo(A.x(), A.y() - r1, -r1 * 2, r1 * 2, 180, 90)
+        path.arcTo(B.x() + r2 * 2, A.y() + r1, -r2 * 2, r2 * 2, 90, -90)
 
-    def paint(self, painter, option, widget=None):
-        pen = QPen()
-        pen.setColor("white")
-        A = self.source.pos() + self.source.boundingRect().center()
-        B = self.target.pos() + self.target.boundingRect().center()
-        # Ax, Ay = A.x(), A.y()
-        # Bx, By = B.x(), B.y()
-        # dx = Bx - Ax
-        # dy = By - Ay
-
-        # path = QPainterPath()
-        # path.moveTo(A)
-        # r = 27
-        # if dx < 0:
-        #     r1 = min(r, min(abs(dx/4), abs(dy/4)))
-        #     r2 = min(abs(dx), abs(dy)-r1*3)
-        #     # angle = abs(angle)
-        #     if dy > 0:
-        #         pen.setColor("cyan") # upper left DONE
-        #         angle = math.degrees(math.atan2(dy-(r1+r2)*2, dx-(r1+r2)))
-        #         path.arcTo(
-        #             Ax-r1, Ay, r1*2,r1*2, 90, -180
-        #         )
-        #         path.arcTo(
-        #             Bx-r1, 
-        #             Ay+r2*2+r1*2, 
-        #             r2*2,
-        #             -r2*2, 
-        #             -90, -90
-        #         )
-        #         path.arcTo(
-        #             Bx+r1,
-        #             By-r1*2,
-        #             -r1*2,
-        #             r1*2,
-        #             0,-90
-        #         )
-        #     else:
-        #         pen.setColor("yellow") # upper left DONE
-        #         angle = math.degrees(math.atan2(dy-(r1+r2)*2, dx-(r1+r2)))
-        #         path.arcTo(
-        #             Ax-r1, Ay, r1*2,-r1*2, 90, -180
-        #         )
-        #         path.arcTo(
-        #             Bx-r1, 
-        #             Ay-r2*2-r1*2, 
-        #             r2*2,
-        #             r2*2, 
-        #             -90, -90
-        #         )
-        #         path.arcTo(
-        #             Bx+r1,
-        #             By+r1*2,
-        #             -r1*2,
-        #             -r1*2,
-        #             0,-90
-        #         )
-        # else:
-        #     r1 = min(r, min(abs(dx/2), abs(dy/2)))
-        #     r2 = min(abs(dx), abs(dy))-r1
-        #     # angle = abs(angle)
-        #     if dy > 0:
-        #         pen.setColor("red") # lower right DONE
-        #         path.arcTo(
-        #             Ax-r1, Ay, r1*2,r1*2, 90, -90
-        #         )
-        #         path.arcTo(
-        #             Ax+r1,
-        #             By-r2*2,
-        #             r2*2,
-        #             r2*2,
-        #             180,
-        #             90
-        #         )
-        #     else:
-        #         pen.setColor("green") #upper right DONE
-        #         r1 = min(r, min(abs(dx/2), abs(dy/2)))
-        #         r2 = min(abs(dx), abs(dy))-r1
-        #         path.arcTo(
-        #             Ax-r1, Ay, r1*2,-r1*2, 90, -90
-        #         )
-        #         path.arcTo(
-        #             Ax+r1,
-        #             By+r2*2,
-        #             r2*2,
-        #             -r2*2,
-        #             180,
-        #             90
-        #         )
-        # path.lineTo(B)
-        path = makeRoundedPath(QLineF(A, B))
-
-        painter.setPen(pen)
-        painter.drawPath(path)
-
-    def move(self):
-        A = self.source.pos() + self.source.boundingRect().center()
-        B = self.target.pos() + self.target.boundingRect().center()
-
-        dx = abs(B.x() - A.x())
-        dy = abs(B.y() - A.y())
-        r1 = min(50, min(dx / 2, dy / 2))
-        r2 = min(dx, dy) - r1
-        self.radii = [r1, r2]
-        self.polygon = QPolygonF(
-            [
-                A,
-                QPointF(A.x() + self.radii[0], A.y()),
-                QPointF(A.x() + self.radii[0], B.y()),
-                B,
-            ]
-        )
-
-        self.prepareGeometryChange()
-        self.update()
+def create_upward_path(path: QPainterPath, A: QPointF, B: QPointF, r1: float, r2: float, is_rightward: bool):
+    """Creates the path segments for upward movement."""
+    if is_rightward:
+        path.arcTo(A.x(), A.y() - r1, r1 * 2, r1 * 2, 180, 180)
+        path.arcTo(A.x() + r2 * 2 + r1 * 2, B.y() - r1, -r2 * 2, r2 * 2, 0, 90)
+        path.arcTo(B.x() - r1 * 2, B.y() + r1, r1 * 2, -r1 * 2, 270, 90)
+    else:
+        path.arcTo(A.x(), A.y() - r1, -r1 * 2, r1 * 2, 180, 180)
+        path.arcTo(A.x() - r2 * 2 - r1 * 2, B.y() - r1, r2 * 2, r2 * 2, 0, 90)
+        path.arcTo(B.x() + r1 * 2, B.y() + r1, -r1 * 2, -r1 * 2, 270, 90)
 
 
-class Node(QGraphicsPolygonItem):
-    def __init__(self):
-        super().__init__(
-            QPolygonF([QPointF(0, 0), QPointF(-20, -20), QPointF(-20, 20)])
-        )
+class HoizontalLink(QAbstractGraphicsShapeItem):
+    def __init__(self, parent=None):
+        super().__init__(parent=parent)
         self._links = []
         self.setBrush(QColor("orange"))
-        self.setFlag(QGraphicsItem.ItemIsMovable)
-        self.setFlag(QGraphicsItem.ItemSendsScenePositionChanges)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges)
 
-    def itemChange(self, change, value):
-        if change == QGraphicsItem.ItemScenePositionHasChanged:
-            for link in self._links:
-                link.move()
-        return super().itemChange(change, value)
+    def makeRoundedPath(self):
+        return makeHorizontalRoundedPath(QLineF(
+            self.mapFromParent(QPointF()), 
+            self.mapFromParent(self.pos())
+        ))
 
+    def boundingRect(self) -> QRectF:
+        return self.makeRoundedPath().boundingRect().adjusted(-20, -20, 100, 20)
+
+    def paint(self, painter, option, widget=None):
+        # painter.drawRect(self.boundingRect())
+        painter.drawPath(self.makeRoundedPath())
+        painter.drawText(0,0, "Horizontal target")\
+
+class VerticalLink(QAbstractGraphicsShapeItem):
+    def __init__(self, parent=None):
+        super().__init__(parent=parent)
+        self._links = []
+        self.setBrush(QColor("orange"))
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges)
+
+    def makeRoundedPath(self):
+        return makeVerticalRoundedPath(QLineF(
+            self.mapFromParent(QPointF()), 
+            self.mapFromParent(self.pos())
+        ))
+
+    def boundingRect(self) -> QRectF:
+        return self.makeRoundedPath().boundingRect().adjusted(-20, -20, 100, 20)
+
+    def paint(self, painter, option, widget=None):
+        # painter.drawRect(self.boundingRect())
+        painter.drawPath(self.makeRoundedPath())
+        painter.drawText(0,0, "Vertical target")
+
+
+def main()->QWidget:
+    view = QGraphicsView()
+    scene = QGraphicsScene()
+    scene.setSceneRect(-9999, -9999, 9999*2, 9999*2)
+    view.setScene(scene)
+    view.resize(800, 600)
+    scene.clear()
+    horizontal = HoizontalLink()
+    horizontal.setPos(300, -100)
+    scene.addItem(horizontal)
+
+    vertical = VerticalLink()
+    vertical.setPos(276, 93)
+    scene.addItem(vertical)
+
+    return view
 
 if __name__ == "__live__":
     from pylive.QtLiveApp import display
-
-    view = QGraphicsView()
-    scene = QGraphicsScene()
-    view.setScene(scene)
-    view.resize(800, 600)
-
-    print("setup")
-
-    scene.clear()
-    n1 = Node()
-    t1 = QGraphicsTextItem("n1", n1)
-    n1.setPos(0, 0)
-    scene.addItem(n1)
-    n2 = Node()
-    t2 = QGraphicsTextItem("n2", n2)
-    n2.setPos(-228, 338)
-    scene.addItem(n2)
-    link = RoundedLink(n1, n2)
-    scene.addItem(link)
-    link.move()
-
-    display(view)
+    display(main())
 
 
 # %% setup
 if __name__ == "__main__":
     app = QApplication()
-    view = QGraphicsView()
-    scene = QGraphicsScene()
-    view.setScene(scene)
-
-    print("setup")
-
-    scene.clear()
-    n1 = Node()
-    t1 = QGraphicsTextItem("n1", n1)
-    n1.setPos(-131, -155)
-    scene.addItem(n1)
-    n2 = Node()
-    t1 = QGraphicsTextItem("n2", n1)
-    n2.setPos(120, 55)
-    scene.addItem(n2)
-    link = RoundedLink(n1, n2)
-    scene.addItem(link)
-    link.move()
-
+    view = main()
     view.show()
     app.exec()

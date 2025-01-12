@@ -42,7 +42,6 @@ from dataclasses import dataclass
 
 # define to NXGraphModel schema
 type NodeId = Hashable
-type SourceId = Hashable
 type TargetId = tuple[Hashable, Hashable]
 type EdgeId = tuple[Hashable, Hashable, Hashable]
 
@@ -61,7 +60,7 @@ class NXNetworkScene(QGraphicsScene):
 
         # draft link: # TODO: consider moving it to the GraphView.
         # GraphView is supposed to be responsible for user interactions
-        self.draft: LinkShape | None = None  # todo use the widget itself?
+        self.draft: RoundedLinkShape | None = None  # todo use the widget itself?
 
         # set model
         # populate with initial model
@@ -115,6 +114,9 @@ class NXNetworkScene(QGraphicsScene):
         # layout items
         self.layout()
 
+    def model(self):
+        return self._model
+
     ### <<< Map the interactive graphics ids to widgets
     def nodeGraphicsObject(self, nodeId: NodeId) -> QGraphicsItem:
         return self._node_graphics_objects[nodeId]
@@ -159,16 +161,14 @@ class NXNetworkScene(QGraphicsScene):
     def onEdgesCreated(self, edges: list[EdgeId]):
         for e in edges:
             link = LinkGraphicsObject(e)
-            link.setLabel(f"{e[2]}")
+            link.setLabelText(f"{e[2]}")
 
             self._link_graphics_objects[e] = link
             self.addItem(link)
 
             u, v, k = e
-            link.move(
-                self.nodeGraphicsObject(u),
-                self.targetGraphicsObject((v, k)),
-            )
+            link.move(self.nodeGraphicsObject(u),
+                self.targetGraphicsObject((v, k)))
 
     def onNodesDeleted(self, nodes: list[Hashable]):
         for n in nodes:
@@ -196,7 +196,7 @@ class NXNetworkScene(QGraphicsScene):
 
     ### linking tools ###
     def makeDraftLink(self):
-        self.draft = LinkShape()
+        self.draft = RoundedLinkShape("")
         self.draft.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
         self.draft.setAcceptHoverEvents(False)
         self.draft.setEnabled(False)
@@ -208,15 +208,16 @@ class NXNetworkScene(QGraphicsScene):
         self.removeItem(self.draft)
         self.draft = None
 
-    def nodeAt(self, position: QPointF) -> SourceId | None:
-        # find source (model) under mouse
+    def nodeAt(self, position: QPointF) -> NodeId | None:
         for item in self.items(position, deviceTransform=QTransform()):
             try:
-                return self._node_graphics_objects.inverse[
+                node =  self._node_graphics_objects.inverse[
                     cast(NodeGraphicsObject, item)
                 ]
+                return node
             except KeyError:
-                return None
+                continue
+        return
 
     def targetAt(self, position: QPointF) -> TargetId | None:
         # find source (model) under mouse
@@ -226,32 +227,36 @@ class NXNetworkScene(QGraphicsScene):
                     cast(InletGraphicsObject, item)
                 ]
             except KeyError:
-                return None
+                continue
 
     def layout(self):
         from pylive.utils.graph_layout import hiearchical_layout_with_nx
-
         pos = hiearchical_layout_with_nx(self._model.G, scale=100)
         for N, (x, y) in pos.items():
             widget = self.nodeGraphicsObject(N)
             widget.setPos(x, y)
 
-    # def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
-    #     item = self.itemAt(event.scenePos(), QTransform())
-    #     if item in self._node_graphics_objects.values():
-    #         print("node clicked")
-    #     else:
-    #         return super().mousePressEvent(event)
+    def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+        item = self.itemAt(event.scenePos(), QTransform())
+        if item in self._node_graphics_objects.inverse:
+            print("node clicked")
+
+        if item in self._link_graphics_objects.inverse:
+            print("edge clicked")
+
+        if item in self._target_graphics_objects.inverse:
+            print("target clicked")
+        
+
+        return super().mousePressEvent(event)
 
 
 ###########################
 # Active Graphics Objects #
 ###########################
-
-
 class InletGraphicsObject(PortShape):
     def __init__(self, targetId: TargetId):
-        super().__init__(label=f"{targetId}")
+        super().__init__(name=f"{targetId[1]}")
         self.targetId = targetId
 
     def graphscene(self) -> "NXNetworkScene":
@@ -275,7 +280,8 @@ class InletGraphicsObject(PortShape):
 
         if nodeId := self.graphscene().nodeAt(event.scenePos()):
             scene = self.graphscene()
-            scene._model.addEdge(node_)
+            v, k = self.targetId
+            scene.model().addEdge(nodeId, v, k)
 
         return super().mouseReleaseEvent(event)
 
@@ -288,7 +294,7 @@ class NodeGraphicsObject(NodeShape):
         parent: QGraphicsItem | None = None,
     ):
         super().__init__(
-            label=f"'{n}'",
+            name=f"'{n}'",
             inlets=inlets,
             outlets=[],
             parent=parent,
@@ -311,7 +317,7 @@ class NodeGraphicsObject(NodeShape):
 
     def moveLinks(self):
         """responsible to update connected link position"""
-        model = self.graphscene()._model
+        model = self.graphscene().model()
         in_out_edges = model.inEdges(self.nodeId) + model.outEdges(self.nodeId)
         for edgeId in in_out_edges:
             u, v, k = edgeId
@@ -319,7 +325,8 @@ class NodeGraphicsObject(NodeShape):
             node = self.graphscene().nodeGraphicsObject(u)
             inlet = self.graphscene().targetGraphicsObject((v, k))
             edge = self.graphscene().linkGraphicsObject(edgeId)
-            edge.move(node, inlet)
+            bbox = node.boundingRect()
+            edge.move(node.pos()+QPointF(bbox.center().x(), bbox.bottom()), inlet)
 
     def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         if not self.isSelected():
@@ -334,7 +341,7 @@ class NodeGraphicsObject(NodeShape):
                 draft.move(self, self.graphscene().targetGraphicsObject(inletId))
             else:
                 draft.move(self, event.scenePos())
-        else:
+        else:                     
             return super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event: QGraphicsSceneMouseEvent) -> None:
@@ -344,7 +351,7 @@ class NodeGraphicsObject(NodeShape):
             if targetId := self.graphscene().targetAt(event.scenePos()):
                 scene = self.graphscene()
 
-                scene._model.addEdge(self.nodeId, targetId[0], targetId[1])
+                scene.model().addEdge(self.nodeId, targetId[0], targetId[1])
         else:
             return super().mouseReleaseEvent(event)
 
@@ -358,9 +365,6 @@ class LinkGraphicsObject(RoundedLinkShape):
     def graphscene(self) -> "NXNetworkScene":
         return cast(NXNetworkScene, self.scene())
 
-    def boundingRect(self) -> QRectF:
-        return super().boundingRect().adjusted(-50, -50, 50, 50)
-
     def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         ...
         # if event.button() == Qt.MouseButton.LeftButton:
@@ -369,49 +373,43 @@ class LinkGraphicsObject(RoundedLinkShape):
         #     self.ungrabMouse()
 
     def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent) -> None:
-        print("mouse move event")
-
-        if nodeId := self.graphscene().nodeAt(event.scenePos()):
-            self.move(self.graphscene().nodeGraphicsObject(nodeId), self)
+        if targetId := self.graphscene().targetAt(event.scenePos()):
+            u, v, k = self.edgeId
+            self.move(
+                self.graphscene().nodeGraphicsObject(u), 
+                self.graphscene().targetGraphicsObject(targetId))
         else:
             u, v, k = self.edgeId
             self.move(
-                event.scenePos(),
-                self.graphscene().targetGraphicsObject((v, k)),
-            )
+                self.graphscene().nodeGraphicsObject(u), 
+                event.scenePos())
         return super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event: QGraphicsSceneMouseEvent) -> None:
-        model = self.graphscene()._model
-        target = self.graphscene().targetAt(event.scenePos())
+        model = self.graphscene().model()
+        assert model
+        target:TargetId|None = self.graphscene().targetAt(event.scenePos())
+        print("mouseReleaseEvent")
         u, v, k = self.edgeId
-        if Qt.MouseButton.RightButton in event.buttons():
+        if target and target != (v, k):
+            # connect to other target
+            model.removeEdge(u, v, k)
+            model.addEdge(u, target[0], target[1])
+
+        elif target == None:
+            # remove
+            model.removeEdge(u, v, k)
+
+        elif target == (v, k):
             # cancel
             self.move(
                 self.graphscene().nodeGraphicsObject(u),
-                self.graphscene().targetGraphicsObject((v, k)),
+                self.graphscene().targetGraphicsObject((v, k))
             )
-            self.ungrabMouse()
         else:
-            # TODO: add an addMethod to the graphview, to convert from the graph edge representation to the model;s
-            u, v, k = self.edgeId
-            if target and target != (v, k):
-                model.removeEdge(u, v, k)
-                model.addEdge(u, target[0], target[1])
+            raise Exception("")
 
-            elif target == None:
-                model.removeEdge(u, v, k)
-
-            elif target == (v, k):
-                # cancel
-                self.move(
-                    self.graphscene().nodeGraphicsObject(u),
-                    self.graphscene().targetGraphicsObject((v, k)),
-                )
-            else:
-                raise Exception("")
-
-            return super().mouseReleaseEvent(event)
+        return super().mouseReleaseEvent(event)
 
 
 ###########
