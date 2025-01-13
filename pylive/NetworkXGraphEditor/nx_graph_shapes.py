@@ -18,13 +18,11 @@ from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
 from pylive.NetworkXGraphEditor.nx_graph_model import NXGraphModel
-from pylive.QtGraphEditor.qgraphics_arrow_item import (
-    makeArrowShape,
-)
+from pylive.utils.geo import makeArrowShape
 from pylive.utils.geo import getShapeCenter, getShapeRight, getShapeLeft, makeLineBetweenShapes, makeVerticalRoundedPath
 
 
-class AbstractShape(QGraphicsItem):
+class InteractiveShape(QGraphicsItem):
     def __init__(self, parent:QGraphicsItem|None=None):
         super().__init__(parent=parent)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
@@ -107,7 +105,30 @@ class AbstractShape(QGraphicsItem):
         painter.setPen(self.pen())
 
 
-class VertexShape(AbstractShape):
+class BaseLinkItem(QGraphicsItem):
+    def move(
+            self,
+            source: QGraphicsItem | QPointF,
+            target: QGraphicsItem | QPointF,
+            /
+        )->None:
+            raise NotImplementedError("link subclasses must implement move method")
+
+
+class BaseNodeItem(QGraphicsWidget):
+    scenePositionChanged = Signal()
+    def __init__(self, parent:QGraphicsItem|None=None):
+        super().__init__(parent=parent)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges)
+
+
+    def itemChange(self, change: QGraphicsItem.GraphicsItemChange, value: Any) -> Any:
+        if change == QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
+            self.scenePositionChanged.emit()
+        return super().itemChange(change, value)
+
+
+class VertexShape(InteractiveShape):
     def __init__(self, name:str, parent=None):
         super().__init__(parent=parent)
         self._nameitem = QGraphicsTextItem(f"{name}")
@@ -133,79 +154,7 @@ class VertexShape(AbstractShape):
         painter.drawRoundedRect(self.boundingRect(), 4, 4)
 
 
-class NodeShape(VertexShape):
-    def __init__(self, name, inlets, outlets, parent=None):
-        super().__init__(name, parent=parent)
-        self._inlets: list[QGraphicsItem] = []
-        self._outlets: list[QGraphicsItem] = []
-        self.ports_margin = -5
 
-        for inlet in inlets:
-            self._addInlet(inlet)
-        for outlet in outlets:
-            self._addOutlet(outlet)
-
-        self.ports_margin = -40
-
-    def pen(self):
-        pen = super().pen()
-        pen.setWidth(1.5)
-        return pen
-
-    def boundingRect(self) -> QRectF:
-        bbox = self._nameitem.boundingRect().adjusted(-4, 0, 4, 2)
-        if bbox.width()<60:
-            bbox.setWidth(60)
-        return bbox
-
-    def _addInlet(self, inlet_widget: QGraphicsItem):
-        inlet_widget.setParentItem(self)
-        self._inlets.append(inlet_widget)
-        self.layoutPorts()
-        self.update()
-
-    def _removeInlet(self, inlet_widget: QGraphicsItem):
-        self._inlets.remove(inlet_widget)
-        if scene := inlet_widget.scene():
-            scene.removeItem(inlet_widget)
-        self.layoutPorts()
-        self.update()
-
-    def _addOutlet(self, outlet_widget: QGraphicsItem):
-        outlet_widget.setParentItem(self)
-        self._outlets.append(outlet_widget)
-        self.layoutPorts()
-        self.update()
-
-    def _removeOutlet(self, outlet_widget: QGraphicsItem):
-        self._outlets.remove(outlet_widget)
-        outlet_widget.setParentItem(self)
-        if scene := outlet_widget.scene():
-            scene.removeItem(outlet_widget)
-        self.layoutPorts()
-        self.update()
-
-    def layoutPorts(self):
-        def layout_vertical():
-            y = 14  # header heighn
-            for inlet_widget in self._inlets:
-                inlet_widget.setPos(4, y)
-                inlet_widget.setRotation(-45)
-                y += inlet_widget.boundingRect().height()
-
-            for outlet_widget in self._outlets:
-                outlet_widget.setRotation(-45)
-                outlet_widget.setPos(4, y)
-                y += outlet_widget.boundingRect().height()
-
-        distribute_items_horizontal(self._inlets, self.boundingRect().adjusted(12, 0, -12, 0))
-        distribute_items_horizontal(self._outlets, self.boundingRect().adjusted(12, 0, -12, 0))
-        for item in self._inlets:
-            item.setY(self.boundingRect().top()-5)
-            # item.setRotation(-45)
-        for item in self._outlets:
-            item.setY(self.boundingRect().bottom()+5)
-            # item.setRotation(+45)
 
 def distribute_items_horizontal(items, rect:QRectF):
             num_items = len(items)
@@ -224,7 +173,7 @@ def distribute_items_horizontal(items, rect:QRectF):
                 item.setX(x)
 
 
-class PortShape(AbstractShape):
+class PortShape(InteractiveShape):
     def __init__(self, name:str, parent:QGraphicsItem|None=None):
         super().__init__(parent)
         self._nameitem = QGraphicsTextItem(f"{name}")
@@ -240,7 +189,7 @@ class PortShape(AbstractShape):
         self._nameitem.hide()
 
     def boundingRect(self) -> QRectF:
-        ellipse_bbox = QRectF(-10,-10,20,20)
+        ellipse_bbox = QRectF(-6,-6,12,12)
         return ellipse_bbox
 
     def brush(self):
@@ -257,24 +206,8 @@ class PortShape(AbstractShape):
         painter.drawEllipse(-r,-r, r*2, r*2)
 
 
-class BaseLinkItem(QGraphicsItem):
-    def move(
-            self,
-            source: QGraphicsItem | QPointF,
-            target: QGraphicsItem | QPointF,
-            /
-        )->None:
-            raise NotImplementedError("link subclasses must implement move method")
 
-class BaseNodeItem(QGraphicsWidget):
-    scenePositionChanged = Signal()
-
-    def itemChange(self, change: QGraphicsItem.GraphicsItemChange, value: Any) -> Any:
-        if change == QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
-            self.scenePositionChanged.emit()
-        return super().itemChange(change, value)
-
-class ArrowLinkShape(AbstractShape):
+class ArrowLinkShape(InteractiveShape, BaseLinkItem):
     """Graphics item representing an edge in a graph."""
 
     def __init__(
@@ -426,7 +359,7 @@ class ArrowLinkShape(AbstractShape):
         self.update()
 
 
-class RoundedLinkShape(AbstractShape):
+class RoundedLinkShape(InteractiveShape, BaseLinkItem):
     def __init__(
         self, label: str = "link-", parent: QGraphicsItem | None = None
     ):

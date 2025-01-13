@@ -5,8 +5,8 @@ from PySide6.QtWidgets import *
 
 
 class OptionDialog(QDialog):
-    def __init__(self, options, title="Choose an Option", parent=None):
-        super().__init__(parent)
+    def __init__(self, options:list[object], title="Choose an Option", parent:QWidget|None=None):
+        super().__init__(parent=parent)
         self.setWindowTitle(title)
         self.setModal(True)
 
@@ -23,19 +23,18 @@ class OptionDialog(QDialog):
         # self.setStyleSheet("background: transparent;")
         # self.setAttribute(Qt.WidgetAttribute.WA_OpaquePaintEvent, True)
 
-
         self.options = options
 
         # Create layout
-        self.layout = QVBoxLayout()
+        main_layout = QVBoxLayout()
 
         # Setup Search
         self.line_edit = QLineEdit()
         self.line_edit.setPlaceholderText("Search...")
-        self.layout.addWidget(self.line_edit)
+        main_layout.addWidget(self.line_edit)
 
         # Setup List
-        self.optionsmodel = QStringListModel(options)
+        self.optionsmodel = QStringListModel([f"{opt}" for opt in options])
         self.filteredmodel = QSortFilterProxyModel()
         self.filteredmodel.setSourceModel(self.optionsmodel)
         self.filteredmodel.setFilterCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
@@ -44,7 +43,7 @@ class OptionDialog(QDialog):
         self.listview = QListView()
         self.listview.setModel(self.filteredmodel)
         self.listview.setSelectionMode(QListView.SelectionMode.SingleSelection)
-        self.layout.addWidget(self.listview)
+        main_layout.addWidget(self.listview)
 
         # OK and Cancel buttons
         button_layout = QHBoxLayout()
@@ -56,9 +55,9 @@ class OptionDialog(QDialog):
         # Connect buttons
         ok_button.clicked.connect(self.accept)
         cancel_button.clicked.connect(self.reject)
-        self.layout.addLayout(button_layout)
+        main_layout.addLayout(button_layout)
 
-        self.setLayout(self.layout)
+        self.setLayout(main_layout)
         self.line_edit.setFocus()
 
         # Select the first item by default
@@ -93,7 +92,7 @@ class OptionDialog(QDialog):
         # self.setMaximumSize(self.size())
         # self.setFixedSize(self.size())
 
-    def eventFilter(self, obj, event):
+    def eventFilter(self, obj, event:QEvent):
         if obj == self.line_edit and event.type() == event.Type.KeyPress:
             current_index = self.listview.currentIndex()
             if event.key() == Qt.Key.Key_Up:
@@ -122,19 +121,22 @@ class OptionDialog(QDialog):
             self.listview.setCurrentIndex(new_index)
             self.listview.scrollTo(new_index)  # Ensure visibility of the selection
 
-    def get_selected_option(self):
-        """Return the selected option text or None if no option is selected."""
+    def optionValue(self):
+        """Return the selected option or None if no option is selected."""
         indexes = self.listview.selectedIndexes()
         if indexes:
             return indexes[0].data()
         return None
 
+    def textValue(self):
+        return self.line_edit.text()
+
     @staticmethod
-    def getOption(options, parent=None):
+    def getOption(options, parent:QWidget|None=None):
         """Static method to open dialog and return selected option."""
-        dialog = OptionDialog(options, parent)
+        dialog = OptionDialog(options, parent=parent)
         result = dialog.exec()
-        return dialog.get_selected_option() if result == QDialog.DialogCode.Accepted else None
+        return dialog.optionValue() if result == QDialog.DialogCode.Accepted else None
 
 
 if __name__ == "__main__":

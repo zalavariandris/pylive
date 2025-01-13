@@ -7,15 +7,12 @@ from typing import *
 def sample_function(a: int, b: str, c: float = 5.0, props:List=[]) -> bool:
 	return True
 
-
-
-
 # Print argument details
-print("Arguments:")
-for param in sig.parameters.values():
-    print(f"- Name: {param.name}, Default: {param.default}, Annotation: {param.annotation}")
+# print("Arguments:")
+# for param in sig.parameters.values():
+#     print(f"- Name: {param.name}, Default: {param.default}, Annotation: {param.annotation}")
 
-def format_type(annotation):
+def format_type(annotation)->str:
 	"""Helper function to format type annotations as readable strings."""
 	if hasattr(annotation, '__name__'):  # For built-in types like int, float
 		return annotation.__name__
@@ -26,7 +23,7 @@ def format_type(annotation):
 	else:
 		return str(annotation)  # Fallback for unusual cases
 
-def format_param(param)->str:
+def format_param(param:inspect.Parameter)->str:
 	text = ""
 	if param.kind == inspect.Parameter.VAR_POSITIONAL:
 		text += "*"
@@ -44,7 +41,7 @@ def format_param(param)->str:
 	
 	return text
 
-def format_signature(fn):
+def format_signature(fn:Callable)->str:
 	# Get the signature of the function
 	sig = inspect.signature(fn)
 
@@ -60,7 +57,11 @@ def format_signature(fn):
 	
 	return text
 	
+if __name__ == "__main__":
+	sig_text = format_signature(sample_function)
+	print(sig_text)
 
-from pylive import livescript
-livescript.display(format_signature(sample_function))
-livescript.display(format_signature(print))
+if __name__ == "__live__":
+	from pylive import livescript
+	livescript.display(format_signature(sample_function))
+	livescript.display(format_signature(print))

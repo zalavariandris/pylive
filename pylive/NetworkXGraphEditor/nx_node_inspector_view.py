@@ -10,7 +10,7 @@ from pylive.NetworkXGraphEditor.nx_graph_selection_model import (
 from pylive.utils.unique import make_unique_name
 
 
-class NXInspectorView(QWidget):
+class NXNodeInspectorView(QWidget):
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent=parent)
         self._model: NXGraphModel | None = None
@@ -146,6 +146,7 @@ class NXInspectorView(QWidget):
             def setModel(widget=lineedit, n=n, attr=attr):
                 assert self._model
                 self._model.setNodeProperties(n, **{attr: widget.text()})
+                widget.clear()
 
             def setEditor(widget=lineedit, n=n, attr=attr):
                 assert self._model

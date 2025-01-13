@@ -23,7 +23,8 @@ from PySide6.QtWidgets import *
 from numpy import isin
 
 from pylive.NetworkXGraphEditor.nx_graph_shapes import (
-    BaseNodeItem, NodeShape,
+    ArrowLinkShape,
+    BaseNodeItem,
     BaseLinkItem, RoundedLinkShape,
     PortShape,
     distribute_items_horizontal
@@ -48,29 +49,7 @@ type NodeId = Hashable
 # type LinkId = tuple[OutletId, InletId]
 
 
-class StandardGraphFactory:
-    def createNode(self, node_id:NodeId)->BaseNodeItem:
-        node = NodeGraphicsObject(node_id)
-        return node
 
-    def createInlet(self, parent_node:QGraphicsItem, node_id:NodeId, key:str)->QGraphicsItem:
-        assert isinstance(key, str)
-        inlet = PortShape(f"{key}")
-        
-        inlet.setParentItem(parent_node)
-        return inlet
-
-    def createOutlet(self, parent_node:QGraphicsItem, node_id:NodeId, key:str)->QGraphicsItem:
-        assert isinstance(key, str)
-        outlet = PortShape(f"{key}")
-        outlet.setParentItem(parent_node)
-        return outlet
-
-    def createLink(self, u:NodeId|None, v:NodeId|None, k:tuple[str|None, str|None])->BaseLinkItem:
-        assert isinstance(k, tuple)
-        link = RoundedLinkShape(f"{k}")
-        link.setZValue(-1)
-        return link
 
 
 class NXNetworkScene(QGraphicsScene):
@@ -86,11 +65,11 @@ class NXNetworkScene(QGraphicsScene):
         # self.setItemIndexMethod(QGraphicsScene.ItemIndexMethod.NoIndex)
 
         # store model widget relations
-        self._node_graphics_objects: bidict[NodeId, NodeGraphicsObject] = bidict()
+        self._node_graphics_objects: bidict[NodeId, BaseNodeItem] = bidict()
         self._outlet_graphics_objects: bidict[tuple[NodeId, str], QGraphicsItem] = bidict()
         self._inlet_graphics_objects: bidict[tuple[NodeId, str], QGraphicsItem] = bidict()
-        self._link_graphics_objects: bidict[tuple[NodeId, NodeId, tuple[str, str]], LinkItemProtocol] = bidict()
-        self._draft_link: LinkItemProtocol | None = None
+        self._link_graphics_objects: bidict[tuple[NodeId, NodeId, tuple[str, str]], BaseLinkItem] = bidict()
+        self._draft_link: BaseLinkItem | None = None
 
         # draft link: # TODO: consider moving it to the GraphView.
         # GraphView is supposed to be responsible for user interactions
@@ -101,6 +80,8 @@ class NXNetworkScene(QGraphicsScene):
         
         self.setModel(model)
         self.setSelectionModel(selection_model)
+
+        self.selectionChanged.connect(self.selectionChangedEvent)
 
     def setSelectionModel(self, selection_model:NXGraphSelectionModel):
         if self._selection_model:
@@ -117,7 +98,7 @@ class NXNetworkScene(QGraphicsScene):
             return
 
         selected_nodes = [
-            self._node_graphics_objects.inverse[cast(NodeGraphicsObject, node)]
+            self._node_graphics_objects.inverse[node]
             for node in self.selectedItems()
             if node in self._node_graphics_objects.values()
         ]
@@ -160,15 +141,26 @@ class NXNetworkScene(QGraphicsScene):
         assert isinstance(key, str)
         return self._inlet_graphics_objects[(node_id, key)]
 
-    def linkGraphicsObject(self, u:NodeId, v:NodeId, k:tuple[str, str]) -> LinkItemProtocol:
+    def linkGraphicsObject(self, u:NodeId, v:NodeId, k:tuple[str, str]) -> BaseLinkItem:
         return self._link_graphics_objects[(u, v, k)]
+
+    def moveAttachedLinks(self, node_id:NodeId):
+        from itertools import chain
+        model = self.model()
+        assert model
+        for e in chain(model.inEdges(node_id), model.outEdges(node_id)):
+            u, v, (o, i) = e
+            outlet = self.outletGraphicsObject(u, o)
+            inlet = self.inletGraphicsObject(v, i)
+            link = self.linkGraphicsObject(u, v, (o, i))
+            link.move(outlet, inlet)
 
     ### <<< Handle Model Signals
     def onNodesCreated(self, nodes: list[Hashable]):
         assert self._model
         for node_id in nodes:
             node = self.delegate.createNode(node_id)
-            node.scenePositionChanged.connect(self.moveAttachedLinks(node_id))
+            node.scenePositionChanged.connect(lambda node_id=node_id: self.moveAttachedLinks(node_id))
             self._node_graphics_objects[node_id] = node
             self.addItem(self.nodeGraphicsObject(node_id))
 
@@ -179,13 +171,14 @@ class NXNetworkScene(QGraphicsScene):
                 raise ValueError("Nodes must have an 'outlets' attribute")
 
             inlets = []
-            inlet_names = self._model.getNodeProperty(node_id, "inlets")
-            assert isinstance(inlet_names, list) and all(
-                isinstance(_, str) for _ in inlet_names
-            )
+            # inlet_names = 
+            # assert isinstance(inlet_names, list), f" {inlet_names}"
+            # assert all(
+            #     isinstance(_, str) for _ in inlet_names
+            # ), f"one of the inlet type currently not supported: {inlet_names}"
 
-            for inlet_name in inlet_names:
-                node = cast(NodeGraphicsObject, self.nodeGraphicsObject(node_id))
+            for inlet_name in self._model.getNodeProperty(node_id, "inlets"):
+                node = cast(BaseNodeItem, self.nodeGraphicsObject(node_id))
                 inlet = self.delegate.createInlet(node, node_id, inlet_name)
                 self._inlet_graphics_objects[(node_id, inlet_name)] = inlet
                 inlets.append(inlet)
@@ -200,7 +193,7 @@ class NXNetworkScene(QGraphicsScene):
                 isinstance(_, str) for _ in outlet_names
             )
             for outlet_name in outlet_names:
-                node = cast(NodeGraphicsObject, self.nodeGraphicsObject(node_id))
+                node = cast(BaseNodeItem, self.nodeGraphicsObject(node_id))
                 outlet = self.delegate.createOutlet(node, node_id, outlet_name)
                 self._outlet_graphics_objects[(node_id, outlet_name)] = outlet
                 outlets.append(outlet)
@@ -254,16 +247,19 @@ class NXNetworkScene(QGraphicsScene):
         self.layout()
 
     def onSelectionChanged(self, selected: set[NodeId], deselected: set[NodeId]):
-        selected_widgets = [self.nodeGraphicsObject(n) for n in selected]
-        deselected_widgets = [self.nodeGraphicsObject(n) for n in deselected]
-        self.blockSignals(True)
-        for widget in selected_widgets:
-            widget.setSelected(True)
+        if len(selected)>0 or len(deselected)>0:
+            selected_widgets = [self.nodeGraphicsObject(n) for n in selected]
+            deselected_widgets = [self.nodeGraphicsObject(n) for n in deselected]
 
-        for widget in deselected_widgets:
-            widget.setSelected(False)
-        self.blockSignals(False)
-        self.selectionChanged.emit()
+            self.blockSignals(True)
+            for widget in selected_widgets :
+                widget.setSelected(True)
+
+            for widget in deselected_widgets:
+                widget.setSelected(False)
+            self.blockSignals(False)
+
+            self.selectionChanged.emit()
 
     ### <<< Handle Model Signals
     def nodeAt(self, position: QPointF) -> NodeId | None:
@@ -467,46 +463,59 @@ class GraphLinkTool(QObject):
 #     def __init__(self, name: str):
 #         super().__init__(name=f"{outlet_id[1]}")
 
+class StandardNodeItem(BaseNodeItem):
+    def __init__(self, parent:QGraphicsItem|None=None):
+        super().__init__(parent=parent)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
+        self.setAcceptHoverEvents(True)
 
-class NodeGraphicsObject(NodeShape):
-    def __init__(
-        self,
-        n: NodeId,
-        parent: QGraphicsItem | None = None,
-    ):
-        super().__init__(
-            name=f"'{n}'",
-            inlets=[],
-            outlets=[],
-            parent=parent,
-        )
-        self.nodeId = n
-        # Enable selection and movement
-        self.setFlag(QGraphicsWidget.GraphicsItemFlag.ItemIsMovable, True)
-        self.setFlag(QGraphicsWidget.GraphicsItemFlag.ItemIsFocusable, True)
-        self.setFlag(
-            QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges
-        )
+    def paint(self, painter, option, widget=None):
+        rect = self.geometry()
 
-    def itemChange(self, change: QGraphicsItem.GraphicsItemChange, value: Any) -> Any:
-        if change == QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
-            self.moveLinks()
-        return super().itemChange(change, value)
+        pen = painter.pen()
+        pen.setBrush(self.palette().text())
+        if self.isSelected():
+            pen.setBrush(self.palette().accent())
+        painter.setPen(pen)
 
-    def graphscene(self) -> "NXNetworkScene":
-        return cast(NXNetworkScene, self.scene())
+        rect.moveTo(QPoint(0,0))
+        painter.drawRoundedRect(rect, 6,6)
 
-    def moveLinks(self):
-        """responsible to update connected link position"""
-        model = self.graphscene().model()
-        assert model is not None
-        in_out_edges = model.inEdges(self.nodeId) + model.outEdges(self.nodeId)
-        for edge_id in in_out_edges:
-            u, v, (o, i) = edge_id
-            outlet = self.graphscene().outletGraphicsObject( u, o )
-            inlet = self.graphscene().inletGraphicsObject(v, i)
-            edge = self.graphscene().linkGraphicsObject(u, v, (o, i))
-            edge.move(outlet, inlet)
+
+class StandardGraphFactory:
+    def createNode(self, node_id:NodeId)->BaseNodeItem:
+        node = StandardNodeItem()
+        
+        labelitem = QGraphicsTextItem(f"{node_id}")
+        labelitem.adjustSize()
+        labelitem.setPos(0,-2)
+        labelitem.setParentItem(node)
+
+        node.setGeometry(QRectF(0,0,labelitem.textWidth(),20))
+        # print(node.geometry())
+
+
+        return node
+
+    def createInlet(self, parent_node:QGraphicsItem, node_id:NodeId, key:str)->QGraphicsItem:
+        assert isinstance(key, str)
+        inlet = PortShape(f"{key}")
+        
+        inlet.setParentItem(parent_node)
+        return inlet
+
+    def createOutlet(self, parent_node:QGraphicsItem, node_id:NodeId, key:str)->QGraphicsItem:
+        assert isinstance(key, str)
+        outlet = PortShape(f"{key}")
+        outlet.setParentItem(parent_node)
+        return outlet
+
+    def createLink(self, u:NodeId|None, v:NodeId|None, k:tuple[str|None, str|None])->BaseLinkItem:
+        assert isinstance(k, tuple)
+        link = ArrowLinkShape(f"{k[1]}" if k[1] else "")
+        link.setZValue(-1)
+        return link
 
 
 ###########
@@ -532,11 +541,14 @@ if __name__ == "__main__":
     graph.addNode("N2", inlets=["in"], outlets=["out"])
     graph.addNode("N3", inlets=["in"], outlets=["out"])
     graph.addEdge("N1", "N2", ("out", "in"))
-    graphscene = NXNetworkScene(graph, NXGraphSelectionModel(graph))
-    graphscene.setSceneRect(QRectF(-400, -400, 800, 800))
-    view.setScene(graphscene)
+    selection = NXGraphSelectionModel(graph)
 
-    # graphscene.addItem(GraphicsVertexItem("HWELLO"))
+
+    scene = NXNetworkScene(graph, selection)
+    scene.setSceneRect(QRectF(-400, -400, 800, 800))
+    view.setScene(scene)
+
+
 
     # show window
     view.show()
