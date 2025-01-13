@@ -17,6 +17,7 @@ from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
+from pylive.NetworkXGraphEditor.nx_graph_model import NXGraphModel
 from pylive.QtGraphEditor.qgraphics_arrow_item import (
     makeArrowShape,
 )
@@ -185,7 +186,28 @@ class NodeShape(VertexShape):
         self.update()
 
     def layoutPorts(self):
-        def distribute_items(items, rect:QRectF):
+        def layout_vertical():
+            y = 14  # header heighn
+            for inlet_widget in self._inlets:
+                inlet_widget.setPos(4, y)
+                inlet_widget.setRotation(-45)
+                y += inlet_widget.boundingRect().height()
+
+            for outlet_widget in self._outlets:
+                outlet_widget.setRotation(-45)
+                outlet_widget.setPos(4, y)
+                y += outlet_widget.boundingRect().height()
+
+        distribute_items_horizontal(self._inlets, self.boundingRect().adjusted(12, 0, -12, 0))
+        distribute_items_horizontal(self._outlets, self.boundingRect().adjusted(12, 0, -12, 0))
+        for item in self._inlets:
+            item.setY(self.boundingRect().top()-5)
+            # item.setRotation(-45)
+        for item in self._outlets:
+            item.setY(self.boundingRect().bottom()+5)
+            # item.setRotation(+45)
+
+def distribute_items_horizontal(items, rect:QRectF):
             num_items = len(items)
             
             if num_items < 1:
@@ -200,27 +222,6 @@ class NodeShape(VertexShape):
             for i, item in enumerate(items):
                 x = rect.left() + i * spacing
                 item.setX(x)
-
-        def layout_vertical():
-            y = 14  # header heighn
-            for inlet_widget in self._inlets:
-                inlet_widget.setPos(4, y)
-                inlet_widget.setRotation(-45)
-                y += inlet_widget.boundingRect().height()
-
-            for outlet_widget in self._outlets:
-                outlet_widget.setRotation(-45)
-                outlet_widget.setPos(4, y)
-                y += outlet_widget.boundingRect().height()
-
-        distribute_items(self._inlets, self.boundingRect().adjusted(12, 0, -12, 0))
-        distribute_items(self._outlets, self.boundingRect().adjusted(12, 0, -12, 0))
-        for item in self._inlets:
-            item.setY(self.boundingRect().top()-5)
-            # item.setRotation(-45)
-        for item in self._outlets:
-            item.setY(self.boundingRect().bottom()+5)
-            # item.setRotation(+45)
 
 
 class PortShape(AbstractShape):
@@ -255,6 +256,23 @@ class PortShape(AbstractShape):
         r = 2
         painter.drawEllipse(-r,-r, r*2, r*2)
 
+
+class BaseLinkItem(QGraphicsItem):
+    def move(
+            self,
+            source: QGraphicsItem | QPointF,
+            target: QGraphicsItem | QPointF,
+            /
+        )->None:
+            raise NotImplementedError("link subclasses must implement move method")
+
+class BaseNodeItem(QGraphicsWidget):
+    scenePositionChanged = Signal()
+
+    def itemChange(self, change: QGraphicsItem.GraphicsItemChange, value: Any) -> Any:
+        if change == QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
+            self.scenePositionChanged.emit()
+        return super().itemChange(change, value)
 
 class ArrowLinkShape(AbstractShape):
     """Graphics item representing an edge in a graph."""
@@ -365,10 +383,10 @@ class ArrowLinkShape(AbstractShape):
 
     def move(
         self,
-        source_graphics_item: QGraphicsItem | QPainterPath | QRectF | QPointF,
-        target_graphics_item: QGraphicsItem | QPainterPath | QRectF | QPointF,
+        source: QGraphicsItem | QPointF,
+        target: QGraphicsItem | QPointF,
         /
-    ):
+    )->None:
         """Moves the link to the source and target items
 
         comments:
@@ -388,7 +406,7 @@ class ArrowLinkShape(AbstractShape):
           to the geometryChange signal, (pay attention as this is a local position)
         """
 
-        line = makeLineBetweenShapes(source_graphics_item, target_graphics_item)
+        line = makeLineBetweenShapes(source, target)
         length = line.length()
         if length > 0:
             offset = min(0, length / 2)
@@ -413,24 +431,32 @@ class RoundedLinkShape(AbstractShape):
         self, label: str = "link-", parent: QGraphicsItem | None = None
     ):
         super().__init__(parent=None)
-        self._label = label
+        self.setCacheMode(QGraphicsItem.CacheMode.NoCache)
 
         # Enable selecting
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
         
         # self.setZValue(-1)
-        self._line: QLineF = QLineF()
+        self._path:QPainterPath = QPainterPath()
+
+        self._labelitem = QGraphicsTextItem(label)
+        self._labelitem.setParentItem(self)
+
+    def path(self):
+        return self._path
+
+    def setPath(self, path:QPainterPath):
+        self._path = path
+        P = self.path().pointAtPercent(0.5)
+        self._labelitem.setPos(P)
+        self._labelitem.adjustSize()
+        size = self._labelitem.boundingRect().size()
+        self._labelitem.moveBy(-size.width()/2, -size.height()/2)
+        self.prepareGeometryChange()
+        self.update()
 
     def setLabelText(self, text:str):
         self._label = text
-        self.update()
-
-    def line(self)->QLineF:
-        return self._line
-
-    def setLine(self, line:QLineF):
-        self._line = line
-        self.prepareGeometryChange()
         self.update()
 
     def boundingRect(self):
@@ -438,7 +464,7 @@ class RoundedLinkShape(AbstractShape):
         return self.shape().boundingRect().adjusted(-m, -m, m, m)
 
     def shape(self)->QPainterPath:
-        path = makeVerticalRoundedPath(self.line())
+        path = self.path()
 
         stroker = QPainterPathStroker()
         stroker.setWidth(10)
@@ -447,44 +473,24 @@ class RoundedLinkShape(AbstractShape):
         return stroker.createStroke(path)
         return path
 
+    def _labelRect(self):
+        ### draw label
+        fm = QFontMetrics(self._labelitem.font())
+        text_rect = fm.boundingRect(self._label)
+        text_rect.moveTo(self.path().pointAtPercent(0.55).toPoint())
+
     def paint(
         self, painter: QPainter, option: QStyleOptionGraphicsItem, widget=None
     ):
-        import math
-
-        path = makeVerticalRoundedPath(self.line())
-
-        ### draw label
-        fm = QFontMetrics(self.font())
-        text_rect = fm.boundingRect(self._label)
-        text_rect.moveTo(path.pointAtPercent(0.55).toPoint())
-
-        outer_circle_factor = 1 / math.sin(math.radians(45))
-        text_rect.setWidth(int(text_rect.width() * outer_circle_factor))
-        text_rect.setHeight(int(text_rect.height() * outer_circle_factor))
-        text_rect.moveCenter(path.pointAtPercent(0.55).toPoint())
-        # painter.drawEllipse(text_bbox)
-
-        text_clip = QRegion(self.boundingRect().toRect()) - QRegion(
-            text_rect, QRegion.RegionType.Ellipse
-        )
-
-        
-        painter.setPen(self.pen())
-        painter.drawText(text_rect,self._label, QTextOption(Qt.AlignmentFlag.AlignCenter))
- 
-        ### draw arrow shape
-        
-
-        # use the pen as brush to draw the arrow shape
-        import math
-
-        # painter.drawRect(ellipse_bbox)
-        # painter.drawEllipse(ellipse_bbox)
-
+        path = self.path()
         painter.setPen(self.pen())
         painter.setBrush(Qt.BrushStyle.NoBrush)
-        if self._label:
+        if self._labelitem:
+            ### clip text
+            text_rect = self.mapFromItem(self._labelitem, self._labelitem.boundingRect()).boundingRect()
+            text_clip = QRegion(self.boundingRect().toRect()) - QRegion(
+                text_rect.toRect(), QRegion.RegionType.Ellipse
+            )
             painter.setClipRegion(text_clip)
         painter.drawPath(path)
 
@@ -494,9 +500,9 @@ class RoundedLinkShape(AbstractShape):
             QPointF(-4, -4)
         ])
         tr = QTransform()
-        P = path.pointAtPercent(0.45)
+        P = path.pointAtPercent(1)
         tr.translate(P.x(), P.y())
-        tr.rotate(-path.angleAtPercent(0.45))
+        tr.rotate(-path.angleAtPercent(1))
         painter.setBrush(painter.pen().color())
         painter.drawPolygon(tr.map(triangle))
         
@@ -523,8 +529,9 @@ class RoundedLinkShape(AbstractShape):
                 ))
             case QPointF():
                 line.setP2(target)
+
+        self.setPath(makeVerticalRoundedPath(line))
         
-        self.setLine(line)
 
 
 
