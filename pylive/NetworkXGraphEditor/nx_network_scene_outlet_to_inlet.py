@@ -35,7 +35,7 @@ from pylive.NetworkXGraphEditor.nx_graph_shapes import (
 ##############
 
 from bidict import bidict
-from pylive.NetworkXGraphEditor.nx_graph_model import NXGraphModel
+from pylive.NetworkXGraphEditor.nx_graph_model import NXNetworkModel
 from pylive.NetworkXGraphEditor.nx_graph_selection_model import (
     NXGraphSelectionModel,
 )
@@ -50,13 +50,11 @@ type NodeId = Hashable
 
 
 
-
-
 class NXNetworkScene(QGraphicsScene):
-    def __init__(self, model: NXGraphModel, selection_model: NXGraphSelectionModel):
+    def __init__(self, model: NXNetworkModel, selection_model: NXGraphSelectionModel):
         super().__init__()
 
-        self._model: NXGraphModel | None = None
+        self._model: NXNetworkModel | None = None
         self._selection_model:NXGraphSelectionModel|None = None
 
         self.delegate = StandardGraphFactory()
@@ -104,7 +102,7 @@ class NXNetworkScene(QGraphicsScene):
         ]
         self._selection_model.setSelectedNodes(selected_nodes)
 
-    def setModel(self, model: NXGraphModel):
+    def setModel(self, model: NXNetworkModel):
         if self._model:
             model.nodesAdded.disconnect(self.onNodesCreated)
             model.nodesAboutToBeRemoved.disconnect(self.onNodesDeleted)
@@ -140,7 +138,7 @@ class NXNetworkScene(QGraphicsScene):
     def inletGraphicsObject(self, node_id:NodeId, key: str) -> QGraphicsItem:
         assert isinstance(key, str)
         return self._inlet_graphics_objects[(node_id, key)]
-
+# 
     def linkGraphicsObject(self, u:NodeId, v:NodeId, k:tuple[str, str]) -> BaseLinkItem:
         return self._link_graphics_objects[(u, v, k)]
 
@@ -164,11 +162,6 @@ class NXNetworkScene(QGraphicsScene):
             self._node_graphics_objects[node_id] = node
             self.addItem(self.nodeGraphicsObject(node_id))
 
-            if not self._model.hasNodeProperty(node_id, "inlets"):
-                raise ValueError("Nodes must have an 'inlets' attribute")
-
-            if not self._model.hasNodeProperty(node_id, "outlets"):
-                raise ValueError("Nodes must have an 'outlets' attribute")
 
             inlets = []
             # inlet_names = 
@@ -177,7 +170,7 @@ class NXNetworkScene(QGraphicsScene):
             #     isinstance(_, str) for _ in inlet_names
             # ), f"one of the inlet type currently not supported: {inlet_names}"
 
-            for inlet_name in self._model.getNodeProperty(node_id, "inlets"):
+            for inlet_name in self._model.inlets(node_id):
                 node = cast(BaseNodeItem, self.nodeGraphicsObject(node_id))
                 inlet = self.delegate.createInlet(node, node_id, inlet_name)
                 self._inlet_graphics_objects[(node_id, inlet_name)] = inlet
@@ -188,7 +181,7 @@ class NXNetworkScene(QGraphicsScene):
             distribute_items_horizontal(inlets, node.boundingRect())
 
             outlets = []
-            outlet_names = self._model.getNodeProperty(node_id, "outlets")
+            outlet_names = self._model.outlets(node_id)
             assert isinstance(outlet_names, list) and all(
                 isinstance(_, str) for _ in outlet_names
             )
@@ -494,8 +487,6 @@ class StandardGraphFactory:
 
         node.setGeometry(QRectF(0,0,labelitem.textWidth(),20))
         # print(node.geometry())
-
-
         return node
 
     def createInlet(self, parent_node:QGraphicsItem, node_id:NodeId, key:str)->QGraphicsItem:
@@ -518,6 +509,8 @@ class StandardGraphFactory:
         return link
 
 
+
+
 ###########
 # EXAMPLE #
 ###########
@@ -536,7 +529,7 @@ if __name__ == "__main__":
     view.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
 
     # create graph scene
-    graph = NXGraphModel()
+    graph = NXNetworkModel()
     graph.addNode("N1", inlets=["in"], outlets=["out"])
     graph.addNode("N2", inlets=["in"], outlets=["out"])
     graph.addNode("N3", inlets=["in"], outlets=["out"])

@@ -23,6 +23,7 @@ def format_type(annotation)->str:
 	else:
 		return str(annotation)  # Fallback for unusual cases
 
+
 def format_param(param:inspect.Parameter)->str:
 	text = ""
 	if param.kind == inspect.Parameter.VAR_POSITIONAL:
@@ -40,6 +41,7 @@ def format_param(param:inspect.Parameter)->str:
 		text += f"={repr(param.default)}"
 	
 	return text
+
 
 def format_signature(fn:Callable)->str:
 	# Get the signature of the function

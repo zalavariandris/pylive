@@ -4,6 +4,7 @@ from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
 import networkx as nx
+from numpy import isin
 
 from pylive.utils.geo import intersect_ray_with_rectangle
 
@@ -80,26 +81,30 @@ class NXGraphModel(QObject):
     def getNodeProperty(self, n: Hashable, name, /) -> object:
         return self.G.nodes[n][name]
 
-    def getNodeProperties(self, n: Hashable) -> list[str]:
+    def getNodeProperties(self, n: Hashable, /) -> list[str]:
         return [key for key in self.G.nodes[n].keys()]
 
-    def removeNode(self, n: Hashable):
+    def removeNode(self, n: Hashable, /):
         self.nodesAboutToBeRemoved.emit([n])
         self.G.remove_node(n)
         self.nodesRemoved.emit([n])
 
-    def edges(self) -> list[Tuple[Hashable, Hashable, Hashable]]:
+    def edges(self) -> Iterable[Tuple[Hashable, Hashable, Hashable]]:
         return [(u, v, k) for u, v, k in self.G.edges]
 
-    def inEdges(self, n: Hashable) -> list[tuple[Hashable, Hashable, Hashable]]:
+    def inEdges(self, n: Hashable, /) -> Iterable[tuple[Hashable, Hashable, Hashable]]:
         """retrun incoming edges to the node"""
-        return [(u, v, k) for u, v, k in self.G.in_edges(n, keys=True)]
+        for e in self.G.in_edges(n, keys=True):
+            yield e
+        # return [(u, v, k) for u, v, k in self.G.in_edges(n, keys=True)]
 
     def outEdges(
-        self, n: Hashable
-    ) -> list[tuple[Hashable, Hashable, Hashable]]:
+        self, n: Hashable, /
+    ) -> Iterable[tuple[Hashable, Hashable, Hashable]]:
         """retrun incoming edges to the node"""
-        return [(u, v, k) for u, v, k in self.G.out_edges(n, keys=True)]
+        for e in self.G.edges(n, keys=True):
+            yield e
+        # return [(u, v, k) for u, v, k in self.G.out_edges(n, keys=True)]
 
     def addEdge(
         self, u: Hashable, v: Hashable, k: Hashable | None = None, /, **props
@@ -128,7 +133,76 @@ class NXGraphModel(QObject):
     def getEdgeProperty(self, u: Hashable, v: Hashable, k: Hashable, prop, /):
         return self.G.edges[u, v, k][prop]
 
-    def isEdgeAllowed(self, u: Hashable, v: Hashable, k: Hashable) -> bool:
+    def isEdgeAllowed(self, u: Hashable, v: Hashable, k: Hashable, /) -> bool:
         if u == v:
             return False
         return True
+
+
+
+type NodeId=Hashable
+type InletName=str
+type OutletName=str
+type EdgeId=tuple[NodeId, NodeId, tuple[OutletName, InletName]]
+
+class NXNetworkModel(NXGraphModel):
+    def inlets(self, n:NodeId, /)->Iterable[InletName]:
+        """override to specify the inlets for a node.
+        the default implementation will attempt to return items
+        from the 'inlets' node property"""
+        if self.hasNodeProperty(n, 'inlets'):
+            for key in self.getNodeProperty(n, "inlets"):
+                yield key
+
+    def outlets(self, n:Hashable, /)->Iterable[OutletName]:
+        """override to specify the outlets for a node.
+        the default implementation will attempt to return items
+        from the 'outlets' node property"""
+        if self.hasNodeProperty(n, 'outlets'):
+            for key in self.getNodeProperty(n, "outlets"):
+                yield key
+
+    @override
+    def addEdge(self, u: Hashable, v: Hashable, k:tuple[str,str], /, **props):
+        assert isinstance(k, tuple)
+        assert len(k)==2
+        assert all(isinstance(_, str) for _ in k)
+        super().addEdge(u, v, k, **props)
+
+    @override
+    def inEdges(self, n: Hashable, inlet_name:str|None = None, /) -> Iterable[tuple[Hashable, Hashable, Hashable]]:
+        """
+        return incoming edges to 'n' node.
+        if inlet_name is not None return edges directly connectod to the inlet only
+        """
+        if inlet_name is None:
+            """retrun incoming edges to the node"""
+            yield from super().inEdges(n)
+        else:
+            """retrun incoming edges to the inlet"""
+            for edge_id in self.G.in_edges(n, keys=True):
+                u, v, k = edge_id
+                assert isinstance(k, tuple)
+                assert len(k)==2
+                o, i = k
+                if i == inlet_name:
+                    yield u, v, k
+
+    @override
+    def outEdges(self, n: Hashable, outlet_name:Hashable|None = None, /) -> Iterable[tuple[Hashable, Hashable, Hashable]]:
+        """
+        return outgoing edges to 'n' node.
+        if 'outlet_name' is not None, return edges connectod to the outlet only
+        """
+        if outlet_name is None:
+            """retrun incoming edges to the node"""
+            yield from super().outEdges(n)
+        else:
+            """retrun incoming edges to the inlet"""
+            for edge_id in self.G.out_edges(n, keys=True):
+                u, v, k = edge_id
+                assert isinstance(k, tuple)
+                assert len(k)==2
+                o, i = k
+                if o == outlet_name:
+                    yield u, v, k

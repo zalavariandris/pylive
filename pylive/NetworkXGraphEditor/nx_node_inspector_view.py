@@ -60,22 +60,22 @@ class NXNodeInspectorView(QWidget):
         self.attributesTable.itemChanged.connect(on_item_changed)
 
         # layout
-        mainLayout = QVBoxLayout()
+        main_layout = QVBoxLayout()
         header_layout = QHBoxLayout()
         header_layout.addWidget(self.kind_label)
         header_layout.addWidget(self.name_label)
-        mainLayout.addLayout(header_layout)
+        main_layout.addLayout(header_layout)
 
-        mainLayout.addWidget(QLabel("attributes"))
+        main_layout.addWidget(QLabel("attributes"))
         buttonsLayout = QHBoxLayout()
         buttonsLayout.addWidget(self.line_edit)
         buttonsLayout.addWidget(self.remove_button)
-        mainLayout.addLayout(buttonsLayout)
-        mainLayout.addWidget(self.attributesTable)
-        mainLayout.addLayout(self.attributesForm)
-        mainLayout.addStretch()
+        main_layout.addLayout(buttonsLayout)
+        main_layout.addWidget(self.attributesTable)
+        main_layout.addLayout(self.attributesForm)
+        main_layout.addStretch()
 
-        self.setLayout(mainLayout)
+        self.setLayout(main_layout)
 
         self._attribute_to_row: dict[str, int] = dict()
         self._row_to_attribute: dict[int, str] = dict()
@@ -86,18 +86,19 @@ class NXNodeInspectorView(QWidget):
     def setModel(self, model: NXGraphModel):
         self._model = model
 
-        model.nodesAdded.connect(lambda: self.updateView())
-        model.nodesRemoved.connect(lambda: self.updateView())
-        model.nodesPropertiesChanged.connect(lambda: self.updateView())
-        self.updateView()
+        model.nodesAdded.connect(lambda: self._updateView())
+        model.nodesRemoved.connect(lambda: self._updateView())
+        model.nodesPropertiesChanged.connect(lambda: self._updateView())
+        self._updateView()
 
     def setSelectionModel(self, selectionModel: NXGraphSelectionModel):
-        selectionModel.selectionChanged.connect(lambda: self.updateView())
+        selectionModel.selectionChanged.connect(lambda: self._updateView())
         self._selectionModel = selectionModel
-        self.updateView()
+        self._updateView()
 
-    def updateView(self):
+    def _updateView(self):
         print("update view")
+        """TODO: needs a ore refined updade mechanism"""
         n = self._get_current_node()
         if not n:
             self.kind_label.setText("")
