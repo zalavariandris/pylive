@@ -4,42 +4,51 @@ from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
 import networkx as nx
-from numpy import isin
+from numpy import iterable
 
 from pylive.utils.geo import intersect_ray_with_rectangle
 
+from dataclasses import dataclass, field
+
+type _NodeId=Hashable
+type _EdgeId=tuple[_NodeId, _NodeId, Hashable]
 
 class NXGraphModel(QObject):
-    nodesAdded: Signal = Signal(list)  # List[Hashable]
-    nodesAboutToBeRemoved: Signal = Signal(list)  # List[Hashable]
-    nodesPropertiesChanged: Signal = Signal(
-        dict
-    )  # dict[Hashable, dict[str, Any]]
+    # Signal: List[_NodeId])
+    nodesAdded: Signal = Signal(list)
+    # Signal: List[_NodeId]
+    nodesAboutToBeRemoved: Signal = Signal(list)
+    # Signal: List[_NodeId]
     nodesRemoved: Signal = Signal(list)
 
-    edgesAdded: Signal = Signal(
-        list
-    )  # List[Tuple[Hashable, Hashable, Hashable]]
-    edgesAboutToBeRemoved: Signal = Signal(
-        list
-    )  # List[Tuple[Hashable, Hashable, Hashable]]
-    edgesPropertiesChanged: Signal = Signal(
-        dict
-    )  # dict[Tuple[Hashable, Hashable, Hashable], dict[str, Any]]
-    edgesRemoved: Signal = Signal(
-        list
-    )  # List[Tuple[Hashable, Hashable, Hashable]]
+    # Signal: List[_EdgeId]
+    edgesAdded: Signal = Signal(list)  
+    # Signal: List[_EdgeId]
+    edgesAboutToBeRemoved: Signal = Signal(list)
+    # Signal: List[_EdgeId]
+    edgesRemoved: Signal = Signal(list)
+
+    # Signal: dict[_NodeId, list]
+    nodesPropertiesChanged: Signal = Signal(dict)  
+    # Signal: dict[_EdgeId, list]
+    edgesPropertiesChanged: Signal = Signal(dict)  
+
+    # @dataclass
+    # class Change:
+    #     added: set = field(default_factory=set)
+    #     removed: set = field(default_factory=set)
+    #     changed: set = field(default_factory=set)
+    #     unchanged: set = field(default_factory=set)
 
     def __init__(self, G: nx.MultiDiGraph = nx.MultiDiGraph(), parent=None):
         super().__init__(parent=parent)
         self.G = G
 
-        for n in self.G.nodes:
-            node = self.addNode(name=n)
+        for n in self.G.nodes():
+            node = self.addNode(n)
 
-        for e in self.G.edges:
+        for e in self.G.edges():
             u, v, k = e
-
             self.addEdge(u, v, k)
 
     def patch(self, G: nx.MultiDiGraph):
@@ -64,16 +73,26 @@ class NXGraphModel(QObject):
         # print("add node: '{n}'")
         self.G.add_node(n, **props)
         self.nodesAdded.emit([n])
-        self.nodesPropertiesChanged.emit({n: props})
+        self.nodesPropertiesChanged.emit({n: props.keys()})
 
-    def setNodeProperties(self, n: Hashable, /, **props):
+    def updateNodeProperties(self, n: Hashable, /, **props):
         # change guard TODO: find removed props
-        change = {}
+        change = list()
         for prop, value in props.items():
-            if prop not in self.G.nodes[n] or value != self.G.nodes[n][prop]:
-                change[prop] = value
-        nx.set_node_attributes(self.G, {n: change})
+            if prop not in self.G.nodes[n]:
+                self.G.nodes[n][prop] = value 
+                change.append(prop)
+
+            if value != self.G.nodes[n][prop]:
+                self.G.nodes[n][prop] = value 
+                change.append(prop)
         self.nodesPropertiesChanged.emit({n: change})
+
+    def delNodeProperty(self, n:Hashable, name, /)->None:
+        del self.G.nodes[n][name]
+        self.nodesPropertiesChanged.emit({
+            n:[name]
+        })
 
     def hasNodeProperty(self, n: Hashable, name, /) -> bool:
         return name in self.G.nodes[n]
@@ -99,15 +118,15 @@ class NXGraphModel(QObject):
         # return [(u, v, k) for u, v, k in self.G.in_edges(n, keys=True)]
 
     def outEdges(
-        self, n: Hashable, /
-    ) -> Iterable[tuple[Hashable, Hashable, Hashable]]:
+        self, n: _NodeId, /
+    ) -> Iterable[_EdgeId]:
         """retrun incoming edges to the node"""
         for e in self.G.edges(n, keys=True):
             yield e
         # return [(u, v, k) for u, v, k in self.G.out_edges(n, keys=True)]
 
     def addEdge(
-        self, u: Hashable, v: Hashable, k: Hashable | None = None, /, **props
+        self, u: _NodeId, v: _NodeId, k: Hashable | None = None, /, **props
     ) -> None:
         if u not in self.G.nodes:
             self.addNode(u)
@@ -119,90 +138,24 @@ class NXGraphModel(QObject):
         )  # note: if k is none, networkx will return a default value for k.
         self.edgesAdded.emit([(u, v, k)])
 
-    def removeEdge(self, u: Hashable, v: Hashable, k: Hashable):
+    def removeEdge(self, u: _NodeId, v: _NodeId, k: Hashable):
         self.edgesAboutToBeRemoved.emit([(u, v, k)])
         self.G.remove_edge(u, v, k)
         self.edgesRemoved.emit([(u, v, k)])
 
     def setEdgeProperties(
-        self, u: Hashable, v: Hashable, k: Hashable, /, **props
+        self, u: _NodeId, v: _NodeId, k: Hashable, /, **props
     ):
         nx.set_edge_attributes(self.G, {(u, v, k): props})
         self.edgesPropertiesChanged.emit([(u, v, k)], list(props.keys()))
 
-    def getEdgeProperty(self, u: Hashable, v: Hashable, k: Hashable, prop, /):
+    def getEdgeProperty(self, u: _NodeId, v: _NodeId, k: Hashable, prop, /)->object|None:
         return self.G.edges[u, v, k][prop]
 
-    def isEdgeAllowed(self, u: Hashable, v: Hashable, k: Hashable, /) -> bool:
+    def isEdgeAllowed(self, u: _NodeId, v: _NodeId, k: Hashable, /) -> bool:
         if u == v:
             return False
         return True
 
 
 
-type NodeId=Hashable
-type InletName=str
-type OutletName=str
-type EdgeId=tuple[NodeId, NodeId, tuple[OutletName, InletName]]
-
-class NXNetworkModel(NXGraphModel):
-    def inlets(self, n:NodeId, /)->Iterable[InletName]:
-        """override to specify the inlets for a node.
-        the default implementation will attempt to return items
-        from the 'inlets' node property"""
-        if self.hasNodeProperty(n, 'inlets'):
-            for key in self.getNodeProperty(n, "inlets"):
-                yield key
-
-    def outlets(self, n:Hashable, /)->Iterable[OutletName]:
-        """override to specify the outlets for a node.
-        the default implementation will attempt to return items
-        from the 'outlets' node property"""
-        if self.hasNodeProperty(n, 'outlets'):
-            for key in self.getNodeProperty(n, "outlets"):
-                yield key
-
-    @override
-    def addEdge(self, u: Hashable, v: Hashable, k:tuple[str,str], /, **props):
-        assert isinstance(k, tuple)
-        assert len(k)==2
-        assert all(isinstance(_, str) for _ in k)
-        super().addEdge(u, v, k, **props)
-
-    @override
-    def inEdges(self, n: Hashable, inlet_name:str|None = None, /) -> Iterable[tuple[Hashable, Hashable, Hashable]]:
-        """
-        return incoming edges to 'n' node.
-        if inlet_name is not None return edges directly connectod to the inlet only
-        """
-        if inlet_name is None:
-            """retrun incoming edges to the node"""
-            yield from super().inEdges(n)
-        else:
-            """retrun incoming edges to the inlet"""
-            for edge_id in self.G.in_edges(n, keys=True):
-                u, v, k = edge_id
-                assert isinstance(k, tuple)
-                assert len(k)==2
-                o, i = k
-                if i == inlet_name:
-                    yield u, v, k
-
-    @override
-    def outEdges(self, n: Hashable, outlet_name:Hashable|None = None, /) -> Iterable[tuple[Hashable, Hashable, Hashable]]:
-        """
-        return outgoing edges to 'n' node.
-        if 'outlet_name' is not None, return edges connectod to the outlet only
-        """
-        if outlet_name is None:
-            """retrun incoming edges to the node"""
-            yield from super().outEdges(n)
-        else:
-            """retrun incoming edges to the inlet"""
-            for edge_id in self.G.out_edges(n, keys=True):
-                u, v, k = edge_id
-                assert isinstance(k, tuple)
-                assert len(k)==2
-                o, i = k
-                if o == outlet_name:
-                    yield u, v, k

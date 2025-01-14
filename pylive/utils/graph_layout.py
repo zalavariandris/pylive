@@ -20,7 +20,7 @@ def hiearchical_layout_with_grandalf(G, scale=1):
 
 
 import networkx as nx
-def hiearchical_layout_with_nx(G, scale=100):
+def hiearchical_layout_with_nx(G:nx.DiGraph, scale=100):
     for layer, nodes in enumerate(
         reversed(tuple(nx.topological_generations(G)))
     ):

@@ -5,10 +5,13 @@ from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 from networkx import find_induced_nodes
+from numpy import isin
 # from pylive.QtLiveApp.live_script_skeleton import LiveScriptWindow
-from pylive.NetworkXGraphEditor.nx_graph_model import NXGraphModel, NXNetworkModel
+from pylive.NetworkXGraphEditor.nx_graph_shapes import BaseNodeItem
+from pylive.NetworkXGraphEditor.nx_network_model import NXNetworkModel
+from pylive.NetworkXGraphEditor.nx_network_model import _NodeId
 from pylive.NetworkXGraphEditor.nx_graph_selection_model import NXGraphSelectionModel
-from pylive.NetworkXGraphEditor.nx_network_scene_outlet_to_inlet import NXNetworkScene, NodeId
+from pylive.NetworkXGraphEditor.nx_network_scene_outlet_to_inlet import NXNetworkScene, StandardNetworkDelegte
 from pylive.NetworkXGraphEditor.nx_node_inspector_view import NXNodeInspectorView
 
 from pylive.options_dialog import OptionDialog
@@ -23,7 +26,7 @@ class PythonGraphModel(NXNetworkModel):
         super().addNode(
             node_id, 
             fn=fn,
-            cache=EMPTY
+            cached=False
         )
         return node_id
 
@@ -31,18 +34,19 @@ class PythonGraphModel(NXNetworkModel):
         return cast(Callable, self.getNodeProperty(node_id, "fn"))
 
     def setArgumentExpression(self, node_id, arg:str, expression:str):
-        self.setNodeProperties(node_id, **{arg:expression})
-        def invalidate(self, node_id)
+        self.updateNodeProperties(node_id, **{arg:expression})
+        self.invalidate(node_id)
 
     def getArgumentExpression(self, node_id, arg:str)->str:
-        return self.getNodeProperty(node_id, arg)
+        expression = self.getNodeProperty(node_id, arg)
+        assert isinstance(expression, str)
+        return expression
 
     def arguments(self, node_id)->Iterable[str]:
         fn = self.getNodeProperty(node_id, "fn")
         assert callable(fn), "Node function should have been a callable!"
         sig = inspect.signature(fn)
         for name, paramteter in sig.parameters.items():
-            print("param name", name)
             yield name
 
     def inlets(self, node_id:Hashable, /)->Iterable[str]:
@@ -52,39 +56,177 @@ class PythonGraphModel(NXNetworkModel):
         return ['out']
 
     def invalidate(self, node_id, recursive=True):
-        del self.G.nodes[node_id]['cache'] # todo: NXGraphModel is missing a delete node attribute
-        for u, v, _ in self.outEdges(node_id):
-            self.invalidate(v)
+        self.updateNodeProperties(node_id, cached=False)
+        if recursive:
+            for u, v, k in self.outEdges(node_id):
+                self.invalidate(v)
 
     def evaluate(self, node_id):
-        try:
-            return self.getNodeProperty(node_id, 'cache')
-        except KeyError:
-            fn = self.getFunction()
-            for arg_name in self.arguments():
-                arg_value = self.inEdges()
-            args = self.arguments()
-            sources = 
-
-            args.update(sources)
-
-            value = fn(*arguments)
-            self.setNodeProperty(node_id, cache=value)
-        for u, v, k in self.inEdges(node_id):
-
-        ...
+        import networkx as nx
+        predecessors = nx.dfs_predecessors(self.G, node_id)
+        successors = nx.dfs_successors(self.G, node_id)
+        print("predecessors", predecessors, "successors", successors)
+        for i, n in enumerate(predecessors):
+            self.updateNodeProperties(n, idx=i)
+        self.updateNodeProperties(node_id, cached=True)
 
 
 
+class LivePythonGraphWindow(QWidget):
+    def __init__(self, parent: QWidget|None=None) -> None:
+        super().__init__(parent=parent)
+        self.setWindowTitle("Live Python function Graph")
+
+        self._model = PythonGraphModel()
+        from pathlib import Path
+
+        self._selection_model = NXGraphSelectionModel(self._model)
+
+        ### create and layout widgets
+        main_layout = QVBoxLayout()
+        self.setLayout(main_layout)
+
+        ### menu
+        menubar = QMenuBar()
+        evaluate_action = QAction("evaluate", self)
+        evaluate_action.triggered.connect(lambda: self.evaluate_selected())
+        menubar.addAction(evaluate_action)
+        invalidate_action = QAction("invalidate", self)
+        invalidate_action.triggered.connect(lambda: self.invalidate_selected())
+        menubar.addAction(invalidate_action)
+        main_layout.setMenuBar(menubar)
+
+
+        ### graph
+        self.graphview = QGraphicsView()
+        self.graphview.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
+        self.graphview.setCacheMode(QGraphicsView.CacheModeFlag.CacheNone)
+        self.graphview.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        self.graphview.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
+        self.graphview.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
+
+        self.graphscene = NXNetworkScene(self._model, self._selection_model)
+        self.graphscene.setSelectionModel(self._selection_model)
+        self.graphscene.setSceneRect(-9999,-9999,9999*2,9999*2)
+        self.graphview.setScene(self.graphscene)
+
+        ### inspector
+        self.inspector_panel = QWidget()
+        self.inspector_panel.setLayout(QVBoxLayout())
+        self.function_inspector = FunctionInspector()
+        self.function_inspector.paramTextChanged.connect(lambda param_name, expression: 
+            self.graphmodel().setArgumentExpression(self.selectionModel().selectedNodes()[0], param_name, expression))
+
+        self.inspector_panel.layout().addWidget(self.function_inspector)
+        self._selection_model.selectionChanged.connect(self.onSelectionChanged)
+
+        self.graphscene.installEventFilter(self)
+
+        ### main splitter
+        splitter = QSplitter()
+        splitter.addWidget(self.graphview)
+        splitter.addWidget(self.inspector_panel)
+        splitter.setSizes([splitter.width()//splitter.count() for idx in range(splitter.count())])
+        main_layout.addWidget(splitter)
+
+        n1 = self._model.addFunction(print)
+        n2 = self._model.addFunction(Path)
+        self._model.addEdge(n1, n2, ("out", "args"))
+        self.graphscene.layout()
+
+    @Slot()
+    def evaluate_selected(self):
+        selected_nodes = self._selection_model.selectedNodes()
+        print("evaluate_selected", selected_nodes)
+        if len(selected_nodes)>0:
+            current_node_id = selected_nodes[0]
+            self._model.evaluate(current_node_id)
+
+    @Slot()
+    def invalidate_selected(self):
+        selected_nodes = self._selection_model.selectedNodes()
+        print("invalidate_selected", selected_nodes)
+        if len(selected_nodes)>0:
+            current_node_id = selected_nodes[0]
+            self._model.invalidate(current_node_id)
+
+    def graphmodel(self)->PythonGraphModel:
+        return self._model
+
+    def selectionModel(self)->NXGraphSelectionModel:
+        return self._selection_model
+
+
+    def sizeHint(self) -> QSize:
+        return QSize(900, 500)
+
+    def onSelectionChanged(self, selected:set[_NodeId], deselected:set[_NodeId]):
+        selected_nodes = self._selection_model.selectedNodes()
+        if len(selected_nodes)>0:
+            node_id = self._selection_model.selectedNodes()[0]
+            fn:Callable = self._model.getFunction(node_id)
+
+            argument_expressions = dict()
+            for arg_name in self.graphmodel().arguments(node_id):
+                try:
+                    expression = self.graphmodel().getArgumentExpression(node_id, arg_name)
+                    argument_expressions[arg_name] = expression
+                except KeyError:
+                    pass
+            self.function_inspector.setFunction(fn, argument_expressions=argument_expressions)
+        else:
+            self.function_inspector.setFunction(None)
+
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
+        if watched == self.graphscene:
+            def get_available_nodes():
+                for name in dir(__builtins__):
+                    if not name.startswith("_"):
+                        item = getattr(__builtins__, name)
+                        if callable(item):
+                            yield name, item
+
+                import pathlib
+                for name in dir(pathlib):
+                    if not name.startswith("_"):
+                        item = getattr(pathlib, name)
+                        if callable(item):
+                            yield name, item
+
+
+                def sample_function(x:int, y:int)->int:
+                    return x + y
+
+                yield 'sample_function', sample_function
+
+            def open_nodes_dialog():
+                available_nodes = {key: val for key, val in get_available_nodes()}
+                dialog = OptionDialog(options=[_ for _ in available_nodes.keys()], title="Create Nodes", parent=self.graphview)
+                result = dialog.exec()
+
+                if result == QDialog.DialogCode.Accepted:
+                    if function_name:=dialog.optionValue():
+                        all_nodes = [str(_) for _ in self._model.nodes()]
+                        fn = available_nodes[function_name]
+                        self._model.addFunction(fn)
+                        
+                else:
+                    print("cancelled")
+
+            if  event.type() == QEvent.Type.KeyPress and cast(QKeyEvent, event).key() == Qt.Key.Key_Tab:
+                open_nodes_dialog()
+                return True
+            elif event.type() == QEvent.Type.GraphicsSceneMouseDoubleClick:
+                open_nodes_dialog()
+                return True
+
+        return super().eventFilter(watched, event)
 
 
 class FunctionInspector(QWidget):
     paramTextChanged = Signal(str, str) #parameter name, editor text
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent=parent)
-        self._model: NXGraphModel | None = None
-        self._selection_model: NXGraphSelectionModel | None = None
-
         main_layout = QVBoxLayout()
         main_layout.setSpacing(0)
         main_layout.setContentsMargins(0,0,0,0)
@@ -192,122 +334,6 @@ class FunctionInspector(QWidget):
             self.body_layout.addWidget(text_edit)
             # self.body_layout.addWidget(QLabel(f"{doc!s}"))
 
-
-class LivePythonGraphWindow(QWidget):
-    def __init__(self, parent: QWidget|None=None) -> None:
-        super().__init__(parent=parent)
-        self.setWindowTitle("Live Python function Graph")
-        main_layout = QVBoxLayout()
-        self.setLayout(main_layout)
-
-        self._model = PythonGraphModel()
-        self._selection_model = NXGraphSelectionModel(self._model)
-        self.graphview = QGraphicsView()
-        self.graphview.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
-        self.graphview.setCacheMode(QGraphicsView.CacheModeFlag.CacheNone)
-        self.graphview.setRenderHint(QPainter.RenderHint.Antialiasing, True)
-        self.graphview.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
-        self.graphview.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
-
-        self.graphscene = NXNetworkScene(self._model, self._selection_model)
-        self.graphscene.setSelectionModel(self._selection_model)
-        self.graphscene.setSceneRect(-9999,-9999,9999*2,9999*2)
-        self.graphview.setScene(self.graphscene)
-
-        self.inspector_panel = QWidget()
-        self.inspector_panel.setLayout(QVBoxLayout())
-        self.function_inspector = FunctionInspector()
-        self.function_inspector.paramTextChanged.connect(lambda param_name, expression: 
-            self.graphmodel().setArgumentExpression(self.selectionModel().selectedNodes()[0], param_name, expression))
-
-        self.inspector_panel.layout().addWidget(self.function_inspector)
-        self._selection_model.selectionChanged.connect(self.onSelectionChanged)
-
-        self.graphscene.installEventFilter(self)
-
-        splitter = QSplitter()
-        splitter.addWidget(self.graphview)
-        splitter.addWidget(self.inspector_panel)
-        splitter.setSizes([splitter.width()//splitter.count() for idx in range(splitter.count())])
-        main_layout.addWidget(splitter)
-
-    def graphmodel(self)->PythonGraphModel:
-        return self._model
-
-    def selectionModel(self)->NXGraphSelectionModel:
-        return self._selection_model
-
-
-    def sizeHint(self) -> QSize:
-        return QSize(900, 500)
-
-    def onSelectionChanged(self, selected:set[NodeId], deselected:set[NodeId]):
-        selected_nodes = self._selection_model.selectedNodes()
-        if len(selected_nodes)>0:
-            node_id = self._selection_model.selectedNodes()[0]
-            fn:Callable = self._model.getFunction(node_id)
-
-            argument_expressions = dict()
-            for arg_name in self.graphmodel().arguments(node_id):
-                try:
-                    expression = self.graphmodel().getArgumentExpression(node_id, arg_name)
-                    argument_expressions[arg_name] = expression
-                except KeyError:
-                    pass
-            self.function_inspector.setFunction(fn, argument_expressions=argument_expressions)
-        else:
-            self.function_inspector.setFunction(None)
-
-    def setNodePropertyEditor(self, param_name, expression, editor):
-        ...
-
-    def setNodePropertyModel(self, node_id, param_name, expression):
-        ...
-
-    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
-        if watched == self.graphscene:
-            def get_available_nodes():
-                for name in dir(__builtins__):
-                    if not name.startswith("_"):
-                        item = getattr(__builtins__, name)
-                        if callable(item):
-                            yield name, item
-
-                import pathlib
-                for name in dir(pathlib):
-                    if not name.startswith("_"):
-                        item = getattr(pathlib, name)
-                        if callable(item):
-                            yield name, item
-
-
-                def sample_function(x:int, y:int)->int:
-                    return x + y
-
-                yield 'sample_function', sample_function
-
-            def open_nodes_dialog():
-                available_nodes = {key: val for key, val in get_available_nodes()}
-                dialog = OptionDialog(options=[_ for _ in available_nodes.keys()], title="Create Nodes", parent=self.graphview)
-                result = dialog.exec()
-
-                if result == QDialog.DialogCode.Accepted:
-                    if function_name:=dialog.optionValue():
-                        all_nodes = [str(_) for _ in self._model.nodes()]
-                        fn = available_nodes[function_name]
-                        self._model.addFunction(fn)
-                        
-                else:
-                    print("cancelled")
-
-            if  event.type() == QEvent.Type.KeyPress and event.key() == Qt.Key.Key_Tab:
-                open_nodes_dialog()
-                return True
-            elif event.type() == QEvent.Type.GraphicsSceneMouseDoubleClick:
-                open_nodes_dialog()
-                return True
-
-        return super().eventFilter(watched, event)
 
 
 
