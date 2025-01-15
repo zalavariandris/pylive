@@ -81,10 +81,9 @@ class StandardNetworkDelegte:
         link.setZValue(-1)
         return link
 
-    @override
-    def createPropertyEditor(self, parent_node: QGraphicsItem, model: NXNetworkModel, n: _NodeId, prop: str)->QGraphicsItem|None:
+    def createPropertyEditor(self, parent_node: QGraphicsItem, model: NXNetworkModel, node_id: _NodeId, prop: str)->QGraphicsItem|None:
         try:
-            value = model.getNodeProperty(n, prop)
+            value = model.getNodeProperty(node_id, prop)
             badge = QGraphicsTextItem(f"{prop}:, {value}")
             badge.setParentItem(parent_node)
             badge.setPos(
@@ -95,13 +94,11 @@ class StandardNetworkDelegte:
         except KeyError:
             return None
 
-    @override
     def setNodePropertyEditor(self, model: NXNetworkModel, node_id:Hashable, prop:str, editor: QGraphicsItem):
         value = model.getNodeProperty(node_id, prop)
         editor = cast(QGraphicsTextItem, editor)
         editor.setPlainText(f"{prop}: {value}")
 
-    @override
     def setNodePropertyModel(self, model:NXNetworkModel, node_id:Hashable, prop:str, editor: QGraphicsItem):
         ...
 
@@ -388,7 +385,7 @@ class NXNetworkScene(QGraphicsScene):
 
     def layout(self):
         assert self._model
-        from pylive.utils.graph_layout import hiearchical_layout_with_nx
+        from pylive.utils.graph import hiearchical_layout_with_nx
         pos = hiearchical_layout_with_nx(self._model.G, scale=100)
         for N, (x, y) in pos.items():
             widget = self.nodeGraphicsObject(N)
@@ -608,7 +605,6 @@ if __name__ == "__main__":
     from pylive.utils.graph import dependencies, dependents
     import networkx as nx
     def on_selection_changed(selected, deselected):
-
         for n in graph.nodes():
             graph.updateNodeProperties(n, dep=-1)
 

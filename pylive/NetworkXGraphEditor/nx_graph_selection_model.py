@@ -93,6 +93,12 @@ class NXGraphSelectionModel(QObject):
         self._selectedNodes = newSelection
         self.__emitSelectionChanged(newSelection, oldSelection)
 
+    def currentNode(self)->Hashable|None:
+        if len(self._selectedNodes)>0:
+            return self._selectedNodes[0]
+        else:
+            return None
+
     # Protected
     def __emitSelectionChanged(
         self, newSelection: list[Hashable], oldSelection: list[Hashable]

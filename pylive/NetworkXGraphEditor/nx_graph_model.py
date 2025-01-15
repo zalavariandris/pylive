@@ -88,7 +88,7 @@ class NXGraphModel(QObject):
                 change.append(prop)
         self.nodesPropertiesChanged.emit({n: change})
 
-    def delNodeProperty(self, n:Hashable, name, /)->None:
+    def deleteNodeProperty(self, n:Hashable, name, /)->None:
         del self.G.nodes[n][name]
         self.nodesPropertiesChanged.emit({
             n:[name]
