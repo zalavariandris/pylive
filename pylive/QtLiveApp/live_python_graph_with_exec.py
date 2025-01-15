@@ -337,12 +337,18 @@ class FunctionInspectorView(QWidget):
             sig = inspect.signature(fn)
             SENTINEL = object()
             def parameter_to_row(param:inspect.Parameter)->tuple[QLabel, QLineEdit]:
+                assert self._model
+                assert self._selection_model
                 name_label = Q.label(format_param(param))
-                value = argument_expressions.get(param.name, SENTINEL)
+                node_id = self._selection_model.currentNode()
+                try:
+                    value = self._model.getNodeProperty(node_id, param.name)
+                except:
+                    value = ""
                 param_editor = Q.lineedit(
                     f"{value!r}" if value !=SENTINEL else "", 
                     placeholder=f"{param.default!r}" if param.default is not inspect.Parameter.empty else "",
-                    onTextChanged=lambda text, param=param: self.paramTextChanged.emit(param.name, text)
+                    onTextChanged=lambda text, param=param.name: self.onParameterChanged(param, text)
                 )
                 return name_label, param_editor
 
@@ -359,6 +365,13 @@ class FunctionInspectorView(QWidget):
             text_edit.setReadOnly(True)
             text_edit.setText(doc)
             self.body_layout.addWidget(text_edit)
+
+    def onParameterChanged(self, param_name:str, text:str):
+        print("on param changed")
+        assert self._model
+        assert self._selection_model
+        node_id = self._selection_model.currentNode()
+        self._model.updateNodeProperties(node_id, **{param_name: text})
 
 
 class DataViewer(QWidget):

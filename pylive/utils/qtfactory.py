@@ -59,6 +59,7 @@ def lineedit(contents="", /, placeholder="", onTextChanged:Callable|None=None)->
 	lineedit = QLineEdit(contents)
 	lineedit.setPlaceholderText(placeholder)
 	if onTextChanged:
+		print("connect textChanged")
 		lineedit.textChanged.connect(onTextChanged)
 
 	return lineedit
