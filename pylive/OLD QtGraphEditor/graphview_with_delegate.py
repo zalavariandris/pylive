@@ -116,7 +116,7 @@ class NXGraphView(QGraphicsView):
 		self._graphmodel = graphmodel
 
 		self._graphmodel.nodesAdded.connect(self.handleNodesAdded)
-		self._graphmodel.nodesPropertiesChanged.connect(self.handleNodesPropertiesChanged)
+		self._graphmodel.nodesChanged.connect(self.handleNodesPropertiesChanged)
 		self._graphmodel.edgesAdded.connect(self.handleEdgesAdded)
 	
 	def handleNodesAdded(self, nodes:List[Hashable]):

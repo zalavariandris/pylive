@@ -164,14 +164,14 @@ class NXNetworkScene(QGraphicsScene):
         if self._model:
             model.nodesAdded.disconnect(self.onNodesCreated)
             model.nodesAboutToBeRemoved.disconnect(self.onNodesDeleted)
-            model.nodesPropertiesChanged.disconnect(self.onNodesProperiesChanged)
+            model.nodesChanged.disconnect(self.onNodesProperiesChanged)
             model.edgesAdded.disconnect(self.onEdgesCreated)
             model.edgesAboutToBeRemoved.disconnect(self.onEdgesDeleted)
 
         if model:
             _ = model.nodesAdded.connect(self.onNodesCreated)
             _ = model.nodesAboutToBeRemoved.connect(self.onNodesDeleted)
-            _ = model.nodesPropertiesChanged.connect(self.onNodesProperiesChanged)
+            _ = model.nodesChanged.connect(self.onNodesProperiesChanged)
             _ = model.edgesAdded.connect(self.onEdgesCreated)
             _ = model.edgesAboutToBeRemoved.connect(self.onEdgesDeleted)
         
@@ -256,7 +256,7 @@ class NXNetworkScene(QGraphicsScene):
                 outlet.setY(node.boundingRect().bottom()+3)
             distribute_items_horizontal(outlets, node.boundingRect())
 
-    def onNodesProperiesChanged(self, changes:dict[_NodeId, list]):
+    def onNodesProperiesChanged(self, changes:dict[_NodeId, list[str]]):
         assert self._model is not None
         
         for node_id, properties in changes.items():
@@ -267,13 +267,16 @@ class NXNetworkScene(QGraphicsScene):
                     value = self._model.getNodeProperty(node_id, prop)
                     """prop exist"""
                     try:
+                        # get the editor
                         editor = self._property_editors[(node_id, prop)]
                     except KeyError:
+                        # no editor exist for the property yet
+                        # create the editor
                         if editor := self.delegate.createPropertyEditor(node, self._model, node_id, prop):
                             self._property_editors[(node_id, prop)] = editor
 
                     if editor:
-                        """set editori if exists"""
+                        # set editor if exists
                         self.delegate.setNodePropertyEditor(self._model, node_id, prop, editor)
 
                 except KeyError:

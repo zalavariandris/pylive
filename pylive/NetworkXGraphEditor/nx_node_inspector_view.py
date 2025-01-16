@@ -88,7 +88,7 @@ class NXNodeInspectorView(QWidget):
 
         model.nodesAdded.connect(lambda: self._updateView())
         model.nodesRemoved.connect(lambda: self._updateView())
-        model.nodesPropertiesChanged.connect(lambda: self._updateView())
+        model.nodesChanged.connect(lambda: self._updateView())
         self._updateView()
 
     def setSelectionModel(self, selectionModel: NXGraphSelectionModel):

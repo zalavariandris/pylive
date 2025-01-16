@@ -47,17 +47,17 @@ class TestGraphPropertySignals(unittest.TestCase):
     def test_property_added(self):
         graph = NXGraphModel()
         graph.addNode("N1", hello="VALUE")
-        spy = QSignalSpy(graph.nodesPropertiesChanged)
+        spy = QSignalSpy(graph.nodesChanged)
         graph.updateNodeProperties("N1", prop2="VALUE2")
-        self.assertEqual(spy.count(), 1, "'nodesPropertiesChanged' Signal was not emitted exactly once.")
+        self.assertEqual(spy.count(), 1, "'nodesChanged' Signal was not emitted exactly once.")
         self.assertEqual(spy.at(0)[0], {"N1": ["prop2"]})
 
     def test_property_updated(self):
         graph = NXGraphModel()
         graph.addNode("N1", prop="VALUE")
-        spy = QSignalSpy(graph.nodesPropertiesChanged)
+        spy = QSignalSpy(graph.nodesChanged)
         graph.updateNodeProperties("N1", prop="VALUE2")
-        self.assertEqual(spy.count(), 1, "'nodesPropertiesChanged' Signal was not emitted exactly once.")
+        self.assertEqual(spy.count(), 1, "'nodesChanged' Signal was not emitted exactly once.")
         self.assertEqual(spy.at(0)[0], {"N1": ["prop"] })
 
     def test_property_removed(self):

@@ -138,7 +138,7 @@ class GraphView(QGraphicsView):
 
         self._graphmodel.nodesAdded.connect(self.handleNodesAdded)
         self._graphmodel.nodesAboutToBeRemoved.connect(self.handleNodesRemoved)
-        self._graphmodel.nodesPropertiesChanged.connect(
+        self._graphmodel.nodesChanged.connect(
             self.handleNodesPropertiesChanged
         )
 

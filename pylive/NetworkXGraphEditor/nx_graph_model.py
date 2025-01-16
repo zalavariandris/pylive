@@ -29,7 +29,7 @@ class NXGraphModel(QObject):
     edgesRemoved: Signal = Signal(list)
 
     # Signal: dict[_NodeId, list]
-    nodesPropertiesChanged: Signal = Signal(dict)  
+    nodesChanged: Signal = Signal(dict)  
     # Signal: dict[_EdgeId, list]
     edgesPropertiesChanged: Signal = Signal(dict)  
 
@@ -73,7 +73,7 @@ class NXGraphModel(QObject):
         # print("add node: '{n}'")
         self.G.add_node(n, **props)
         self.nodesAdded.emit([n])
-        self.nodesPropertiesChanged.emit({n: props.keys()})
+        self.nodesChanged.emit({n: props.keys()})
 
     def updateNodeProperties(self, n: Hashable, /, **props):
         # change guard TODO: find removed props
@@ -86,11 +86,11 @@ class NXGraphModel(QObject):
             if value != self.G.nodes[n][prop]:
                 self.G.nodes[n][prop] = value 
                 change.append(prop)
-        self.nodesPropertiesChanged.emit({n: change})
+        self.nodesChanged.emit({n: change})
 
     def deleteNodeProperty(self, n:Hashable, name, /)->None:
         del self.G.nodes[n][name]
-        self.nodesPropertiesChanged.emit({
+        self.nodesChanged.emit({
             n:[name]
         })
 

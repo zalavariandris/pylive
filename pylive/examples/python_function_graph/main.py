@@ -187,7 +187,7 @@ class PythonGraphWindow(QWidget):
         # graphmodel
         graphmodel = PythonGraphModel()
         graphmodel.nodesAdded.connect(self.handleNodesAdded)
-        graphmodel.nodesPropertiesChanged.connect(
+        graphmodel.nodesChanged.connect(
             self.handleNodesPropertiesChanged
         )
         graphmodel.nodesAboutToBeRemoved.connect(self.handleNodesRemoved)

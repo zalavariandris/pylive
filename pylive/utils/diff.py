@@ -10,21 +10,21 @@ class Change:
     changed: dict
     unchanged: dict
 
-def diff_dict(dict1:dict, dict2:dict)->Change:
+def diff_dict(prev:dict, current:dict)->Change:
     """
     Compute the difference between two dictionaries.
 
     Args:
-        dict1 (dict): The first dictionary (original).
-        dict2 (dict): The second dictionary (updated).
+        prev (dict): The previous (original) dictionary.
+        current (dict): The current (updated) dictionary.
 
     Returns:
         dict: A dictionary containing added, removed, changed, and unchanged keys.
     """
-    added =     {k: dict2[k] for k in dict2 if k not in dict1}
-    removed =   {k: dict1[k] for k in dict1 if k not in dict2}
-    changed =   {k: (dict1[k], dict2[k]) for k in dict1 if k in dict2 and dict1[k] != dict2[k]}
-    unchanged = {k: dict1[k] for k in dict1 if k in dict2 and dict1[k] == dict2[k]}
+    added =     {k: current[k] for k in current if k not in prev}
+    removed =   {k: prev[k] for k in prev if k not in current}
+    changed =   {k: (prev[k], current[k]) for k in prev if k in current and prev[k] != current[k]}
+    unchanged = {k: prev[k] for k in prev if k in current and prev[k] == current[k]}
 
     return Change(
         added=added,
@@ -34,19 +34,19 @@ def diff_dict(dict1:dict, dict2:dict)->Change:
     )
 
 
-def diff_list(list1:list, list2:list)->Change:
+def diff_list(prev:list, current:list)->Change:
     added = dict()
     removed = dict()
     unchanged = dict()
-    for i, (item1, item2) in enumerate(zip_longest(list1, list2, fillvalue=_SENTINEL_)):
+    for i, (item1, item2) in enumerate(zip_longest(prev, current, fillvalue=_SENTINEL_)):
         if item1 is item2:
             # Items are unchanged
             unchanged[i]=item1
         elif item1 is _SENTINEL_:
-            # Item added in list2
+            # Item added in current
             added[i]=item2
         elif item2 is _SENTINEL_:
-            # Item removed from list1
+            # Item removed from prev
             removed[i]=item1
         else:
             # Item replaced (treated as a remove and add)

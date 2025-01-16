@@ -347,7 +347,7 @@ class NXGraphView(QGraphicsView):
         model.nodesAboutToBeRemoved.connect(self.handleNodesRemoved)
         model.edgesAdded.connect(self.handleEdgesAdded)
         model.edgesAboutToBeRemoved.connect(self.handleEdgesRemoved)
-        model.nodesPropertiesChanged.connect(self.handleNodesPropertiesChanged)
+        model.nodesChanged.connect(self.handleNodesPropertiesChanged)
 
         model.nodesAdded.connect(self.updateGraphLayout)
         model.nodesRemoved.connect(self.updateGraphLayout)

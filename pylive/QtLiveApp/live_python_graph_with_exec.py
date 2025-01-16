@@ -146,13 +146,8 @@ class LivePythonGraphWindow(QWidget):
         self.graphscene.installEventFilter(self)
 
         ### inspector
-        self.inspector_panel = QWidget()
-        self.inspector_panel.setLayout(QVBoxLayout())
         self.function_inspector = FunctionInspectorView(self._model, self._selection_model)
-        self.function_inspector.paramTextChanged.connect(lambda param_name, expression: 
-            self.graphmodel().setArgumentExpression(self.selectionModel().currentNode(), param_name, expression))
-
-        self.inspector_panel.layout().addWidget(self.function_inspector)
+        self.function_inspector2 = FunctionInspectorView(self._model, self._selection_model)
         
         ### Previewer
         self.dataviewer = DataViewer(self._model, self._selection_model)
@@ -160,7 +155,8 @@ class LivePythonGraphWindow(QWidget):
         ### main splitter
         splitter = QSplitter()
         splitter.addWidget(self.graphview)
-        splitter.addWidget(self.inspector_panel)
+        splitter.addWidget(self.function_inspector)
+        splitter.addWidget(self.function_inspector2)
         splitter.addWidget(self.dataviewer)
         splitter.setSizes([splitter.width()//splitter.count() for idx in range(splitter.count())])
         main_layout.addWidget(splitter)
@@ -208,7 +204,7 @@ class LivePythonGraphWindow(QWidget):
                     if function_name:=dialog.optionValue():
                         all_nodes = [str(_) for _ in self._model.nodes()]
                         fn = available_nodes[function_name]
-                        self._model.addFunction(fn)
+                        node_id = self._model.addFunction(fn)
                         
                 else:
                     print("cancelled")
@@ -222,48 +218,63 @@ class LivePythonGraphWindow(QWidget):
 
         return super().eventFilter(watched, event)
 
-
+from bidict import bidict
 class FunctionInspectorView(QWidget):
     paramTextChanged = Signal(str, str) #parameter name, editor text
     def __init__(self, model:PythonGraphModel, selectionmodel:NXGraphSelectionModel, parent: QWidget | None = None):
         super().__init__(parent=parent)
-
+        ### attributes
         self._model = None
         self._selection_model = None
+        self._node_editors: bidict[Hashable, QWidget] = bidict()
+        self._attribute_editors: bidict[tuple[Hashable, inspect.Parameter], tuple[QLabel,QWidget]] = bidict()
 
+        ### setup ui
         main_layout = QVBoxLayout()
         main_layout.setSpacing(0)
         main_layout.setContentsMargins(0,0,0,0)
 
-        self.header_layout = QVBoxLayout()
-        self.header_layout.setSpacing(0)
-        self.header_layout.setContentsMargins(0,0,0,0)
-        main_layout.addWidget(QLabel("<h4>Node</h4>"))
-        main_layout.addLayout(self.header_layout)
 
-        self.body_layout = QVBoxLayout()
-        self.body_layout.setSpacing(0)
-        self.body_layout.setContentsMargins(0,0,0,0)
+
+        # self.header_layout = QVBoxLayout()
+        # self.header_layout.setSpacing(0)
+        # self.header_layout.setContentsMargins(0,0,0,0)
+        # main_layout.addWidget(QLabel("<h4>Node</h4>"))
+        # main_layout.addLayout(self.header_layout)
+
+        # self.properties_layout = QFormLayout()
+        # self.properties_layout.setSpacing(0)
+        # self.properties_layout.setContentsMargins(0,0,0,0)
         
-        main_layout.addLayout(self.body_layout)
+        # main_layout.addLayout(self.properties_layout)
 
+        # self.help_widget = QTextEdit()
+        # self.help_widget.setReadOnly(True)
+        # main_layout.addWidget(self.help_widget)
         main_layout.addStretch()
 
         self.setLayout(main_layout)
 
-        ### setup
+        ### set models
         self.setModel(model)
         self.setSelectionModel(selectionmodel)
 
     def setModel(self, model:PythonGraphModel):
+        if self._model:
+            self._model.nodesChanged.disconnect(self.onNodesChanged)
+        if model:
+            model.nodesChanged.connect(self.onNodesChanged)
         self._model = model
 
     def model(self):
         return self._model
 
     def setSelectionModel(self, selectionmodel:NXGraphSelectionModel):
+        if self._selection_model:
+            selectionmodel.selectionChanged.disconnect(self.onSelectionChanged)
+        if selectionmodel:
+            selectionmodel.selectionChanged.connect(self.onSelectionChanged)
         self._selection_model = selectionmodel
-        selectionmodel.selectionChanged.connect(self.onSelectionChanged)
 
     def selectionModel(self):
         return self._selection_model
@@ -271,107 +282,170 @@ class FunctionInspectorView(QWidget):
     def onSelectionChanged(self, selected, deselected):
         assert self._model
         assert self._selection_model
-        node_id = self._selection_model.currentNode()
-        if node_id:
+
+        if node_id := self._selection_model.currentNode():
+            node_editor = self.createNodeEditor(self._model, node_id)
+            self._node_editors.clear()
+            self._node_editors[node_id] = node_editor
+            main_layout = cast(QVBoxLayout, self.layout())
+            old_item = main_layout.takeAt(0)
+            if widget:= old_item.widget():
+                widget.deleteLater()
+
+
+            main_layout.insertWidget(0, node_editor)
+            self.updateNodeEditor(self._model, node_id, node_editor)
+
+        # self.updateNodeEditor(self._model, node_id, self.node_editor)
+
+        # def clear_layout_recursive(layout):
+        #     while layout.count():
+        #         item = layout.takeAt(0)
+        #         if item.widget():
+        #             item.widget().deleteLater()
+        #         elif item.layout():
+        #             clear_layout_recursive(item.layout())  # This is actual recursion
+        #         del item
+
+        # self._editors.clear()
+
+        # node_id = self._selection_model.currentNode()
+        # if node_id:
+        #     ### Header
+        #     clear_layout_recursive(self.header_layout)
+        #     func = self._model.getNodeFunction(node_id)
+        #     import inspect
+        #     if module:=inspect.getmodule(func):
+        #         module_label = Q.label(f"{module.__name__}")
+        #     else:
+        #         module_label = Q.label(f"cant find module for fn: {func}")
+        #     kind_label = Q.label(f"{func.__class__.__name__}")
+        #     name_label = Q.label(f"{func.__qualname__}")
+
+        #     self.header_layout.addWidget(module_label)
+        #     self.header_layout.addWidget(kind_label)
+        #     self.header_layout.addWidget(name_label)
+
+        #     ### properties
+        #     clear_layout_recursive(self.properties_layout)
+        #     for param in inspect.signature(func).parameters.values():
+        #         label, widget = self.createAttributeEditor(self._model, (node_id, param))
+        #         self._editors[(node_id, param)] = (label, widget)
+
+        #     ### help
+        #     import pydoc
+        #     import html
+        #     doc = pydoc.render_doc(func)
+        #     self.help_widget.setPlainText(doc)
+        # else:
+        #     clear_layout_recursive(self.header_layout)
+        #     clear_layout_recursive(self.properties_layout)
+
+    def onNodesChanged(self, changes:dict[_NodeId, list[str]]):
+        assert self._model is not None
+        assert self._selection_model is not None
+
+        node_id = self._selection_model.currentNode()    
+        if node_id and node_id in changes:
             func = self._model.getNodeFunction(node_id)
-            self._showFunction(func)
-        else:
-            self.clear()
-
-    def clear(self):
-        def clear_layout_recursive(layout):
-            while layout.count():
-                item = layout.takeAt(0)
-                if item.widget():
-                    item.widget().deleteLater()
-                elif item.layout():
-                    clear_layout_recursive(item.layout())  # This is actual recursion
-                del item
-
-        clear_layout_recursive(self.header_layout)
-        clear_layout_recursive(self.body_layout)
-
-    def _showFunction(self, fn:Callable|None, argument_expressions:dict[str,str]=dict(), input_nodes:dict[str,object|None]=dict()):
-        # clear head
-        self.clear()
-
-        if fn:
-            import inspect
-            try:
-                module_label = Q.label(f"{inspect.getmodule(fn).__name__}")
-            except:
-                module_label = Q.label(f"cant find module for fn: {fn}")
-            kind_label = Q.label(f"{fn.__class__.__name__}")
-            name_label = Q.label(f"{fn.__qualname__}")
-
-            self.header_layout.addWidget(module_label)
-            self.header_layout.addWidget(kind_label)
-            self.header_layout.addWidget(name_label)
-
-            ### Parametere  
-            def format_param(param)->str:
-                text = ""
-                match param.kind:
-                    case inspect.Parameter.VAR_POSITIONAL:
-                        text = "*"+param.name
-                    case inspect.Parameter.VAR_KEYWORD:
-                        text = "**"+param.name
-                    case _:
-                        text = param.name
-
-                if param.annotation is not inspect.Parameter.empty:
-                    def format_type(annotation)->str:
-                        """Helper function to format type annotations as readable strings."""
-                        if hasattr(annotation, '__name__'):  # For built-in types like int, float
-                            return annotation.__name__
-                        elif hasattr(annotation, '__origin__'):  # For generic types like List, Dict
-                            origin = annotation.__origin__
-                            args = ", ".join(format_type(arg) for arg in annotation.__args__) if annotation.__args__ else ""
-                            return f"{origin.__name__}[{args}]" if args else origin.__name__
-                        else:
-                            return str(annotation)  # Fallback for unusual cases
-                    print("param annotation:", param.annotation)
-                    text += f":{format_type(param.annotation)}"
-                return text
-
-            sig = inspect.signature(fn)
-            SENTINEL = object()
-            def parameter_to_row(param:inspect.Parameter)->tuple[QLabel, QLineEdit]:
-                assert self._model
-                assert self._selection_model
-                name_label = Q.label(format_param(param))
-                node_id = self._selection_model.currentNode()
+            for prop in changes[node_id]:
+                param = inspect.signature(func).parameters[prop]
                 try:
-                    value = self._model.getNodeProperty(node_id, param.name)
-                except:
-                    value = ""
-                param_editor = Q.lineedit(
-                    f"{value!r}" if value !=SENTINEL else "", 
-                    placeholder=f"{param.default!r}" if param.default is not inspect.Parameter.empty else "",
-                    onTextChanged=lambda text, param=param.name: self.onParameterChanged(param, text)
-                )
-                return name_label, param_editor
+                    value = self._model.getNodeProperty(node_id, prop)
+                    
+                    """prop exist"""
+                    try:
+                        # get the editor
+                        editor = self._editors[(node_id, param)]
+                    except KeyError:
+                        # no editor exist for the property yet
+                        # create the editor
+                        if editor := self.createAttributeEditor(self._model, (node_id, param) ):
+                            self._editors[(node_id, param)] = editor
 
-            params_layout = Q.formlayout(*map(parameter_to_row, sig.parameters.values()))
-            self.body_layout.addWidget(Q.label("<h2>Parameters<h2>"))
-            self.body_layout.addLayout(params_layout)
+                    if editor:
+                        # update editor if exists
+                        self.updateAttributeEditor(self._model, (node_id, param), editor)
 
-            ### HELP
-            import pydoc
-            import html
-            doc = pydoc.render_doc(fn)
-            self.body_layout.addWidget(QLabel("<h2>Help</h2>"))
-            text_edit = QTextEdit()
-            text_edit.setReadOnly(True)
-            text_edit.setText(doc)
-            self.body_layout.addWidget(text_edit)
+                except KeyError:
+                    """prop does not exist"""
+                    try:
+                        """delete editor if exist"""
+                        label, widget = self._editors[(node_id, param)]
+                        del self._editors[(node_id, param)]
+                        label.deleteLater()
+                        widget.deleteLater()
+                    except KeyError:
+                        pass
 
-    def onParameterChanged(self, param_name:str, text:str):
-        print("on param changed")
+    ### Delegate methods
+    def createNodeEditor(self, model:PythonGraphModel, item:Hashable)->QWidget:
+        node_editor = QWidget()
+        editor_layout = QVBoxLayout()
+        node_editor.setLayout(editor_layout)
+
+        header_layout = QVBoxLayout()
+        header_layout.setSpacing(0)
+        header_layout.setContentsMargins(0,0,0,0)
+
+        header_label = QLabel("Header")
+        header_layout.addWidget(header_label)
+
+        properties_layout = QFormLayout()
+        properties_layout.setSpacing(0)
+        properties_layout.setContentsMargins(0,0,0,0)
+
+        editor_layout.addLayout(header_layout)
+        editor_layout.addLayout(properties_layout)
+
+        return node_editor
+
+    def updateNodeEditor(self, model:PythonGraphModel, node_id:Hashable, editor:QWidget)->None:
+        editor_layout = cast(QVBoxLayout, editor.layout())
+        header_layout = cast(QVBoxLayout, editor_layout.itemAt(0))
+        header_label = cast(QLabel, header_layout.itemAt(0).widget())
+
+        func = model.getNodeFunction(node_id)
+        print(func)
+        header_label.setText(f"""\
+        <h1>id: {node_id}</h1>
+        <em>func: {func!s}</em>
+        <p>module: {inspect.getmodule(func)}</p>""")
+
+    def itemEditor(self, key):
+        return self._editors[key]
+
+    def createAttributeEditor(self, model:PythonGraphModel, item:tuple[Hashable, inspect.Parameter] )->tuple[QLabel, QWidget]:
         assert self._model
         assert self._selection_model
-        node_id = self._selection_model.currentNode()
-        self._model.updateNodeProperties(node_id, **{param_name: text})
+        node_id, param = item
+
+        label = QLabel(param.name)
+        lineedit = QLineEdit()
+        try:
+            lineedit.setText(f"{model.getNodeProperty(node_id, param.name)!r}")
+        except:
+            value = ""
+        lineedit.setPlaceholderText(f"{param.default!r}" if param.default is not inspect.Parameter.empty else "")
+
+        lineedit.textChanged.connect(
+            lambda text, model=self._model, node_id=self._selection_model.currentNode(), prop=param, editor=(label, lineedit):
+            self.updateAttributeModel(model, (node_id, param), editor))
+        
+        parent_editor = cast(QWidget, self.itemEditor(item))
+        properties_layout = cast(QFormLayout, parent_editor.layout().itemAt(1))
+        properties_layout.addRow(label, lineedit)
+        return label, lineedit
+
+    def updateAttributeEditor(self, model, item:tuple[Hashable, inspect.Parameter], editor:tuple[QLabel, QWidget])->None:
+        label, lineedit = cast(tuple[QLabel, QLineEdit], editor)
+        node_id, param = item
+        lineedit.setText(model.getNodeProperty(node_id, param.name))
+
+    def updateAttributeModel(self, model, item:tuple[Hashable, inspect.Parameter], editor:tuple[QLabel, QWidget])->None:
+        label, lineedit = cast(tuple[QLabel, QLineEdit], editor)
+        node_id, param = item
+        model.updateNodeProperties(node_id, **{param.name: lineedit.text()})
 
 
 class DataViewer(QWidget):
@@ -391,7 +465,7 @@ class DataViewer(QWidget):
 
     def setModel(self, model:PythonGraphModel):
         if model:
-            @model.nodesPropertiesChanged.connect
+            @model.nodesChanged.connect
             def _(changes):
                 assert self._selection_model
                 if current_node_id:=self._selection_model.currentNode():

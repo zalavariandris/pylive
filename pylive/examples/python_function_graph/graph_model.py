@@ -10,7 +10,7 @@ from pylive.utils.geo import intersect_ray_with_rectangle
 class GraphModel(QObject):
 	nodesAdded = Signal(list) #List[Tuple[Hashable, Hashable]]
 	nodesAboutToBeRemoved = Signal(list) #List[Tuple[Hashable, Hashable]]
-	nodesPropertiesChanged = Signal(dict) # Dict[Hashable, Dict[str, Any]]
+	nodesChanged = Signal(dict) # Dict[Hashable, Dict[str, Any]]
 	nodesRemoved = Signal(list)
 
 	edgesAdded = Signal(list) #List[Tuple[Hashable, Hashable]]
@@ -38,7 +38,7 @@ class GraphModel(QObject):
 		return [n for n in self.G.nodes]
 
 	def __del__(self):
-		self.G = None
+		del self.G
 		# self.nodesAdded.disconnect()
 		# self.nodesAboutToBeRemoved.disconnect()
 		# self.nodesPropertyChanged.disconnect()
@@ -52,7 +52,7 @@ class GraphModel(QObject):
 		print("add node", n)
 		self.G.add_node(n, **props)
 		self.nodesAdded.emit([n])
-		self.nodesPropertiesChanged.emit({n:props})
+		self.nodesChanged.emit({n:props})
 
 	def addEdge(self, u:Hashable, v:Hashable, / , **props):
 		if u not in self.G.nodes:
@@ -78,14 +78,14 @@ class GraphModel(QObject):
 			if key not in self.G.nodes[n] or val != self.G.nodes[n][key]:
 				change[key] = val
 		nx.set_node_attributes(self.G, {n: change})
-		self.nodesPropertiesChanged.emit({n: change})
+		self.nodesChanged.emit({n: change})
 
 	def getNodeProperty(self, n:Hashable, name, /):
 		return self.G.nodes[n][name]
 
 	def setEdgeProperties(self, u:Hashable, v:Hashable, /, **props):
 		nx.set_edge_attributes(self.G, {(u,v): props})
-		self.nodesPropertiesChanged.emit([n], list(props.keys()) )
+		self.nodesChanged.emit([n], list(props.keys()) )
 
 	def getEdgeProperty(self, u:Hashable, v:Hashable, prop, /):
 		return self.G.edges[u, v][prop]
