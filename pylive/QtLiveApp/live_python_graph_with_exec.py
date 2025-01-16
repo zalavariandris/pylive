@@ -356,12 +356,13 @@ class FunctionInspectorView(QWidget):
                     """prop exist"""
                     try:
                         # get the editor
-                        editor = self._editors[(node_id, param)]
+                        editor = self._attribute_editors[(node_id, param)]
                     except KeyError:
                         # no editor exist for the property yet
                         # create the editor
                         if editor := self.createAttributeEditor(self._model, (node_id, param) ):
-                            self._editors[(node_id, param)] = editor
+                            self._attribute_editors[(node_id, param)] = editor
+                            
 
                     if editor:
                         # update editor if exists
@@ -371,15 +372,15 @@ class FunctionInspectorView(QWidget):
                     """prop does not exist"""
                     try:
                         """delete editor if exist"""
-                        label, widget = self._editors[(node_id, param)]
-                        del self._editors[(node_id, param)]
+                        label, widget = self._attribute_editors[(node_id, param)]
+                        del self._attribute_editors[(node_id, param)]
                         label.deleteLater()
                         widget.deleteLater()
                     except KeyError:
                         pass
 
     ### Delegate methods
-    def createNodeEditor(self, model:PythonGraphModel, item:Hashable)->QWidget:
+    def createNodeEditor(self, model:PythonGraphModel, node_id:Hashable)->QWidget:
         node_editor = QWidget()
         editor_layout = QVBoxLayout()
         node_editor.setLayout(editor_layout)
@@ -398,10 +399,16 @@ class FunctionInspectorView(QWidget):
         editor_layout.addLayout(header_layout)
         editor_layout.addLayout(properties_layout)
 
+        for arg in model.arguments(node_id):
+            if attribute_editor := self.createAttributeEditor(model, (node_id, arg)):
+                self._attribute_editors[(node_id, arg)] = attribute_editor
+
         return node_editor
 
     def updateNodeEditor(self, model:PythonGraphModel, node_id:Hashable, editor:QWidget)->None:
         editor_layout = cast(QVBoxLayout, editor.layout())
+
+        ### header
         header_layout = cast(QVBoxLayout, editor_layout.itemAt(0))
         header_label = cast(QLabel, header_layout.itemAt(0).widget())
 
@@ -431,9 +438,11 @@ class FunctionInspectorView(QWidget):
         lineedit.textChanged.connect(
             lambda text, model=self._model, node_id=self._selection_model.currentNode(), prop=param, editor=(label, lineedit):
             self.updateAttributeModel(model, (node_id, param), editor))
-        
-        parent_editor = cast(QWidget, self.itemEditor(item))
-        properties_layout = cast(QFormLayout, parent_editor.layout().itemAt(1))
+
+        node_editor = cast(QWidget, self.itemEditor(item))
+        node_editor_layout = cast(QVBoxLayout, node_editor.layout())
+        node_editor_layout = cast(QVBoxLayout, node_editor.layout())
+        properties_layout = cast(QFormLayout, node_editor_layout.itemAt(1))
         properties_layout.addRow(label, lineedit)
         return label, lineedit
 
@@ -509,7 +518,6 @@ class DataViewer(QWidget):
 
 
 if __name__ == "__main__":
-    import mypy
     app = QApplication()
     window = LivePythonGraphWindow()
 
