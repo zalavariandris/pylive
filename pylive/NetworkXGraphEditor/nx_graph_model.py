@@ -14,31 +14,28 @@ type _NodeId=Hashable
 type _EdgeId=tuple[_NodeId, _NodeId, Hashable]
 
 class NXGraphModel(QObject):
-    # Signal: List[_NodeId])
-    nodesAdded: Signal = Signal(list)
-    # Signal: List[_NodeId]
-    nodesAboutToBeRemoved: Signal = Signal(list)
-    # Signal: List[_NodeId]
-    nodesRemoved: Signal = Signal(list)
+    # Nodes
+    nodesAdded = Signal(list)            #list[_NodeId])
+    nodesAboutToBeRemoved = Signal(list) #list[_NodeId])
+    nodesRemoved = Signal(list)          #list[_NodeId])
 
-    # Signal: List[_EdgeId]
-    edgesAdded: Signal = Signal(list)  
-    # Signal: List[_EdgeId]
-    edgesAboutToBeRemoved: Signal = Signal(list)
-    # Signal: List[_EdgeId]
-    edgesRemoved: Signal = Signal(list)
+    # Edges
+    edgesAdded = Signal(list)            #list[_EdgeId]
+    edgesAboutToBeRemoved = Signal(list) #list[_EdgeId]
+    edgesRemoved = Signal(list)          #list[_EdgeId]
 
-    # Signal: dict[_NodeId, list]
-    nodesChanged: Signal = Signal(dict)  
-    # Signal: dict[_EdgeId, list]
-    edgesPropertiesChanged: Signal = Signal(dict)  
+    ### Node Attributes
+    nodeAttributesAdded = Signal(dict)          #dict[_NodeId, list[str]]
+    nodeAttributesRemoved = Signal(dict)        #dict[_NodeId, list[str]]
+    nodeAttributesAboutToBeRemoved=Signal(dict) #dict[_NodeId, list[str]]
+    nodeAttributesChanged = Signal(dict)        #dict[_NodeId, list[str]]
 
-    # @dataclass
-    # class Change:
-    #     added: set = field(default_factory=set)
-    #     removed: set = field(default_factory=set)
-    #     changed: set = field(default_factory=set)
-    #     unchanged: set = field(default_factory=set)
+    ### Edge Attributes
+    edgeAttributesAdded = Signal(dict)          #dict[_EdgeId, list[str]]
+    edgeAttributesAboutToBeRemoved=Signal(dict) #dict[_EdgeId, list[str]]
+    edgeAttributesRemoved = Signal(dict)        #dict[_EdgeId, list[str]]
+    edgeAttributesChanged = Signal(dict)        #dict[_EdgeId, list[str]]
+
 
     def __init__(self, G: nx.MultiDiGraph = nx.MultiDiGraph(), parent=None):
         super().__init__(parent=parent)
@@ -57,105 +54,148 @@ class NXGraphModel(QObject):
 
     def __del__(self):
         del self.G
-        # self.nodesAdded.disconnect()
-        # self.nodesAboutToBeRemoved.disconnect()
-        # self.nodesPropertyChanged.disconnect()
-        # self.nodesRemoved.disconnect()
-        # self.edgesAdded.disconnect()
-        # self.edgesAboutToBeRemoved.disconnect()
-        # self.edgesPropertyChanged.disconnect()
-        # self.edgesRemoved.disconnect()
 
+    ### Nodes
     def nodes(self) -> List[Hashable]:
         return [n for n in self.G.nodes]
 
-    def addNode(self, n: Hashable, /, **props) -> None:
+    def addNode(self, node_id: Hashable, /, **attrs) -> None:
         # print("add node: '{n}'")
-        self.G.add_node(n, **props)
-        self.nodesAdded.emit([n])
-        self.nodesChanged.emit({n: props.keys()})
-
-    def updateNodeProperties(self, n: Hashable, /, **props):
-        # change guard TODO: find removed props
-        change = list()
-        for prop, value in props.items():
-            if prop not in self.G.nodes[n]:
-                self.G.nodes[n][prop] = value 
-                change.append(prop)
-
-            if value != self.G.nodes[n][prop]:
-                self.G.nodes[n][prop] = value 
-                change.append(prop)
-        self.nodesChanged.emit({n: change})
-
-    def deleteNodeProperty(self, n:Hashable, name, /)->None:
-        del self.G.nodes[n][name]
-        self.nodesChanged.emit({
-            n:[name]
-        })
-
-    def hasNodeProperty(self, n: Hashable, name, /) -> bool:
-        return name in self.G.nodes[n]
-
-    def getNodeProperty(self, n: Hashable, name, /) -> object:
-        return self.G.nodes[n][name]
-
-    def getNodeProperties(self, n: Hashable, /) -> list[str]:
-        return [key for key in self.G.nodes[n].keys()]
+        self.G.add_node(node_id, **attrs)
+        self.nodesAdded.emit([node_id])
+        self.nodeAttributesAdded.emit({node_id: attrs.keys()})
 
     def removeNode(self, n: Hashable, /):
+        self.nodeAttributesAboutToBeRemoved.emit({n: self.nodeAttributes(n)})
         self.nodesAboutToBeRemoved.emit([n])
         self.G.remove_node(n)
+        self.nodeAttributesRemoved.emit({n: self.nodeAttributes(n)})
         self.nodesRemoved.emit([n])
 
+    ### EDGES
     def edges(self) -> Iterable[Tuple[Hashable, Hashable, Hashable]]:
         return [(u, v, k) for u, v, k in self.G.edges]
 
-    def inEdges(self, n: Hashable, /) -> Iterable[tuple[Hashable, Hashable, Hashable]]:
+    def inEdges(self, node_id: Hashable, /) -> Iterable[tuple[Hashable, Hashable, Hashable]]:
         """retrun incoming edges to the node"""
-        for e in self.G.in_edges(n, keys=True):
-            yield e
+        for edge_id in self.G.in_edges(node_id, keys=True):
+            yield edge_id
         # return [(u, v, k) for u, v, k in self.G.in_edges(n, keys=True)]
 
     def outEdges(
-        self, n: _NodeId, /
+        self, node_id: _NodeId, /
     ) -> Iterable[_EdgeId]:
         """retrun incoming edges to the node"""
-        for e in self.G.edges(n, keys=True):
-            yield e
+        for edge_id in self.G.edges(node_id, keys=True):
+            yield edge_id
         # return [(u, v, k) for u, v, k in self.G.out_edges(n, keys=True)]
 
     def addEdge(
-        self, u: _NodeId, v: _NodeId, k: Hashable | None = None, /, **props
+        self, u: _NodeId, v: _NodeId, k: Hashable | None = None, /, **attrs
     ) -> None:
-        if u not in self.G.nodes:
-            self.addNode(u)
-        if v not in self.G.nodes:
-            self.addNode(v)
+        # if u not in self.G.nodes:
+        #     self.addNode(u)
+        # if v not in self.G.nodes:
+        #     self.addNode(v)
 
         k = self.G.add_edge(
-            u, v, k, **props
+            u, v, k, **attrs
         )  # note: if k is none, networkx will return a default value for k.
         self.edgesAdded.emit([(u, v, k)])
+        self.edgeAttributesAdded.emit({(u, v, k): attrs.keys()})
 
     def removeEdge(self, u: _NodeId, v: _NodeId, k: Hashable):
-        self.edgesAboutToBeRemoved.emit([(u, v, k)])
-        self.G.remove_edge(u, v, k)
-        self.edgesRemoved.emit([(u, v, k)])
-
-    def setEdgeProperties(
-        self, u: _NodeId, v: _NodeId, k: Hashable, /, **props
-    ):
-        nx.set_edge_attributes(self.G, {(u, v, k): props})
-        self.edgesPropertiesChanged.emit([(u, v, k)], list(props.keys()))
-
-    def getEdgeProperty(self, u: _NodeId, v: _NodeId, k: Hashable, prop, /)->object|None:
-        return self.G.edges[u, v, k][prop]
+        edge_id = (u, v, k)
+        self.edgeAttributesAboutToBeRemoved.emit({
+            edge_id: self.edgeAttributes(*edge_id)
+        })
+        self.edgesAboutToBeRemoved.emit([edge_id])
+        self.G.remove_edge(*edge_id)
+        self.edgeAttributesRemoved.emit({
+            edge_id: self.edgeAttributes(*edge_id)
+        })
+        self.edgesRemoved.emit([edge_id])
 
     def isEdgeAllowed(self, u: _NodeId, v: _NodeId, k: Hashable, /) -> bool:
         if u == v:
             return False
         return True
 
+    ### Node Attributes
+    def nodeAttributes(self, node_id: Hashable, /) -> Iterable[str]:
+        for key in self.G.nodes[node_id].keys():
+            yield key
 
+    def hasNodeAttribute(self, node_id: Hashable, attr, /) -> bool:
+        return attr in self.G.nodes[node_id]
+
+    def getNodeAttribute(self, node_id: Hashable, attr, /) -> object:
+        return self.G.nodes[node_id][attr]
+
+    def updateNodeAttributes(self, node_id: Hashable, /, **attrs):
+        # change guard TODO: find removed attrs
+        added_attributes = list()
+        changed_attributes = list()
+        for attr, value in attrs.items():
+            if attr not in self.G.nodes[node_id]:
+                self.G.nodes[node_id][attr] = value 
+                added_attributes.append(attr)
+
+            if value != self.G.nodes[node_id][attr]:
+                self.G.nodes[node_id][attr] = value 
+                changed_attributes.append(attr)
+        if len(added_attributes)>0:
+            self.nodeAttributesAdded.emit({node_id: added_attributes})
+        if len(changed_attributes)>0:
+            print("changed_attributes", changed_attributes)
+            self.nodeAttributesChanged.emit({node_id: changed_attributes})
+
+    def deleteNodeAttribute(self, node_id:Hashable, attr:str, /)->None:
+        self.nodeAttributesAboutToBeRemoved.emit({
+            node_id: [attr]
+        })
+        del self.G.nodes[node_id][attr]
+        self.nodeAttributesRemoved.emit({
+            node_id: [attr]
+        })
+
+    ### Edge Attributes
+    def edgeAttributes(
+        self, u: _NodeId, v: _NodeId, k: Hashable, /, **attrs
+    )-> Iterable[str]:
+        for key in self.G.edges[(u, v, k)].keys():
+            yield key
+
+    def hasEdgeAttribute(self, edge_id: _EdgeId, attr, /) -> bool:
+        return attr in self.G.edges[edge_id]
+
+    def getEdgeAttribute(self, edge_id: _EdgeId, attr, /) -> object:
+        return self.G.edges[edge_id][attr]
+
+    def updateEdgeAttributes(self, edge_id: _EdgeId, /, **attrs):
+        # change guard TODO: find removed attrs
+        added_attributes = list()
+        changed_attributes = list()
+        for attr, value in attrs.items():
+            if attr not in self.G.edges[edge_id]:
+                self.G.edges[edge_id][attr] = value 
+                added_attributes.append(attr)
+
+            if value != self.G.edges[edge_id][attr]:
+                self.G.edges[edge_id][attr] = value 
+                changed_attributes.append(attr)
+        if len(added_attributes)>0:
+            self.edgeAttributesAdded.emit({edge_id: added_attributes})
+        if len(changed_attributes)>0:
+            print("changed_attributes", changed_attributes)
+            self.edgeAttributesChanged.emit({edge_id: changed_attributes})
+
+    def deleteEdgeAttribute(self, edge_id:_EdgeId, attr:str, /)->None:
+        self.edgeAttributesAboutToBeRemoved.emit({
+            edge_id: [attr]
+        })
+        del self.G.edges[edge_id][attr]
+        self.edgeAttributesRemoved.emit({
+            edge_id: [attr]
+        })
 

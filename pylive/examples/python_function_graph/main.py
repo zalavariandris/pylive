@@ -23,7 +23,7 @@ from pylive.QtGraphEditor.infinite_graphicsview_optimized import (
 
 from pylive.QtGraphEditor.nx_graph_selection_model import NXGraphSelectionModel
 from pylive.utils.unique import make_unique_name
-
+from pylive.utils.qt import signalsBlocked
 #########
 # UTILS #
 #########
@@ -388,13 +388,13 @@ class PythonGraphWindow(QWidget):
         # update dagscene selection
         selected_widgets = [self._operator_to_widget[n] for n in selected]
         deselected_widgets = [self._operator_to_widget[n] for n in deselected]
-        self.dagscene.blockSignals(True)
-        for widget in selected_widgets:
-            widget.setSelected(True)
+        with signalsBlocked(self.dagscene):
+            for widget in selected_widgets:
+                widget.setSelected(True)
 
-        for widget in deselected_widgets:
-            widget.setSelected(False)
-        self.dagscene.blockSignals(False)
+            for widget in deselected_widgets:
+                widget.setSelected(False)
+
         self.dagscene.selectionChanged.emit()
 
 

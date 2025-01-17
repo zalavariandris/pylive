@@ -22,10 +22,8 @@ from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
 from pylive.NetworkXGraphEditor.nx_graph_shapes import (
-    ArrowLinkShape,
     BaseNodeItem,
-    BaseLinkItem, RoundedLinkShape,
-    PortShape,
+    BaseLinkItem,
     distribute_items_horizontal
 )
 
@@ -37,8 +35,11 @@ from bidict import bidict
 from pylive.NetworkXGraphEditor.nx_graph_model import NXGraphModel
 from pylive.NetworkXGraphEditor.nx_network_model import NXNetworkModel
 from pylive.NetworkXGraphEditor.nx_graph_selection_model import NXGraphSelectionModel
+from pylive.NetworkXGraphEditor.nx_standard_network_delegate import StandardNetworkDelegte
 
 from dataclasses import dataclass
+
+from pylive.utils.qt import signalsBlocked
 
 # define to NXGraphModel schema
 
@@ -47,60 +48,6 @@ type _OutletName = str
 type _InletName = str
 type _EdgeId=tuple[_NodeId, _NodeId, tuple[_OutletName, _InletName]]
 
-
-
-class StandardNetworkDelegte:
-    def createNode(self, node_id:_NodeId)->BaseNodeItem:
-        node = StandardNodeItem()
-        
-        labelitem = QGraphicsTextItem(f"{node_id}")
-        labelitem.adjustSize()
-        labelitem.setPos(0,-2)
-        labelitem.setParentItem(node)
-
-        node.setGeometry(QRectF(0,0,labelitem.textWidth(),20))
-        # print(node.geometry())
-        return node
-
-    def createInlet(self, parent_node:QGraphicsItem, node_id:_NodeId, key:str)->QGraphicsItem:
-        assert isinstance(key, str)
-        inlet = PortShape(f"{key}")
-        
-        inlet.setParentItem(parent_node)
-        return inlet
-
-    def createOutlet(self, parent_node:QGraphicsItem, node_id:_NodeId, key:str)->QGraphicsItem:
-        assert isinstance(key, str)
-        outlet = PortShape(f"{key}")
-        outlet.setParentItem(parent_node)
-        return outlet
-
-    def createLink(self, u:_NodeId|None, v:_NodeId|None, k:tuple[str|None, str|None])->BaseLinkItem:
-        assert isinstance(k, tuple)
-        link = ArrowLinkShape(f"{k[1]}" if k[1] else "")
-        link.setZValue(-1)
-        return link
-
-    def createPropertyEditor(self, parent_node: QGraphicsItem, model: NXNetworkModel, node_id: _NodeId, prop: str)->QGraphicsItem|None:
-        try:
-            value = model.getNodeProperty(node_id, prop)
-            badge = QGraphicsTextItem(f"{prop}:, {value}")
-            badge.setParentItem(parent_node)
-            badge.setPos(
-                parent_node.boundingRect().right(),
-                (parent_node.boundingRect()|parent_node.childrenBoundingRect()).bottom()
-            )
-            return badge
-        except KeyError:
-            return None
-
-    def setNodePropertyEditor(self, model: NXNetworkModel, node_id:Hashable, prop:str, editor: QGraphicsItem):
-        value = model.getNodeProperty(node_id, prop)
-        editor = cast(QGraphicsTextItem, editor)
-        editor.setPlainText(f"{prop}: {value}")
-
-    def setNodePropertyModel(self, model:NXNetworkModel, node_id:Hashable, prop:str, editor: QGraphicsItem):
-        ...
 
 
 class NXNetworkScene(QGraphicsScene):
@@ -122,7 +69,7 @@ class NXNetworkScene(QGraphicsScene):
         self._link_graphics_objects: bidict[_EdgeId, QGraphicsItem] = bidict()
         self._draft_link: BaseLinkItem | None = None
 
-        self._property_editors: bidict[tuple[_NodeId, str], QGraphicsItem] = bidict()
+        self._attribute_editors: bidict[tuple[_NodeId, str], QGraphicsItem] = bidict()
 
         # draft link: # TODO: consider moving it to the GraphView.
         # GraphView is supposed to be responsible for user interactions
@@ -136,8 +83,8 @@ class NXNetworkScene(QGraphicsScene):
 
         self.selectionChanged.connect(self.selectionChangedEvent)
 
-    def propertyEditor(self, node_id:_NodeId, key:str)->QGraphicsItem:
-        return self._property_editors[(node_id, key)]
+    def attributeEditor(self, node_id:_NodeId, key:str)->QGraphicsItem:
+        return self._attribute_editors[(node_id, key)]
 
     def setSelectionModel(self, selection_model:NXGraphSelectionModel):
         if self._selection_model:
@@ -162,25 +109,49 @@ class NXNetworkScene(QGraphicsScene):
 
     def setModel(self, model: NXNetworkModel):
         if self._model:
-            model.nodesAdded.disconnect(self.onNodesCreated)
-            model.nodesAboutToBeRemoved.disconnect(self.onNodesDeleted)
-            model.nodesChanged.disconnect(self.onNodesProperiesChanged)
-            model.edgesAdded.disconnect(self.onEdgesCreated)
-            model.edgesAboutToBeRemoved.disconnect(self.onEdgesDeleted)
+            # Nodes
+            model.nodesAdded.disconnect(self.onNodesAdded)
+            model.nodesAboutToBeRemoved.disconnect(self.onNodesRemoved)
+
+            # Edges
+            model.edgesAdded.disconnect(self.onEdgesAdded)
+            model.edgesAboutToBeRemoved.disconnect(self.onEdgesRemoved)
+
+            # Node Attributes
+            model.nodeAttributesAdded.disconnect(self.onNodeAttributesAdded)
+            model.nodeAttributesAboutToBeRemoved.disconnect(self.onNodeAttributesRemoved)
+            model.nodeAttributesChanged.disconnect(self.onNodeAttributesChanged)
+
+            # Edge Attributes
+            model.edgeAttributesAdded.disconnect(self.onEdgeAttributesAdded)
+            model.edgeAttributesAboutToBeRemoved.disconnect(self.onEdgeAttributesRemoved)
+            model.edgeAttributesChanged.disconnect(self.onEdgeAttributesChanged)
 
         if model:
-            _ = model.nodesAdded.connect(self.onNodesCreated)
-            _ = model.nodesAboutToBeRemoved.connect(self.onNodesDeleted)
-            _ = model.nodesChanged.connect(self.onNodesProperiesChanged)
-            _ = model.edgesAdded.connect(self.onEdgesCreated)
-            _ = model.edgesAboutToBeRemoved.connect(self.onEdgesDeleted)
+            # Nodes
+            model.nodesAdded.connect(self.onNodesAdded)
+            model.nodesAboutToBeRemoved.connect(self.onNodesRemoved)
+            
+            # Edges
+            model.edgesAdded.connect(self.onEdgesAdded)
+            model.edgesAboutToBeRemoved.connect(self.onEdgesRemoved)
+
+            # Node Attributes
+            model.nodeAttributesAdded.connect(self.onNodeAttributesAdded)
+            model.nodeAttributesAboutToBeRemoved.connect(self.onNodeAttributesRemoved)
+            model.nodeAttributesChanged.connect(self.onNodeAttributesChanged)
+
+            # Edge Attributes
+            model.edgeAttributesAdded.connect(self.onEdgeAttributesAdded)
+            model.edgeAttributesAboutToBeRemoved.connect(self.onEdgeAttributesRemoved)
+            model.edgeAttributesChanged.connect(self.onEdgeAttributesChanged)
         
         self._model = model
         if self._model:
             ### populate graph
-            self.onNodesCreated(self._model.nodes())
+            self.onNodesAdded(self._model.nodes())
             edges:list[tuple[_NodeId, _NodeId, tuple[str, str]]] = [e for e in self._model.edges()]
-            self.onEdgesCreated( edges )
+            self.onEdgesAdded( edges )
 
             # layout items
             self.layout()
@@ -216,91 +187,52 @@ class NXNetworkScene(QGraphicsScene):
             link.move(outlet, inlet)
 
     ### <<< Handle Model Signals
-    def onNodesCreated(self, nodes: list[Hashable]):
+    def onNodesAdded(self, nodes: list[Hashable]):
         assert self._model
         for node_id in nodes:
-            ### create node
-            node = self.delegate.createNode(node_id)
-            node.scenePositionChanged.connect(lambda node_id=node_id: self.moveAttachedLinks(node_id))
-            self._node_graphics_objects[node_id] = node
+            ### create node editor
+            node_editor = self.delegate.createNode(node_id)
+            node_editor.scenePositionChanged.connect(lambda node_id=node_id: self.moveAttachedLinks(node_id))
+            self._node_graphics_objects[node_id] = node_editor
             self.addItem(self.nodeGraphicsObject(node_id))
 
-            # ### create property editors
-            # # TODO: handle node property changes
-            # for prop in self._model.getNodeProperties(node_id):
-            #     editor = self.delegate.createPropertyEditor(node, self._model, node_id, prop)
-            #     if editor:
-            #         self._property_editors[(node_id, prop)] = editor
+            ### create attribute editors
+            for attr in self._model.nodeAttributes(node_id):
+                editor = self.delegate.createAttributeEditor(node_editor, self._model, node_id, attr)
+                if editor:
+                    self._attribute_editors[(node_id, attr)] = editor
 
             ### create inlets
             inlets = []
             for inlet_name in self._model.inlets(node_id):
-                node = cast(BaseNodeItem, self.nodeGraphicsObject(node_id))
-                inlet = self.delegate.createInlet(node, node_id, inlet_name)
+                node_editor = cast(BaseNodeItem, self.nodeGraphicsObject(node_id))
+                inlet = self.delegate.createInlet(node_editor, node_id, inlet_name)
                 self._inlet_graphics_objects[(node_id, inlet_name)] = inlet
                 inlets.append(inlet)
             # position inlet
             for inlet in inlets:
-                inlet.setY(node.boundingRect().top()-3)
-            distribute_items_horizontal(inlets, node.boundingRect())
+                inlet.setY(node_editor.boundingRect().top()-3)
+            distribute_items_horizontal(inlets, node_editor.boundingRect())
 
             ### create outlets
             outlets = []
             for outlet_name in self._model.outlets(node_id):
-                node = cast(BaseNodeItem, self.nodeGraphicsObject(node_id))
-                outlet = self.delegate.createOutlet(node, node_id, outlet_name)
+                node_editor = cast(BaseNodeItem, self.nodeGraphicsObject(node_id))
+                outlet = self.delegate.createOutlet(node_editor, node_id, outlet_name)
                 self._outlet_graphics_objects[(node_id, outlet_name)] = outlet
                 outlets.append(outlet)
             # position outlets
             for outlet in outlets:
-                outlet.setY(node.boundingRect().bottom()+3)
-            distribute_items_horizontal(outlets, node.boundingRect())
+                outlet.setY(node_editor.boundingRect().bottom()+3)
+            distribute_items_horizontal(outlets, node_editor.boundingRect())
 
-    def onNodesProperiesChanged(self, changes:dict[_NodeId, list[str]]):
-        assert self._model is not None
-        
-        for node_id, properties in changes.items():
-            for prop in properties:
-                node = self.nodeGraphicsObject(node_id)
+    def onNodesRemoved(self, nodes: list[_NodeId]):
+        for n in nodes:
+            if n in self._node_graphics_objects:
+                node_graphics_object = self.nodeGraphicsObject(n)
+                raise NotImplementedError()
 
-                try:
-                    value = self._model.getNodeProperty(node_id, prop)
-                    """prop exist"""
-                    try:
-                        # get the editor
-                        editor = self._property_editors[(node_id, prop)]
-                    except KeyError:
-                        # no editor exist for the property yet
-                        # create the editor
-                        if editor := self.delegate.createPropertyEditor(node, self._model, node_id, prop):
-                            self._property_editors[(node_id, prop)] = editor
-
-                    if editor:
-                        # set editor if exists
-                        self.delegate.setNodePropertyEditor(self._model, node_id, prop, editor)
-
-                except KeyError:
-                    """prop does not exist"""
-                    try:
-                        """remove editor if exist"""
-                        editor = self._property_editors[(node_id, prop)]
-                        del self._property_editors[(node_id, prop)]
-                        scene = editor.scene()
-                        scene.removeItem(editor)
-                    except KeyError:
-                        pass
-
-    def onEdgesProperiesChanged(self, change:dict[_EdgeId, list]):
-        print("onEdgesProperiesChanged", change)
-
-    def onEdgesDeleted(self, edges: Iterable[tuple[_NodeId, _NodeId, tuple[str, str]]]):
-        for e in edges:
-            u, v, (o, i) = e
-            self.removeItem(self.linkGraphicsObject(u, v, (o, i)))
-            if e in self._link_graphics_objects:
-                del self._link_graphics_objects[e]
-
-    def onEdgesCreated(self, edges: Iterable[tuple[_NodeId, _NodeId, tuple[str, str]]]):
+    def onEdgesAdded(self, edges: Iterable[tuple[_NodeId, _NodeId, tuple[str, str]]]):
         for e in edges:
             u, v, (o, i) = e
             link = self.delegate.createLink(u, v, (o, i))
@@ -314,11 +246,63 @@ class NXNetworkScene(QGraphicsScene):
                 self.inletGraphicsObject(v, i)
             )
 
-    def onNodesDeleted(self, nodes: list[_NodeId]):
-        for n in nodes:
-            if n in self._node_graphics_objects:
-                node_graphics_object = self.nodeGraphicsObject(n)
-                raise NotImplementedError()
+    def onEdgesRemoved(self, edges: Iterable[tuple[_NodeId, _NodeId, tuple[str, str]]]):
+        for e in edges:
+            u, v, (o, i) = e
+            self.removeItem(self.linkGraphicsObject(u, v, (o, i)))
+            if e in self._link_graphics_objects:
+                del self._link_graphics_objects[e]
+
+    def onNodeAttributesAdded(self, node_attributes:dict[_NodeId, list[str]]):
+        assert self._model
+        for node_id, attributes in node_attributes.items():
+            node_editor = self.nodeGraphicsObject(node_id)
+            for attr in attributes:
+                if attr_editor := self.delegate.createAttributeEditor(node_editor, self._model, node_id, attr):
+                    self._attribute_editors[(node_id, attr)] = attr_editor
+                    self.delegate.updateAttributeEditor(self._model, node_id, attr, attr_editor)
+
+    def onNodeAttributesRemoved(self, node_attributes:dict[_NodeId, list[str]]):
+        assert self._model
+        for node_id, attributes in node_attributes.items():
+            node_editor = self.nodeGraphicsObject(node_id)
+            for attr in attributes:
+                if attr_editor := self._attribute_editors[(node_id, attr)]:
+                    del self._attribute_editors[(node_id, attr)]
+                    scene = attr_editor.scene()
+                    scene.removeItem(attr_editor)
+
+    def onNodeAttributesChanged(self, node_attributes:dict[_NodeId, list[str]]):
+        assert self._model
+        for node_id, attributes in node_attributes.items():
+            node_editor = self.nodeGraphicsObject(node_id)
+            for attr in attributes:
+                if attr_editor := self._attribute_editors[(node_id, attr)]:
+                    self.delegate.updateAttributeEditor(self._model, node_id, attr, attr_editor)
+
+    def onEdgeAttributesAdded(self, edge_attributes:dict[_EdgeId, list[str]]):
+        assert self._model
+        for edge_id, attributes in edge_attributes.items():
+            u, v, k = edge_id
+            edge_editor = self.linkGraphicsObject(u, v, k)
+            for attr in attributes:
+                ...
+
+    def onEdgeAttributesRemoved(self, edge_attributes:dict[_EdgeId, list[str]]):
+        assert self._model
+        for edge_id, attributes in edge_attributes.items():
+            u, v, k = edge_id
+            edge_editor = self.linkGraphicsObject(u, v, k)
+            for attr in attributes:
+                ...
+
+    def onEdgeAttributesChanged(self, edge_attributes:dict[_EdgeId, list[str]]):
+        assert self._model
+        for edge_id, attributes in edge_attributes.items():
+            u, v, k = edge_id
+            edge_editor = self.linkGraphicsObject(u, v, k)
+            for attr in attributes:
+                ...
 
     def onModelReset(self):
         assert self._model
@@ -330,8 +314,8 @@ class NXNetworkScene(QGraphicsScene):
         self.clear()
 
         ### populate graph
-        self.onNodesCreated(self._model.nodes())
-        self.onEdgesCreated(self._model.edges())
+        self.onNodesAdded(self._model.nodes())
+        self.onEdgesAdded(self._model.edges())
 
         # layout items
         self.layout()
@@ -341,13 +325,12 @@ class NXNetworkScene(QGraphicsScene):
             selected_widgets = [self.nodeGraphicsObject(n) for n in selected]
             deselected_widgets = [self.nodeGraphicsObject(n) for n in deselected]
 
-            self.blockSignals(True)
-            for widget in selected_widgets :
-                widget.setSelected(True)
+            with signalsBlocked(self):
+                for widget in selected_widgets :
+                    widget.setSelected(True)
 
-            for widget in deselected_widgets:
-                widget.setSelected(False)
-            self.blockSignals(False)
+                for widget in deselected_widgets:
+                    widget.setSelected(False)
 
             self.selectionChanged.emit()
 
@@ -522,6 +505,7 @@ class GraphLinkTool(QObject):
                 assert self.source_node_id is not None
                 if outlet_id := self.graphscene().outletAt(event.scenePos()):
                     outlet_node_id, outlet_key = outlet_id
+                    
                     model.addEdge(outlet_id, self.source_node_id, (outlet_key, self.source_key))
                 else:
                     pass
@@ -540,39 +524,6 @@ class GraphLinkTool(QObject):
             case _:
                 pass
         return super().eventFilter(watched, event)
-
-
-###########################
-# Active Graphics Objects #
-###########################
-# class InletGraphicsObject(PortShape):
-#     def __init__(self, name: str):
-#         super().__init__(name=f"{inlet_id[1]}")
-
-
-# class OutletGraphicsObject(PortShape):
-#     def __init__(self, name: str):
-#         super().__init__(name=f"{outlet_id[1]}")
-
-class StandardNodeItem(BaseNodeItem):
-    def __init__(self, parent:QGraphicsItem|None=None):
-        super().__init__(parent=parent)
-        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable)
-        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
-        self.setAcceptHoverEvents(True)
-
-    def paint(self, painter, option, widget=None):
-        rect = self.geometry()
-
-        pen = painter.pen()
-        pen.setBrush(self.palette().text())
-        if self.isSelected():
-            pen.setBrush(self.palette().accent())
-        painter.setPen(pen)
-
-        rect.moveTo(QPoint(0,0))
-        painter.drawRoundedRect(rect, 6,6)
-
 
 
 ###########
@@ -609,7 +560,7 @@ if __name__ == "__main__":
     import networkx as nx
     def on_selection_changed(selected, deselected):
         for n in graph.nodes():
-            graph.updateNodeProperties(n, dep=-1)
+            graph.updateNodeAttributes(n, dep=-1)
 
         selected_nodes = selection.selectedNodes()
         if len(selected_nodes)>0:
@@ -617,7 +568,7 @@ if __name__ == "__main__":
             deps = dependencies(graph.G, node_id)
             topological_deps = nx.topological_sort(nx.subgraph(graph.G, deps))
             for idx, dep in enumerate(topological_deps):
-                graph.updateNodeProperties(dep, dep=idx)
+                graph.updateNodeAttributes(dep, dep=idx)
 
     selection.selectionChanged.connect(on_selection_changed)
 

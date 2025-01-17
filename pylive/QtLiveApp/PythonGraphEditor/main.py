@@ -1,0 +1,199 @@
+from typing import *
+from PySide6.QtCore import *
+from PySide6.QtGui import *
+from PySide6.QtWidgets import *
+
+# from pylive.QtLiveApp.live_script_skeleton import LiveScriptWindow
+from pylive.NetworkXGraphEditor.nx_graph_shapes import BaseNodeItem
+from pylive.NetworkXGraphEditor.nx_network_model import NXNetworkModel, _NodeId
+from pylive.NetworkXGraphEditor.nx_graph_selection_model import NXGraphSelectionModel
+from pylive.NetworkXGraphEditor.nx_network_scene_outlet_to_inlet import NXNetworkScene, StandardNetworkDelegte, StandardNodeItem
+from pylive.NetworkXGraphEditor.nx_node_inspector_view import NXNodeInspectorView
+
+from pylive.options_dialog import OptionDialog
+from pylive.utils.unique import make_unique_name
+
+from pylive.utils import qtfactory as Q
+
+from python_graph_model import PythonGraphModel
+from function_inspector_view import FunctionInspectorView
+from python_graph_delegate import PythonGraphDelegate
+from python_data_viewer import PythonDataViewer
+
+
+class LivePythonGraphWindow(QWidget):
+    def __init__(self, parent: QWidget|None=None) -> None:
+        super().__init__(parent=parent)
+        self.setWindowTitle("Live Python function Graph")
+
+        self._model = PythonGraphModel()
+        self._selection_model = NXGraphSelectionModel(self._model)
+
+        ### create and layout widgets
+        main_layout = QVBoxLayout()
+        self.setLayout(main_layout)
+
+        ### menu
+        menubar = QMenuBar()
+        evaluate_action = QAction("evaluate", self)
+        evaluate_action.triggered.connect(lambda: self.evaluate_selected())
+        menubar.addAction(evaluate_action)
+        invalidate_action = QAction("invalidate", self)
+        invalidate_action.triggered.connect(lambda: self.invalidate_selected())
+        menubar.addAction(invalidate_action)
+        main_layout.setMenuBar(menubar)
+
+        ### graph
+        self.graphview = QGraphicsView()
+        self.graphview.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
+        self.graphview.setCacheMode(QGraphicsView.CacheModeFlag.CacheNone)
+        self.graphview.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        self.graphview.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
+        self.graphview.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
+
+        self.graphscene = NXNetworkScene(self._model, self._selection_model, delegate=PythonGraphDelegate())
+        self.graphscene.setSelectionModel(self._selection_model)
+        self.graphscene.setSceneRect(-9999,-9999,9999*2,9999*2)
+        self.graphview.setScene(self.graphscene)
+        self.graphscene.installEventFilter(self)
+
+        ### inspector
+        self.function_inspector = FunctionInspectorView(self._model, self._selection_model)
+        self.function_inspector2 = FunctionInspectorView(self._model, self._selection_model)
+        
+        ### Previewer
+        self.dataviewer = PythonDataViewer(self._model, self._selection_model)
+
+        ### main splitter
+        splitter = QSplitter()
+        splitter.addWidget(self.graphview)
+        splitter.addWidget(self.function_inspector)
+        splitter.addWidget(self.function_inspector2)
+        splitter.addWidget(self.dataviewer)
+        splitter.setSizes([splitter.width()//splitter.count() for idx in range(splitter.count())])
+        main_layout.addWidget(splitter)
+
+    @Slot()
+    def evaluate_selected(self):
+        selected_nodes = self._selection_model.selectedNodes()
+        print("evaluate_selected", selected_nodes)
+        if len(selected_nodes)>0:
+            current_node_id = selected_nodes[0]
+            self._model.evaluate(current_node_id)
+
+    @Slot()
+    def invalidate_selected(self):
+        selected_nodes = self._selection_model.selectedNodes()
+        print("invalidate_selected", selected_nodes)
+        if len(selected_nodes)>0:
+            current_node_id = selected_nodes[0]
+            self._model.invalidate(current_node_id)
+
+    def graphmodel(self)->PythonGraphModel:
+        return self._model
+
+    def selectionModel(self)->NXGraphSelectionModel:
+        return self._selection_model
+
+    def sizeHint(self) -> QSize:
+        return QSize(900, 500)
+
+    def setFunctions(self, functions:dict[str, Callable]):
+        self._functions = functions
+
+    def functions(self)->Iterable:
+        for name, func in self._functions.items():
+            yield name, func
+
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
+        if watched == self.graphscene:
+            def open_nodes_dialog():
+                available_nodes = {key: val for key, val in self.functions()}
+                dialog = OptionDialog(options=[_ for _ in available_nodes.keys()], title="Create Nodes", parent=self.graphview)
+                result = dialog.exec()
+
+                if result == QDialog.DialogCode.Accepted:
+                    if function_name:=dialog.optionValue():
+                        all_nodes = [str(_) for _ in self._model.nodes()]
+                        fn = available_nodes[function_name]
+                        node_id = self._model.addFunction(fn)
+                        
+                else:
+                    print("cancelled")
+
+            if  event.type() == QEvent.Type.KeyPress and cast(QKeyEvent, event).key() == Qt.Key.Key_Tab:
+                open_nodes_dialog()
+                return True
+            elif event.type() == QEvent.Type.GraphicsSceneMouseDoubleClick:
+                open_nodes_dialog()
+                return True
+
+        return super().eventFilter(watched, event)
+
+
+
+
+
+if __name__ == "__main__":
+    app = QApplication()
+    window = LivePythonGraphWindow()
+
+    def get_available_nodes():
+        for name in dir(__builtins__):
+            if not name.startswith("_"):
+                item = getattr(__builtins__, name)
+                if callable(item):
+                    yield name, item
+
+        import pathlib
+        for name in dir(pathlib):
+            if not name.startswith("_"):
+                item = getattr(pathlib, name)
+                if callable(item):
+                    yield name, item
+
+
+        def sample_function(x:int, y:int)->int:
+            return x + y
+
+        yield 'sample_function', sample_function
+
+    from pathlib import Path
+    def ls(path=Path.cwd()):
+        return [_ for _ in path.iterdir()]
+
+    def read_text(path:Path):
+        return path.read_text()
+
+    def process_text(text:str):
+        return f"processed {text}"
+
+    def show_text(text:str):
+        print(text)
+
+    def write_text(text:str, path:Path):
+        print(text)
+
+    def forEach(fn:Callable, items:list)->list:
+        return [fn(item) for item in items]
+
+    window.setFunctions({
+        'read': read_text,
+        'process_text': process_text,
+        'write_text': write_text,
+        # 'forEach': forEach
+    })
+
+    # n0 = window._model.addFunction(ls)
+
+    n1 = window._model.addFunction(read_text, path="index.html")
+    n2 = window._model.addFunction(process_text)
+    n3 = window._model.addFunction(show_text)
+    n4 = window._model.addFunction(write_text)
+    window._model.addEdge(n1, n2, ("out", "text"))
+    window._model.addEdge(n2, n3, ("out", "text"))
+    window._model.addEdge(n2, n4, ("out", "text"))
+    window.graphscene.layout()
+
+    window.show()
+    app.exec()

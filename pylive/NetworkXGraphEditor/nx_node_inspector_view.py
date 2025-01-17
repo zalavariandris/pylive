@@ -3,184 +3,190 @@ from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 from networkx.generators import line
+from numpy import isin
 from pylive.NetworkXGraphEditor.nx_graph_model import NXGraphModel
 from pylive.NetworkXGraphEditor.nx_graph_selection_model import (
     NXGraphSelectionModel,
 )
 from pylive.utils.unique import make_unique_name
+from pylive.utils.qt import signalsBlocked
+
+from bidict import bidict
+
+type AttrId=str
+
+
+class NXNodeInspectorDelegate(QObject):
+    def createAttributeEditor(self, model, node_id, attr:str):
+        # if isinstance(attr, str) and attr.startswith("_"):
+        #     return None
+
+        attr_widget = QLineEdit()
+
+        @attr_widget.textChanged.connect
+        def _update_model(text, model=model, node_id=node_id, attr=attr):
+            assert model
+            model.updateNodeAttributes(node_id, **{attr: text})
+
+        return attr_widget
+
+    def updateAttributeEditor(self, model, node_id, attr, attr_widget):
+        value = model.getNodeAttribute(node_id, attr)
+        if f"{value}" != attr_widget.text():
+            attr_widget.setText(f"{value}")
 
 
 class NXNodeInspectorView(QWidget):
-    def __init__(self, parent: QWidget | None = None):
-        super().__init__(parent=parent)
+    def __init__(self, 
+        model:NXGraphModel, 
+        selection:NXGraphSelectionModel, 
+        delegate=NXNodeInspectorDelegate(), 
+        parent: QWidget | None = None
+    ):
         self._model: NXGraphModel | None = None
-        self._selectionModel: NXGraphSelectionModel | None = None
+        self._selection_model: NXGraphSelectionModel | None = None
+        self._delegate = delegate
+        self._attribute_editors: bidict[AttrId, QLineEdit] = bidict()
+        super().__init__(parent=parent)
 
-        # widgets
-        self.kind_label = QLabel()
-        self.name_label = QLabel()
-
-        self.line_edit = QLineEdit()
-        self.line_edit.setPlaceholderText("new attribute")
-        self.line_edit.returnPressed.connect(
-            lambda: (
-                self.addAttribute(self.line_edit.text()),
-                self.line_edit.setText(""),
-            )
-        )
-        self.remove_button = QPushButton("remove attribute")
-        self.remove_button.clicked.connect(
-            lambda: self.removeSelectedAttribute()
-        )
-
-        self.attributesTable = QTableWidget()
-        self.attributesTable.setColumnCount(1)
-
-        self._item_to_attribute: dict[QTableWidgetItem, str] = dict()
-        self._attribute_to_item: dict[str, QTableWidgetItem] = dict()
-
-        self.attributesForm = QFormLayout()
-
-        self.updateView()
-
-        def on_item_changed(item):
-            if not self._model:
-                return
-            n = self._get_current_node()
-            if not n:
-                return
-
-            row = item.row()
-            value = item.text()
-            attr = self._row_to_attribute[row]
-            change = {attr: value}
-            print(f"set node properties: {n}, {change}")
-            self._model.setNodeProperties(n, **change)
-
-        self.attributesTable.itemChanged.connect(on_item_changed)
-
-        # layout
+        # Setup UI
         main_layout = QVBoxLayout()
-        header_layout = QHBoxLayout()
-        header_layout.addWidget(self.kind_label)
-        header_layout.addWidget(self.name_label)
-        main_layout.addLayout(header_layout)
-
-        main_layout.addWidget(QLabel("attributes"))
-        buttonsLayout = QHBoxLayout()
-        buttonsLayout.addWidget(self.line_edit)
-        buttonsLayout.addWidget(self.remove_button)
-        main_layout.addLayout(buttonsLayout)
-        main_layout.addWidget(self.attributesTable)
-        main_layout.addLayout(self.attributesForm)
-        main_layout.addStretch()
-
         self.setLayout(main_layout)
 
-        self._attribute_to_row: dict[str, int] = dict()
-        self._row_to_attribute: dict[int, str] = dict()
+        ### header
+        self.header_label = QLabel("<h1>None</h1>")
+        main_layout.addWidget(self.header_label)
 
-        self._widget_to_attribute: dict[QWidget, str] = dict()
-        self._attribute_to_widget: dict[str, QWidget] = dict()
+        ### attributes
+        self._new_attribute_edit = QLineEdit()
+        self._new_attribute_edit.setPlaceholderText("new attribute")
+        main_layout.addWidget(self._new_attribute_edit)
+
+        @self._new_attribute_edit.returnPressed.connect
+        def _add_attribute_to_current_node():
+            assert self._model
+            assert self._selection_model
+            current_node_id = self._selection_model.currentNode()
+            attr = self._new_attribute_edit.text()
+            self._model.updateNodeAttributes(current_node_id, **{attr: None})
+            self._new_attribute_edit.clear()
+
+        self._attributes_layout = QFormLayout()
+        main_layout.addLayout(self._attributes_layout)
+        main_layout.addStretch()
+
+        #
+        self.setModel(model)
+        self.setSelectionModel(selection)
+
 
     def setModel(self, model: NXGraphModel):
+        if model:
+            model.nodeAttributesAdded.connect(self.onNodeAttributesAdded)
+            model.nodeAttributesAboutToBeRemoved.connect(self.onNodeAttributesRemoved)
+            model.nodeAttributesChanged.connect(self.onNodeAttributesChanged)
+        if self._model:
+            model.nodeAttributesAdded.disconnect(self.onNodeAttributesAdded)
+            model.nodeAttributesAboutToBeRemoved.disconnect(self.onNodeAttributesRemoved)
+            model.nodeAttributesChanged.disconnect(self.onNodeAttributesChanged)
         self._model = model
 
-        model.nodesAdded.connect(lambda: self._updateView())
-        model.nodesRemoved.connect(lambda: self._updateView())
-        model.nodesChanged.connect(lambda: self._updateView())
-        self._updateView()
+    def setSelectionModel(self, selection_model: NXGraphSelectionModel):
+        if selection_model:
+            selection_model.selectionChanged.connect(self.onSelectionChanged)
+        if self._selection_model:
+            selection_model.selectionChanged.disconnect(self.onSelectionChanged)
 
-    def setSelectionModel(self, selectionModel: NXGraphSelectionModel):
-        selectionModel.selectionChanged.connect(lambda: self._updateView())
-        self._selectionModel = selectionModel
-        self._updateView()
+        self._selection_model = selection_model
 
-    def _updateView(self):
-        print("update view")
-        """TODO: needs a ore refined updade mechanism"""
-        n = self._get_current_node()
-        if not n:
-            self.kind_label.setText("")
-            self.name_label.setText("- no selection -")
+    def onSelectionChanged(self, selected, deselected):
+        assert self._model
+        assert self._selection_model
 
-            self.attributesTable.clearContents()
-            self.attributesTable.setRowCount(0)
-            return
+        ### create node editor
+        current_node_id = self._selection_model.currentNode()
+        self.header_label.setText(f"""\
+            <h1>{current_node_id}</h1>""")
 
-        ### update header
-        self.kind_label.setText(f"{n.__class__}")
-        self.name_label.setText(f"{n}")
-
-        ### update attributes table
-        self.attributesTable.clear()
-        self.attributesTable.setHorizontalHeaderItem(
-            0, QTableWidgetItem("value")
-        )
-        attributes = self._model.G.nodes[n]
-        self.attributesTable.setRowCount(len(attributes))
-        for row, (attr, value) in enumerate(attributes.items()):
-            print(row, attr, value)
-            name_item = QTableWidgetItem(
-                f"{attr}",
-            )
-            self.attributesTable.setVerticalHeaderItem(row, name_item)
-            # self.attributesTable.setItem(row, 0, item1)
-            value_item = QTableWidgetItem(f"{value}")
-            self.attributesTable.blockSignals(True)
-            self.attributesTable.setItem(row, 0, value_item)
-            self.attributesTable.blockSignals(False)
-            self._row_to_attribute[row] = attr
-            self._attribute_to_row[attr] = row
-
-        ### update attributes form
-        while self.attributesForm.count():
-            item = self.attributesForm.takeAt(0)
-            if widget := item.widget():
+        ### Init node attribute editors
+        # clear attribute layout
+        while self._attributes_layout.count():
+            item = self._attributes_layout.takeAt(0)
+            if widget:=item.widget():
                 widget.deleteLater()
 
-        attributes = self._model.G.nodes[n]
-        for row, (attr, value) in enumerate(attributes.items()):
-            lineedit = QLineEdit(f"{value}")
-            self.attributesForm.addRow(attr, lineedit)
+        if current_node_id:
+            self._new_attribute_edit.show()
+            self.onNodeAttributesAdded({current_node_id: self._model.nodeAttributes(current_node_id)})
+        else:
+            self._new_attribute_edit.hide()
 
-            def setModel(widget=lineedit, n=n, attr=attr):
-                assert self._model
-                self._model.setNodeProperties(n, **{attr: widget.text()})
-                widget.clear()
+    def onNodeAttributesAdded(self, node_attributes:dict[Hashable, list[AttrId]]):
+        assert self._model
+        assert self._selection_model
 
-            def setEditor(widget=lineedit, n=n, attr=attr):
-                assert self._model
-                value = self._model.getNodeProperty(n, attr)
-                widget.setText(f"{value}")
-
-            lineedit.editingFinished.connect(setModel)
-            self._widget_to_attribute[lineedit] = attr
-            self._attribute_to_widget[attr] = lineedit
-
-    @Slot()
-    def addAttribute(self, attr: str = "attr1", value=None):
-        print("addAttribute", self._model, self._get_current_node())
-        if not self._model:
+        current_node_id = self._selection_model.currentNode()
+        if current_node_id not in node_attributes:
             return
 
-        n = self._get_current_node()
+        for attr in node_attributes[current_node_id]:
+            # create attribute editor
+            if attr_widget := self._delegate.createAttributeEditor(self._model, current_node_id, attr):
+                with signalsBlocked(attr_widget):
+                    self._delegate.updateAttributeEditor(self._model, current_node_id, attr, attr_widget)
 
-        if not n:
+                # add attr editor
+                attr_label = QLabel(attr)
+                remove_btn = QPushButton("x")
+                remove_btn.setFixedSize(22, 22)
+                name_layout = QHBoxLayout()
+                name_layout.setContentsMargins(0,0,0,0)
+                name_layout.setSpacing(0)
+                name_widget = QWidget()
+                name_widget.setLayout(name_layout)
+                name_layout.addWidget(remove_btn)
+                name_layout.addWidget(attr_label)
+                
+                @remove_btn.pressed.connect
+                def _(node_id=current_node_id, attr=attr):
+                    assert self._model
+                    self._model.deleteNodeAttribute(node_id, attr)
+                self._attributes_layout.addRow(name_widget, attr_widget)
+                self._attribute_editors[attr] = attr_widget
+
+    def onNodeAttributesChanged(self, node_attributes:dict[Hashable, list[str]]):
+        assert self._model
+        assert self._selection_model
+
+        current_node_id = self._selection_model.currentNode()
+        if current_node_id not in node_attributes:
             return
 
-        attributes = self._model.G.nodes[n]
-        attr = make_unique_name(attr, attributes.keys())
+        for attr in node_attributes[current_node_id]:
+            ### update editor
+            if attr_widget := self._attribute_editors.get(attr):
+                with signalsBlocked(attr_widget):
+                    self._delegate.updateAttributeEditor(self._model, current_node_id, attr, attr_widget)
 
-        props = {attr: None}
-        self._model.setNodeProperties(n, **props)
 
-    @Slot()
-    def removeSelectedAttribute(self):
-        ...
+    def onNodeAttributesRemoved(self, node_attributes:dict[Hashable, list[str]]):
+        assert self._model
+        assert self._selection_model
 
-    def _get_current_node(self):
-        if not self._selectionModel:
-            return None
-        selection = self._selectionModel.selectedNodes()
-        return selection[0] if selection else None
+        print("onNodeAttributesRemoved")
+
+        current_node_id = self._selection_model.currentNode()
+        if current_node_id not in node_attributes:
+            return
+
+        for attr in node_attributes[current_node_id]:
+            ### get editor
+            attr_widget = self._attribute_editors[attr]
+
+            ### remove editor
+            self._attributes_layout.removeRow(attr_widget)
+
+    
+
+
+
