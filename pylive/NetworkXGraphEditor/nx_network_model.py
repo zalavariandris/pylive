@@ -17,8 +17,8 @@ class NXNetworkModel(NXGraphModel):
         """override to specify the inlets for a node.
         the default implementation will attempt to return items
         from the 'inlets' node attribute"""
-        if self.hasNodeAttribute(node_id, '_inlets'):
-            attributes = self.getNodeAttribute(node_id, "_inlets")
+        if self.hasNodeAttribute(node_id, 'inlets'):
+            attributes = self.getNodeAttribute(node_id, "inlets")
             assert hasattr(attributes, '__iter__')
             for key in attributes: #type: ignore
                 yield key
@@ -27,15 +27,15 @@ class NXNetworkModel(NXGraphModel):
         """override to specify the outlets for a node.
         the default implementation will attempt to return items
         from the 'outlets' node attribute"""
-        if self.hasNodeAttribute(node_id, '_outlets'):
-            attributes = self.getNodeAttribute(node_id, "_outlets")
+        if self.hasNodeAttribute(node_id, 'outlets'):
+            attributes = self.getNodeAttribute(node_id, "outlets")
             assert hasattr(attributes, '__iter__')
             for key in attributes: #type: ignore
                 yield key
 
-    @override
-    def addNode(self, node_id: Hashable, /,*, inlets:list[Hashable], outlets:list[Hashable], **attrs) -> None:
-        return super().addNode(node_id, _inlets=inlets, _outlets=outlets, **attrs)
+    # @override
+    # def addNode(self, node_id: Hashable, /,*, inlets:list[Hashable], outlets:list[Hashable], **attrs) -> None:
+    #     return super().addNode(node_id, _inlets=inlets, _outlets=outlets, **attrs)
 
     # @override
     # def nodeAttributes(self, node_id: Hashable, /) -> Iterable[str]:

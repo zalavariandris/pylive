@@ -7,7 +7,9 @@ from PySide6.QtWidgets import *
 from pylive.NetworkXGraphEditor.nx_graph_shapes import BaseNodeItem
 from pylive.NetworkXGraphEditor.nx_network_model import NXNetworkModel, _NodeId
 from pylive.NetworkXGraphEditor.nx_graph_selection_model import NXGraphSelectionModel
-from pylive.NetworkXGraphEditor.nx_network_scene_outlet_to_inlet import NXNetworkScene, StandardNetworkDelegte, StandardNodeItem
+from pylive.NetworkXGraphEditor.nx_network_scene_outlet_to_inlet import NXNetworkScene
+from pylive.NetworkXGraphEditor.nx_network_scene_delegate import NXNetworkSceneDelegate
+
 from pylive.NetworkXGraphEditor.nx_node_inspector_view import NXNodeInspectorView
 
 from pylive.options_dialog import OptionDialog
@@ -16,8 +18,8 @@ from pylive.utils.unique import make_unique_name
 from pylive.utils import qtfactory as Q
 
 from python_graph_model import PythonGraphModel
-from function_inspector_view import FunctionInspectorView
-from python_graph_delegate import PythonGraphDelegate
+from pylive.NetworkXGraphEditor.nx_node_inspector_view import NXNodeInspectorView, NXNodeInspectorDelegate
+
 from python_data_viewer import PythonDataViewer
 
 
@@ -29,18 +31,20 @@ class LivePythonGraphWindow(QWidget):
         self._model = PythonGraphModel()
         self._selection_model = NXGraphSelectionModel(self._model)
 
+        self._selection_model.selectionChanged.connect(self.onSelectionChanged)
+
         ### create and layout widgets
         main_layout = QVBoxLayout()
         self.setLayout(main_layout)
 
         ### menu
         menubar = QMenuBar()
-        evaluate_action = QAction("evaluate", self)
-        evaluate_action.triggered.connect(lambda: self.evaluate_selected())
-        menubar.addAction(evaluate_action)
-        invalidate_action = QAction("invalidate", self)
-        invalidate_action.triggered.connect(lambda: self.invalidate_selected())
-        menubar.addAction(invalidate_action)
+        # evaluate_action = QAction("evaluate", self)
+        # evaluate_action.triggered.connect(lambda: self.evaluate_selected())
+        # menubar.addAction(evaluate_action)
+        # invalidate_action = QAction("invalidate", self)
+        # invalidate_action.triggered.connect(lambda: self.invalidate_selected())
+        # menubar.addAction(invalidate_action)
         main_layout.setMenuBar(menubar)
 
         ### graph
@@ -51,43 +55,61 @@ class LivePythonGraphWindow(QWidget):
         self.graphview.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
         self.graphview.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
 
-        self.graphscene = NXNetworkScene(self._model, self._selection_model, delegate=PythonGraphDelegate())
+        self.graphscene = NXNetworkScene(self._model, self._selection_model)
         self.graphscene.setSelectionModel(self._selection_model)
         self.graphscene.setSceneRect(-9999,-9999,9999*2,9999*2)
         self.graphview.setScene(self.graphscene)
         self.graphscene.installEventFilter(self)
 
         ### inspector
-        self.function_inspector = FunctionInspectorView(self._model, self._selection_model)
-        self.function_inspector2 = FunctionInspectorView(self._model, self._selection_model)
+        self.node_inspector = NXNodeInspectorView(self._model, self._selection_model)
+        # self.node_inspector2 = NXNodeInspectorView(self._model, self._selection_model)
         
-        ### Previewer
-        self.dataviewer = PythonDataViewer(self._model, self._selection_model)
+        ### Data Viewer
+        self.dataviewer = PythonDataViewer()
+        self.dataviewer.setModel(self._model)
+        self.dataviewer.setSelectionModel(self._selection_model)
 
         ### main splitter
         splitter = QSplitter()
         splitter.addWidget(self.graphview)
-        splitter.addWidget(self.function_inspector)
-        splitter.addWidget(self.function_inspector2)
+        splitter.addWidget(self.node_inspector)
+        # splitter.addWidget(self.node_inspector2)
         splitter.addWidget(self.dataviewer)
         splitter.setSizes([splitter.width()//splitter.count() for idx in range(splitter.count())])
         main_layout.addWidget(splitter)
 
-    @Slot()
-    def evaluate_selected(self):
-        selected_nodes = self._selection_model.selectedNodes()
-        print("evaluate_selected", selected_nodes)
-        if len(selected_nodes)>0:
-            current_node_id = selected_nodes[0]
-            self._model.evaluate(current_node_id)
+    def onNodeAttributesChanged(self, node_attributes:dict[Hashable, list[str]]):
+        assert self._model
+        assert self._selection_model
+        for node_id, attributes in node_attributes.items():
+            if "_result" in attributes:
+                continue
+            self._model.invalidate(node_id)
 
-    @Slot()
-    def invalidate_selected(self):
-        selected_nodes = self._selection_model.selectedNodes()
-        print("invalidate_selected", selected_nodes)
-        if len(selected_nodes)>0:
-            current_node_id = selected_nodes[0]
-            self._model.invalidate(current_node_id)
+    def onSelectionChanged(self, selected, deselected):
+        assert self._model
+        assert self._selection_model
+        current_node_id = self._selection_model.currentNode()
+        self._model.evaluate(current_node_id)
+
+    # @Slot()
+    # def invalidate_selected(self):
+    #     selected_nodes = self._selection_model.selectedNodes()
+    #     print("invalidate_selected", selected_nodes)
+    #     if len(selected_nodes)>0:
+    #         current_node_id = selected_nodes[0]
+    #         self._model.invalidate(current_node_id)
+
+    # @Slot()
+    # def evaluate_selected(self):
+    #     selected_nodes = self._selection_model.selectedNodes()
+    #     print("evaluate_selected", selected_nodes)
+    #     if len(selected_nodes)>0:
+    #         current_node_id = selected_nodes[0]
+    #         self._model.evaluate(current_node_id)
+
+    
 
     def graphmodel(self)->PythonGraphModel:
         return self._model
@@ -131,9 +153,6 @@ class LivePythonGraphWindow(QWidget):
         return super().eventFilter(watched, event)
 
 
-
-
-
 if __name__ == "__main__":
     app = QApplication()
     window = LivePythonGraphWindow()
@@ -162,8 +181,8 @@ if __name__ == "__main__":
     def ls(path=Path.cwd()):
         return [_ for _ in path.iterdir()]
 
-    def read_text(path:Path):
-        return path.read_text()
+    def read_text(path:Path|str):
+        return Path(path).read_text()
 
     def process_text(text:str):
         return f"processed {text}"

@@ -35,8 +35,8 @@ class StandardNodeItem(BaseNodeItem):
         painter.drawRoundedRect(rect, 6,6)
 
 
-class StandardNetworkDelegte:
-    def createNode(self, node_id:_NodeId)->BaseNodeItem:
+class NXNetworkSceneDelegate:
+    def createNodeEditor(self, node_id:_NodeId)->BaseNodeItem:
         node = StandardNodeItem()
         
         labelitem = QGraphicsTextItem(f"{node_id}")
@@ -47,26 +47,31 @@ class StandardNetworkDelegte:
         node.setGeometry(QRectF(0,0,labelitem.textWidth(),20))
         return node
 
-    def createInlet(self, parent_node:QGraphicsItem, node_id:_NodeId, key:str)->QGraphicsItem:
+    def createLinkEditor(self, 
+        u:_NodeId|None, v:_NodeId|None, k:tuple[str|None, str|None],
+        )->BaseLinkItem:
+
+        assert isinstance(k, tuple)
+        link = ArrowLinkShape(f"{k[1]}" if k[1] else "")
+        link.setZValue(-1)
+        return link
+
+    def createInletEditor(self, parent_node:QGraphicsItem, node_id:_NodeId, key:str)->QGraphicsItem:
         assert isinstance(key, str)
         inlet = PortShape(f"{key}")
         
         inlet.setParentItem(parent_node)
         return inlet
 
-    def createOutlet(self, parent_node:QGraphicsItem, node_id:_NodeId, key:str)->QGraphicsItem:
+    def createOutletEditor(self, parent_node:QGraphicsItem, node_id:_NodeId, key:str)->QGraphicsItem:
         assert isinstance(key, str)
         outlet = PortShape(f"{key}")
         outlet.setParentItem(parent_node)
         return outlet
 
-    def createLink(self, u:_NodeId|None, v:_NodeId|None, k:tuple[str|None, str|None])->BaseLinkItem:
-        assert isinstance(k, tuple)
-        link = ArrowLinkShape(f"{k[1]}" if k[1] else "")
-        link.setZValue(-1)
-        return link
-
     def createAttributeEditor(self, parent_node: QGraphicsItem, model: NXNetworkModel, node_id: _NodeId, attr: str)->QGraphicsItem|None:
+        if isinstance(attr, str) and attr.startswith("_"):
+            return None
         value = model.getNodeAttribute(node_id, attr)
         badge = QGraphicsTextItem(f"{attr}:, {value}")
         badge.setParentItem(parent_node)
@@ -76,11 +81,8 @@ class StandardNetworkDelegte:
         )
         return badge
 
-
     def updateAttributeEditor(self, model: NXNetworkModel, node_id:Hashable, attr:str, editor: QGraphicsItem):
         value = model.getNodeAttribute(node_id, attr)
         editor = cast(QGraphicsTextItem, editor)
         editor.setPlainText(f"{attr}: {value}")
 
-    def updateAttributeModel(self, model:NXNetworkModel, node_id:Hashable, attr:str, editor: QGraphicsItem):
-        ...

@@ -16,6 +16,7 @@
 # from the widgets to a delegate, or the graphsene itself
 
 
+from contextlib import contextmanager
 from typing import *
 from PySide6.QtGui import *
 from PySide6.QtCore import *
@@ -35,23 +36,25 @@ from bidict import bidict
 from pylive.NetworkXGraphEditor.nx_graph_model import NXGraphModel
 from pylive.NetworkXGraphEditor.nx_network_model import NXNetworkModel
 from pylive.NetworkXGraphEditor.nx_graph_selection_model import NXGraphSelectionModel
-from pylive.NetworkXGraphEditor.nx_standard_network_delegate import StandardNetworkDelegte
+from pylive.NetworkXGraphEditor.nx_network_scene_delegate import NXNetworkSceneDelegate
 
 from dataclasses import dataclass
 
 from pylive.utils.qt import signalsBlocked
 
+from contextlib import contextmanager
+
 # define to NXGraphModel schema
-
-type _NodeId=Hashable
-type _OutletName = str
-type _InletName = str
-type _EdgeId=tuple[_NodeId, _NodeId, tuple[_OutletName, _InletName]]
-
+# This is only for typecheckers and debugging
+# TODO: check if this is actually messes things up later.
+class _NodeId(Hashable):...
+class _OutletName(str):...
+class _InletName(str):...
+class _EdgeId(tuple[_NodeId, _NodeId, tuple[_OutletName, _InletName]]):...
 
 
 class NXNetworkScene(QGraphicsScene):
-    def __init__(self, model: NXNetworkModel, selection_model: NXGraphSelectionModel, delegate=StandardNetworkDelegte()):
+    def __init__(self, model: NXNetworkModel, selection_model: NXGraphSelectionModel, delegate=NXNetworkSceneDelegate()):
         super().__init__()
 
         self._model: NXNetworkModel | None = None
@@ -71,9 +74,7 @@ class NXNetworkScene(QGraphicsScene):
 
         self._attribute_editors: bidict[tuple[_NodeId, str], QGraphicsItem] = bidict()
 
-        # draft link: # TODO: consider moving it to the GraphView.
-        # GraphView is supposed to be responsible for user interactions
-        # self.draft: RoundedLinkShape | None = None  # todo use the widget itself?
+
 
         # set model
         # populate with initial model
@@ -181,7 +182,9 @@ class NXNetworkScene(QGraphicsScene):
         assert model
         for e in chain(model.inEdges(node_id), model.outEdges(node_id)):
             u, v, (o, i) = e
+            source_node = self.nodeGraphicsObject(u)
             outlet = self.outletGraphicsObject(u, o)
+            target_node = self.nodeGraphicsObject(v)
             inlet = self.inletGraphicsObject(v, i)
             link = self.linkGraphicsObject(u, v, (o, i))
             link.move(outlet, inlet)
@@ -191,7 +194,7 @@ class NXNetworkScene(QGraphicsScene):
         assert self._model
         for node_id in nodes:
             ### create node editor
-            node_editor = self.delegate.createNode(node_id)
+            node_editor = self.delegate.createNodeEditor(node_id)
             node_editor.scenePositionChanged.connect(lambda node_id=node_id: self.moveAttachedLinks(node_id))
             self._node_graphics_objects[node_id] = node_editor
             self.addItem(self.nodeGraphicsObject(node_id))
@@ -206,7 +209,7 @@ class NXNetworkScene(QGraphicsScene):
             inlets = []
             for inlet_name in self._model.inlets(node_id):
                 node_editor = cast(BaseNodeItem, self.nodeGraphicsObject(node_id))
-                inlet = self.delegate.createInlet(node_editor, node_id, inlet_name)
+                inlet = self.delegate.createInletEditor(node_editor, node_id, inlet_name)
                 self._inlet_graphics_objects[(node_id, inlet_name)] = inlet
                 inlets.append(inlet)
             # position inlet
@@ -218,7 +221,7 @@ class NXNetworkScene(QGraphicsScene):
             outlets = []
             for outlet_name in self._model.outlets(node_id):
                 node_editor = cast(BaseNodeItem, self.nodeGraphicsObject(node_id))
-                outlet = self.delegate.createOutlet(node_editor, node_id, outlet_name)
+                outlet = self.delegate.createOutletEditor(node_editor, node_id, outlet_name)
                 self._outlet_graphics_objects[(node_id, outlet_name)] = outlet
                 outlets.append(outlet)
             # position outlets
@@ -235,7 +238,7 @@ class NXNetworkScene(QGraphicsScene):
     def onEdgesAdded(self, edges: Iterable[tuple[_NodeId, _NodeId, tuple[str, str]]]):
         for e in edges:
             u, v, (o, i) = e
-            link = self.delegate.createLink(u, v, (o, i))
+            link = self.delegate.createLinkEditor(u, v, (o, i))
 
             self._link_graphics_objects[e] = link
             self.addItem(link)
@@ -267,7 +270,7 @@ class NXNetworkScene(QGraphicsScene):
         for node_id, attributes in node_attributes.items():
             node_editor = self.nodeGraphicsObject(node_id)
             for attr in attributes:
-                if attr_editor := self._attribute_editors[(node_id, attr)]:
+                if attr_editor := self._attribute_editors.get((node_id, attr)):
                     del self._attribute_editors[(node_id, attr)]
                     scene = attr_editor.scene()
                     scene.removeItem(attr_editor)
@@ -412,7 +415,7 @@ class GraphLinkTool(QObject):
         return self._graphscene
 
     def startFromOutlet(self, node_id:_NodeId, key:str):
-        link = self.graphscene().delegate.createLink(node_id, None, (key, None))
+        link = self.graphscene().delegate.createLinkEditor(node_id, None, (key, None))
         self.draft = link
         assert self.draft
         self.draft.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
@@ -433,12 +436,8 @@ class GraphLinkTool(QObject):
         app.removeEventFilter(self)
 
     def startFromInlet(self, node_id:_NodeId, key:str):
-        self.draft = self.graphscene().delegate.createLink(None, node_id, (None, key))
+        self.draft = self.graphscene().delegate.createLinkEditor(None, node_id, (None, key))
         assert self.draft
-        # self.draft.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
-        # self.draft.setAcceptHoverEvents(False)
-        # self.draft.setEnabled(False)
-        # self.draft.setActive(False)
         self.graphscene().addItem(self.draft)
         
         self.source_node_id = node_id
@@ -505,8 +504,8 @@ class GraphLinkTool(QObject):
                 assert self.source_node_id is not None
                 if outlet_id := self.graphscene().outletAt(event.scenePos()):
                     outlet_node_id, outlet_key = outlet_id
-                    
-                    model.addEdge(outlet_id, self.source_node_id, (outlet_key, self.source_key))
+                    edge_id:_EdgeId = outlet_node_id, self.source_node_id, (outlet_key, self.source_key)
+                    model.addEdge(*edge_id)
                 else:
                     pass
 
