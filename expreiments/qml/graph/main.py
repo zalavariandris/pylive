@@ -8,14 +8,6 @@ from PyQt6.QtGui import *
 from PyQt6.QtQml import *
 from PyQt6.QtQuick import *
 
-# from dataclasses import dataclass
-# @dataclass
-# class Node:
-#     name:str
-#     x:int=0
-#     y:int=0 
-#     kind:str="function"
-
 
 class AttributeController(QObject):
     nameChanged = pyqtSignal(str)
@@ -132,16 +124,16 @@ if __name__ == '__main__':
     context.setContextProperty('theAttribute', theAttribute)
     engine.load(QUrl.fromLocalFile("main.qml"))
 
-    timer = QTimer()
-    def randomize_name():
-        index = theGraph.nodes.index(0)
-        nodeListItem = theGraph.nodes.data(index)
-        nodeListItem.setName("judit")
-        print(nodeListItem)
-        print("hello")
+    # timer = QTimer()
+    # def randomize_name():
+    #     index = theGraph.nodes.index(0)
+    #     nodeListItem = theGraph.nodes.data(index)
+    #     nodeListItem.setName("judit")
+    #     print(nodeListItem)
+    #     print("hello")
         
-    timer.timeout.connect(randomize_name)
-    timer.start(1000)
+    # timer.timeout.connect(randomize_name)
+    # timer.start(1000)
 
 
 
