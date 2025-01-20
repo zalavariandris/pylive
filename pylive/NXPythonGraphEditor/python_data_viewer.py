@@ -2,6 +2,7 @@ from typing import *
 from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
+from parso.python.tree import Keyword
 
 from python_graph_model import PythonGraphModel
 from pylive.NetworkXGraphEditor.nx_graph_selection_model import NXGraphSelectionModel
@@ -70,7 +71,11 @@ class PythonDataViewer(QWidget):
 
         current_node_id = self._selection_model.currentNode()
         try:
-            result = self._model.result(current_node_id)
-            self._label.setText(f"'{result!r}'")
+            cache = self._model.cache(current_node_id)
+            self._label.setText(f"'{cache!r}'")
         except KeyError:
-            self._label.setText("no results")
+            try:
+                error = self._model.error(current_node_id)
+                self._label.setText(f"'{error!r}'")
+            except KeyError:
+                self._label.setText("no results")

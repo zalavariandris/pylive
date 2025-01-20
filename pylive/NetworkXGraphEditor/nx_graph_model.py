@@ -13,6 +13,8 @@ from dataclasses import dataclass, field
 type _NodeId=Hashable
 type _EdgeId=tuple[_NodeId, _NodeId, Hashable]
 
+G = nx.Graph()
+
 class NXGraphModel(QObject):
     # Nodes
     nodesAdded = Signal(list)            #list[_NodeId])
@@ -37,16 +39,19 @@ class NXGraphModel(QObject):
     edgeAttributesChanged = Signal(dict)        #dict[_EdgeId, list[str]]
 
 
-    def __init__(self, G: nx.MultiDiGraph = nx.MultiDiGraph(), parent=None):
+    def __init__(self, G: nx.MultiDiGraph|None = None, parent=None):
         super().__init__(parent=parent)
-        self.G = G
+        self.G = G or nx.MultiDiGraph()
 
-        for n in self.G.nodes():
-            node = self.addNode(n)
+        # for n in self.G.nodes():
+        self.nodesAdded.emit([_ for _ in self.G.nodes()])
+        self.edgesAdded.emit([_ for _ in self.G.edges.data()])
 
-        for e in self.G.edges():
-            u, v, k = e
-            self.addEdge(u, v, k)
+            # self.addNode(n)
+
+        # for e in self.G.edges():
+        #     u, v, k = e
+        #     self.addEdge(u, v, k)
 
     def patch(self, G: nx.MultiDiGraph):
         ...
@@ -57,10 +62,11 @@ class NXGraphModel(QObject):
 
     ### Nodes
     def nodes(self) -> List[Hashable]:
-        return [n for n in self.G.nodes]
+        return [n for n in self.G.nodes()]
 
-    def addNode(self, node_id: Hashable, /, **attrs) -> None:
-        # print("add node: '{n}'")
+    def addNode(self, node_id: Hashable, /, **attrs) -> Hashable:
+        if node_id in self.G.nodes:
+            raise ValueError(f"node {node_id!r} already in graph", self.G.nodes)
         self.G.add_node(node_id, **attrs)
         self.nodesAdded.emit([node_id])
         self.nodeAttributesAdded.emit({node_id: attrs.keys()})
@@ -91,7 +97,7 @@ class NXGraphModel(QObject):
         # return [(u, v, k) for u, v, k in self.G.out_edges(n, keys=True)]
 
     def addEdge(
-        self, u: _NodeId, v: _NodeId, k: Hashable | None = None, /, **attrs
+        self, u: _NodeId, v: _NodeId, k: Hashable, /, **attrs
     ) -> None:
         # if u not in self.G.nodes:
         #     self.addNode(u)
@@ -147,7 +153,6 @@ class NXGraphModel(QObject):
         if len(added_attributes)>0:
             self.nodeAttributesAdded.emit({node_id: added_attributes})
         if len(changed_attributes)>0:
-            print("changed_attributes", changed_attributes)
             self.nodeAttributesChanged.emit({node_id: changed_attributes})
 
     def deleteNodeAttribute(self, node_id:Hashable, attr:str, /)->None:
@@ -189,7 +194,6 @@ class NXGraphModel(QObject):
         if len(added_attributes)>0:
             self.edgeAttributesAdded.emit({edge_id: added_attributes})
         if len(changed_attributes)>0:
-            print("changed_attributes", changed_attributes)
             self.edgeAttributesChanged.emit({edge_id: changed_attributes})
 
     def deleteEdgeAttribute(self, edge_id:_EdgeId, attr:str, /)->None:
@@ -200,4 +204,14 @@ class NXGraphModel(QObject):
         self.edgeAttributesRemoved.emit({
             edge_id: [attr]
         })
+
+    def anchestors(self, node_id:_NodeId)->Iterable[_NodeId]:
+        assert node_id in self.G.nodes
+        for n in nx.ancestors(self.G, node_id):
+            yield n
+
+    def descendants(self, node_id:_NodeId)->Iterable[_NodeId]:
+        assert node_id in self.G.nodes
+        for n in nx.descendants(self.G, node_id):
+            yield n
 

@@ -85,13 +85,13 @@ class LivePythonGraphWindow(QWidget):
         for node_id, attributes in node_attributes.items():
             if "_result" in attributes:
                 continue
-            self._model.invalidate(node_id)
+            self._model._invalidate(node_id)
 
     def onSelectionChanged(self, selected, deselected):
         assert self._model
         assert self._selection_model
-        current_node_id = self._selection_model.currentNode()
-        self._model.evaluate(current_node_id)
+        if current_node_id := self._selection_model.currentNode():
+            self._model._evaluate(current_node_id)
 
     # @Slot()
     # def invalidate_selected(self):
@@ -187,27 +187,27 @@ if __name__ == "__main__":
     def process_text(text:str):
         return f"processed {text}"
 
-    def show_text(text:str):
-        print(text)
+    def print_text(text:str):
+        print("SHOW_TEST:")
+        from textwrap import indent
+        print(indent(text, "   |"))
 
     def write_text(text:str, path:Path):
-        print(text)
+        pass
+        # print(text)
 
     def forEach(fn:Callable, items:list)->list:
         return [fn(item) for item in items]
 
-    window.setFunctions({
-        'read': read_text,
-        'process_text': process_text,
-        'write_text': write_text,
-        # 'forEach': forEach
-    })
+    window.setFunctions({fn.__name__:fn for fn in [
+        ls, read_text, process_text, print_text, write_text, forEach
+    ]})
 
     # n0 = window._model.addFunction(ls)
 
     n1 = window._model.addFunction(read_text, path="index.html")
     n2 = window._model.addFunction(process_text)
-    n3 = window._model.addFunction(show_text)
+    n3 = window._model.addFunction(print_text)
     n4 = window._model.addFunction(write_text)
     window._model.addEdge(n1, n2, ("out", "text"))
     window._model.addEdge(n2, n3, ("out", "text"))

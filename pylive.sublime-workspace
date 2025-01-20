@@ -4,104 +4,300 @@
 		"selected_items":
 		[
 			[
-				"pyq",
-				"pyqtProperty"
+				"View",
+				"VScrollView"
 			],
 			[
-				"name",
-				"nameChanged"
+				"write",
+				"write_text"
 			],
 			[
-				"current",
-				"current_node_id"
+				"proce",
+				"process_text"
 			],
 			[
-				"nodeAtt",
-				"nodeAttributesRemoved"
+				"u",
+				"updateNodeAttributes"
 			],
 			[
-				"nodeA",
-				"nodeAttributesChanged"
-			],
-			[
-				"kwa",
-				"kw_args"
+				"set",
+				"setParameterValue"
 			],
 			[
 				"para",
 				"parameterValue"
 			],
 			[
-				"att",
-				"attributes"
+				"nodeAttr",
+				"nodeAttributesRemoved"
 			],
 			[
-				"delete",
-				"deleteAttributeEditor"
+				"dele",
+				"deleteNodeAttribute"
 			],
 			[
-				"la",
-				"layout"
+				"edge",
+				"edgesAdded"
 			],
 			[
-				"create",
-				"createNodeEditor"
+				"nodeA",
+				"nodeAttributesChanged"
 			],
 			[
-				"NXNode",
-				"NXNodeInspectorView"
+				"Py",
+				"PythonGraphModel"
 			],
 			[
-				"update",
-				"updateNodeAttributes"
+				"pytho",
+				"python_graph_model"
 			],
 			[
-				"contex",
-				"contextmanager"
+				"select",
+				"selectedNodes"
+			],
+			[
+				"curren",
+				"current_node_id"
+			],
+			[
+				"isin",
+				"isinstance"
 			],
 			[
 				"node",
-				"nodeGraphicsObject"
+				"nodeAttributes"
 			],
 			[
-				"param",
-				"param_editor"
+				"setSt",
+				"setStyleSheet"
 			],
 			[
-				"getNodeP",
-				"getNodeProperty"
+				"setSi",
+				"setFixedSize"
 			],
 			[
-				"curr",
-				"currentNode"
+				"name_",
+				"name_layout"
+			],
+			[
+				"delete",
+				"deleteNodeAttribute"
+			],
+			[
+				"cli",
+				"clicked"
+			],
+			[
+				"remove",
+				"remove_btn"
+			],
+			[
+				"signa",
+				"signalsBlocked"
+			],
+			[
+				"block",
+				"signalsBlocked"
+			],
+			[
+				"curre",
+				"current_node_id"
+			],
+			[
+				"upd",
+				"updateAttributeEditor"
+			],
+			[
+				"node_",
+				"node_attributes"
+			],
+			[
+				"on",
+				"onNodeAttributesChanged"
+			],
+			[
+				"getAttr",
+				"getNodeAttribute"
+			],
+			[
+				"_attr",
+				"_attributes_layout"
+			],
+			[
+				"current",
+				"current_node_id"
+			],
+			[
+				"add",
+				"addRow"
+			],
+			[
+				"attr",
+				"attributes"
+			],
+			[
+				"addS",
+				"addStretch"
+			],
+			[
+				"setM",
+				"setModel"
+			],
+			[
+				"delet",
+				"deleteNodeAttribute"
+			],
+			[
+				"onNodeAttr",
+				"onNodeAttributesAdded"
 			],
 			[
 				"sele",
-				"_selection_model"
+				"selectionModel"
 			],
 			[
-				"getNode",
-				"getNodeProperties"
+				"nodeAbou",
+				"nodesAboutToBeRemoved"
 			],
 			[
-				"getN",
-				"getNodeProperties"
+				"NX",
+				"NXNetworkModel"
 			],
 			[
-				"out",
-				"outEdges"
+				"NXNet",
+				"NXNetworkExample"
 			],
 			[
-				"Lite",
-				"LiteralString"
+				"nx_n",
+				"nx_network_scene_outlet_to_inlet"
 			],
 			[
-				"argum",
-				"getArgumentExpression"
+				"onNodeAttributes",
+				"onNodeAttributesAdded"
 			],
 			[
-				"argument",
-				"argument_expressions="
+				"edgeAttributes",
+				"edgeAttributesAdded"
+			],
+			[
+				"nodeAttri",
+				"nodeAttributesChanged"
+			],
+			[
+				"nodeAttributes",
+				"nodeAttributesChanged"
+			],
+			[
+				"edgeAtt",
+				"edgeAttributesRemoved"
+			],
+			[
+				"edgeAttr",
+				"edgeAttributesAboutToBeRemoved"
+			],
+			[
+				"QListMo",
+				"QAbstractListModel"
+			],
+			[
+				"NXGra",
+				"NXGraphSelectionModel"
+			],
+			[
+				"nx_gr",
+				"nx_graph_selection_model"
+			],
+			[
+				"NXNe",
+				"NXNetworkScene"
+			],
+			[
+				"Python",
+				"PythonGraphModel"
+			],
+			[
+				"python_",
+				"python_graph_model"
+			],
+			[
+				"make_uni",
+				"make_unique_name"
+			],
+			[
+				"getM",
+				"getmodule"
+			],
+			[
+				"editor",
+				"editor_layout"
+			],
+			[
+				"re",
+				"removeItem"
+			],
+			[
+				"creat",
+				"createNodeEditor"
+			],
+			[
+				"edit",
+				"itemEditor"
+			],
+			[
+				"header_l",
+				"header_label"
+			],
+			[
+				"heade",
+				"header_layout"
+			],
+			[
+				"QW",
+				"QWidget"
+			],
+			[
+				"Pythongr",
+				"PythonGraphModel"
+			],
+			[
+				"prop",
+				"properties_layout"
+			],
+			[
+				"hea",
+				"header_layout"
+			],
+			[
+				"Pyth",
+				"PythonGraphModel"
+			],
+			[
+				"item",
+				"item_editor"
+			],
+			[
+				"setPa",
+				"setParent"
+			],
+			[
+				"setPl",
+				"setPlainText"
+			],
+			[
+				"create",
+				"createPropertyEditor"
+			],
+			[
+				"he",
+				"header_layout"
+			],
+			[
+				"t",
+				"text"
+			],
+			[
+				"line",
+				"lineedit"
 			],
 			[
 				"setNo",
@@ -112,421 +308,217 @@
 				"textChanged"
 			],
 			[
-				"Pyth",
-				"PythonGraphModel"
+				"QForm",
+				"QFormLayout"
 			],
 			[
-				"nodeP",
+				"setNodePrope",
+				"setNodePropertyEditor"
+			],
+			[
+				"pa",
+				"parameters"
+			],
+			[
+				"st",
+				"Status"
+			],
+			[
+				"getNode",
 				"getNodeProperty"
 			],
 			[
-				"isin",
-				"isinstance"
+				"QLine",
+				"QLineEdit"
 			],
 			[
-				"setB",
-				"setAutoFillBackground"
+				"setNodeP",
+				"setNodePropertyEditor"
 			],
 			[
-				"setAuto",
-				"setAutoFillBackground"
+				"cr",
+				"currentNode"
 			],
 			[
-				"setBa",
-				"setBackgroundRole"
-			],
-			[
-				"setH",
-				"setHtml"
-			],
-			[
-				"add",
-				"addWidget"
-			],
-			[
-				"VAR",
-				"VAR_KEYWORD"
-			],
-			[
-				"params",
-				"params_layout"
+				"di",
+				"display"
 			],
 			[
 				"selec",
-				"selectionChanged"
+				"selectionmodel"
 			],
 			[
-				"mod",
-				"_model"
-			],
-			[
-				"get",
-				"getmodule"
-			],
-			[
-				"se",
-				"selectedNodes"
-			],
-			[
-				"sceneP",
-				"scenePositionChanged"
-			],
-			[
-				"Itemsce",
-				"ItemScenePositionHasChanged"
-			],
-			[
-				"_la",
-				"_labelitem"
-			],
-			[
-				"margin_",
-				"margin_height"
-			],
-			[
-				"margin",
-				"margin_width"
-			],
-			[
-				"Abstra",
-				"AbstractShape"
-			],
-			[
-				"_label",
-				"_labelitem"
-			],
-			[
-				"Abstract",
-				"AbstractShape"
-			],
-			[
-				"setP",
-				"setPos"
-			],
-			[
-				"setPArent",
-				"setParentItem"
-			],
-			[
-				"Abstr",
-				"AbstractLinkShape"
-			],
-			[
-				"NotI",
-				"NotImplementedError"
-			],
-			[
-				"source_",
-				"source_node_id"
-			],
-			[
-				"target_",
-				"target_node_id"
-			],
-			[
-				"source",
-				"source_node_id"
-			],
-			[
-				"inle",
-				"inletGraphicsObject"
-			],
-			[
-				"Qgraphics",
-				"QGraphicsItem"
+				"NXGrap",
+				"NXGraphSelectionModel"
 			],
 			[
 				"NXGraph",
 				"NXGraphSelectionModel"
 			],
 			[
-				"graph",
+				"read",
+				"read_text"
+			],
+			[
+				"topo",
+				"topological_sort"
+			],
+			[
+				"p",
+				"popleft"
+			],
+			[
+				"selected",
+				"selected_nodes"
+			],
+			[
+				"cha",
+				"selectionChanged"
+			],
+			[
+				"gr",
 				"graphscene"
 			],
 			[
-				"inlet",
-				"inlet_id"
-			],
-			[
-				"outl",
-				"outletGraphicsObject"
-			],
-			[
-				"eve",
-				"eventFilter"
-			],
-			[
-				"removeI",
-				"removeEventFilter"
-			],
-			[
-				"in",
-				"instance"
-			],
-			[
-				"GrapicsMou",
-				"GraphicsSceneMousePress"
-			],
-			[
-				"GraphicsSceneMouse",
-				"GraphicsSceneMouseRelease"
-			],
-			[
-				"MouseMov",
-				"GraphicsSceneMouseMove"
-			],
-			[
-				"inel",
-				"inletAt"
-			],
-			[
-				"outlet",
-				"OutletId"
-			],
-			[
-				"seB",
-				"setBrush"
-			],
-			[
-				"QPolyGo",
-				"QPolygonF"
-			],
-			[
-				"inst",
-				"installSceneEventFilter"
-			],
-			[
-				"QPoint",
-				"QPointF"
-			],
-			[
-				"ItemIs",
-				"ItemIsMovable"
-			],
-			[
-				"Grap",
-				"GraphicsItemFlag"
-			],
-			[
-				"l",
-				"LeftToRight"
-			],
-			[
-				"setParent",
-				"setParentItem"
-			],
-			[
-				"hover",
-				"hoverEnterEvent"
-			],
-			[
-				"QGraphicsT",
-				"QGraphicsTextItem"
-			],
-			[
-				"rot",
-				"setRotation"
+				"dfs_",
+				"dfs_successors"
 			],
 			[
 				"chil",
 				"childrenBoundingRect"
 			],
 			[
-				"to",
-				"top"
+				"predecessor",
+				"dfs_predecessors"
 			],
 			[
-				"ellip",
-				"ellipse_bbox"
+				"rec",
+				"recursive"
 			],
 			[
-				"tr",
-				"translated"
+				"outEd",
+				"outEdges"
 			],
 			[
-				"QGraphicsI",
+				"ite",
+				"iterable"
+			],
+			[
+				"Multi",
+				"MultiDiGraph"
+			],
+			[
+				"QGraphicsT",
+				"QGraphicsTextItem"
+			],
+			[
+				"getN",
+				"getNodeProperty"
+			],
+			[
+				"trigg",
+				"triggered"
+			],
+			[
+				"bottom",
+				"bottomRight"
+			],
+			[
+				"setparent",
+				"setParentItem"
+			],
+			[
+				"cace",
+				"cache_badge"
+			],
+			[
+				"getNod",
+				"getNodeProperty"
+			],
+			[
+				"assrt",
+				"assert"
+			],
+			[
+				"_inle",
+				"_InletName"
+			],
+			[
+				"nodes",
+				"nodesPropertiesChanged"
+			],
+			[
+				"outlet",
+				"outlet_names"
+			],
+			[
+				"function",
+				"function_name"
+			],
+			[
+				"in",
+				"inspector_panel"
+			],
+			[
+				"selection",
+				"selectionChanged"
+			],
+			[
+				"Grap",
+				"GraphicsItemFlag"
+			],
+			[
+				"QGrap",
 				"QGraphicsItem"
 			],
 			[
-				"norm",
-				"normalized"
+				"setSe",
+				"setSelectionModel"
 			],
 			[
-				"QVe",
-				"QVector2D"
+				"graph",
+				"graphscene"
 			],
 			[
-				"no",
-				"normalized"
+				"option",
+				"optionValue"
 			],
 			[
-				"mouse",
-				"mouseDoubleClickEvent"
-			],
-			[
-				"_model",
-				"_model_connections"
-			],
-			[
-				"Qgra",
-				"QGraphicsItem"
-			],
-			[
-				"Node",
-				"NodeGraphicsObject"
-			],
-			[
-				"NXGr",
-				"NXGraphScene"
-			],
-			[
-				"nx",
-				"nx_graph_scene"
-			],
-			[
-				"pyl",
-				"pylive"
-			],
-			[
-				"top",
-				"topLeft"
-			],
-			[
-				"_",
-				"_label"
-			],
-			[
-				"Verte",
-				"VertexGraphicsObject"
-			],
-			[
-				"NotImpl",
-				"NotImplementedError"
-			],
-			[
-				"child",
-				"childrenBoundingRect"
-			],
-			[
-				"oute",
-				"outletAt"
-			],
-			[
-				"Qpoin",
-				"QPointF"
-			],
-			[
-				"Outlet",
-				"OutletGraphicsObject"
-			],
-			[
-				"setAcc",
-				"setAcceptHoverEvents"
-			],
-			[
-				"item",
-				"itemAt"
-			],
-			[
-				"ungrab",
-				"ungrabMouse"
-			],
-			[
-				"Link",
-				"LinkGraphicsObject"
-			],
-			[
-				"NotIm",
-				"NotImplementedError"
-			],
-			[
-				"mapFro",
-				"mapFromScene"
-			],
-			[
-				"Inlet",
-				"InletGraphicsObject"
-			],
-			[
-				"GraphicsSceneMou",
-				"GraphicsSceneMousePress"
-			],
-			[
-				"scene",
-				"_scene"
-			],
-			[
-				"GraphicsN",
-				"GraphicsNodeItem"
-			],
-			[
-				"NXGraphScen",
-				"NXGraphSceneMouseTool"
+				"grp",
+				"graphmodel"
 			],
 			[
 				"make",
-				"make_fillet_path"
+				"make_unique_name"
 			],
 			[
-				"ar",
-				"arcMoveTo"
+				"Option",
+				"OptionDialog"
 			],
 			[
-				"mapFrom",
-				"mapFromParent"
+				"global",
+				"global_center"
 			],
 			[
-				"arcTo",
-				"arcMoveTo"
+				"mapTo",
+				"mapToGlobal"
 			],
 			[
-				"_in",
-				"_inlet_graphics_objects"
+				"mapT",
+				"mapToGlobal"
 			],
 			[
-				"_inl",
-				"_inlet_graphics_objects"
+				"size",
+				"sizeHint"
 			],
 			[
-				"nx_grp",
-				"nx_graph_graphics_items"
-			],
-			[
-				"Gra",
-				"GraphicsPortItem"
-			],
-			[
-				"Graphics",
-				"GraphicsVertexItem"
-			],
-			[
-				"onNode",
-				"onNodeDeleted"
-			],
-			[
-				"onC",
-				"onNodeCreated"
-			],
-			[
-				"onLink",
-				"onLinkDeleted"
-			],
-			[
-				"edge",
-				"edgesAdded"
+				"QDialo",
+				"QDialog"
 			]
 		]
 	},
 	"buffers":
 	[
-		{
-			"file": "pylive/NXPythonGraphEditor/main.py",
-			"settings":
-			{
-				"buffer_size": 8000,
-				"line_ending": "Windows"
-			}
-		}
 	],
 	"build_system": "Packages/Python/Python.sublime-build",
 	"build_system_choices":
@@ -556,20 +548,28 @@
 		"selected_items":
 		[
 			[
-				"insta",
+				"install",
 				"Package Control: Install Package"
 			],
 			[
 				"debug",
-				"Debugger: Open"
+				"Package Control: Disable Debug Mode"
+			],
+			[
+				"disa",
+				"Package Control: Disable Package"
+			],
+			[
+				"remove p",
+				"Package Control: Remove Package"
+			],
+			[
+				"packa",
+				"Package Control: List Packages"
 			],
 			[
 				"debu",
 				"Debugger: Open"
-			],
-			[
-				"install",
-				"Package Control: Install Package"
 			],
 			[
 				"instal",
@@ -590,6 +590,10 @@
 			[
 				"remov",
 				"Package Control: Remove Package"
+			],
+			[
+				"insta",
+				"Package Control: Install Package"
 			],
 			[
 				"termin",
@@ -630,10 +634,6 @@
 			[
 				"package",
 				"Package Control: Disable Package"
-			],
-			[
-				"packa",
-				"View Package File"
 			]
 		],
 		"width": 0.0
@@ -657,81 +657,97 @@
 	"expanded_folders":
 	[
 		"/C/dev/src/pylive",
-		"/C/dev/src/pylive/pylive",
-		"/C/dev/src/pylive/pylive/NXPythonGraphEditor"
+		"/C/dev/src/pylive/expreiments",
+		"/C/dev/src/pylive/expreiments/edifice_youtube_playlist"
 	],
 	"file_history":
 	[
-		"/C/dev/src/pylive/expreiments/qml/graph2/main.py",
-		"/C/dev/src/pylive/expreiments/qml/graph2.py",
-		"/C/dev/src/pylive/expreiments/qml/graph.py",
-		"/C/dev/src/pylive/expreiments/qml/main.py",
-		"/C/dev/src/pylive/expreiments/qml/graph2/main.qml",
-		"/C/dev/src/pylive/expreiments/qml/rahix_node_editor/graph.qml",
-		"/C/dev/src/pylive/expreiments/qml/rahix_node_editor/graph.py",
-		"/C/dev/src/pylive/expreiments/qml/graph/main.qml",
-		"/C/dev/src/pylive/expreiments/qml/graph/main.py",
+		"/C/dev/src/pylive/expreiments/edifice_youtube_playlist/youtube_main.py",
+		"/C/dev/src/pylive/expreiments/edifice_youtube_playlist/youtube_helpers.py",
+		"/C/dev/src/music_library_manager/main.py",
 		"/C/dev/src/pylive/pylive/NXPythonGraphEditor/main.py",
-		"/C/dev/src/pylive/pylive/NetworkXGraphEditor/nx_network_scene_delegate.py",
-		"/C/dev/src/pylive/pylive/NXPythonGraphEditor/python_graph_model.py",
 		"/C/dev/src/pylive/pylive/NetworkXGraphEditor/nx_node_inspector_view.py",
+		"/C/dev/src/pylive/pylive/NXPythonGraphEditor/python_graph_model.py",
 		"/C/dev/src/pylive/pylive/NXPythonGraphEditor/python_data_viewer.py",
 		"/C/Program Files/WindowsApps/PythonSoftwareFoundation.Python.3.12_3.12.2288.0_x64__qbz5n2kfra8p0/Lib/contextlib.py",
-		"/C/dev/src/pylive/pylive/NetworkXGraphEditor/nx_network_scene_outlet_to_inlet.py",
-		"/C/dev/src/pylive/pylive/QtLiveApp/PythonGraphEditor/python_data_viewer.py",
-		"/C/dev/src/pylive/pylive/QtLiveApp/PythonGraphEditor/main.py",
-		"/C/dev/src/pylive/pylive/NetworkXGraphEditor/nx_graph_selection_model.py",
-		"/C/dev/src/pylive/pylive/utils/execute_function.py",
-		"/C/dev/src/pylive/pylive/QtLiveApp/PythonGraphEditor/python_graph_model.py",
+		"/C/dev/src/pylive/pylive/utils/qt.py",
+		"/C/dev/src/pylive/pylive/NXPythonGraphEditor/<class 'networkx.utils.decorators.argmap'> compilation 8",
+		"/C/dev/src/pylive/.venv/Lib/site-packages/networkx/algorithms/dag.py",
+		"/C/dev/src/pylive/.venv/Lib/site-packages/networkx/algorithms/traversal/breadth_first_search.py",
+		"/C/dev/src/pylive/.venv/Lib/site-packages/networkx/classes/digraph.py",
+		"/C/dev/src/pylive/tests/test_python_graphmodel.py",
+		"/C/dev/src/pylive/tests/test_nx_graph_model.py",
+		"/C/dev/src/pylive/.venv/Lib/site-packages/networkx/classes/filters.py",
+		"/C/dev/src/pylive/.venv/Lib/site-packages/networkx/classes/function.py",
+		"/C/dev/src/pylive/.venv/Lib/site-packages/networkx/classes/graph.py",
+		"/C/dev/src/pylive/pylive/NetworkXGraphEditor/nx_node_inspector_delegate.py",
 		"/C/dev/src/pylive/pylive/NetworkXGraphEditor/nx_graph_model.py",
-		"/C/dev/src/pylive/pylive/QtLiveApp/PythonGraphEditor/index.html",
-		"/C/dev/src/pylive/expreiments/qml/graph/nodeList.qml",
-		"/C/dev/src/pylive/expreiments/qml/graph/graph.qmlproject",
-		"/C/dev/src/pylive/expreiments/qml/graph/node_list.py",
-		"/C/dev/src/pylive/expreiments/qml/todo/todo.qml",
-		"/C/dev/src/pylive/expreiments/qml/todo.py",
-		"/C/dev/src/pylive/expreiments/qml/node_list.py",
-		"/C/dev/src/pylive/expreiments/qml/nodeList.qml",
-		"/C/dev/src/pylive/expreiments/qml/graph.qml",
-		"/C/dev/src/pylive/expreiments/qml/graph2.qml",
-		"/C/dev/src/pylive/expreiments/qml/main.qml",
-		"/C/dev/src/pylive/pylive/NetworkXGraphEditor/nx_standard_network_delegate.py",
 		"/C/dev/src/pylive/pylive/NetworkXGraphEditor/nx_network_model.py",
-		"/C/dev/src/pylive/pylive/NetworkXGraphEditor/main-network_example.py",
-		"/C/dev/src/pylive/pylive/QtLiveApp/PythonGraphEditor/python_graph_scene_delegate.py",
-		"/C/dev/src/pylive/pylive/NetworkXGraphEditor/OLD nx_graph_view.py",
-		"/C/dev/src/pylive/pylive/NetworkXGraphEditor/nx_graph_shapes.py",
-		"/C/dev/src/pylive/pylive/NetworkXGraphEditor/main-graph_example.py",
-		"/C/dev/src/pylive/pylive/QtLiveApp/live_python_graph_with_exec.py",
-		"/C/dev/src/pylive/pylive/examples/python_function_graph/python_graph_model.py",
-		"/C/dev/src/pylive/expreiments/inspect_functions_experiment.py",
-		"/C/dev/src/pylive/tests/nx_netowrk_model.md",
-		"/C/Users/andris/AppData/Local/Sublime Text/Package Storage/LSP-pyright/18.15.0/language-server/node_modules/pyright/dist/typeshed-fallback/stdlib/pathlib.pyi",
-		"/C/Users/andris/AppData/Local/Sublime Text/Package Storage/LSP-pyright/18.15.0/language-server/node_modules/pyright/dist/typeshed-fallback/stdlib/os/__init__.pyi",
-		"/C/Users/andris/AppData/Local/Sublime Text/Package Storage/LSP-pyright/18.15.0/language-server/node_modules/pyright/dist/typeshed-fallback/stdlib/_typeshed/__init__.pyi",
-		"/C/dev/src/pylive/pylive/NetworkXGraphEditor/main.py",
-		"/C/dev/src/pylive/script_examples_to_run_live/rounded_link_item.py",
-		"/C/dev/src/pylive/pylive/utils/geo.py",
-		"/C/dev/src/pylive/.venv/Lib/site-packages/bidict/_base.py",
-		"/C/dev/src/pylive/pylive/NetworkXGraphEditor/nx_network_scene_node-to-inlet.py",
-		"/C/dev/src/pylive/pylive/NetworkXGraphEditor/nx_network_scene_outlet-to-inlet.py",
-		"/C/dev/src/pylive/pylive/QtLiveApp/live_script_with_exec.py",
-		"/C/dev/src/pylive/pylive/NetworkXGraphEditor/nx_network_scene.py",
-		"/C/dev/src/pylive/pylive/NetworkXGraphEditor/nx_graph_scene.py",
-		"/C/dev/src/pylive/pylive/NetworkXGraphEditor/nx_network_scene-STANDALONE.py",
-		"/C/dev/src/pylive/pylive/NetworkXGraphEditor/nx_network_scene-SUBCLASS.py",
-		"/C/dev/src/pylive/pylive/utils/graph_layout.py",
-		"/C/dev/src/pylive/pylive/QtTerminal/terminal_with_exec.py",
-		"/C/dev/src/pylive/.venv/Lib/site-packages/networkx/classes/multidigraph.py",
-		"/C/dev/src/pylive/pylive/QtGraphEditor/nx_inspector_view.py",
-		"/C/dev/src/pylive/pylive/QtGraphEditor/nx_graph_view.py",
-		"/C/dev/src/pylive/pylive/QtGraphEditor/nx_graph_model.py",
-		"/C/dev/src/pylive/pylive/QtGraphEditor/nx_graph_graphics_items.py",
-		"/C/dev/src/pylive/pylive/QtGraphEditor/NetrowkXGraphEditor/link_graphics_items.py",
-		"/C/dev/src/pylive/pylive/QtGraphEditor/nx_graph_graphics_scene.py",
-		"/C/dev/src/pylive/pylive/QtGraphEditor/qtpy_nodeeditor.py",
-		"/C/dev/src/pylive/pylive/utils/diff.py",
 		"/C/dev/src/pylive/pylive/QtScriptEditor/components/jedi_completer.py",
+		"/C/dev/src/pylive/pylive/NetworkXGraphEditor/main-network_example.py",
+		"/C/dev/src/pylive/pylive/NetworkXGraphEditor/nx_network_scene_outlet_to_inlet.py",
+		"/C/dev/src/pylive/pylive/NetworkXGraphEditor/nx_node_proxy_model.py",
+		"/C/dev/src/pylive/pylive/NetworkXGraphEditor/nx_standard_network_delegate.py",
+		"/C/dev/src/pylive/pylive/NetworkXGraphEditor/main-graph_example.py",
+		"/C/dev/src/pylive/.venv/Lib/site-packages/networkx/classes/reportviews.py",
+		"/C/dev/src/pylive/pylive/OLD QtGraphEditor/mindmap_example.py",
+		"/C/dev/src/pylive/pylive/examples/python_function_graph/main.py",
+		"/C/dev/src/pylive/pylive/examples/livescript OLD.py",
+		"/C/dev/src/pylive/pylive/QtLiveApp/PythonGraphEditor/main.py",
+		"/C/dev/src/pylive/pylive/QtLiveApp/PythonGraphEditor/python_data_viewer.py",
+		"/C/dev/src/pylive/pylive/QtLiveApp/PythonGraphEditor/function_inspector_view.py",
+		"/C/dev/src/pylive/pylive/QtLiveApp/PythonGraphEditor/python_graph_model.py",
+		"/C/dev/src/pylive/pylive/QtLiveApp/PythonGraphEditor/python_graph_delegate.py",
+		"/C/dev/src/pylive/pylive/NetworkXGraphEditor/__init__.py",
+		"/C/dev/src/pylive/model-view-delegate-pattern-template.py",
+		"/C/dev/src/pylive/pylive/QtLiveApp/live_python_graph_with_exec.py",
+		"/C/dev/src/pylive/pylive/NetworkXGraphEditor/OLD nx_graph_view.py",
+		"/C/dev/src/pylive/pylive/OLD QtGraphEditor/graphview_with_delegate.py",
+		"/C/dev/src/pylive/pylive/examples/python_function_graph/graph_view.py",
+		"/C/dev/src/pylive/pylive/examples/python_function_graph/graph_model.py",
+		"/C/dev/src/pylive/pylive/utils/diff.py",
+		"/C/dev/src/pylive/pylive/utils/qtfactory.py",
+		"/C/dev/src/pylive/expreiments/qml/main.qml",
+		"/C/dev/src/pylive/expreiments/qml/main.py",
+		"/C/dev/src/pylive/expreiments/qml/qml-simple-demo.qml",
+		"/C/Users/and/Downloads/Main.qml",
+		"/C/dev/src/pylive/pylive/NetworkXGraphEditor/nx_graph_selection_model.py",
+		"/C/dev/src/pylive/pylive/utils/graph.py",
+		"/C/dev/src/pylive/.venv/Lib/site-packages/networkx/algorithms/traversal/depth_first_search.py",
+		"/C/dev/src/pylive/pylive/examples/python_function_graph/function_widget.py",
+		"/C/dev/src/pylive/pylive/utils/graph_layout.py",
+		"/C/dev/src/pylive/expreiments/QGraphicsColorizeEffect_with_QGraphicsItem_Example.py",
+		"/C/dev/src/pylive/TODOs.md",
+		"/C/dev/src/pylive/tests/nx_netowrk_model.py",
+		"/C/Users/and/AppData/Local/Sublime Text/Package Storage/LSP-pyright/20.17.0/language-server/node_modules/pyright/dist/typeshed-fallback/stubs/networkx/networkx/classes/multidigraph.pyi",
+		"/C/dev/src/pylive/expreiments/inspect_functions_experiment.py",
+		"/C/dev/src/pylive/.venv/Lib/site-packages/direct/tkpanels/Inspector.py",
+		"/C/dev/src/pylive/expreiments/inspect_available_functions.py",
+		"/C/dev/src/pylive/pylive/options_dialog.py",
+		"/C/dev/src/pylive/pylive/NetworkXGraphEditor/nx_graph_shapes.py",
+		"/C/dev/src/pylive/pylive/examples/visual_coding.py",
+		"/C/dev/src/pylive/pylive/NetworkXGraphEditor/nx_network_scene.py",
+		"/C/dev/src/pylive/pylive/utils/geo.py",
+		"/C/dev/src/pylive/script_examples_to_run_live/rounded_link_item.py",
+		"/C/dev/src/pylive/pylive/QtGraphEditor/qgraphics_arrow_item.py",
+		"/C/dev/src/pylive/pylive/QtLiveApp/live_script_with_exec.py",
+		"/C/dev/src/pylive/pylive/QtLiveApp/live_graph_with_exec.py",
+		"/C/dev/src/pylive/.venv/Lib/site-packages/bidict/_base.py",
+		"/C/dev/src/pylive/pylive/NetworkXGraphEditor/main.py",
+		"/C/dev/src/pylive/pylive/NetworkXGraphEditor/nx_graph_scene-SUBCLASS-example.py",
+		"/C/dev/src/pylive/pyproject.toml",
+		"/C/dev/src/pylive/pylive/NetworkXGraphEditor/nx_inspector_view.py",
+		"/C/dev/src/pylive/pylive/NetworkXGraphEditor/nx_graph_scene-STANDALONE.py",
+		"/C/dev/src/pylive/.venv/Lib/site-packages/networkx/classes/multidigraph.py",
+		"/C/dev/src/pylive/pylive/QtTerminal/terminal_with_exec.py",
+		"/C/dev/src/pylive/pylive/QtGraphEditor/NetrowkXGraphEditor/link_graphics_items.py",
+		"/C/dev/src/pylive/pylive/NetworkXGraphEditor/nx_graph_graphics_items.py",
+		"/C/dev/src/pylive/pylive/QtGraphEditor/nx_graph_view.py",
+		"/C/dev/src/pylive/pylive/QtGraphEditor/nx_inspector_view.py",
+		"/C/dev/src/pylive/pylive/QtGraphEditor/nx_graph_model.py",
+		"/C/dev/src/pylive/pylive/QtGraphEditor/nx_graph_graphics_scene.py",
+		"/C/dev/src/pylive/pylive/QtGraphEditor/nx_graph_graphics_items.py",
+		"/C/dev/src/pylive/pylive/QtGraphEditor/qtpy_nodeeditor.py",
 		"/C/dev/src/pylive/expreiments/ipython/embedded_qtconsole.py",
 		"/C/dev/src/pylive/expreiments/display_builtin_icons.py",
 		"/C/dev/src/pylive/pylive/QtGraphEditor/nx_graph_selection_model.py",
@@ -740,24 +756,20 @@
 		"/C/dev/src/pylive/pylive/utils/sugiyama_layout.py",
 		"/C/dev/src/pylive/.venv/Lib/site-packages/networkx/drawing/layout.py",
 		"/C/dev/src/pylive/pylive.sublime-project",
-		"/C/dev/src/pylive/.venv/Lib/site-packages/networkx/classes/reportviews.py",
 		"/C/dev/src/pylive/pylive/QtGraphEditor/nx_graph_graphics_scene_with_ports.py",
 		"/C/dev/src/pylive/pylive/QtGraphEditor/NetrowkXGraphEditor/qgraphics_arrow_item.py",
 		"/C/dev/src/pylive/pylive/QtGraphEditor/dag_graph_graphics_scene.py",
 		"/C/dev/src/pylive/expreiments/qstyle_draw_ptimitive_elements.py",
-		"/C/dev/src/pylive/tests/test_python_graphmodel.py",
 		"/C/dev/src/pylive/pylive/QtGraphEditor/infinite_graphicsview_optimized.py",
 		"/C/Users/andris/AppData/Local/Packages/PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0/LocalCache/local-packages/Python312/site-packages/PySide6/QtCore.pyi",
-		"/C/dev/src/pylive/pylive/examples/python_function_graph/graph_view.py",
 		"/C/dev/src/pylive/pylive/QtGraphEditor/node_connection_tool.py",
 		"/C/dev/src/pylive/pylive/QtGraphEditor/text_widget.py",
 		"/C/dev/src/pylive/pylive/QtGraphEditor/circle_widget.py",
 		"/C/dev/src/pylive/pylive/QtGraphEditor/pin_connection_tool.py",
-		"/C/dev/src/pylive/pylive/examples/python_function_graph/main.py",
 		"/C/dev/src/pylive/pylive/QtGraphEditor/NetrowkXGraphEditor/graphview_with_delegate.py",
+		"/C/dev/src/pylive/pylive/examples/python_function_graph/python_graph_model.py",
 		"/C/Users/andris/Downloads/SideFX Houdini 20.5.278 x64 Win/readme.txt",
 		"/C/Users/andris/Documents/Blender/Assets/blender_assets.cats.txt",
-		"/C/dev/src/pylive/pyproject.toml",
 		"/C/dev/src/pylive/pylive/QtGraphEditor/NetrowkXGraphditor/nx_graph_view.py",
 		"/C/dev/src/pylive/pylive/QtGraphEditor/NetrowkXGraphditor/standard_graph_delegate.py",
 		"/C/dev/src/pylive/pylive/QtGraphEditor/NetrowkXGraphditor/link_graphics_items.py",
@@ -767,8 +779,8 @@
 		"/C/dev/src/pylive/expreiments/built-a-dependency-graph-of-a-python-codebase.py",
 		"/C/dev/src/pylive/pylive/QtLiveApp/live_script_skeleton.py",
 		"/C/dev/src/pylive/script_examples_to_run_live/text_processing.py",
-		"/C/dev/src/pylive/pylive/QtLiveApp/live_graph_with_exec.py",
 		"/C/dev/src/pylive/expreiments/run-script-in-terminal.py",
+		"/C/Users/andris/AppData/Local/Sublime Text/Package Storage/LSP-pyright/18.15.0/language-server/node_modules/pyright/dist/typeshed-fallback/stdlib/pathlib.pyi",
 		"/C/dev/src/pylive/expreiments/connect_to_ipython.py",
 		"/C/dev/src/pylive/pylive/__main__.py",
 		"/C/dev/src/pylive/expreiments/ipython/notebook_with_ipython.py",
@@ -777,23 +789,11 @@
 		"/C/dev/src/pylive/pylive/QtScriptEditor/cell_support.py",
 		"/C/dev/src/pylive/pylive/QtScriptEditor/components/linter_widget.py",
 		"/C/dev/src/pylive/pylive/QtScriptEditor/components/textedit_number_editor.py",
-		"/C/dev/src/pylive/pylive/QtScriptEditor/script_edit.py",
-		"/C/dev/src/pylive/TODOs.md",
-		"/C/dev/src/pylive/script_examples_to_run_live/glcanvas_widget_with_moderngl.py",
-		"/C/dev/src/pylive/pylive/QtTerminal/preview_widget.py",
-		"/C/dev/src/pylive/pylive/render_engine/GLCanvasWidget_with_painting_signal.py",
-		"/C/dev/src/pylive/pylive/QtLiveFramework/live_framework_with_exec.py",
-		"/C/dev/src/pylive/expreiments/file_textdocument_link.py",
-		"/E/__ANDRIS__/ART/_Applications_/Cynthia Lopez 7000 - 2024/Cynthia Lopez 7000.xlsx",
-		"/C/dev/src/pylive/expreiments/glcanvas.py",
-		"/C/dev/src/pylive/pylive/render_engine/regl/regl.py",
-		"/C/dev/src/pylive/pylive/QtLiveFramework/live_framework_skeleton.py",
-		"/C/dev/src/pylive/expreiments/GLCanvasWidget.py",
-		"/C/dev/src/pylive/expreiments/3d_rendering/glcanvas.py"
+		"/C/dev/src/pylive/pylive/QtScriptEditor/script_edit.py"
 	],
 	"find":
 	{
-		"height": 25.3333333333
+		"height": 23.0
 	},
 	"find_in_files":
 	{
@@ -808,52 +808,78 @@
 		"case_sensitive": false,
 		"find_history":
 		[
-			"nx_network_scene_delegate",
-			":\".\"",
-			"contextmanager",
-			"arguments(",
-			"try",
-			"...\n",
-			"):)",
+			"print",
+			"logging",
+			"print",
+			"selection_model",
+			"nodeAttributesAb",
+			"push",
+			"blockSignals",
+			"block",
+			"updateAttr",
+			"updateAttri",
+			"_selectionModel",
+			"StandardNodeItem",
+			"prop",
+			"_Node",
+			"PythonGraphDelegate",
+			"Q.",
+			"addFunction",
+			"nodesPropertiesChanged",
+			"nodesChanged",
+			"nodesPropertiesChanged",
+			"onNodesCreated",
+			"_property_editors",
+			"_node_graphics_objects",
+			"delegate",
+			"fn",
 			"getFunction",
-			"inEdges",
-			"outEdges",
-			"NXGraphModel",
-			"self.getNodeProperty(n, \"inlets\")",
-			"inlets",
-			"LinkGrap",
-			"ArrowLinkShape",
-			"ArrowLinke",
-			"createLink",
-			"EdgeId",
+			"selectedNodes()[0]",
+			"selectedNodes[0]",
+			"onNodesProperiesChanged",
+			"PythonGraphDelegate",
+			"None",
+			"setNodePropertyEditor",
+			"createPropertyEditor",
+			"):\n",
+			"setNodeProp",
+			"createPropert",
+			"NXNetworkModel",
+			"createProp",
+			"isin",
+			"nodesPropertiesChanged.connect",
+			"class Change",
+			"nodesPropertiesChanged",
+			"nodePropertiesChanged",
+			"class Change",
+			"Change",
+			"selectionmodel",
+			"options",
+			"createNode",
+			"creatNode",
+			"AbstractS",
+			"makeArrow",
+			"Rounded",
 			"LinkId",
-			"createLink",
-			"createOutlet",
-			"createInlet",
-			"OutletGraphics",
-			"addInlet",
+			"_inletEditorAt",
+			"selectionmodel",
+			"selectionodel",
+			"QSplitter",
+			"ConnectionEnterType",
+			"grabM",
+			"NXGraphScene",
 			"move(",
-			"linkshape",
-			"rounded",
-			"draft",
-			"linktool",
-			"mousetool",
-			"tool",
-			"linktool",
-			"source",
-			"target",
-			"targetId",
-			"target_id",
-			"TargetId",
-			"LinkShape",
-			"disrtribute",
-			"4",
-			"_model",
-			"move(",
-			"LinkShape",
 			"_target_graphics_objects",
-			"outlet",
-			"EdgeId",
+			"sourceGr",
+			"updateAtta",
+			"_inlet",
+			"link.move",
+			"move(",
+			"move",
+			"move(",
+			"edges[",
+			"move(",
+			"import",
 			"outletGraphicsObject(",
 			"NXGraphModel",
 			"modified",
@@ -909,33 +935,7 @@
 			"ConnectionEvent",
 			".map",
 			"QTransform",
-			"makeLineBetweenShapes",
-			"print",
-			"arrow",
-			"line_between",
-			"drag",
-			"self.loop",
-			"PinConnectionTool",
-			"eventFilter",
-			"edge",
-			"edge.target",
-			"edge.source",
-			"edge.target",
-			"setMouseTool",
-			"self.connectionTool",
-			"node",
-			"EdgeConnectionEvent",
-			"parent",
-			"(\n",
-			"block",
-			"signal",
-			"connected",
-			"_edges",
-			"removeEdge",
-			"setSourceOutlet",
-			"sceneGeome",
-			"EdgeW",
-			"updatePo"
+			"makeLineBetweenShapes"
 		],
 		"highlight": true,
 		"in_selection": false,
@@ -943,8 +943,8 @@
 		"regex": false,
 		"replace_history":
 		[
-			"<\n",
-			"InletId",
+			"nodesChanged",
+			"EdgeId",
 			"LinkEvent",
 			"VertexWidget",
 			"LinkWidget",
@@ -993,73 +993,12 @@
 		{
 			"sheets":
 			[
-				{
-					"buffer": 0,
-					"file": "pylive/NXPythonGraphEditor/main.py",
-					"selected": true,
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 8000,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								559,
-								559
-							]
-						],
-						"settings":
-						{
-							"auto_complete_triggers":
-							[
-								{
-									"characters": "<",
-									"selector": "text.html, text.xml"
-								},
-								{
-									"rhs_empty": true,
-									"selector": "punctuation.accessor"
-								},
-								{
-									"characters": ".[\"'",
-									"selector": "meta.tag, source - comment - string.quoted.double.block - string.quoted.single.block - string.unquoted.heredoc",
-									"server": "LSP-pyright"
-								}
-							],
-							"lsp_active": true,
-							"lsp_uri": "file:///C:/dev/src/pylive/pylive/NXPythonGraphEditor/main.py",
-							"show_definitions": false,
-							"syntax": "Packages/Python/Python.sublime-syntax",
-							"tab_size": 4,
-							"translate_tabs_to_spaces": true
-						},
-						"translation.x": 0.0,
-						"translation.y": 0.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 0,
-					"stack_multiselect": false,
-					"type": "text"
-				}
-			]
-		},
-		{
-			"sheets":
-			[
-			]
-		},
-		{
-			"sheets":
-			[
 			]
 		}
 	],
 	"incremental_find":
 	{
-		"height": 25.3333333333
+		"height": 23.0
 	},
 	"input":
 	{
@@ -1074,25 +1013,11 @@
 				0,
 				1,
 				1
-			],
-			[
-				1,
-				0,
-				2,
-				1
-			],
-			[
-				2,
-				0,
-				3,
-				1
 			]
 		],
 		"cols":
 		[
 			0.0,
-			0.416142322097,
-			0.837902621723,
 			1.0
 		],
 		"rows":
@@ -1128,7 +1053,7 @@
 	},
 	"output.exec":
 	{
-		"height": 220.0
+		"height": 215.0
 	},
 	"output.find_results":
 	{
@@ -1138,15 +1063,11 @@
 	{
 		"height": 0.0
 	},
-	"output.rename":
-	{
-		"height": 541.0
-	},
 	"pinned_build_system": "Python: Run File (CrossPlatform)",
 	"project": "pylive.sublime-project",
 	"replace":
 	{
-		"height": 46.6666666667
+		"height": 42.0
 	},
 	"save_all_on_build": true,
 	"select_file":
@@ -1156,56 +1077,112 @@
 		"selected_items":
 		[
 			[
-				"execut",
-				"pylive\\utils\\execute_function.py"
+				"data view",
+				"pylive\\NXPythonGraphEditor\\python_data_viewer.py"
 			],
 			[
-				"nx networkd mode",
-				"pylive\\NetworkXGraphEditor\\nx_network_model.py"
+				"python gr",
+				"pylive\\NXPythonGraphEditor\\python_graph_model.py"
 			],
 			[
-				"nx network deleg",
-				"pylive\\NetworkXGraphEditor\\nx_standard_network_delegate.py"
+				"nx node ins",
+				"pylive\\NetworkXGraphEditor\\nx_node_inspector_view.py"
 			],
 			[
-				"shapes",
-				"pylive\\NetworkXGraphEditor\\nx_graph_shapes.py"
+				"nx graph",
+				"pylive\\NetworkXGraphEditor\\nx_graph_model.py"
+			],
+			[
+				"nx graph model",
+				"pylive\\NetworkXGraphEditor\\nx_graph_model.py"
+			],
+			[
+				"nx node inspector dele",
+				"pylive\\NetworkXGraphEditor\\nx_node_inspector_delegate.py"
 			],
 			[
 				"inspector",
 				"pylive\\NetworkXGraphEditor\\nx_node_inspector_view.py"
 			],
 			[
-				"network shape",
+				"nx netw",
+				"pylive\\NetworkXGraphEditor\\nx_network_model.py"
+			],
+			[
+				"nx grap",
+				"pylive\\NetworkXGraphEditor\\nx_graph_model.py"
+			],
+			[
+				"nx network",
+				"pylive\\NetworkXGraphEditor\\nx_network_model.py"
+			],
+			[
+				"nx graph mod",
+				"pylive\\NetworkXGraphEditor\\nx_graph_model.py"
+			],
+			[
+				"graph model",
+				"pylive\\examples\\python_function_graph\\graph_model.py"
+			],
+			[
+				"nx",
+				"pylive\\NetworkXGraphEditor\\nx_graph_model.py"
+			],
+			[
+				"nx graph mode",
+				"pylive\\NetworkXGraphEditor\\nx_graph_model.py"
+			],
+			[
+				"nxgraph se",
+				"pylive\\NetworkXGraphEditor\\nx_graph_selection_model.py"
+			],
+			[
+				"test n",
+				"tests\\test_nx_graph_model.py"
+			],
+			[
+				"nx ",
+				"pylive\\NetworkXGraphEditor\\nx_graph_model.py"
+			],
+			[
+				"nxgraphm",
+				"pylive\\NetworkXGraphEditor\\nx_graph_model.py"
+			],
+			[
+				"nxgr",
+				"pylive\\NetworkXGraphEditor\\nx_graph_model.py"
+			],
+			[
+				"shapes",
 				"pylive\\NetworkXGraphEditor\\nx_graph_shapes.py"
+			],
+			[
+				"nx network sce",
+				"pylive\\NetworkXGraphEditor\\nx_network_scene_outlet-to-inlet.py"
 			],
 			[
 				"geo",
 				"pylive\\utils\\geo.py"
 			],
 			[
-				"graph sh",
+				"shape",
 				"pylive\\NetworkXGraphEditor\\nx_graph_shapes.py"
 			],
 			[
-				"graph s",
-				"pylive\\NetworkXGraphEditor\\nx_graph_shapes.py"
+				"nx net",
+				"pylive\\NetworkXGraphEditor\\nx_network_scene.py"
 			],
 			[
 				"round",
 				"script_examples_to_run_live\\rounded_link_item.py"
 			],
 			[
-				"nx graph",
+				"nx graph s",
 				"pylive\\NetworkXGraphEditor\\nx_graph_shapes.py"
 			],
 			[
-				"nx netw",
-				"pylive\\NetworkXGraphEditor\\nx_network_scene.py"
-			],
-			[
 				"nx graph mo",
-				"pylive\\QtGraphEditor\\nx_graph_model.py"
+				"pylive\\NetworkXGraphEditor\\nx_graph_model.py"
 			],
 			[
 				"icons",
@@ -1228,10 +1205,6 @@
 				"pylive\\QtGraphEditor\\nx_graph_graphics_scene_with_ports.py"
 			],
 			[
-				"nx",
-				"pylive\\QtGraphEditor\\nx_graph_model.py"
-			],
-			[
 				"arrowi",
 				"pylive\\QtGraphEditor\\NetrowkXGraphEditor\\qgraphics_arrow_item.py"
 			],
@@ -1244,20 +1217,12 @@
 				"pylive\\QtGraphEditor\\dag_graph_graphics_scene.py"
 			],
 			[
-				"nx graph s",
-				"pylive\\QtGraphEditor\\nx_graph_selection_model.py"
-			],
-			[
 				"dag graphics ",
 				"pylive\\QtGraphEditor\\dag_graph_graphics_scene.py"
 			],
 			[
 				"test py",
 				"tests\\test_python_graphmodel.py"
-			],
-			[
-				"python gr",
-				"pylive\\examples\\python_function_graph\\python_graph_model.py"
 			],
 			[
 				"main",
@@ -1496,7 +1461,7 @@
 		],
 		"width": 592.0
 	},
-	"selected_group": 1,
+	"selected_group": 0,
 	"settings":
 	{
 		"lsp_show_inlay_hints": false
@@ -1505,7 +1470,7 @@
 	"show_open_files": false,
 	"show_tabs": true,
 	"side_bar_visible": true,
-	"side_bar_width": 424.0,
+	"side_bar_width": 289.0,
 	"status_bar_visible": true,
 	"template_settings":
 	{
