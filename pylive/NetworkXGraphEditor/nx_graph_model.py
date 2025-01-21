@@ -158,6 +158,8 @@ class NXGraphModel(QObject):
     def deleteNodeAttribute(self, node_id:Hashable, attr:str, /)->None:
         if attr not in self.G.nodes[node_id]:
             raise KeyError(attr)
+            return
+            
         self.nodeAttributesAboutToBeRemoved.emit({
             node_id: [attr]
         })

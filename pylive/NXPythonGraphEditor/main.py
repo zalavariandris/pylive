@@ -4,6 +4,7 @@ from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
 # from pylive.QtLiveApp.live_script_skeleton import LiveScriptWindow
+from pylive.NXPythonGraphEditor.python_graph_scene_delegate import PythonGraphDelegate
 from pylive.NetworkXGraphEditor.nx_graph_shapes import BaseNodeItem
 from pylive.NetworkXGraphEditor.nx_network_model import NXNetworkModel, _NodeId
 from pylive.NetworkXGraphEditor.nx_graph_selection_model import NXGraphSelectionModel
@@ -55,7 +56,7 @@ class LivePythonGraphWindow(QWidget):
         self.graphview.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
         self.graphview.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
 
-        self.graphscene = NXNetworkScene(self._model, self._selection_model)
+        self.graphscene = NXNetworkScene(self._model, self._selection_model, delegate=PythonGraphDelegate())
         self.graphscene.setSelectionModel(self._selection_model)
         self.graphscene.setSceneRect(-9999,-9999,9999*2,9999*2)
         self.graphview.setScene(self.graphscene)
@@ -98,7 +99,7 @@ class LivePythonGraphWindow(QWidget):
     #     selected_nodes = self._selection_model.selectedNodes()
     #     print("invalidate_selected", selected_nodes)
     #     if len(selected_nodes)>0:
-    #         current_node_id = selected_nodes[0]
+    #         current_node_id = sselected_nodes[0]
     #         self._model.invalidate(current_node_id)
 
     # @Slot()
@@ -188,9 +189,9 @@ if __name__ == "__main__":
         return f"processed {text}"
 
     def print_text(text:str):
-        print("SHOW_TEST:")
+        # print("SHOW_TEST:")
         from textwrap import indent
-        print(indent(text, "   |"))
+        # print(indent(text, "   |"))
 
     def write_text(text:str, path:Path):
         pass

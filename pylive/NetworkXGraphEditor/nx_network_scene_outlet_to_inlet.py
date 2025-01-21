@@ -84,8 +84,7 @@ class NXNetworkScene(QGraphicsScene):
 
         self.selectionChanged.connect(self.selectionChangedEvent)
 
-    def attributeEditor(self, node_id:_NodeId, key:str)->QGraphicsItem:
-        return self._attribute_editors[(node_id, key)]
+    
 
     def setSelectionModel(self, selection_model:NXGraphSelectionModel):
         if self._selection_model:
@@ -161,20 +160,48 @@ class NXNetworkScene(QGraphicsScene):
         return self._model
 
     ### <<< Map the interactive graphics ids to widgets
-    def nodeGraphicsObject(self, nodeId: _NodeId) -> BaseNodeItem:
-        return cast(BaseNodeItem, self._node_graphics_objects[nodeId])
+    def nodeGraphicsObject(self, node_id: _NodeId) -> BaseNodeItem|None:
+        assert self._model
+        if node_id not in [_ for _ in self._model.nodes()]:
+            raise KeyError(f"model has no node: {node_id}")
+        if editor:=self._node_graphics_objects.get(node_id):
+            return editor
 
-    def outletGraphicsObject(self, node_id:_NodeId, key:_OutletName) -> QGraphicsItem:
+    def outletGraphicsObject(self, node_id:_NodeId, key:_OutletName) -> QGraphicsItem|None:
         assert isinstance(key, str)
-        return self._outlet_graphics_objects[(node_id, key)]
+        assert self._model
+        if node_id not in [_ for _ in self._model.nodes()]:
+            raise KeyError(f"model has no node: {node_id}")
+        if editor:=self._outlet_graphics_objects.get((node_id, key), None):
+            return editor
 
-    def inletGraphicsObject(self, node_id:_NodeId, key: _InletName) -> QGraphicsItem:
+    def inletGraphicsObject(self, node_id:_NodeId, key: _InletName) -> QGraphicsItem|None:
         assert isinstance(key, str)
-        return self._inlet_graphics_objects[(node_id, key)]
-# 
-    def linkGraphicsObject(self, u:_NodeId, v:_NodeId, k:tuple[_OutletName, _InletName]) -> BaseLinkItem:
+        assert self._model
+        if node_id not in [_ for _ in self._model.nodes()]:
+            raise KeyError(f"model has no node: {node_id}")
+        if editor:=self._inlet_graphics_objects.get((node_id, key), None):
+            return editor
+
+    def linkGraphicsObject(self, u:_NodeId, v:_NodeId, k:tuple[_OutletName, _InletName]) -> BaseLinkItem|None:
         edge_id = u, v, k
-        return cast(BaseLinkItem, self._link_graphics_objects[edge_id])
+        assert self._model
+        if edge_id not in [_ for _ in self._model.edges()]:
+            raise KeyError(f"model has no edge: {edge_id}")
+
+        if editor:=self._link_graphics_objects.get(edge_id):
+            return cast(BaseLinkItem, editor)
+
+    def attributeEditor(self, node_id:_NodeId, attr:str)->QGraphicsItem|None:
+        assert isinstance(attr, str)
+        assert self._model
+        if node_id not in [_ for _ in self._model.nodes()]:
+            raise KeyError(f"model has no node: {node_id}")
+        if attr not in [_ for _ in self._model.nodeAttributes(node_id)]:
+            raise KeyError(f"node {node_id} has no attribute: {attr}")
+
+        if editor:=self._attribute_editors.get((node_id, attr), None):
+            return editor
 
     def moveAttachedLinks(self, node_id:_NodeId):
         from itertools import chain
@@ -190,20 +217,23 @@ class NXNetworkScene(QGraphicsScene):
             link.move(outlet, inlet)
 
     ### <<< Handle Model Signals
-    def onNodesAdded(self, nodes: list[Hashable]):
+    def onNodesAdded(self, nodes: list[_NodeId]):
         assert self._model
         for node_id in nodes:
             ### create node editor
-            node_editor = self.delegate.createNodeEditor(node_id)
+            node_editor = self.delegate.createNodeEditor(self._model, node_id)
             node_editor.scenePositionChanged.connect(lambda node_id=node_id: self.moveAttachedLinks(node_id))
             self._node_graphics_objects[node_id] = node_editor
             self.addItem(self.nodeGraphicsObject(node_id))
+            attributes = [_ for _ in self._model.nodeAttributes(node_id)]
+            
 
             ### create attribute editors
-            for attr in self._model.nodeAttributes(node_id):
+            for attr in attributes:
                 editor = self.delegate.createAttributeEditor(node_editor, self._model, node_id, attr)
                 if editor:
                     self._attribute_editors[(node_id, attr)] = editor
+                    self.delegate.updateAttributeEditor(self._model, node_id, attr, editor)
 
             ### create inlets
             inlets = []
@@ -229,6 +259,8 @@ class NXNetworkScene(QGraphicsScene):
                 outlet.setY(node_editor.boundingRect().bottom()+3)
             distribute_items_horizontal(outlets, node_editor.boundingRect())
 
+            self.delegate.updateNodeEditor(self._model, node_id, node_editor, attributes)
+
     def onNodesRemoved(self, nodes: list[_NodeId]):
         for n in nodes:
             if n in self._node_graphics_objects:
@@ -238,7 +270,7 @@ class NXNetworkScene(QGraphicsScene):
     def onEdgesAdded(self, edges: Iterable[tuple[_NodeId, _NodeId, tuple[str, str]]]):
         for e in edges:
             u, v, (o, i) = e
-            link = self.delegate.createLinkEditor(u, v, (o, i))
+            link = self.delegate.createLinkEditor(self._model, u, v, (o, i))
 
             self._link_graphics_objects[e] = link
             self.addItem(link)
@@ -259,29 +291,38 @@ class NXNetworkScene(QGraphicsScene):
     def onNodeAttributesAdded(self, node_attributes:dict[_NodeId, list[str]]):
         assert self._model
         for node_id, attributes in node_attributes.items():
-            node_editor = self.nodeGraphicsObject(node_id)
-            for attr in attributes:
-                if attr_editor := self.delegate.createAttributeEditor(node_editor, self._model, node_id, attr):
-                    self._attribute_editors[(node_id, attr)] = attr_editor
-                    self.delegate.updateAttributeEditor(self._model, node_id, attr, attr_editor)
+            if node_editor := self.nodeGraphicsObject(node_id):
+                for attr in attributes:
+                    if attr_editor := self.delegate.createAttributeEditor(node_editor, self._model, node_id, attr):
+                        self._attribute_editors[(node_id, attr)] = attr_editor
+                        
+
+                self.delegate.updateNodeEditor(self._model, node_id, node_editor, attributes)
+                for attr in attributes:
+                    if attr_editor:=self.attributeEditor(node_id, attr):
+                        self.delegate.updateAttributeEditor(self._model, node_id, attr, attr_editor)
+
 
     def onNodeAttributesRemoved(self, node_attributes:dict[_NodeId, list[str]]):
         assert self._model
         for node_id, attributes in node_attributes.items():
-            node_editor = self.nodeGraphicsObject(node_id)
-            for attr in attributes:
-                if attr_editor := self._attribute_editors.get((node_id, attr)):
-                    del self._attribute_editors[(node_id, attr)]
-                    scene = attr_editor.scene()
-                    scene.removeItem(attr_editor)
+            if node_editor := self.nodeGraphicsObject(node_id):
+                for attr in attributes:
+                    if attr_editor := self._attribute_editors.get((node_id, attr)):
+                        del self._attribute_editors[(node_id, attr)]
+                        scene = attr_editor.scene()
+                        scene.removeItem(attr_editor)
+
+                self.delegate.updateNodeEditor(self._model, node_id, node_editor, attributes)
 
     def onNodeAttributesChanged(self, node_attributes:dict[_NodeId, list[str]]):
         assert self._model
         for node_id, attributes in node_attributes.items():
-            node_editor = self.nodeGraphicsObject(node_id)
-            for attr in attributes:
-                if attr_editor := self._attribute_editors[(node_id, attr)]:
-                    self.delegate.updateAttributeEditor(self._model, node_id, attr, attr_editor)
+            if node_editor := self.nodeGraphicsObject(node_id):
+                for attr in attributes:
+                    if attr_editor := self.attributeEditor(node_id, attr):
+                        self.delegate.updateAttributeEditor(self._model, node_id, attr, attr_editor)
+                self.delegate.updateNodeEditor(self._model, node_id, node_editor, attributes)
 
     def onEdgeAttributesAdded(self, edge_attributes:dict[_EdgeId, list[str]]):
         assert self._model

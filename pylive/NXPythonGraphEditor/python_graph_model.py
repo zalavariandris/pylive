@@ -33,6 +33,11 @@ class PythonGraphModel(NXNetworkModel):
         )
         return node_id
 
+    def function(self, node_id)->Callable:
+        func = self.getNodeAttribute(node_id, "_fn")
+        assert callable(func)
+        return func
+
     def parameters(self, node_id)->Iterable[str]:
         """return a specific node function parameters"""
         fn = self.getNodeAttribute(node_id, "_fn")

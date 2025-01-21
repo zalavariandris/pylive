@@ -36,7 +36,7 @@ class StandardNodeItem(BaseNodeItem):
 
 
 class NXNetworkSceneDelegate:
-    def createNodeEditor(self, node_id:_NodeId)->BaseNodeItem:
+    def createNodeEditor(self, model, node_id:_NodeId)->BaseNodeItem:
         node = StandardNodeItem()
         
         labelitem = QGraphicsTextItem(f"{node_id}")
@@ -46,6 +46,10 @@ class NXNetworkSceneDelegate:
 
         node.setGeometry(QRectF(0,0,labelitem.textWidth(),20))
         return node
+
+    def updateNodeEditor(self, model, node_id: _NodeId, editor:'BaseNodeItem', attributes:list[str])->None:
+        ...
+
 
     def createLinkEditor(self, 
         u:_NodeId|None, v:_NodeId|None, k:tuple[str|None, str|None],
