@@ -117,6 +117,7 @@ class TestNodeAttributesCRUD(unittest.TestCase):
 
 
 from PySide6.QtTest import QSignalSpy
+
 class TestNodeAttributeSignals(unittest.TestCase):
     def test_attribute_added(self):
         graph = NXGraphModel()
@@ -162,16 +163,26 @@ class TestEdgeAttributesCRUD(unittest.TestCase):
         ...
 
 
-from PySide6.QtTest import QSignalSpy
-class TestNodeAttributeSignals(unittest.TestCase):
-    def test_attribute_added(self):
-        ...
+class TestNodeParents(unittest.TestCase):
+    def setUp(self) -> None:
+        self.app = QApplication.instance()
+        return super().setUp()
 
-    def test_attribute_updated(self):
-        ...
+    def test_create_child_node(self):
+        graph = NXGraphModel()
+        graph.addNode("n1")
+        graph.addNode("child", parent="n1")
 
-    def test_attribute_deleted(self):
-        ...
+        self.assertEqual(graph.parentNode("child"), "n1")
+        self.assertIn("child", [_ for _ in graph.childNodes("n1")])
+
+    def test_adding_child_to_unexisting_parent(self):
+        graph = NXGraphModel()
+        with self.assertRaises(KeyError):
+            graph.addNode("child", parent="n1")
+
+        # del self.app
+
 
 if __name__ == "__main__":
     unittest.main()

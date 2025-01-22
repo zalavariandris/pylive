@@ -4,11 +4,8 @@ from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
 import networkx as nx
-from numpy import iterable
+from collections import defaultdict
 
-from pylive.utils.geo import intersect_ray_with_rectangle
-
-from dataclasses import dataclass, field
 
 type _NodeId=Hashable
 type _EdgeId=tuple[_NodeId, _NodeId, Hashable]
@@ -42,6 +39,8 @@ class NXGraphModel(QObject):
     def __init__(self, G: nx.MultiDiGraph|None = None, parent=None):
         super().__init__(parent=parent)
         self.G = G or nx.MultiDiGraph()
+        self._children:dict[Hashable, list[Hashable]] = defaultdict(list)
+        self._parents:dict[Hashable, Hashable] = dict()
 
         # for n in self.G.nodes():
         self.nodesAdded.emit([_ for _ in self.G.nodes()])
@@ -64,17 +63,39 @@ class NXGraphModel(QObject):
     def nodes(self) -> List[Hashable]:
         return [n for n in self.G.nodes()]
 
-    def addNode(self, node_id: Hashable, /, **attrs) -> Hashable:
+    def addNode(self, node_id: Hashable, /,*, parent:Hashable|None=None, **attrs) -> Hashable:
+        if parent is not None and parent not in self.G.nodes:
+            raise KeyError(f"No parent node {parent} exists!")
+
         if node_id in self.G.nodes:
             raise ValueError(f"node {node_id!r} already in graph", self.G.nodes)
         self.G.add_node(node_id, **attrs)
+        if parent is not None:
+            self._parents[node_id] = parent
+            self._children[parent].append(node_id)
+
         self.nodesAdded.emit([node_id])
         self.nodeAttributesAdded.emit({node_id: attrs.keys()})
+
+    def parentNode(self, node_id)->Hashable|None:
+        if node_id in self._parents:
+            return self._parents[node_id]
+
+    def childNodes(self, node_id)->Iterable[Hashable]:
+        if node_id not in self._children:
+            return []
+
+        for child_id in self._children[node_id]:
+            yield child_id
 
     def removeNode(self, n: Hashable, /):
         self.nodeAttributesAboutToBeRemoved.emit({n: self.nodeAttributes(n)})
         self.nodesAboutToBeRemoved.emit([n])
         self.G.remove_node(n)
+        if n in self._parents:
+            parent_node_id = self._parents[n]
+            self._children[parent_node_id].remove(n)
+            del self._parents[n]
         self.nodeAttributesRemoved.emit({n: self.nodeAttributes(n)})
         self.nodesRemoved.emit([n])
 

@@ -11,7 +11,7 @@ from pylive.utils.unique import make_unique_name
 """
 node
 - attributes:
-  -> _fn: Callable
+  -> _content: Callable
   -> param_name: stored_value
   -> param_name2: stored_value
   -> ...
@@ -39,19 +39,19 @@ class PythonGraphModel(NXNetworkModel):
         node_id = make_unique_name(callable_name, [str(n) for n in self.nodes()])
         super().addNode(
             node_id,
-            _fn=fn,
+            _content=fn,
             **kwargs
         )
         return node_id
 
     def function(self, node_id)->Callable:
-        func = self.getNodeAttribute(node_id, "_fn")
+        func = self.getNodeAttribute(node_id, "_content")
         assert callable(func)
         return func
 
     def parameters(self, node_id)->Iterable[str]:
         """return a specific node function parameters"""
-        fn = self.getNodeAttribute(node_id, "_fn")
+        fn = self.getNodeAttribute(node_id, "_content")
         assert callable(fn), "Node function should have been a callable!"
         if isinstance(fn, PythonGraphModel):
             subgraph = fn
@@ -129,7 +129,7 @@ class PythonGraphModel(NXNetworkModel):
                         pass # no value was set
 
             ### call function with arguments_by_name
-            fn = self.getNodeAttribute(n, "_fn")
+            fn = self.getNodeAttribute(n, "_content")
             assert callable(fn)
             sig = inspect.signature(fn)
             pos_args = []
