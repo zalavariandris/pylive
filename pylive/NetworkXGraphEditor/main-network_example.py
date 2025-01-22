@@ -6,7 +6,7 @@ from PySide6.QtWidgets import *
 from nx_network_model import NXNetworkModel
 from nx_graph_selection_model import NXGraphSelectionModel
 from nx_network_scene_outlet_to_inlet import NXNetworkScene
-from nx_network_scene_outlet_to_inlet import StandardNetworkDelegte
+from nx_network_scene_delegate import NXNetworkSceneDelegate
 from nx_node_inspector_view import NXNodeInspectorView
 
 ###########
@@ -33,7 +33,7 @@ class NXNetworkExample(QWidget):
         self.graphview.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
         self.graphview.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
 
-        self.graphscene = NXNetworkScene(self._model, self._selection_model, delegate=StandardNetworkDelegte())
+        self.graphscene = NXNetworkScene(self._model, self._selection_model, delegate=NXNetworkSceneDelegate())
         self.graphscene.setSelectionModel(self._selection_model)
         self.graphscene.setSceneRect(-9999,-9999,9999*2,9999*2)
         self.graphview.setScene(self.graphscene)

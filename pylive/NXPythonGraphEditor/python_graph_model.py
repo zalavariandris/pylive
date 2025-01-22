@@ -2,6 +2,7 @@ from typing import *
 from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
+from numpy import isin
 
 
 from pylive.NetworkXGraphEditor.nx_network_model import NXNetworkModel
@@ -20,12 +21,22 @@ import time
 import logging
 logger = logging.getLogger(__name__)
 
+import networkx as nx
 import inspect
 class PythonGraphModel(NXNetworkModel):
-    EMPTY = object()
+    def __init__(self, name:str, G:nx.MultiDiGraph|None=None, parent:QObject|None=None):
+        super().__init__(G=G, parent=parent)
+        self._inputs:dict[str, tuple[Hashable, str]] = dict()
+        self._output = None
+        self.__name__ = name
+
     def addFunction(self, fn:Callable, **kwargs):
         assert callable(fn), "Fn {fn}!"
-        node_id = make_unique_name(fn.__name__, [str(n) for n in self.nodes()])
+        try:
+            callable_name = fn.__name__
+        except AttributeError:
+            callable_name = fn.__class__.__name__
+        node_id = make_unique_name(callable_name, [str(n) for n in self.nodes()])
         super().addNode(
             node_id,
             _fn=fn,
@@ -42,9 +53,14 @@ class PythonGraphModel(NXNetworkModel):
         """return a specific node function parameters"""
         fn = self.getNodeAttribute(node_id, "_fn")
         assert callable(fn), "Node function should have been a callable!"
-        sig = inspect.signature(fn)
-        for name, paramteter in sig.parameters.items():
-            yield name
+        if isinstance(fn, PythonGraphModel):
+            subgraph = fn
+            for input_name, (node, param) in subgraph._inputs.items():
+                yield input_name
+        else:
+            sig = inspect.signature(fn)
+            for name, paramteter in sig.parameters.items():
+                yield name
 
     def cache(self, node_id):
         return self.getNodeAttribute(node_id, "cache")
@@ -142,4 +158,21 @@ class PythonGraphModel(NXNetworkModel):
                     pass
                 self.updateNodeAttributes(n, error=err)
                 break
+
+    def setInputs(self, inputs:dict[str, tuple[Hashable, str]]):
+        self._inputs = inputs
+
+    outputChanged = Signal()
+
+    def setOutput(self, node_id:Hashable|None):
+        if node_id not in self.G.nodes:
+            raise KeyError("{node_id} is not in the graph")
+            return None
+        self._output = node_id
+
+    def output(self)->Hashable|None:
+        return self._output
+
+    def __call__(self, *args, **kwargs):
+        return self._evaluate(self._output)
             

@@ -415,7 +415,7 @@ class NXNetworkScene(QGraphicsScene):
     def layout(self):
         assert self._model
         from pylive.utils.graph import hiearchical_layout_with_nx
-        pos = hiearchical_layout_with_nx(self._model.G, scale=100)
+        pos = hiearchical_layout_with_nx(self._model.G, scale=200)
         for N, (x, y) in pos.items():
             widget = self.nodeGraphicsObject(N)
             widget.setPos(x, y)
@@ -455,7 +455,8 @@ class GraphLinkTool(QObject):
         return self._graphscene
 
     def startFromOutlet(self, node_id:_NodeId, key:str):
-        link = self.graphscene().delegate.createLinkEditor(node_id, None, (key, None))
+        model = self.graphscene().model()
+        link = self.graphscene().delegate.createLinkEditor(model, node_id, None, (key, None))
         self.draft = link
         assert self.draft
         self.draft.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
@@ -476,7 +477,8 @@ class GraphLinkTool(QObject):
         app.removeEventFilter(self)
 
     def startFromInlet(self, node_id:_NodeId, key:str):
-        self.draft = self.graphscene().delegate.createLinkEditor(None, node_id, (None, key))
+        model = self.graphscene().model()
+        self.draft = self.graphscene().delegate.createLinkEditor(model, None, node_id, (None, key))
         assert self.draft
         self.graphscene().addItem(self.draft)
         

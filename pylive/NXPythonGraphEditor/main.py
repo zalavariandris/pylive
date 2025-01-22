@@ -29,7 +29,7 @@ class LivePythonGraphWindow(QWidget):
         super().__init__(parent=parent)
         self.setWindowTitle("Live Python function Graph")
 
-        self._model = PythonGraphModel()
+        self._model = PythonGraphModel("main_graph")
         self._selection_model = NXGraphSelectionModel(self._model)
 
         self._selection_model.selectionChanged.connect(self.onSelectionChanged)
@@ -119,7 +119,7 @@ class LivePythonGraphWindow(QWidget):
         return self._selection_model
 
     def sizeHint(self) -> QSize:
-        return QSize(900, 500)
+        return QSize(1800, 700)
 
     def setFunctions(self, functions:dict[str, Callable]):
         self._functions = functions
@@ -206,13 +206,28 @@ if __name__ == "__main__":
 
     # n0 = window._model.addFunction(ls)
 
-    n1 = window._model.addFunction(read_text, path="index.html")
-    n2 = window._model.addFunction(process_text)
-    n3 = window._model.addFunction(print_text)
-    n4 = window._model.addFunction(write_text)
-    window._model.addEdge(n1, n2, ("out", "text"))
-    window._model.addEdge(n2, n3, ("out", "text"))
-    window._model.addEdge(n2, n4, ("out", "text"))
+    subgraph = PythonGraphModel("process_subgraph")
+    proc1 = subgraph.addFunction(process_text)
+    proc2 = subgraph.addFunction(process_text)
+    subgraph.setInputs({"text": (proc1, "text")} )
+    subgraph.setOutput(proc2)
+
+    read_node = window._model.addFunction(read_text, path="index.html")
+    process_node1 = window._model.addFunction(process_text)
+    write_node = window._model.addFunction(write_text)
+    process_node2 = window._model.addFunction(process_text)
+    print_node = window._model.addFunction(print_text)
+    
+    window._model.addEdge(read_node, process_node1, ("out", "text"))
+    window._model.addEdge(read_node, process_node2, ("out", "text"))
+    window._model.addEdge(process_node1, write_node, ("out", "text"))
+    window._model.addEdge(process_node2, print_node, ("out", "text"))
+
+    # window._model.addFunction(subgraph)
+
+    # subgraph
+    subgraph1 = window._model.addFunction(subgraph)
+
     window.graphscene.layout()
 
     window.show()

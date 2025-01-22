@@ -51,7 +51,7 @@ class NXNetworkSceneDelegate:
         ...
 
 
-    def createLinkEditor(self, 
+    def createLinkEditor(self, model,
         u:_NodeId|None, v:_NodeId|None, k:tuple[str|None, str|None],
         )->BaseLinkItem:
 
