@@ -11,8 +11,15 @@ from pylive.utils.qtfactory import vboxlayout
 class Element:
 	def __init__(self):
 		self.underlying = QWidget()
+		self.children = dict()
+
+	def addChildren(self, child:Self):
+		
 
 	def create(self)->QWidget|QLayout:
+		...
+
+	def setState(self, change:dict[str, object|None]):
 		...
 
 	def patch(self, *args, **kwargs)->None:
