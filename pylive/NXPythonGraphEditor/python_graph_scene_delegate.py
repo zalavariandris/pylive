@@ -75,66 +75,31 @@ class PythonFunctionNodeView(BaseNodeItem):
                 self.badge_label.setPlainText("")
 
 
-class NXGraphFactoryDelegate():
-    def __init__(self, 
-        nodeFactory=lambda model, node_id: PythonFunctionNodeView(model, node_id), 
-        edgeFactory=lambda model, edge_id: RoundedLinkShape(model, edge_id),
-        # inletFactory: None,
-        # outletfactory: None,
-        attributeFactory=lambda model, node_id, attr: QGraphicsTextItem(f"{attr}"),
-        attributeUpdate=lambda model, node_id, attr, editor: editor.onAttributesChanged(node_id, attr),
-        nodeUpdate=lambda editor, node_id, attributes: editor.onAttributesChanged(node_id, attributes),
-        # edgeUpdate=lambda editor, edge_id, attributes: editor.onAttributesChanged(edge_id, attributes),
-    ):
-        ...
-
-
 class PythonGraphDelegate(NXNetworkSceneDelegate):
-    def __init__(self, 
-        nodeFactory: Callable[[PythonGraphModel, Hashable], QGraphicsItem],
-        edgeFactory=lambda model, edge_id: RoundedLinkShape(model, edge_id),
-        # inletFactory: None,
-        # outletfactory: None,
-        attributeFactory=lambda model, node_id, attr: QGraphicsTextItem(f"{attr}"),
-        attributeUpdate=lambda model, node_id, attr, editor: editor.onAttributesChanged(node_id, attr),
-        nodeUpdate=lambda editor, node_id, attributes: editor.onAttributesChanged(node_id, attributes),
-        # edgeUpdate=lambda editor, edge_id, attributes: editor.onAttributesChanged(edge_id, attributes),
-    ):
-        ...
-    # @override
-    # def createNodeEditor(self, model, node_id: _NodeId) -> 'BaseNodeItem':
-    #     return PythonFunctionNodeView(model, node_id)
+    @override
+    def createNodeEditor(self, model, node_id: _NodeId) -> 'BaseNodeItem':
+        return PythonFunctionNodeView(model, node_id)
 
-    # @override
-    # def updateNodeEditor(self, model, node_id: _NodeId, editor:'BaseNodeItem', attributes:list[str])->None:
-    #     cast(PythonFunctionNodeView, editor).onAttributesChanged(attributes)
+    @override
+    def updateNodeEditor(self, model, node_id: _NodeId, editor:'BaseNodeItem', attributes:list[str])->None:
+        cast(PythonFunctionNodeView, editor).onAttributesChanged(attributes)
 
-    # @override
-    # def createLinkEditor(self, model,
-    #     u:_NodeId|None, v:_NodeId|None, k:tuple[str|None, str|None],
-    #     )->BaseLinkItem:
+    @override
+    def createLinkEditor(self, model,
+        u:_NodeId|None, v:_NodeId|None, k:tuple[str|None, str|None],
+        )->BaseLinkItem:
 
-    #     assert isinstance(k, tuple)
-    #     link = RoundedLinkShape("")  #(f"{k[1]}" if k[1] else "")
-    #     link.setZValue(-1)
-    #     return link
+        assert isinstance(k, tuple)
+        link = RoundedLinkShape("")  #(f"{k[1]}" if k[1] else "")
+        link.setZValue(-1)
+        return link
 
-    # @override
-    # def createAttributeEditor(self, parent_node: QGraphicsItem, model: NXNetworkModel, node_id: _NodeId, attr: str)->QGraphicsItem|None:
-    #     return None
+    @override
+    def createAttributeEditor(self, parent_node: QGraphicsItem, model: NXNetworkModel, node_id: _NodeId, attr: str)->QGraphicsItem|None:
+        return None
 
-    # def updateAttributeEditor(self, model: NXNetworkModel, node_id:Hashable, attr:str, editor: QGraphicsItem)->None:
-    #     return None
+    def updateAttributeEditor(self, model: NXNetworkModel, node_id:Hashable, attr:str, editor: QGraphicsItem)->None:
+        return None
 
-    # # def setNodePropertyModel(self, model:NXNetworkModel, node_id:Hashable, prop:str, editor: QGraphicsItem):
-    # #     ...
-
-PythonGraphDelegate(
-    nodeFactory=PythonFunctionNodeView,
-    edgeFactory=RoundedLinkShape,
-    # inletFactory: None,
-    # outletfactory: None,
-    attributeFactory=lambda model, node_id, attr: QGraphicsTextItem(f"{attr}"),
-    attributeUpdate=lambda model, node_id, attr, editor: editor.onAttributesChanged(node_id, attr),
-    nodeUpdate=lambda editor, node_id, attributes: editor.onAttributesChanged(node_id, attributes),
-)
+    # def setNodePropertyModel(self, model:NXNetworkModel, node_id:Hashable, prop:str, editor: QGraphicsItem):
+    #     ...

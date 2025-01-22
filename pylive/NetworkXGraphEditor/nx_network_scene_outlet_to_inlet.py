@@ -84,7 +84,6 @@ class NXNetworkScene(QGraphicsScene):
 
         self.selectionChanged.connect(self.selectionChangedEvent)
 
-    
 
     def setSelectionModel(self, selection_model:NXGraphSelectionModel):
         if self._selection_model:
