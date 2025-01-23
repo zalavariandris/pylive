@@ -21,16 +21,40 @@ def diff_dict(prev:dict, current:dict)->Change:
     Returns:
         dict: A dictionary containing added, removed, changed, and unchanged keys.
     """
-    added =     {k: current[k] for k in current if k not in prev}
-    removed =   {k: prev[k] for k in prev if k not in current}
-    changed =   {k: (prev[k], current[k]) for k in prev if k in current and prev[k] != current[k]}
-    unchanged = {k: prev[k] for k in prev if k in current and prev[k] == current[k]}
+    added =     {k: current[k] for k in current if k not in prev.keys()}
+    removed =   {k: prev[k] for k in prev if k not in current.keys()}
+    changed =   {k: (prev[k], current[k]) for k in prev if k in current.keys() and prev[k] != current[k]}
+    unchanged = {k: prev[k] for k in prev if k in current and prev[k] == current[k].keys()}
 
     return Change(
         added=added,
         removed=removed,
         changed=changed,
         unchanged=unchanged,
+    )
+
+@dataclass
+class SetChange:
+    added: Set
+    removed: Set
+
+def diff_set(prev: Set, current: Set) -> SetChange:
+    """
+    Compute the difference between two sets.
+
+    Args:
+        prev (Set): The previous (original) set.
+        current (Set): The current (updated) set.
+
+    Returns:
+        SetChange: A dataclass containing added, removed, and unchanged elements.
+    """
+    added = current - prev
+    removed = prev - current
+
+    return SetChange(
+        added=added,
+        removed=removed
     )
 
 
