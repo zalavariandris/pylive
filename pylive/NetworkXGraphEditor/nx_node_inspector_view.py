@@ -38,7 +38,7 @@ class NXNodeInspectorView(QWidget):
         # Setup UI
         main_layout = QVBoxLayout()
         self.setLayout(main_layout)
-        main_layout.addStretch()
+        # main_layout.addStretch()
 
         #
         self.setModel(model)
@@ -65,6 +65,7 @@ class NXNodeInspectorView(QWidget):
 
         if node_id:=self._selection_model.currentNode():
             if node_editor := self._delegate.createNodeEditor(self._model, node_id):
+                node_editor.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
                 self._node_editors[node_id] = node_editor
                 main_layout.insertWidget(0, node_editor)
                 self._delegate.updateNodeEditor(self._model, node_id, node_editor)

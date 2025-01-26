@@ -1,0 +1,71 @@
+definitions: |
+  def identiy(value):
+    return value
+  def read_text(path:Path):
+    ...
+
+  def parse_md(text:str)->str:
+    ...
+
+  def merge_chapters(mardkowns:list[str]):
+    ...
+
+  def create_reference_footnotes(md:str)->str:
+    ...
+
+  def seperate_chapters(md:str)->list[str]:
+    ...
+
+  def extract_references(md:str)->str:
+    ...
+
+  def make_bibliography(md:str, bib:str):
+    ...
+
+graph:
+  nodes:
+  - read_title:
+    fn: read_text
+  - read_abstract:
+    fn: read_text
+  - read_prologue:
+    fn: read_text
+  - read_chapters:
+    fn: read_text
+  - read_acknowledgments:
+    fn: read_text
+  - ref.bib:
+    fn: identity
+  - _read_bib:
+    fn: read_text
+  - parse_title:
+    fn: parse_md
+  - parse_abstract:
+    fn: parse_md
+  - parse_prologue:
+    fn: parse_md
+  - parse_chapters:
+    fn: parse_md
+  - parse_acknowledgments:
+    fn: parse_md
+  - merge_chapters:
+    fn: merge_chapters
+  - create_reference_footnotes:
+    fn: create_reference_footnotes
+  - extract_references:
+    fn: _extract_references
+
+  - seperate_chapters:
+    fn: seperate_chapters
+  - make_bibliography:
+    fn: make_bibliography
+
+  - _template:
+    fn: template
+
+  links:
+  - ref.bib, path, read_bib
+  - read_title, text, parse_title
+  - read_read_abstract, text, parse_abstract
+# todo: add the rest of the link here
+  

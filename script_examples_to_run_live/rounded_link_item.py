@@ -155,6 +155,7 @@ class HoizontalLink(QAbstractGraphicsShapeItem):
         painter.drawPath(self.makeRoundedPath())
         painter.drawText(0,0, "Horizontal target")\
 
+
 class VerticalLink(QAbstractGraphicsShapeItem):
     def __init__(self, parent=None):
         super().__init__(parent=parent)

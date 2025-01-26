@@ -23,30 +23,49 @@ from pylive.NetworkXGraphEditor.nx_node_inspector_view import NXNodeInspectorVie
 
 from python_data_viewer import PythonDataViewer
 
+from pylive.QtScriptEditor.script_edit import ScriptEdit
+
+
+
+from pylive.QtLiveApp.document_file_link import DocumentFileLink
+
+from dataclasses import dataclass
+
+import yaml
+
+
+
+
 
 class LivePythonGraphWindow(QWidget):
+    definitionsChanged = Signal()
+
     def __init__(self, parent: QWidget|None=None) -> None:
         super().__init__(parent=parent)
-        self.setWindowTitle("Live Python function Graph")
 
         self._model = PythonGraphModel("main_graph")
         self._selection_model = NXGraphSelectionModel(self._model)
-
         self._selection_model.selectionChanged.connect(self.onSelectionChanged)
+        self.document = QTextDocument()
+        self.file_link = DocumentFileLink(self.document)
 
-        ### create and layout widgets
-        main_layout = QVBoxLayout()
-        self.setLayout(main_layout)
+        ### meubar
+        menubar = QMenuBar(self)
+        file_menu = self.file_link.createFileMenu()
+        menubar.addMenu(file_menu)
 
-        ### menu
-        menubar = QMenuBar()
-        # evaluate_action = QAction("evaluate", self)
-        # evaluate_action.triggered.connect(lambda: self.evaluate_selected())
-        # menubar.addAction(evaluate_action)
-        # invalidate_action = QAction("invalidate", self)
-        # invalidate_action.triggered.connect(lambda: self.invalidate_selected())
-        # menubar.addAction(invalidate_action)
-        main_layout.setMenuBar(menubar)
+        # definition editor
+        self.document_viewer = QTextEdit()
+        font = self.document_viewer.font()
+        font.setFamilies(["monospace", "Operator Mono Book"])
+        # font.setPointSize(10)
+        font.setWeight(QFont.Weight.Medium)
+        font.setStyleStrategy(QFont.StyleStrategy.PreferAntialias)
+        self.document_viewer.setFont(font)
+
+        self.document_viewer.setDocument(self.document)
+        self.document_viewer.setReadOnly(True)
+        self.definition_editor = ScriptEdit()
 
         ### graph
         self.graphview = QGraphicsView()
@@ -71,14 +90,67 @@ class LivePythonGraphWindow(QWidget):
         self.dataviewer.setModel(self._model)
         self.dataviewer.setSelectionModel(self._selection_model)
 
-        ### main splitter
-        splitter = QSplitter()
-        splitter.addWidget(self.graphview)
-        splitter.addWidget(self.node_inspector)
+        #### Layout
+        grid_layout = QGridLayout()
+        
+        grid_layout.setMenuBar(menubar)
+        grid_layout.addWidget(self.document_viewer,        0, 0, 2, 1)
+        grid_layout.addWidget(self.definition_editor, 0, 1, 2, 1)
+        grid_layout.addWidget(self.graphview,         0, 2, 2, 1)
+        grid_layout.addWidget(self.node_inspector,    0, 3, 1, 1)
+        grid_layout.addWidget(self.dataviewer,        1, 4, 1, 1)
+        
+        grid_layout.setColumnStretch(0, 50)
+        grid_layout.setColumnStretch(1, 50)
+        grid_layout.setColumnStretch(2, 50)
+        grid_layout.setRowStretch(0, 0)
+        grid_layout.setRowStretch(1, 100)
+        self.setLayout(grid_layout)
+        
+        # grid_layout.addWidget(self.node_inspector, 1, 0)
+        # splitter.addWidget(leftpane)
+        # self.node_inspector.setParent(self.graphview.viewport())
+        # splitter.addWidget(self.node_inspector)
         # splitter.addWidget(self.node_inspector2)
-        splitter.addWidget(self.dataviewer)
-        splitter.setSizes([splitter.width()//splitter.count() for idx in range(splitter.count())])
-        main_layout.addWidget(splitter)
+        # splitter.addWidget(self.dataviewer)
+        # splitter.setSizes([splitter.width()//splitter.count() for idx in range(splitter.count())])
+        # main_layout.addWidget(splitter)
+
+        self.definition_editor.textChanged.connect(lambda: 
+            self.setDefinitions(self.definition_editor.toPlainText()))
+        self.definitionsChanged.connect(self.updateDocument)
+
+    def setDefinitions(self, text):
+        self._definitions = text
+        self.definitionsChanged.emit()
+
+    def updateDocument(self):
+        from textwrap import dedent, indent
+
+        # Ensure PyYAML uses the literal block style for multiline strings
+        class BlockString(str):
+            ...
+
+        def literal_representer(dumper, data:BlockString):
+            return dumper.represent_scalar('tag:yaml.org,2002:str', data.strip(), style='|')
+
+        yaml.add_representer(BlockString, literal_representer)
+
+        # Wrap the string with LiteralString to trigger the custom representation
+        data = {
+            'definitions': BlockString(self.definition_editor.toPlainText())
+        }
+
+        # Dump the YAML
+        yaml_output = yaml.dump(data, default_flow_style=False)
+
+        self.document.setPlainText(yaml_output)
+
+    def definitions(self):
+        return self._definitions
+
+    def updateWindowTitle(self):
+        self.setWindowTitle("LiveGraph - {self.file}")
 
     def onNodeAttributesChanged(self, node_attributes:dict[Hashable, list[str]]):
         assert self._model

@@ -5,8 +5,8 @@ from PySide6.QtWidgets import *
 
 from pathlib import Path
 
-
-class FileLink(QObject):
+# TODO Replace with DocumentFileLink
+class DocumentFileLink(QObject):
 	filePathChanged = Signal() # emit when a file opened
 	def __init__(self, document, filepath=None, parent:Optional[QObject]=None) -> None:
 		super().__init__(parent=parent)
@@ -14,9 +14,15 @@ class FileLink(QObject):
 		self._document:QTextDocument = document
 		self.watcher = QFileSystemWatcher()
 		self.watcher.fileChanged.connect(lambda:
-			self.fileChangedOnDiskEvent(self.filepath))
+			self.onFileChanged(self.filepath))
 
-	def fileChangedOnDiskEvent(self, path):
+		self.setFileFilter(".py")
+		self.setFileSelectFilter("Python Script (*.py);;Any File (*)")
+
+	def fileFilter(self):
+		return self._file_filter
+
+	def onFileChanged(self, path):
 		assert path == self.filepath
 		assert self._document is not None
 
@@ -98,8 +104,17 @@ class FileLink(QObject):
 		else:
 			return None
 
-	def newFile(self):
-		self.closeFile()
+	def setFileFilter(self, file_filter:str):
+		self._file_filter = file_filter
+
+	def fileFilter(self):
+		return self._file_filter
+
+	def setFileSelectFilter(self, select_filter:str):
+		self._select_filter = select_fitler
+
+	def fileSelectFilter(self):
+		return "Python Script (*.py);;Any File (*)"
 
 	def saveFile(self, filepath:str|None=None):
 		assert filepath is None or isinstance(filepath, str), f"got:, {filepath}"
@@ -110,7 +125,7 @@ class FileLink(QObject):
 		
 		if not self.filepath or filepath:
 			choosen_filepath, filter_used = QFileDialog.getSaveFileName(self.parentWidget(), 
-				"Save", ".py", "Python Script (*.py);;Any File (*)")
+				"Save", self.fileFilter(), self.fileSelectFilter())
 			if not choosen_filepath:
 				return # if no filepath was choosen cancel saving
 			filepath = choosen_filepath
@@ -142,7 +157,7 @@ class FileLink(QObject):
 		if not filepath:
 			# if not filepath is specified open file doalog
 			choosen_filepath, filter_used = QFileDialog.getOpenFileName(self.parentWidget(), 
-				"Open", ".py", "Python Script (*.py);;Any File (*)")
+				"Open", self.fileFilter(), self.fileSelectFilter())
 			filepath = choosen_filepath
 
 		# open filepath
@@ -165,7 +180,7 @@ class FileLink(QObject):
 
 	def createFileMenu(self):
 		new_file_action = QAction("New File", self)
-		new_file_action.triggered.connect(lambda: self.newFile())
+		new_file_action.triggered.connect(lambda: self.closeFile())
 		new_file_action.setShortcut(QKeySequence.StandardKey.New)
 
 		open_file_action = QAction("Open File", self)
@@ -215,7 +230,7 @@ if __name__ == "__main__":
 
 			layout.addWidget(editor)
 
-			self.fileLink = FileLink(self.document, parent=self)
+			self.fileLink = DocumentFileLink(self.document, parent=self)
 			self.fileLink.openFile("C:/dev/src/pylive/script_examples_to_run_live/glcanvas_widget_with_moderngl.py")
 
 			self.document.modificationChanged.connect(self.updateWindowTitle)

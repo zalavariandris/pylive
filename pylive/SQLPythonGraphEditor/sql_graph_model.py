@@ -1,19 +1,19 @@
+#sql_graph_model.py
+
 from typing import *
 from PySide6.QtCore import *
 from PySide6.QtSql import *
 
 from itertools import chain
 
-class MyClass:
-    def __init__(self):
-        self.name:str
+from PySide6.QtWidgets import QApplication
 
 
-class MySqlRelationalTableModel(QSqlRelationalTableModel):
-    def flags(self, index):
-        if index.column() == self.fieldIndex("key"):  # Replace "key" with your column name
-            return Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled
-        return super().flags(index)
+# class MySqlRelationalTableModel(QSqlRelationalTableModel):
+#     def flags(self, index):
+#         if index.column() == self.fieldIndex("key"):  # Replace "key" with your column name
+#             return Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled
+#         return super().flags(index)
 
 class SQLGraphModel(QObject):
     def __init__(self, parent:QObject|None=None):
@@ -67,15 +67,19 @@ class SQLGraphModel(QObject):
         # graphs table
         self.graphs = QSqlRelationalTableModel(self, self.db)
         self.graphs.setTable("graph")
+        
         self.graphs.select()
+        
 
         ### nodes table
         self.nodes = QSqlRelationalTableModel(self, self.db)
         self.nodes.setTable("node")
         self.nodes.setRelation(2, QSqlRelation("graph", "key", "name"))
-        self.nodes.select()
         self.nodes.setHeaderData(1, Qt.Orientation.Horizontal, "name")
         self.nodes.setHeaderData(2, Qt.Orientation.Horizontal, "graph")
+        
+        self.nodes.select()
+        
 
         ### edges table
         self.edges = QSqlRelationalTableModel(self, self.db)
@@ -85,7 +89,12 @@ class SQLGraphModel(QObject):
         self.edges.setRelation(2, QSqlRelation("node", "key", "name"))
         self.edges.setHeaderData(1, Qt.Orientation.Horizontal, "source")
         self.edges.setHeaderData(2, Qt.Orientation.Horizontal, "target")
+
         self.edges.select()
+
+        self.graphs.setEditStrategy(QSqlTableModel.EditStrategy.OnManualSubmit)
+        self.nodes.setEditStrategy(QSqlTableModel.EditStrategy.OnManualSubmit)
+        self.edges.setEditStrategy(QSqlTableModel.EditStrategy.OnManualSubmit)
 
     def _populate_database(self):
         ### create initial data
@@ -108,139 +117,159 @@ class SQLGraphModel(QObject):
             if not query.exec(insertion):
                 print(f"Error creating tables: {query.lastError().text()}")
 
-    def add_graph(self, graph_name: str) -> int:
-        assert self.graphs
-        """Add a new graph to the database."""
+    def create_graph(self, name: str) -> int:
+        """
+        Create a new graph and return its key.
+        
+        Args:
+            name (str): Name of the graph
+        
+        Returns:
+            int: Key of the newly created graph
+        """
         row = self.graphs.rowCount()
-        self.graphs.insertRow(row)
-        self.graphs.setData(self.graphs.index(row, 1), graph_name)  # Set the name of the graph
+        self.graphs.beginInsertRows(QModelIndex(), row, row)
+        record = self.graphs.record()
+        record.setValue("name", name)
+        self.graphs.insertRecord(-1, record)
+        self.graphs.endInsertRows()
+        self.graphs.submitAll()
+        
+        # Return the key of the last inserted graph
+        return self.graphs.record(row).value("key")
 
-        if self.graphs.submitAll():  # Save to the database
-            return self.graphs.record(row).value("key")  # Return the key (ID) of the new graph
-        else:
-            print(f"Error adding graph: {self.graphs.lastError().text()}")
-            return -1
-
-    def remove_graph(self, graph_key: int) -> bool:
-        assert self.graphs
-        """Remove a graph and its associated nodes and edges."""
-        # Find the row corresponding to the graph_key
-        row = -1
-        for i in range(self.graphs.rowCount()):
-            if self.graphs.record(i).value("key") == graph_key:
-                row = i
+    def delete_graph(self, graph_key: int):
+        """
+        Delete a graph and all its associated nodes and edges.
+        
+        Args:
+            graph_key (int): Key of the graph to delete
+        """
+        # Delete associated edges first
+        edge_filter = f"source_node IN (SELECT key FROM node WHERE graph = {graph_key}) OR " \
+                      f"target_node IN (SELECT key FROM node WHERE graph = {graph_key})"
+        self.edges.setFilter(edge_filter)
+        while self.edges.rowCount() > 0:
+            self.edges.removeRow(0)
+        self.edges.setFilter("")
+        
+        # Delete nodes of the graph
+        self.nodes.setFilter(f"graph = {graph_key}")
+        while self.nodes.rowCount() > 0:
+            self.nodes.removeRow(0)
+        self.nodes.setFilter("")
+        
+        # Delete the graph itself
+        for row in range(self.graphs.rowCount()):
+            if self.graphs.record(row).value("key") == graph_key:
+                self.graphs.beginRemoveRows(QModelIndex(), row, row)
+                self.graphs.removeRow(row)
+                self.graphs.endRemoveRows()
                 break
 
-        if row == -1:
-            print("Graph not found.")
-            return False
-
-        # Delete associated edges (via nodes)
-        self.db.transaction()
-        try:
-            # Remove edges associated with this graph's nodes
-            query = QSqlQuery(self.db)
-            query.prepare("DELETE FROM edge WHERE source_node IN (SELECT key FROM node WHERE graph = :graph_key) OR target_node IN (SELECT key FROM node WHERE graph = :graph_key)")
-            query.bindValue(":graph_key", graph_key)
-            if not query.exec():
-                raise Exception(f"Error deleting edges: {query.lastError().text()}")
-
-            # Remove nodes for this graph
-            query.prepare("DELETE FROM node WHERE graph = :graph_key")
-            query.bindValue(":graph_key", graph_key)
-            if not query.exec():
-                raise Exception(f"Error deleting nodes: {query.lastError().text()}")
-
-            # Remove the graph itself
-            self.graphs.removeRow(row)
-            if not self.graphs.submitAll():
-                raise Exception(f"Error removing graph: {self.graphs.lastError().text()}")
-
-            self.db.commit()
-            return True
-        except Exception as e:
-            self.db.rollback()
-            print(e)
-            return False
-
-    def add_node(self, graph_key: int, node_name: str) -> int:
-        assert self.nodes
-        """Add a node to a specific graph."""
+    def add_node(self, graph_key: int, name: str) -> int:
+        """
+        Add a node to a specific graph.
+        
+        Args:
+            graph_key (int): Key of the graph to add the node to
+            name (str): Name of the node
+        
+        Returns:
+            int: Key of the newly created node
+        """
+        print(f"!!!!!add_node, graph_key: {graph_key}, name:{name}")
         row = self.nodes.rowCount()
-        self.nodes.insertRow(row)
-        self.nodes.setData(self.nodes.index(row, 1), node_name)  # Set the node name
-        self.nodes.setData(self.nodes.index(row, 2), graph_key)  # Set the graph ID
 
-        if self.nodes.submitAll():  # Save to the database
-            return self.nodes.record(row).value("key")  # Return the node's key (ID)
-        else:
-            print(f"Error adding node: {self.nodes.lastError().text()}")
-            return -1
+        # Begin inserting the row
+        self.nodes.beginInsertRows(QModelIndex(), row, row)
+        
+        # Create a new record and set its values
+        record = self.nodes.record()
+        record.setValue("name", name)
+        record.setValue("graph", graph_key)
+        
+        # Insert the record into the model
+        if not self.nodes.insertRecord(row, record):
+            print("cant insert record")
+        
+        # End inserting rows
+        self.nodes.endInsertRows()
 
-    def remove_node(self, node_key: int) -> bool:
-        assert self.nodes
-        """Remove a node and its associated edges."""
-        row = -1
-        for i in range(self.nodes.rowCount()):
-            if self.nodes.record(i).value("key") == node_key:
-                row = i
-                break
+        # Commit changes to the database
+        if not self.nodes.submitAll():
+            print("Error submitting data:")
+            print("-", self.nodes.lastError().text())
 
-        if row == -1:
-            print("Node not found.")
-            return False
+        # Get the key of the newly inserted node
+        new_node_key =  self.nodes.record(row).value("key")
+        print(new_node_key)
+        return new_node_key
 
-        # Delete associated edges
-        self.db.transaction()
-        try:
-            # Remove edges associated with this node
-            query = QSqlQuery(self.db)
-            query.prepare("DELETE FROM edge WHERE source_node = :node_key OR target_node = :node_key")
-            query.bindValue(":node_key", node_key)
-            if not query.exec():
-                raise Exception(f"Error deleting edges: {query.lastError().text()}")
 
-            # Remove the node itself
+    def delete_node(self, node_key: int):
+        """
+        Delete a node and all its associated edges.
+        
+        Args:
+            node_key (int): Key of the node to delete
+        """
+        # First, delete associated edges
+        self.edges.setFilter(f"source_node = {node_key} OR target_node = {node_key}")
+        while self.edges.rowCount() > 0:
+            self.edges.removeRow(0)
+        self.edges.setFilter("")  # Clear the filter after removing rows
+        
+        # Now, delete the node itself
+        self.nodes.setFilter(f"key = {node_key}")
+        for row in range(self.nodes.rowCount()):
+            self.nodes.beginRemoveRows(QModelIndex(), row, row)
             self.nodes.removeRow(row)
-            if not self.nodes.submitAll():
-                raise Exception(f"Error removing node: {self.nodes.lastError().text()}")
-
-            self.db.commit()
-            return True
-        except Exception as e:
-            self.db.rollback()
-            print(e)
-            return False
+            self.nodes.endRemoveRows()
+        self.nodes.setFilter("")  # Clear the filter after removing rows
 
     def add_edge(self, source_node_key: int, target_node_key: int) -> int:
-        assert self.edges
-        """Add an edge between two nodes."""
+        """
+        Add an edge between two nodes.
+        
+        Args:
+            source_node_key (int): Key of the source node
+            target_node_key (int): Key of the target node
+        
+        Returns:
+            int: Key of the newly created edge
+        """
         row = self.edges.rowCount()
-        self.edges.insertRow(row)
-        self.edges.setData(self.edges.index(row, 1), source_node_key)
-        self.edges.setData(self.edges.index(row, 2), target_node_key)
+        self.edges.beginInsertRows(QModelIndex(), row, row)
+        record = self.edges.record()
+        record.setValue("source_node", source_node_key)
+        record.setValue("target_node", target_node_key)
+        self.edges.insertRecord(-1, record)
+        self.edges.endInsertRows()
+        
+        # Return the key of the last inserted edge
+        return self.edges.record(row).value("key")
 
-        if self.edges.submitAll():  # Save to the database
-            return self.edges.record(row).value("key")  # Return the edge's key (ID)
-        else:
-            print(f"Error adding edge: {self.edges.lastError().text()}")
-            return -1
-
-    def remove_edge(self, edge_key: int) -> bool:
-        assert self.edges
-        """Remove an edge."""
-        row = -1
-        for i in range(self.edges.rowCount()):
-            if self.edges.record(i).value("key") == edge_key:
-                row = i
+    def delete_edge(self, edge_key: int):
+        """
+        Delete a specific edge.
+        
+        Args:
+            edge_key (int): Key of the edge to delete
+        """
+        for row in range(self.edges.rowCount()):
+            if self.edges.record(row).value("key") == edge_key:
+                self.edges.beginRemoveRows(QModelIndex(), row, row)
+                self.edges.removeRow(row)
+                self.edges.endRemoveRows()
                 break
 
-        if row == -1:
-            print("Edge not found.")
-            return False
+        self.edges.submitAll()
 
-        self.edges.removeRow(row)
-        if not self.edges.submitAll():  # Save to the database
-            print(f"Error removing edge: {self.edges.lastError().text()}")
-            return False
-        return True
+
+if __name__ == "__main__":
+    app = QApplication()
+    model = SQLGraphModel()
+
+
+    app.exec()

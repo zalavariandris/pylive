@@ -19,13 +19,13 @@ from PySide6.QtWidgets import *
 
 from pylive.NetworkXGraphEditor.nx_graph_model import NXGraphModel
 from pylive.utils.geo import makeArrowShape
-from pylive.utils.geo import getShapeCenter, getShapeRight, getShapeLeft, makeLineBetweenShapes, makeVerticalRoundedPath
+from pylive.utils.geo import getShapeCenter, getShapeRight, getShapeLeft, makeLineBetweenShapes, makeVerticalRoundedPath, makeHorizontalRoundedPath
 
 
 class InteractiveShape(QGraphicsItem):
     def __init__(self, parent:QGraphicsItem|None=None):
         super().__init__(parent=parent)
-        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
+        # self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
         self.setAcceptHoverEvents(True)
         self._isHighlighted = False
         self._hoverMousePos: QPointF | None = None
@@ -361,17 +361,11 @@ class ArrowLinkShape(InteractiveShape, BaseLinkItem):
 
 class RoundedLinkShape(InteractiveShape, BaseLinkItem):
     def __init__(
-        self, label: str = "link-", parent: QGraphicsItem | None = None
+        self, label: str = "link-", orientation:Qt.Orientation=Qt.Orientation.Vertical, parent: QGraphicsItem | None = None
     ):
         super().__init__(parent=None)
-        self.setCacheMode(QGraphicsItem.CacheMode.NoCache)
-
-        # Enable selecting
-        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
-        
-        # self.setZValue(-1)
+        self._orientation = orientation
         self._path:QPainterPath = QPainterPath()
-
         self._labelitem = QGraphicsTextItem(label)
         self._labelitem.setParentItem(self)
 
@@ -389,8 +383,10 @@ class RoundedLinkShape(InteractiveShape, BaseLinkItem):
         self.update()
 
     def setLabelText(self, text:str):
-        self._label = text
-        self.update()
+        self._labelitem.setPlainText(text)
+
+    def labelText(self):
+        return self._labelitem.toPlainText()
 
     def boundingRect(self):
         m = 2
@@ -405,12 +401,6 @@ class RoundedLinkShape(InteractiveShape, BaseLinkItem):
         stroker.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
         return stroker.createStroke(path)
         return path
-
-    def _labelRect(self):
-        ### draw label
-        fm = QFontMetrics(self._labelitem.font())
-        text_rect = fm.boundingRect(self._label)
-        text_rect.moveTo(self.path().pointAtPercent(0.55).toPoint())
 
     def paint(
         self, painter: QPainter, option: QStyleOptionGraphicsItem, widget=None
@@ -446,26 +436,51 @@ class RoundedLinkShape(InteractiveShape, BaseLinkItem):
         /
     ):
         line = QLineF()
+        match self._orientation:
+            case Qt.Orientation.Vertical:
+                match source:
+                    case QGraphicsItem():
+                        rect = source.boundingRect()
+                        line.setP1(source.mapToScene(
+                            rect.center().x(),
+                            rect.bottom()
+                        ))
+                    case QPointF():
+                        line.setP1(source)
 
-        match source:
-            case QGraphicsItem():
-                line.setP1(source.mapToScene(
-                    source.boundingRect().center()
-                ))
-            case QPointF():
-                line.setP1(source)
+                match target:
+                    case QGraphicsItem():
+                        rect = target.boundingRect()
+                        line.setP2(target.mapToScene(
+                            rect.center().x(),
+                            rect.top()
+                        ))
+                    case QPointF():
+                        line.setP2(target)
 
-        match target:
-            case QGraphicsItem():
-                line.setP2(target.mapToScene(
-                    target.boundingRect().center()
-                ))
-            case QPointF():
-                line.setP2(target)
+                self.setPath(makeVerticalRoundedPath(line))
+            case Qt.Orientation.Horizontal:
+                match source:
+                    case QGraphicsItem():
+                        rect = source.boundingRect()
+                        line.setP1(source.mapToScene(
+                            rect.right(),
+                            rect.center().y()
+                        ))
+                    case QPointF():
+                        line.setP1(source)
 
-        self.setPath(makeVerticalRoundedPath(line))
-        
+                match target:
+                    case QGraphicsItem():
+                        rect = target.boundingRect()
+                        line.setP2(target.mapToScene(
+                            rect.left(),
+                            rect.center().y()
+                        ))
+                    case QPointF():
+                        line.setP2(target)
 
+                self.setPath(makeHorizontalRoundedPath(line))
 
 
 if __name__ == "__main__":
@@ -506,7 +521,6 @@ if __name__ == "__main__":
         scene.addItem(node)
         node.setPos(pos)
         return node
-
 
     # link_item_1 = LinkShape("link1")
     # link_item_1.move(QPointF(0, -50), QPointF(100, -20))

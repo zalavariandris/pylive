@@ -1,3 +1,5 @@
+#main.py
+
 from typing import *
 from PySide6.QtGui import *
 from PySide6.QtCore import *
@@ -7,6 +9,60 @@ from PySide6.QtSql import *
 
 from sql_graph_model import SQLGraphModel
 from sql_graph_view import SQLGraphScene
+
+
+class NodesOfGraphProxyModel(QSortFilterProxyModel):
+    def __init__(self, parent: QObject|None=None) -> None:
+        super().__init__(parent=parent)
+        self._graph_key:int|None = None
+
+    def setSourceGraph(self, graph_key:int):
+        self._graph_key = graph_key
+
+    # @override
+    # def filterAcceptsRow(self, source_row:int, source_parent:QModelIndex|QPersistentModelIndex):
+    #     source_model = self.sourceModel()
+    #     graph_key = self._graph_key
+    #     print("filter accepts row")
+    #     if source_model is None or graph_key is None:
+    #         return False
+    #     assert source_model
+    #     assert graph_key
+
+    #     filter_column = source_model.record().indexOf("graph")
+    #     print(filter_column)
+    #     graphIdIndex = source_model.index(source_row, 
+    #         filter_column, 
+    #         source_parent)
+        
+    #     print(graphIdIndex)
+    #     return True
+    #     return self.sourceModel().data(graphIdIndex).toInt() == self._graph_key;
+
+
+
+class GraphInspector(QWidget):
+    def __init__(self, parent:QWidget|None=None):
+        super().__init__(parent=parent)
+        ### database inspector
+        node_inspector = QWidget()
+        # self._proxy_model = QSortFilterProxyModel()
+        self._node_of_graph_proxy = NodesOfGraphProxyModel()
+
+        self._nodes_table = QTableView()
+        self._nodes_table.setModel(self._node_of_graph_proxy)
+
+        main_layout = QVBoxLayout()
+        main_layout.addWidget(QLabel("GraphInspector"))
+        main_layout.addWidget(self._nodes_table)
+        self.setLayout(main_layout)
+
+    def setModel(self, source_model:SQLGraphModel):
+        self._node_of_graph_proxy.setSourceModel(source_model.nodes)
+
+    def setGraph(self, graph_key:int):
+        self._node_of_graph_proxy.setSourceGraph(graph_key)
+
 
 class Window(QWidget):
     def __init__(self, parent:QWidget|None=None):
@@ -34,10 +90,10 @@ class Window(QWidget):
         self.edges_table.setSelectionModel(self.edge_selection)
         self.edges_table.setItemDelegate(QSqlRelationalDelegate(self.edges_table))
 
-        self.graph_editor_scene = SQLGraphScene()
-        self.graph_editor_scene.setModel(self.model)
-        self.graph_editor_view = QGraphicsView()
-        self.graph_editor_view.setScene(self.graph_editor_scene)
+        # self.graph_editor_scene = SQLGraphScene()
+        # self.graph_editor_scene.setModel(self.model)
+        # self.graph_editor_view = QGraphicsView()
+        # self.graph_editor_view.setScene(self.graph_editor_scene)
 
         ### actions 
         add_graph_action = QAction("add new graph", self)
@@ -64,41 +120,48 @@ class Window(QWidget):
         menubar.addAction(add_edge_action)
         menubar.addAction(remove_edges_action)
 
-        ### layout
-        splitter = QSplitter()
-        splitter.addWidget(self.graphs_table)
-        splitter.addWidget(self.nodes_table)
-        splitter.addWidget(self.edges_table)
-        splitter.setSizes([splitter.width()//splitter.count() for _ in range(splitter.count())])
+        ### holistic database viewer
+        database_viewer = QSplitter()
+        database_viewer.addWidget(self.graphs_table)
+        database_viewer.addWidget(self.nodes_table)
+        database_viewer.addWidget(self.edges_table)
+        database_viewer.setSizes([database_viewer.width()//database_viewer.count() for _ in range(database_viewer.count())])
 
+        ### database inspector
+        self.graph_inspector = GraphInspector()
+        self.graph_inspector.setModel(self.model)
+        self.graph_inspector.setGraph(1)
+
+        ###
         main_layout = QVBoxLayout()
         main_layout.setMenuBar(menubar)
-        main_layout.addWidget(splitter)
-        main_layout.addWidget(self.graph_editor_view)
+        main_layout.addWidget(database_viewer)
+        # main_layout.addWidget(self.graph_inspector)
+        # main_layout.addWidget(self.graph_editor_view)
 
         self.setLayout(main_layout)
 
     @Slot()
     def create_new_graph(self):
-        self.model.add_graph("new graph")
+        self.model.create_graph("new graph")
 
     @Slot()
     def remove_selected_graphs(self):
         for index in self.graph_selection.selectedIndexes():
             graph_key =  self.model.graphs.record(index.row()).value("key")
-            self.model.remove_graph(graph_key)
+            self.model.delete_graph(graph_key)
 
     @Slot()
     def create_new_node(self):
         current = self.graph_selection.currentIndex()
-        graph_key = self.model.graphs.record(current.row()).value("key")
+        graph_key = 1#self.model.graphs.record(current.row()).value("key")
         self.model.add_node(graph_key, "new node")
 
     @Slot()
     def remove_selected_nodes(self):
         for index in self.node_selection.selectedIndexes():
             node_key = self.model.nodes.record(index.row()).value("key")
-            self.model.remove_node(node_key)
+            self.model.delete_node(node_key)
 
     @Slot()
     def create_new_edge(self):
@@ -119,7 +182,7 @@ class Window(QWidget):
     def remove_selected_edges(self):
         for index in self.edge_selection.selectedIndexes():
             edge_key = self.model.edges.record(index.row()).value("key")
-            self.model.remove_edge(edge_key)
+            self.model.delete_edge(edge_key)
             
 
 

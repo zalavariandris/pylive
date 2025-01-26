@@ -24,7 +24,7 @@ from pylive.QtScriptEditor.components.async_jedi_completer import (
     AsyncJediCompleter,
 )
 from pylive.QtTerminal.terminal_with_exec import Terminal
-from pylive.QtLiveApp.file_link import FileLink
+from pylive.QtLiveApp.document_file_link import DocumentFileLink
 
 import logging
 
@@ -115,7 +115,7 @@ class LiveScriptWithExec(LiveScriptWindow):
         )
 
         ### File link
-        self.fileLink = FileLink(editor.document())
+        self.fileLink = DocumentFileLink(editor.document())
         self.fileLink.filePathChanged.connect(self.updateWindowTitle)
         editor.document().modificationChanged.connect(self.updateWindowTitle)
 
