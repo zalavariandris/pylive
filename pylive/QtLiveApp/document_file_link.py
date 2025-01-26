@@ -111,7 +111,7 @@ class DocumentFileLink(QObject):
 		return self._file_filter
 
 	def setFileSelectFilter(self, select_filter:str):
-		self._select_filter = select_fitler
+		self._select_filter = select_filter
 
 	def fileSelectFilter(self):
 		return "Python Script (*.py);;Any File (*)"

@@ -1,11 +1,12 @@
+from enum import IntEnum
 from typing import *
 from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
 
-class OptionDialog(QDialog):
-    def __init__(self, options:list[object], title="Choose an Option", parent:QWidget|None=None):
+class QOptionDialog(QDialog):
+    def __init__(self, items:Sequence[str], title="Choose an Option", parent:QWidget|None=None):
         super().__init__(parent=parent)
         self.setWindowTitle(title)
         self.setModal(True)
@@ -23,7 +24,7 @@ class OptionDialog(QDialog):
         # self.setStyleSheet("background: transparent;")
         # self.setAttribute(Qt.WidgetAttribute.WA_OpaquePaintEvent, True)
 
-        self.options = options
+        self.items = items
 
         # Create layout
         main_layout = QVBoxLayout()
@@ -34,7 +35,7 @@ class OptionDialog(QDialog):
         main_layout.addWidget(self.line_edit)
 
         # Setup List
-        self.optionsmodel = QStringListModel([f"{opt}" for opt in options])
+        self.optionsmodel = QStringListModel([f"{item}" for item in items])
         self.filteredmodel = QSortFilterProxyModel()
         self.filteredmodel.setSourceModel(self.optionsmodel)
         self.filteredmodel.setFilterCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
@@ -61,7 +62,7 @@ class OptionDialog(QDialog):
         self.line_edit.setFocus()
 
         # Select the first item by default
-        if options:
+        if items:
             self.listview.setCurrentIndex(self.filteredmodel.index(0, 0))
 
         # Adjust the dialog size based on the content
@@ -70,6 +71,8 @@ class OptionDialog(QDialog):
 
         # Enable event filter for keyboard navigation
         self.line_edit.installEventFilter(self)
+
+
 
     def adjust_dialog_size(self):
         """Adjust the height of the list view and the dialog dynamically based on content."""
@@ -121,7 +124,7 @@ class OptionDialog(QDialog):
             self.listview.setCurrentIndex(new_index)
             self.listview.scrollTo(new_index)  # Ensure visibility of the selection
 
-    def optionValue(self):
+    def optionValue(self)->str:
         """Return the selected option or None if no option is selected."""
         indexes = self.listview.selectedIndexes()
         if indexes:
@@ -134,16 +137,35 @@ class OptionDialog(QDialog):
     @staticmethod
     def getOption(options, parent:QWidget|None=None):
         """Static method to open dialog and return selected option."""
-        dialog = OptionDialog(options, parent=parent)
+        dialog = QOptionDialog(options, parent=parent)
         result = dialog.exec()
         return dialog.optionValue() if result == QDialog.DialogCode.Accepted else None
+
+    @staticmethod
+    def getItem(parent, 
+        title:str, 
+        label:str, 
+        items:Sequence[str],
+        current:int, 
+        editable:bool=False
+    )->tuple[str|None, bool]:
+
+        dialog = QOptionDialog(items, title, parent=parent)
+        result = dialog.exec()
+
+        if result == QDialog.DialogCode.Accepted:
+            return str(dialog.optionValue()), True
+        else:
+            return None, False 
+
+
 
 
 if __name__ == "__main__":
     import sys
     app = QApplication(sys.argv)
     options = ["print", "Path.read_text", "Path.write_text", "sample_function"]
-    selected = OptionDialog.getOption(options)
+    selected = QOptionDialog.getOption(options)
     print(selected)
     sys.exit(app.exec())
 
@@ -156,7 +178,7 @@ if __name__ == "__main__":
 	import sys
 	app = QApplication(sys.argv)
 	options = ["print", "Path.read_text", "Path.write_text", "sample_function"]
-	selected = OptionDialog.getOption(options)
+	selected = QOptionDialog.getOption(options)
 	print(selected)
 	sys.exit(app.exec())
 

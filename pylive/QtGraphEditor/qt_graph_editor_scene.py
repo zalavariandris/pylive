@@ -483,9 +483,9 @@ if __name__ == "__main__":
 
     grid_layout = QGridLayout()
     grid_layout.setMenuBar(menubar)
-    grid_layout.addWidget(nodelist, 0, 0)
-    grid_layout.addWidget(edgelist, 0, 1)
-    grid_layout.addWidget(graph_view, 1, 0, 1, 3)
+    grid_layout.addWidget(nodelist, 1, 0)
+    grid_layout.addWidget(edgelist, 1, 1)
+    grid_layout.addWidget(graph_view, 0, 0, 1, 3)
 
     window.setLayout(grid_layout)
     window.show()

@@ -13,7 +13,7 @@ from pylive.NetworkXGraphEditor.nx_network_scene_delegate import NXNetworkSceneD
 
 from pylive.NetworkXGraphEditor.nx_node_inspector_view import NXNodeInspectorView
 
-from pylive.options_dialog import OptionDialog
+from pylive.qt_options_dialog import QOptionDialog
 from pylive.utils.unique import make_unique_name
 
 from pylive.utils import qtfactory as Q
@@ -204,7 +204,7 @@ class LivePythonGraphWindow(QWidget):
         if watched == self.graphscene:
             def open_nodes_dialog():
                 available_nodes = {key: val for key, val in self.functions()}
-                dialog = OptionDialog(options=[_ for _ in available_nodes.keys()], title="Create Nodes", parent=self.graphview)
+                dialog = QOptionDialog(items=[_ for _ in available_nodes.keys()], title="Create Nodes", parent=self.graphview)
                 result = dialog.exec()
 
                 if result == QDialog.DialogCode.Accepted:
