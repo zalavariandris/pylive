@@ -6,48 +6,90 @@ from networkx.classes import graphviews
 
 from pylive.qt_options_dialog import QOptionDialog
 
-# from dataclasses import dataclass
-# @dataclass
-# class Node:
-#     display: str
-#     content: str
+from dataclasses import dataclass
+@dataclass
+class Node:
+    display: str
+    content: str
 
-# @dataclass
-# class Edge:
-#     source: Node
-#     target: Node
-#     display: str
+@dataclass
+class Edge:
+    source: Node
+    target: Node
+    display: str
 
-# @dataclass
-# class Graph:
-#     nodes:list[Node]
-#     edges:list[Edge]
+@dataclass
+class Graph:
+    nodes:list[Node]
+    edges:list[Edge]
 
-# @dataclass
-# class Scene:
-#     definitions:str
-#     graph: Graph
+@dataclass
+class Scene:
+    definitions:str
+    graph: Graph
 
-#     def serialize(self)->str:
-#         return yaml.dump({
-#             'definitions': self.definitions,
-#         })
+    def serialize(self)->str:
+        import yaml
+        return yaml.dump({
+            'definitions': self.definitions,
+        })
 
-#     def deserialize(self, text:str):
-#         # parse yaml
-#         data = yaml.load(text, Loader=yaml.SafeLoader)
+    def deserialize(self, text:str):
+        import yaml
+        # parse yaml
+        data = yaml.load(text, Loader=yaml.SafeLoader)
 
-#         # set definitions
-#         self.definitions = data['definitions']
+        # set definitions
+        self.definitions = data['definitions']
 
-#         #parse graph
-#         nodes = [Node(_['name'], _['func']) for _ in data['graph']['nodes']]
-#         edges = [Edge(_[0], _[1], _[2]) for _ in data['graph']['edges']]
-#         self.graph = Graph(nodes, edges)
+        #parse graph
+        nodes = [Node(_['name'], _['func']) for _ in data['graph']['nodes']]
+        edges = [Edge(_[0], _[1], _[2]) for _ in data['graph']['edges']]
+        self.graph = Graph(nodes, edges)
+
+
+from pylive.QtLiveApp.document_file_link import DocumentFileLink
+from qt_graph_editor_scene import QGraphEditorScene
+from pylive.QtScriptEditor.script_edit import ScriptEdit
+
+class SceneModel(QObject):
+    DefinitionFunctionRole = Qt.ItemDataRole.UserRole
+    NodeDefinitionRole = Qt.ItemDataRole.UserRole
+    def __init__(self, parent:QObject|None=None):
+        super().__init__(parent=parent)
+        self.nodes = QStandardItemModel()
+        self.nodes.setHeaderData(0, Qt.Orientation.Horizontal, "name")
+
+        self.edges = QStandardItemModel()
+        self.edges.setHeaderData(0, Qt.Orientation.Horizontal, "key")
+
+        self.node_selection = QItemSelectionModel(self.nodes)
+        self.edge_selection = QItemSelectionModel(self.edges)
+
+        self.definitions_model = QStandardItemModel()
+        self.definitions_model.setHeaderData(0, Qt.Orientation.Horizontal, "name")
+
+    def fromData(self, data:Scene):
+        self.definitions_model.beginResetModel()
+        self.nodes.beginResetModel()
+        self.edges.beginResetModel()
+        ...
+
+        self.definitions_model.endResetModel()
+        self.nodes.endResetModel()
+        self.edges.endResetModel()
+
+        self.node_selection.setModel(self.nodes)
+        self.edge_selection.setModel(self.edges)
+
+
+    def toData(self)->Scene:
+        ...
 
 
 class Window(QWidget):
-    FunctionRole = Qt.ItemDataRole.UserRole
+    DefinitionFunctionRole = Qt.ItemDataRole.UserRole
+    NodeDefinitionRole = Qt.ItemDataRole.UserRole
     def __init__(self, parent:QWidget|None=None):
         super().__init__(parent=parent)
         ### model state
@@ -58,14 +100,35 @@ class Window(QWidget):
         self.node_selection = QItemSelectionModel(self.nodes)
         self.edge_selection = QItemSelectionModel(self.edges)
 
+        self.document = QTextDocument()
+        self.document.setDocumentLayout(QPlainTextDocumentLayout(self.document))
+        self.document_viewer = ScriptEdit()
+        self.document_viewer.setReadOnly(True)
+        self.document_viewer.setDocument(self.document)
+        self.filelink = DocumentFileLink(self.document)
+        self.filelink.setFileFilter(".yaml")
+        self.filelink.setFileSelectFilter("YAML (*.yaml);;Any File (*)")
+        self.filelink.filepathChanged.connect(self.onFilepathChanged)
+
         self.definitions_model = QStandardItemModel()
+
+        ### update document on graph change
+        self.nodes.rowsInserted.connect(self._update_document)
+        self.nodes.rowsRemoved.connect(self._update_document)
+        self.nodes.dataChanged.connect(self._update_document)
+        self.nodes.modelReset.connect(self._update_document)
+        self.edges.rowsInserted.connect(self._update_document)
+        self.edges.rowsRemoved.connect(self._update_document)
+        self.edges.dataChanged.connect(self._update_document)
+        self.edges.modelReset.connect(self._update_document)
         
         ### actions, commands
         self.nodes.rowsInserted.connect(lambda: print("rows inserted"))
         ### view
 
-        from pylive.QtScriptEditor.script_edit import ScriptEdit
+        
         self.definitions_editor = ScriptEdit()
+        self.definitions_editor.textChanged.connect(self.init_definitions)
 
         self.graph_view = QGraphicsView()
         self.graph_view.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
@@ -84,7 +147,7 @@ class Window(QWidget):
         edgelist.setModel(self.edges)
 
         ### Grahp editor
-        from qt_graph_editor_scene import QGraphEditorScene
+        
         graph_scene = QGraphEditorScene()
         graph_scene.setModel(self.nodes, self.edges)
         graph_scene.setSceneRect(QRectF(-400, -400, 800, 800))
@@ -92,8 +155,8 @@ class Window(QWidget):
         self.graph_view.setScene(graph_scene)
 
         # Actions
-        execute_definitions_action = QAction("Execute definitions", self)
-        execute_definitions_action.triggered.connect(self.execute_definitions)
+        # init_definitions_action = QAction("Init definitions", self)
+        # init_definitions_action.triggered.connect(self.init_definitions)
 
         add_node_action = QAction("add new node", self)
         add_node_action.triggered.connect(self.create_new_node)
@@ -107,7 +170,8 @@ class Window(QWidget):
         layout_action.triggered.connect(graph_scene.layout)
 
         menubar = QMenuBar(parent=self)
-        menubar.addAction(execute_definitions_action)
+        menubar.addMenu(self.filelink.createFileMenu())
+        # menubar.addAction(init_definitions_action)
         menubar.addAction(add_node_action)
         menubar.addAction(delete_node_action)
         menubar.addAction(connect_selected_nodes_action)
@@ -120,16 +184,20 @@ class Window(QWidget):
         # grid_layout.addWidget(nodelist, 1, 0)
         # grid_layout.addWidget(edgelist, 1, 1)
         grid_layout.addWidget(self.definitions_editor, 0, 0, 1, 1)
-        grid_layout.addWidget(self.graph_view, 0, 1, 1, 1)
+        grid_layout.addWidget(self.graph_view,         0, 1, 1, 1)
+        grid_layout.addWidget(self.document_viewer,    0, 2, 1, 1)
+        self.statusbar = QStatusBar(self)
+        grid_layout.addWidget(self.statusbar, 1,0,1,3)
         self.setLayout(grid_layout)
 
-    # def _builtins(self):
-    #     # display module members
-    #     for key in dir(__builtins__):
-    #         if not key.startswith("_"):
-    #             item = getattr(__builtins__, key)
-    #             if callable(item):
-    #                 yield key
+        self.init_definitions()
+
+    def loadScene(self, scene:Scene):
+        ...
+
+    def onFilepathChanged(self):
+        print(f"on open {self.filelink.filepath()}")
+
 
     # def _pathlib_module_functions(self):
     #     import pathlib
@@ -141,44 +209,106 @@ class Window(QWidget):
     #                 yield key
 
     @Slot()
-    def execute_definitions(self):
+    def init_definitions(self):
+        ### add builtin functions
+        import inspect
+        for name in dir(__builtins__):
+            if not name.startswith("_"):
+                attribute = getattr(__builtins__, name)
+                if callable(attribute) and not inspect.isclass(attribute):
+                    item = QStandardItem()
+                    item.setData(name, Qt.ItemDataRole.DisplayRole)
+                    item.setData(attribute, self.DefinitionFunctionRole)
+                    self.definitions_model.appendRow(item)
+
+        ### execute definition script
         definitions_script = self.definitions_editor.toPlainText()
 
         try:
             capture = {'__builtins__': __builtins__}
             exec(definitions_script, capture)
 
-
-            for key, value in capture.items():
-                if key!='__builtins__':
-                    if callable(value):
+            for name, attribute in capture.items():
+                if name!='__builtins__':
+                    if callable(attribute) and not inspect.isclass(attribute):
                         fn_item = QStandardItem()
-                        fn_item.setData(key, Qt.ItemDataRole.DisplayRole)
-                        fn_item.setData(key, self.FunctionRole)
+                        fn_item.setData(name, Qt.ItemDataRole.DisplayRole)
+                        fn_item.setData(name, self.DefinitionFunctionRole)
                         self.definitions_model.insertRow(self.definitions_model.rowCount(), fn_item)
-                        print(f"- {key}: {value}")
+
+            self._update_document()
+            self.statusbar.showMessage(f"definitions initalized")
         except Exception as err:
-            QMessageBox.critical(self, "Error", f"{err}")
+            self.statusbar.showMessage(f"error: {err}")
+            # QMessageBox.critical(self, "Error", f"{err}")
+
+    def _update_document(self):
+        print("update document")
+        import json
+
+        definitions = self.definitions_editor.toPlainText()
+
+        nodes = dict()
+        for row in range(self.nodes.rowCount()):
+            index = self.nodes.index(row, 0)
+            name = self.nodes.data(index, Qt.ItemDataRole.DisplayRole)
+            definition_index = self.nodes.data(index, self.NodeDefinitionRole)
+            definition_name = self.definitions_model.data(definition_index, Qt.ItemDataRole.DisplayRole)
+            nodes[name] = definition_name
+
+        edges = []
+        for row in range(self.edges.rowCount()):
+            index = self.edges.index(row, 0)
+            source_idx = self.edges.data(index, QGraphEditorScene.SourceRole)
+            target_idx = self.edges.data(index, QGraphEditorScene.TargetRole)
+            source_name = self.nodes.data(source_idx, Qt.ItemDataRole.DisplayRole)
+            target_name = self.nodes.data(target_idx, Qt.ItemDataRole.DisplayRole)
+            edges.append( (source_name, target_name) )
+
+        import yaml
+        class LiteralString(str):
+            pass
+
+        def literal_representer(dumper, data):
+            # Use `|` without `-` to keep trailing newlines intact
+            value = data if data.endswith('\n') else f"{data}\n"
+            return dumper.represent_scalar('tag:yaml.org,2002:str', value, style='|')
+
+        yaml.add_representer(LiteralString, literal_representer)
+
+        document_text = yaml.dump({
+            'definitions': LiteralString(definitions),
+            'nodes': nodes,
+            'edges': edges
+        }, indent=4)
+
+        self.document.setPlainText(document_text)
+
 
     @Slot()
     def create_new_node(self):
         ###
         if self.definitions_model.rowCount()==0:
-            QMessageBox.warning(self, "No definiions!", "please create function definitions!")
+            QMessageBox.warning(self, "No definiions!", "Please create function definitions!")
             return
 
         from itertools import chain
         # node_name, accepted =  QOptionDialog.getItem(self , "Title", "label", ['print', "write"], 0, editable=True)
-        items = {self.definitions_model.index(row, 0).data(Qt.DisplayRole): self.definitions_model.index(row, 0).data(self.FunctionRole) for row in range(self.definitions_model.rowCount())}
-
-        node_key, accepted =  QOptionDialog.getItem(self , "Title", "label", items.keys() , 0)
-        if node_key and accepted:
+        definitions = dict()
+        for row in range(self.definitions_model.rowCount()):
+            definition_index = self.definitions_model.index(row, 0)
+            name = definition_index.data(Qt.ItemDataRole.DisplayRole)
+            func = definition_index.data(self.DefinitionFunctionRole)
+            definitions[name]  = definition_index
+       
+        definition_key, accepted =  QOptionDialog.getItem(self , "Title", "label", [_ for _ in definitions.keys()] , 0)
+        if definition_key and accepted:
             from pylive.utils.unique import make_unique_name
             node_names = [self.nodes.data(self.nodes.index(row, 0), Qt.ItemDataRole.DisplayRole) for row in  range(self.nodes.rowCount())]
-            node_key = make_unique_name(node_key, node_names)
+            node_key = make_unique_name(f"{definition_key}1", node_names)
             item = QStandardItem()
             item.setData(f"{node_key}", Qt.ItemDataRole.DisplayRole)
-            item.setData(items[node_key], self.FunctionRole)
+            item.setData(definitions[definition_key], self.NodeDefinitionRole)
             self.nodes.insertRow(self.nodes.rowCount(), item)
 
     @Slot()

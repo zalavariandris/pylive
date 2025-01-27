@@ -1,0 +1,7 @@
+definitions: |
+    def read_text(path:str)->str:
+        from pathlib import Path
+        return Path(path).read_text()
+edges: []
+nodes:
+    read_text1: read_text
