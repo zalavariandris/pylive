@@ -4,22 +4,114 @@ from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
 from pathlib import Path
+from pylive.utils.qt import signalsBlocked
 
-# TODO Replace with DocumentFileLink
 class DocumentFileLink(QObject):
 	filepathChanged = Signal() # emit when a file opened
 	def __init__(self, document, filepath=None, parent:Optional[QObject]=None) -> None:
 		super().__init__(parent=parent)
 		self._filepath: Optional[str] = filepath
 		self._document:QTextDocument = document
-		self.watcher = QFileSystemWatcher()
-		self.watcher.fileChanged.connect(lambda:
-			self.onFileChanged(self._filepath))
+		self._watcher = QFileSystemWatcher()
+		self._watcher.fileChanged.connect(lambda:
+			self._onFileChanged(self._filepath))
 
 		self.setFileFilter(".py")
 		self.setFileSelectFilter("Python Script (*.py);;Any File (*)")
 
-	def onFileChanged(self, path):
+	def filepath(self):
+		return self._filepath
+
+	def saveFile(self, filepath:str|None=None):
+		assert filepath is None or isinstance(filepath, str), f"got:, {filepath}"
+		DoSaveAs = self._filepath!=filepath
+
+		if DoSaveAs:
+			...
+		
+		if not self._filepath or filepath:
+			choosen_filepath, filter_used = QFileDialog.getSaveFileName(self._parentWidget(), 
+				"Save", self.fileFilter(), self.fileSelectFilter())
+			if not choosen_filepath:
+				return # if no filepath was choosen cancel saving
+			filepath = choosen_filepath
+		elif self._filepath:
+			filepath = self._filepath
+
+		if not filepath:
+			return
+
+		""" note
+		We must stop watching this file, otherwise it will silently reload the
+		script. It reloads silently, because if the document is not modified,
+		and the file has been changed, it will silently reload the script.
+		"""
+		self._watcher.removePath(filepath) 
+		try:
+			with open(filepath, 'w') as file:
+				file.write(self._document.toPlainText())
+				self._document.setModified(False)
+		except FileNotFoundError:
+			pass
+		self._watcher.addPath(filepath)
+		self._filepath = filepath
+
+	def openFile(self, filepath:str|None=None):
+		# close current file
+		self.closeFile()
+
+		if not filepath:
+			# if not filepath is specified open file doalog
+			choosen_filepath, filter_used = QFileDialog.getOpenFileName(self._parentWidget(), 
+				"Open", self.fileFilter(), self.fileSelectFilter())
+			filepath = choosen_filepath
+
+		# open filepath
+		if not filepath:
+			return
+		
+		try:
+			with open(filepath, 'r') as file:
+				text = file.read()
+				self._document.setPlainText(text)
+				self._document.setModified(False)
+				self._filepath = filepath
+
+				self._watcher.addPath(filepath)
+		except FileNotFoundError:
+			pass
+
+		self._filepath = filepath
+		self.filepathChanged.emit()
+
+	def closeFile(self)->bool:
+		AcceptClose = True
+		if self._document.isModified():
+			# prompt user if file has changed
+			result = QMessageBox.question(
+		        window, 
+		        "Save changes before closing?", 
+		        f"{self.filepath() or "untitled"}", 
+		        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel
+		    )
+
+			match result:
+				case QMessageBox.StandardButton.Yes:
+					self.saveFile()
+				case QMessageBox.StandardButton.No:
+					pass
+				case QMessageBox.StandardButton.Cancel:
+					return False
+
+		if self._watcher.files():
+			self._watcher.removePaths(self._watcher.files())
+		self._filepath = None
+		self._document.setPlainText("")
+		self._document.setModified(False)
+
+		return True
+
+	def _onFileChanged(self, path):
 		assert path == self._filepath
 		assert self._document is not None
 
@@ -31,70 +123,16 @@ class DocumentFileLink(QObject):
 				self._document.setPlainText(data)
 				self._document.setModified(False)
 
-		if not self._document.isModified():
-			"""
-			When the script is not modified in the editor,
-			silently reload the file changed on disk!
-			"""
-			reload_script()
-		else:
-			"""
-			Notify the user that the file haschanged on disk,
-			and ask if they want to reload it?
-			"""
-			msg_box = QMessageBox(self.parentWidget())
-			msg_box.setWindowTitle("File has changed on Disk.")
-			msg_box.setText("Do you want to reload?")
-			msg_box.setIcon(QMessageBox.Icon.Question)
-			msg_box.setStandardButtons(
-				QMessageBox.StandardButton.Yes |
-				QMessageBox.StandardButton.No
-			)
-			"""
-			Temporary block _file change_ signals, to ignore multiple changes
-			when the messagebox is already open
-			"""
-			self.watcher.blockSignals(True) 
-			result = msg_box.exec()
-			self.watcher.blockSignals(False)
+		# ignore file changes, while prompt is open
+		with signalsBlocked(self._watcher):
+			if not self._document.isModified() or QMessageBox.StandardButton.Yes==QMessageBox.information(window, 
+		        "File has changed on disk!", 
+		        f"Do you want to reaload '{self.filepath()}'?", 
+		        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel):
 
-			if result == QMessageBox.StandardButton.Yes:
-				reload_script()
+				reload_script()				
 
-	def closeFile(self)->bool:
-		AcceptClose = True
-		if self._document.isModified():
-			# prompt user if file has changed
-			msg_box = QMessageBox(parent=self.parentWidget())
-			msg_box.setWindowTitle("Save changes?")
-			filename = Path(self._filepath).name if self._filepath else "Script"
-			msg_box.setText(f"{filename} has been modified, save changes?")
-			msg_box.setIcon(QMessageBox.Icon.Warning)
-			msg_box.setStandardButtons(
-				QMessageBox.StandardButton.Yes | 
-				QMessageBox.StandardButton.No | 
-				QMessageBox.StandardButton.Cancel
-			)
-			result = msg_box.exec()
-
-			match result:
-				case QMessageBox.StandardButton.Yes:
-					self.saveFile()
-				case QMessageBox.StandardButton.No:
-					pass
-				case QMessageBox.StandardButton.Cancel:
-					AcceptClose = False
-
-		if AcceptClose:
-			if self.watcher.files():
-				self.watcher.removePaths(self.watcher.files())
-			self._filepath = None
-			self._document.setPlainText("")
-			self._document.setModified(False)
-
-		return AcceptClose
-
-	def parentWidget(self)->QWidget|None:
+	def _parentWidget(self)->QWidget|None:
 		parent = self.parent()
 		if isinstance( parent, QWidget ):
 			return parent
@@ -115,71 +153,6 @@ class DocumentFileLink(QObject):
 	def fileSelectFilter(self):
 		"""default: "Python Script (*.py);;Any File (*)"""
 		return self._select_filter
-
-	def filepath(self):
-		return self._filepath
-
-	def saveFile(self, filepath:str|None=None):
-		assert filepath is None or isinstance(filepath, str), f"got:, {filepath}"
-		DoSaveAs = self._filepath!=filepath
-
-		if DoSaveAs:
-			...
-		
-		if not self._filepath or filepath:
-			choosen_filepath, filter_used = QFileDialog.getSaveFileName(self.parentWidget(), 
-				"Save", self.fileFilter(), self.fileSelectFilter())
-			if not choosen_filepath:
-				return # if no filepath was choosen cancel saving
-			filepath = choosen_filepath
-		elif self._filepath:
-			filepath = self._filepath
-
-		if not filepath:
-			return
-
-		""" note
-		We must stop watching this file, otherwise it will silently reload the
-		script. It reloads silently, because if the document is not modified,
-		and the file has been changed, it will silently reload the script.
-		"""
-		self.watcher.removePath(filepath) 
-		try:
-			with open(filepath, 'w') as file:
-				file.write(self._document.toPlainText())
-				self._document.setModified(False)
-		except FileNotFoundError:
-			pass
-		self.watcher.addPath(filepath)
-		self._filepath = filepath
-
-	def openFile(self, filepath:str|None=None):
-		# close current file
-		self.closeFile()
-
-		if not filepath:
-			# if not filepath is specified open file doalog
-			choosen_filepath, filter_used = QFileDialog.getOpenFileName(self.parentWidget(), 
-				"Open", self.fileFilter(), self.fileSelectFilter())
-			filepath = choosen_filepath
-
-		# open filepath
-		if not filepath:
-			return
-		
-		try:
-			with open(filepath, 'r') as file:
-				text = file.read()
-				self._document.setPlainText(text)
-				self._document.setModified(False)
-				self._filepath = filepath
-
-				self.watcher.addPath(filepath)
-		except FileNotFoundError:
-			pass
-
-		self._filepath = filepath
-		self.filepathChanged.emit()
 
 	def createFileMenu(self):
 		new_file_action = QAction("New File", self)
@@ -261,8 +234,8 @@ if __name__ == "__main__":
 
 		def updateWindowTitle(self):
 			file_title = "untitled"
-			if self.fileLink.filepath:
-				file_title = Path(self.fileLink.filepath).name
+			if filepath:=self.fileLink.filepath():
+				file_title = Path(filepath).name
 
 			modified_mark = ""
 			if self.document.isModified():

@@ -48,7 +48,6 @@ class Scene:
         self.graph = Graph(nodes, edges)
 
 
-from pylive.QtLiveApp.document_file_link import DocumentFileLink
 from qt_graph_editor_scene import QGraphEditorScene
 from pylive.QtScriptEditor.script_edit import ScriptEdit
 
@@ -57,6 +56,8 @@ class SceneModel(QObject):
     NodeDefinitionRole = Qt.ItemDataRole.UserRole
     def __init__(self, parent:QObject|None=None):
         super().__init__(parent=parent)
+        self.definitions_source:str=""
+
         self.nodes = QStandardItemModel()
         self.nodes.setHeaderData(0, Qt.Orientation.Horizontal, "name")
 
@@ -66,67 +67,48 @@ class SceneModel(QObject):
         self.node_selection = QItemSelectionModel(self.nodes)
         self.edge_selection = QItemSelectionModel(self.edges)
 
-        self.definitions_model = QStandardItemModel()
-        self.definitions_model.setHeaderData(0, Qt.Orientation.Horizontal, "name")
+        self._cache_definitions:dict[str, Callable]=None
 
-    def fromData(self, data:Scene):
-        self.definitions_model.beginResetModel()
-        self.nodes.beginResetModel()
-        self.edges.beginResetModel()
+    def setDefinitionsSource(self, source:str):
+        self.definitions_source = source
+
+    def definitions(self):
         ...
-
-        self.definitions_model.endResetModel()
-        self.nodes.endResetModel()
-        self.edges.endResetModel()
-
-        self.node_selection.setModel(self.nodes)
-        self.edge_selection.setModel(self.edges)
-
-
-    def toData(self)->Scene:
-        ...
-
 
 class Window(QWidget):
     DefinitionFunctionRole = Qt.ItemDataRole.UserRole
     NodeDefinitionRole = Qt.ItemDataRole.UserRole
     def __init__(self, parent:QWidget|None=None):
         super().__init__(parent=parent)
+        ### document state
+        self._is_modified = False
+        self._filepath = "None"
+
         ### model state
-        self.nodes = QStandardItemModel()
-        self.nodes.setHeaderData(0, Qt.Orientation.Horizontal, "name")
-        self.edges = QStandardItemModel()
-        self.edges.setHeaderData(0, Qt.Orientation.Horizontal, "key")
-        self.node_selection = QItemSelectionModel(self.nodes)
-        self.edge_selection = QItemSelectionModel(self.edges)
+        self.model = SceneModel()
 
         self.document = QTextDocument()
         self.document.setDocumentLayout(QPlainTextDocumentLayout(self.document))
         self.document_viewer = ScriptEdit()
         self.document_viewer.setReadOnly(True)
         self.document_viewer.setDocument(self.document)
-        self.filelink = DocumentFileLink(self.document)
-        self.filelink.setFileFilter(".yaml")
-        self.filelink.setFileSelectFilter("YAML (*.yaml);;Any File (*)")
-        self.filelink.filepathChanged.connect(self.onFilepathChanged)
-
-        self.definitions_model = QStandardItemModel()
 
         ### update document on graph change
-        self.nodes.rowsInserted.connect(self._update_document)
-        self.nodes.rowsRemoved.connect(self._update_document)
-        self.nodes.dataChanged.connect(self._update_document)
-        self.nodes.modelReset.connect(self._update_document)
-        self.edges.rowsInserted.connect(self._update_document)
-        self.edges.rowsRemoved.connect(self._update_document)
-        self.edges.dataChanged.connect(self._update_document)
-        self.edges.modelReset.connect(self._update_document)
+        self.model.nodes.rowsInserted.connect(self._update_document)
+        self.model.nodes.rowsRemoved.connect(self._update_document)
+        self.model.nodes.dataChanged.connect(self._update_document)
+        self.model.nodes.modelReset.connect(self._update_document)
+        self.model.edges.rowsInserted.connect(self._update_document)
+        self.model.edges.rowsRemoved.connect(self._update_document)
+        self.model.edges.dataChanged.connect(self._update_document)
+        self.model.edges.modelReset.connect(self._update_document)
+
+        self.definitions_model = QStandardItemModel()
         
         ### actions, commands
-        self.nodes.rowsInserted.connect(lambda: print("rows inserted"))
-        ### view
 
-        
+
+        ### view
         self.definitions_editor = ScriptEdit()
         self.definitions_editor.textChanged.connect(self.init_definitions)
 
@@ -192,11 +174,87 @@ class Window(QWidget):
 
         self.init_definitions()
 
-    def loadScene(self, scene:Scene):
+    ### The python script flow documents
+    def fileFilter(self):
+        return ".py"
+
+    def fileSelectFilter(self):
+        return "Python Script (*.py);;Any File (*)"
+
+    def setIsModified(self, m:bool):
+        self._is_modified = m
+
+    @Slot()
+    def openFile(self, filepath:str|None=None)->bool:
+        ### close current file
+        if not self.closeFile():
+            return False
+
+        ### prompt file name
+        if not filepath:
+            filepath, _ = QFileDialog.getOpenFileName(self, 
+                "Open", self.fileFilter(), self.fileSelectFilter())
+            if filepath is None: # cancelled
+                return False
+
+        ### try to load
+        try:
+            from pathlib import Path
+            import yaml
+            # parse yaml
+            text = Path(filepath).read_text()
+            data = yaml.load(text, Loader=yaml.SafeLoader)
+
+            # Delete the current model and load data into the new model!!!!
+
+            return True
+        except Exception:
+            return False
+        
+
+        # self.filelink = DocumentFileLink(self.document)
+        # self.filelink.setFileFilter(".yaml")
+        # self.filelink.setFileSelectFilter("YAML (*.yaml);;Any File (*)")
         ...
 
-    def onFilepathChanged(self):
-        print(f"on open {self.filelink.filepath()}")
+    def deserialize(self, text:str):
+
+
+
+
+        # # set definitions
+        # self.definitions = data['definitions']
+
+        # #parse graph
+        # nodes = [Node(_['name'], _['func']) for _ in data['graph']['nodes']]
+        # edges = [Edge(_[0], _[1], _[2]) for _ in data['graph']['edges']]
+        # self.graph = Graph(nodes, edges)
+
+    @Slot()
+    def closeFile(self)->bool:
+        """return False, if the user cancelled, otherwise true"""
+        if self._is_modified:
+            match QMessageBox.question(self, "Save changes before closing?", f"{self._filepath or "unititled"}", QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel):
+                case QMessageBox.StandardButton.Yes:
+                    self.saveFile()
+                    return True
+                case QMessageBox.StandardButton.No:
+                    return True
+                case QMessageBox.StandardButton.Cancel:
+                    return False
+        return True
+
+    def serialize(self)->str:
+        import yaml
+        return yaml.dump({
+            'definitions': self.definitions,
+        })
+
+
+
+    @Slot()
+    def saveFile(self):
+        ...
 
 
     # def _pathlib_module_functions(self):
@@ -355,9 +413,13 @@ class Window(QWidget):
 if __name__ == "__main__":
     app = QApplication()
     window = Window()
+
+    
     
 
     window.show()
+
+    
 
     app.exec()
 
