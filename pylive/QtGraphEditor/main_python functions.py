@@ -1,11 +1,231 @@
+from collections import defaultdict
 from typing import *
+from typing_extensions import deprecated
 from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 from networkx.classes import graphviews
 
 from pylive.qt_options_dialog import QOptionDialog
+from pylive.utils import group_consecutive_numbers
 from pylive.utils.qt import modelReset, signalsBlocked
+
+class NodeModel(QAbstractItemModel):
+    DefinitionRole = Qt.ItemDataRole.UserRole+1
+    NameRole = Qt.ItemDataRole.UserRole+2
+
+    def __init__(self, definitions:QAbstractItemModel, parent: QObject|None=None) -> None:
+        super().__init__(parent)
+        self._nodes:list[dict] = []
+        self._related_definitions = definitions
+
+    def rowCount(self, parent=QModelIndex()):
+        """Returns the number of rows in the model."""
+        return len(self._nodes)
+
+    def columnCount(self, parent: QModelIndex|QPersistentModelIndex=QModelIndex()) -> int:
+        return 1
+
+    def data(self, index:QModelIndex|QPersistentModelIndex, role:Qt.ItemDataRole):
+        """Returns the data for the given index and role."""
+        if not index.isValid() or not 0 <= index.row() < len(self._nodes):
+            return None
+
+        node = self._nodes[index.row()]
+
+        if role == Qt.ItemDataRole.DisplayRole:
+            return self._nodes[index.row()]['name']
+        elif role == Qt.ItemDataRole.UserRole:
+            return node  # Return the entire person dictionary for custom use
+        elif role == self.NameRole:
+            return self._nodes[index.row()]['name']
+        elif role == self.DefinitionRole:
+            return self._nodes[index.row()]['definition']
+
+        return None
+
+    def roleNames(self)->dict[int, bytes]:
+        """Returns a dictionary mapping custom role numbers to role names."""
+        return {
+            Qt.ItemDataRole.DisplayRole: b'name',
+            self.DefinitionRole:         b'definition'
+        }
+
+    def insertRows(self, row:int, count:int, parent=QModelIndex()):
+        if len(self._nodes) <= row or row < 0:
+            return False
+
+        parent = QModelIndex()
+        row = self.rowCount()
+        count=1
+        self.beginInsertRows(parent, row, row + count - 1)
+        for _ in range(count):
+            node = {}
+            self._nodes.append(node)
+        self.endInsertRows()
+        return True
+
+    def addNewNode(self, name:str, definition:QModelIndex):
+        self.beginInsertRows(QModelIndex(), self.rowCount(), self.rowCount())
+
+        self._nodes.append({
+            'name': name, 
+            'definition': QPersistentModelIndex(definition)
+        })
+        self.endInsertRows()
+
+    def removeRows(self, row:int, count:int, parent=QModelIndex()):
+        """Removes rows from the model."""
+        if row < 0 or row + count > len(self.nodes):
+            return False
+
+        self.beginRemoveRows(parent, row, row + count - 1)
+        for row in range(row+count-1, row, -1):
+            del self._nodes[row]
+        self.endRemoveRows()
+        return True
+
+    def clear(self):
+        self.blockSignals(True)
+        self.removeRows(0, self.rowCount(), QModelIndex())
+        self.blockSignals(False)
+        self.modelReset.emit()
+
+    def flags(self, index):
+        """Returns the item flags for the given index."""
+        if not index.isValid():
+            return Qt.ItemFlag.NoItemFlags
+
+        return Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled ### | Qt.ItemFlag.ItemIsEditable
+
+    def index(self, row:int, column:int, parent=QModelIndex()):
+        if parent.isValid():
+            return QModelIndex()
+
+        return self.createIndex(row, column)
+
+    def parent(self, index:QModelIndex):
+        return QModelIndex()  # No parent for this flat model
+
+
+class GraphModel(QAbstractListModel):
+    SourceRole = Qt.ItemDataRole.UserRole+1
+    TargetRole = Qt.ItemDataRole.UserRole+2
+    KeyRole = Qt.ItemDataRole.EditRole
+
+    def __init__(self, nodes:QAbstractItemModel, parent: QObject|None=None) -> None:
+        super().__init__(parent)
+
+        self._related_nodes = nodes
+        nodes.rowsRemoved.connect(self._onRelatedModelRowsRemoved)
+
+        self._edges:list[tuple[QPersistentModelIndex, QPersistentModelIndex, str]] = []
+
+    def _onRelatedModelRowsRemoved(self, parent:QModelIndex, first:int, last:int):
+        edge_rows_to_remove = []
+        for row, edge in enumerate(self._edges):
+            source, target, key = edge
+            WasEdgeSourceRemoed = first <= source.row() and source.row() <=last
+            WasEdgeTargetRemoed = first <= target.row() and target.row() <=last
+            if WasEdgeSourceRemoed or WasEdgeTargetRemoed:
+                edge_rows_to_remove.append(row)
+
+        edge_row_groups = group_consecutive_numbers(edge_rows_to_remove)
+
+        for first, last in edge_row_groups:
+            self.removeRows(first, count=last-first+1)
+
+    def rowCount(self, parent=QModelIndex()):
+        """Returns the number of rows in the model."""
+        return len(self._edges)
+
+    def data(self, index:QModelIndex|QPersistentModelIndex, role:Qt.ItemDataRole):
+        """Returns the data for the given index and role."""
+        if not index.isValid() or not 0 <= index.row() < len(self._edges):
+            return None
+
+        edge = self._edges[index.row()]
+        source, target, key = edge
+
+        if role == Qt.ItemDataRole.DisplayRole:
+            return f"{source.data(Qt.ItemDataRole.DisplayRole)}\n|--{key}->\n{target.data(Qt.ItemDataRole.DisplayRole)}"
+        elif role == Qt.ItemDataRole.UserRole:
+            return edge  # Return the entire person dictionary for custom use
+        elif role == self.SourceRole:
+            return source
+        elif role == self.TargetRole:
+            return target
+        elif role == self.KeyRole:
+            return key
+
+        return None
+
+    def roleNames(self):
+        """Returns a dictionary mapping custom role numbers to role names."""
+        return {
+            Qt.ItemDataRole.DisplayRole: b'display',
+            self.SourceRole:             b'source',
+            self.TargetRole:             b'target',
+            self.KeyRole:                b'key'
+        }
+
+    def insertRows(self, row, count, parent=QModelIndex()):
+        raise NotImplementedError()
+
+    def addEdge(self, source: QModelIndex|QPersistentModelIndex, target:QModelIndex|QPersistentModelIndex, key:str):
+        assert isinstance(source, (QModelIndex, QPersistentModelIndex)) 
+        assert isinstance(target, (QModelIndex, QPersistentModelIndex))
+        assert isinstance(key, str)
+        assert source.model() == self._related_nodes
+        assert target.model() == self._related_nodes
+
+        """Inserts rows into the model."""
+        if not isinstance(source, (QModelIndex, QPersistentModelIndex)):
+            return False
+        if source.model() != self._related_nodes:
+            return False
+
+        if not isinstance(source, (QModelIndex, QPersistentModelIndex)):
+            return False
+        if target.model() != self._related_nodes:
+            return False
+
+        print("add edge")
+
+        parent = QModelIndex()
+        row = self.rowCount()
+        count=1
+        print("beginInsertRows", row, row + count - 1)
+        self.beginInsertRows(parent, row, row + count - 1)
+        for _ in range(count):
+            source = QPersistentModelIndex(source)
+            target = QPersistentModelIndex(target)
+            edge = source, target, key
+            self._edges.insert(row, edge)
+        self.endInsertRows()
+        return True
+
+    def removeRows(self, row:int, count:int, parent=QModelIndex()):
+        """Removes rows from the model."""
+        if row < 0 or row + count > len(self._edges):
+            return False
+
+        self.beginRemoveRows(parent, row, row + count - 1)
+        for row in range(row+count-1, row, -1):
+            edge = self._edges[row]
+            source, target, key = edge
+            del self._edges[row]
+        self.endRemoveRows()
+        return True
+
+    def flags(self, index):
+        """Returns the item flags for the given index."""
+        if not index.isValid():
+            return Qt.ItemFlag.NoItemFlags
+
+        return Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled ### | Qt.ItemFlag.ItemIsEditable
+
+
 
 # from dataclasses import dataclass
 # @dataclass
@@ -81,54 +301,6 @@ from pylive.utils.qt import modelReset, signalsBlocked
 from qt_graph_editor_scene import QGraphEditorScene
 from pylive.QtScriptEditor.script_edit import ScriptEdit
 
-# class SceneModel(QObject):
-#     DefinitionFunctionRole = Qt.ItemDataRole.UserRole
-#     NodeDefinitionRole = Qt.ItemDataRole.UserRole
-#     def __init__(self, parent:QObject|None=None):
-#         super().__init__(parent=parent)
-#         self.definitions_source:str=""
-
-#         self.nodes = QStandardItemModel()
-#         self.nodes.setHeaderData(0, Qt.Orientation.Horizontal, "name")
-
-#         self.edges = QStandardItemModel()
-#         self.edges.setHeaderData(0, Qt.Orientation.Horizontal, "key")
-
-#         self.node_selection = QItemSelectionModel(self.nodes)
-#         self.edge_selection = QItemSelectionModel(self.edges)
-
-#         self._cache_definitions:dict[str, Callable]=None
-
-#     def setDefinitionsSource(self, source:str):
-#         self.definitions_source = source
-
-#     def definitions(self):
-#         ...
-
-
-# class AbstractLinkModel(QAbstractItemModel):
-#     def __init__(self, sourceModel, parent=None):
-#         super().__init__(parent=parent)
-
-#     def link(self, sourceIndex, targetIndex):
-#         self.insertRow
-#         ...
-
-#     def unlink(self, sourceIndex, targetIndex):
-#         ...
-
-#     def source(self, index):
-#         ...
-
-#     def target(self, index):
-#         ...
-
-#     def links(self, sourceIndex, targetIndes)->Iterable[QModelIndex]:
-#         ...
-
-
-# class StandardLinkModel(QStandardItemModel):
-#     ...
 
 class DefinitionsEditorDelegate(QStyledItemDelegate):
     def createEditor(self, parent: QWidget, option: QStyleOptionViewItem, index: QModelIndex | QPersistentModelIndex) -> QWidget:
@@ -149,6 +321,51 @@ class DefinitionsEditorDelegate(QStyledItemDelegate):
         model.setData(index, editor.toPlainText(), Qt.ItemDataRole.EditRole)
 
 
+class ListTileDelegate(QStyledItemDelegate):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+    def paint(self, painter: QPainter, option:QStyleOption, index: QModelIndex):
+        painter.save()
+
+        # Get data from the model
+        heading = index.data(Qt.ItemDataRole.DisplayRole)  # DisplayRole for the heading
+        subheading = index.data(Qt.ItemDataRole.ToolTipRole)  # ToolTipRole for the subheading
+
+        # Define the rectangle areas
+        rect:QRect = option.rect
+        heading_rect = rect.adjusted(10, 5, -10, -rect.height() // 2)
+        subheading_rect = rect.adjusted(10, rect.height() // 2, -10, -5)
+
+        # Access the palette for standard colors
+        palette:QPalette = option.palette
+
+        # Background color for selected items
+        if option.state & QStyle.State_Selected:
+            painter.fillRect(rect, palette.button())
+            painter.fillRect(QRect(rect.left(), rect.top(), 1, rect.height()), palette.highlight())
+
+        # Heading text color
+        heading_color = palette.highlightedText() if option.state & QStyle.State_Selected else palette.text()
+
+        # Subheading text color
+        subheading_color = palette.highlightedText() if option.state & QStyle.State_Selected else palette.mid()
+
+        # Draw the heading (uses default font)
+        painter.setPen(heading_color.color())
+        painter.drawText(heading_rect, Qt.AlignLeft | Qt.AlignVCenter, heading or "")
+
+        # Draw the subheading (uses default font)
+        painter.setPen(subheading_color.color())
+        painter.drawText(subheading_rect, Qt.AlignLeft | Qt.AlignVCenter, subheading or "")
+
+        painter.restore()
+
+    def sizeHint(self, option, index):
+        # Set the height of the item to accommodate both heading and subheading
+        return QSize(option.rect.width(), 50)
+
+
 class Window(QWidget):
     DefinitionFunctionRole = Qt.ItemDataRole.UserRole
     DefinitionErrorRole = Qt.ItemDataRole.UserRole+1
@@ -162,12 +379,13 @@ class Window(QWidget):
 
         ### MODEL
         self.definitions = QStandardItemModel()
-        self.nodes = QStandardItemModel()
-        self.edges = QStandardItemModel()
+        self.nodes = NodeModel(definitions=self.definitions)
+        self.edges = GraphModel(nodes=self.nodes)
         
         # configure model
         self.nodes.setHeaderData(0, Qt.Orientation.Horizontal, "name")
-        self.edges.setHeaderData(0, Qt.Orientation.Horizontal, "key")
+        self.edges.setHeaderData(0, Qt.Orientation.Horizontal, "edge")
+        self.edges.rowsInserted.connect(lambda parent, first, last:  print(parent, first, last))
         self.node_selection = QItemSelectionModel(self.nodes)
         self.edge_selection = QItemSelectionModel(self.edges)
 
@@ -182,6 +400,7 @@ class Window(QWidget):
         self.nodes_list_view.setModel(self.nodes)
 
         self.edges_list_view = QListView(self)
+        self.edges_list_view.setItemDelegate(ListTileDelegate())
         self.edges_list_view.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.edges_list_view.setModel(self.edges)
 
@@ -273,81 +492,76 @@ class Window(QWidget):
                 return False
 
         ### try to load
-        try:
-            from pathlib import Path
-            import yaml
-            # parse yaml
-            text = Path(filepath).read_text()
-            data = yaml.load(text, Loader=yaml.SafeLoader)
+        from pathlib import Path
+        import yaml
+        # parse yaml
+        text = Path(filepath).read_text()
+        data = yaml.load(text, Loader=yaml.SafeLoader)
 
-            def get_python_function_from_string(code:str)->tuple[str, Callable]:
-                capture = {'__builtins__':__builtins__}
-                try:
-                    exec(code, capture)
-                except SyntaxError as err:
-                    raise err
-                except Exception as err:
-                    raise err
-                functions:list[tuple[str, Callable]] = []
-                for name, attribute in capture.items():
-                    if name!='__builtins__':
-                        if callable(attribute) and not inspect.isclass(attribute):
-                            functions.append( (name, attribute) )
+        def get_python_function_from_string(code:str)->tuple[str, Callable]:
+            capture = {'__builtins__':__builtins__}
+            try:
+                exec(code, capture)
+            except SyntaxError as err:
+                raise err
+            except Exception as err:
+                raise err
+            functions:list[tuple[str, Callable]] = []
+            for name, attribute in capture.items():
+                if name!='__builtins__':
+                    if callable(attribute) and not inspect.isclass(attribute):
+                        functions.append( (name, attribute) )
 
-                if len(functions)!=1:
-                    raise ValueError("")
-                return functions[0]
+            if len(functions)!=1:
+                raise ValueError("")
+            return functions[0]
 
-            # Delete the current model and load data into the new model!
-            with modelReset(self.definitions):
+        # Clear and load data into the new model!
+        _definition_index_by_name = dict()
+        self.definitions.blockSignals(True)
+        self.definitions.clear()
+        import inspect
+        for row, code in enumerate(data['definitions']):
+            ### get python function from string
+            # the string should contain a single function definition
+            try:
+                name, func = get_python_function_from_string(code)
+                item = QStandardItem()
+                item.setData(name, Qt.ItemDataRole.DisplayRole)
+                item.setData(code, Qt.ItemDataRole.EditRole)
+                self.definitions.insertRow(row, item)
+                _definition_index_by_name[name] = row
+            except Exception as err:
+                print("ERROR", err)
+                self.statusbar.showMessage(f"error: {err}")
+        self.definitions.blockSignals(False)
+        self.definitions.modelReset.emit()
 
-                # self.definitions.clear()
-                import inspect
-                for code in data['definitions']:
-                    ### get python function from string
-                    # the string should contain a single function definition
-                    try:
-                        name, func = get_python_function_from_string(code)
-                        item = QStandardItem()
-                        item.setData(name, Qt.ItemDataRole.DisplayRole)
-                        item.setData(code, Qt.ItemDataRole.EditRole)
-                        self.definitions.insertRow(self.definitions.rowCount(), item)
-                    except Exception as err:
-                        print("ERROR", err)
-                        self.statusbar.showMessage(f"error: {err}")
+        _node_row_by_name = dict()
+        self.nodes.blockSignals(True)
+        for row, node in enumerate(data['nodes']):
+            print(node)
+            func_name = node['func']
+            def_row = _definition_index_by_name[func_name]
 
-            _node_items_by_name = dict()
-            with modelReset(self.nodes):
-                with signalsBlocked(self.nodes):
-                    for node_data in data['nodes']:
-                        node_item = QStandardItem()
-                        node_item.setData(node_data['name'], Qt.ItemDataRole.DisplayRole)
-                        node_item.setData(node_data['func'], self.NodeFunctionRole)
-                        _node_items_by_name[node_data['name']] = node_item
-                        self.nodes.insertRow(self.nodes.rowCount(), node_item)
-            
-            # with modelReset(self.edges):
-            #     # self.edges.clear()
-            #     for edge_data in data['edges']:
-            #         edge_item = QStandardItem()
-            #         source_node_item = _node_items_by_name[edge_data['source']]
-            #         edge_item.setData(source_node_item, QGraphEditorScene.SourceRole)
-            #         target_node_item = _node_items_by_name[edge_data['target']]
-            #         edge_item.setData(target_node_item, QGraphEditorScene.TargetRole)
-            #         edge_item.setData(edge_data['inlet'], Qt.ItemDataRole.DisplayRole)
+            self.nodes.addNewNode(node['name'], definition=self.definitions.index(def_row, 0))
+            _node_row_by_name[node['name']] = row
+        self.nodes.blockSignals(False)
+        self.nodes.modelReset.emit()
 
-            #         self.edges.insertRow(self.edges.rowCount(), edge_item)
+        self.edges.blockSignals(True)
+        for row, edge in enumerate(data['edges']):
+            source_name = edge['source']
+            target_name = edge['target']
+            source_row = _node_row_by_name[source_name]
+            target_row = _node_row_by_name[target_name]
+            source_index = self.nodes.index(source_row, 0)
+            target_index = self.nodes.index(target_row, 0)
+            self.edges.addEdge(source_index, target_index, edge['inlet'])
 
+        self.edges.blockSignals(False)
+        self.edges.modelReset.emit()
 
-            return True
-        except Exception:
-            return False
-        
-
-        # self.filelink = DocumentFileLink(self.document)
-        # self.filelink.setFileFilter(".yaml")
-        # self.filelink.setFileSelectFilter("YAML (*.yaml);;Any File (*)")
-        ...
 
     def deserialize(self, text:str):
         ...
@@ -380,12 +594,9 @@ class Window(QWidget):
             'definitions': self.definitions,
         })
 
-
-
     @Slot()
     def saveFile(self):
         ...
-
 
     # def _pathlib_module_functions(self):
     #     import pathlib
@@ -472,7 +683,6 @@ class Window(QWidget):
 
     #     self.document.setPlainText(document_text)
 
-
     @Slot()
     def create_new_node(self):
         ###
@@ -540,16 +750,11 @@ class Window(QWidget):
 
         return super().eventFilter(watched, event)
 
+
 if __name__ == "__main__":
     app = QApplication()
     window = Window()
-
-    
-    
-
     window.show()
-
-    
-
+    window.openFile("./website_builder.yaml")
     app.exec()
 

@@ -32,7 +32,7 @@ class InteractiveShape(QGraphicsItem):
         self._debug = False
 
     def __repr__(self):
-        return f"{self.__class__.__name__}({self._label!r})"
+        return f"{self.__class__.__name__}()"
 
     def setHighlighted(self, value):
         self._isHighlighted = value

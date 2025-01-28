@@ -80,7 +80,6 @@ class QGraphEditorScene(QGraphicsScene):
         # populate with initial model
         # self.setModel(model)
         # self.setSelectionModel(selection_model)
-        
             
         @self.selectionChanged.connect
         def _():
@@ -109,8 +108,7 @@ class QGraphEditorScene(QGraphicsScene):
                 self._node_selection.setCurrentIndex(new_selection.at(0).topLeft(), QItemSelectionModel.SelectionFlag.Current)
             self._node_selection.select(new_selection, QItemSelectionModel.SelectionFlag.ClearAndSelect)
 
-
-    def setModel(self, nodes: QStandardItemModel, edges:QStandardItemModel):
+    def setModel(self, nodes: QAbstractItemModel, edges:QAbstractItemModel):
         if self._nodes:
             # Nodes
             self._nodes.modelReset.disconnect(self._onNodesReset)
@@ -157,7 +155,9 @@ class QGraphEditorScene(QGraphicsScene):
     def _moveAttachedLinks(self, node_editor:QGraphicsItem):
         assert self._edges
         from itertools import chain
+
         for edge_editor in chain(self._node_in_links[node_editor], self._node_out_links[node_editor]):
+            assert edge_editor in self._link_graphics_objects.values(), f"got: {edge_editor} not in {[_ for _ in self._link_graphics_objects.values()]}"
             edge_index = self._link_graphics_objects.inverse[edge_editor]
             source_index = self._edges.data(edge_index, self.SourceRole)
             target_index = self._edges.data(edge_index, self.TargetRole)
@@ -167,7 +167,7 @@ class QGraphEditorScene(QGraphicsScene):
 
     def setDelegate(self, delegate:QGraphEditorDelegate):
         self._delegate = delegate
-        self._delegate.nodePositionChanged.connect(lambda editor: self._moveAttachedLinks(editor))
+        self._delegate.nodePositionChanged.connect(self._moveAttachedLinks)
 
     def setSelectionModel(self, node_selection:QItemSelectionModel):
         if self._node_selection:
@@ -184,6 +184,8 @@ class QGraphEditorScene(QGraphicsScene):
         assert self._nodes
         ### clear graph
         self._node_graphics_objects.clear()
+        self._node_in_links.clear()
+        self._node_out_links.clear()
 
         ### populate graph with nodes
         if self._nodes.rowCount()>0:
@@ -193,11 +195,12 @@ class QGraphEditorScene(QGraphicsScene):
         self.layout()
 
     def _onEdgesReset(self):
+
         assert self._edges
         ### clear graph
         self._link_graphics_objects.clear()
 
-        ### populate graph with nodes
+        ### populate graph with edges
         if self._edges.rowCount()>0:
             self._onEdgesInserted(QModelIndex(), 0, self._edges.rowCount()-1)
 
@@ -243,6 +246,7 @@ class QGraphEditorScene(QGraphicsScene):
                 self._edges.data(index, self.SourceRole)
                 persistent = QPersistentModelIndex(index)
                 self._link_graphics_objects[persistent] = edge_editor
+
                 self.addItem( edge_editor )
 
                 # TODO UPDATE LINKS POSITION
@@ -343,7 +347,6 @@ class QGraphEditorScene(QGraphicsScene):
         return
 
     def layout(self):
-        print("layout")
         assert self._nodes
         assert self._edges
         from pylive.utils.graph import hiearchical_layout_with_nx
