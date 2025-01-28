@@ -1,5 +1,6 @@
 from contextlib import contextmanager
-from PySide6.QtCore import QObject
+from PySide6.QtCore import QAbstractItemModel, QObject
+
 @contextmanager
 def signalsBlocked(obj:QObject):
     WereSignalsBlocked = obj.signalsBlocked()
@@ -8,3 +9,11 @@ def signalsBlocked(obj:QObject):
         yield None
     finally:
         obj.blockSignals(WereSignalsBlocked)
+
+@contextmanager
+def modelReset(model:QAbstractItemModel):
+    model.beginResetModel()
+    try:
+        yield None
+    finally:
+        model.endResetModel()

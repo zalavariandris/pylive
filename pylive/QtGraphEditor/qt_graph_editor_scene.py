@@ -113,14 +113,14 @@ class QGraphEditorScene(QGraphicsScene):
     def setModel(self, nodes: QStandardItemModel, edges:QStandardItemModel):
         if self._nodes:
             # Nodes
-            # self._nodes.modelReset.disconnect(self.onNodesReset)
+            self._nodes.modelReset.disconnect(self._onNodesReset)
             self._nodes.rowsInserted.disconnect(self._onNodesInserted)
             self._nodes.rowsAboutToBeRemoved.disconnect(self._onNodesAboutToBeRemoved)
             self._nodes.dataChanged.disconnect(self._onNodeDataChanged)
 
         if self._edges:
             # Nodes
-            # self._edges.modelReset.disconnect(self.onEdgesReset)
+            self._edges.modelReset.disconnect(self._onEdgesReset)
             self._edges.rowsInserted.disconnect(self._onEdgesInserted)
             self._edges.rowsAboutToBeRemoved.disconnect(self._onEdgesAboutToBeRemoved)
             self._edges.dataChanged.disconnect(self._onEdgeDataChanged)
@@ -184,11 +184,10 @@ class QGraphEditorScene(QGraphicsScene):
         assert self._nodes
         ### clear graph
         self._node_graphics_objects.clear()
-        self._inlet_graphics_objects.clear()
 
         ### populate graph with nodes
         if self._nodes.rowCount()>0:
-            self.onNodesInserted(QModelIndex(), 0, self._nodes.rowCount()-1)
+            self._onNodesInserted(QModelIndex(), 0, self._nodes.rowCount()-1)
 
         # layout items
         self.layout()
