@@ -14,73 +14,78 @@ from pylive.utils.qt import modelReset, signalsBlocked
 
 from dataclasses import dataclass, field
 from fields_model import FieldsModel
-from definitions_model import DefinitionsModel, DefinitionItem
+
 
 @dataclass
 class NodeItem:
     name: str
     #content
-    definition: QPersistentModelIndex
-    fields: FieldsModel
-    dirty:bool
+    definition: QPersistentModelIndex = field(default_factory=QPersistentModelIndex)
+    fields: FieldsModel = field(default_factory=FieldsModel)
+    dirty:bool=True
 
 
 class NodesModel(QAbstractItemModel):
-    ObjectRole = Qt.ItemDataRole.UserRole
-    DefinitionRole = Qt.ItemDataRole.UserRole+1
-    NameRole = Qt.ItemDataRole.UserRole+2
-    FieldsRole = Qt.ItemDataRole.UserRole+3
-    DirtyRole = Qt.ItemDataRole.UserRole+4
-
-    def __init__(self, definitions:QAbstractItemModel, parent: QObject|None=None) -> None:
+    def __init__(self, parent: QObject|None=None) -> None:
         super().__init__(parent)
         self._nodes:list[NodeItem] = []
-        self._related_definitions = definitions
-
+        
     def rowCount(self, parent=QModelIndex()):
         """Returns the number of rows in the model."""
         return len(self._nodes)
 
-    def columnCount(self, parent: QModelIndex|QPersistentModelIndex=QModelIndex()) -> int:
-        return 3
+    def headerData(self, section: int, orientation: Qt.Orientation, role: int = Qt.ItemDataRole.DisplayRole) -> Any:
+        if orientation == Qt.Orientation.Horizontal and role==Qt.ItemDataRole.DisplayRole:
+            return ["name", "definition", "dirty", "fields"][section]
+        else:
+            return super().headerData(section, orientation, role)
 
-    def data(self, index:QModelIndex|QPersistentModelIndex, role:Qt.ItemDataRole.DisplayRole):
-        """Returns the data for the given index and role."""
+    def columnCount(self, parent: QModelIndex|QPersistentModelIndex = QModelIndex()) -> int:
+        return 4
+
+    def data(self, index: QModelIndex|QPersistentModelIndex, role: int = Qt.ItemDataRole.DisplayRole) -> Any:
         if not index.isValid() or not 0 <= index.row() < len(self._nodes):
             return None
 
-        node = self._nodes[index.row()]
+        item = self._nodes[index.row()]
 
-        match role:
-            case Qt.ItemDataRole.DisplayRole:
-                return node.name
+        if role==Qt.ItemDataRole.DisplayRole or role==Qt.ItemDataRole.EditRole:
+            match index.column():
+                case 0:
+                    return item.name
+                case 1:
+                    return item.definition.data(Qt.ItemDataRole.DisplayRole)
+                case 2:
+                    return f"{item.dirty}"
+                case 3:
+                    if item.fields and item.fields.rowCount():
+                        field_names = [
+                            item.fields.index(row, 0).data(Qt.ItemDataRole.DisplayRole)
+                            for row in range(item.fields.rowCount())
+                        ]
+                        return ", ".join(field_names)
+                    else:
+                        return ""
+        return None
 
-            case Qt.ItemDataRole.UserRole:
-                return node  # Return the entire person dictionary for custom use
+    def setData(self, index: QModelIndex|QPersistentModelIndex, value:Any, role: int = Qt.ItemDataRole.DisplayRole) -> Any:
+        if not index.isValid() or not 0 <= index.row() < len(self._nodes):
+            return None
 
-            case self.NameRole:
-                return node.name
+        item = self._nodes[index.row()]
+        if index.column()==0:
+            item.name = f"{value}"
+            self.dataChanged.emit(index, index, [role])
+            return True
 
-            case self.DefinitionRole:
-                return node.definition
-
-            case self.DirtyRole:
-                return node.dirty
-
-            case self.FieldsRole:
-                return node.fields
-            case _:
-                return None
-
-    def roleNames(self)->dict[int, bytes]:
-        """Returns a dictionary mapping custom role numbers to role names."""
-        return {
-            self.ObjectRole:             b'object',
-            Qt.ItemDataRole.DisplayRole: b'name',
-            self.DefinitionRole:         b'definition',
-            self.DirtyRole:              b'dirty',
-            self.FieldsRole:          b'fields'
-        }
+        elif index.column()==1:
+            assert isinstance(value, QPersistentModelIndex)
+            item.definition = value
+            self.dataChanged.emit(index, index, [role])
+            return True
+            
+        else:
+            return False
 
     def insertRows(self, row:int, count:int, parent=QModelIndex()):
         if len(self._nodes) <= row or row < 0:
@@ -109,6 +114,12 @@ class NodesModel(QAbstractItemModel):
         ))
         self.endInsertRows()
 
+    def insertNodeItem(self, row:int, item:NodeItem):
+        self.beginInsertRows(QModelIndex(), row, row)
+        self._nodes.insert(row, item)
+        self.endInsertRows()
+        return True
+
     def removeRows(self, row:int, count:int, parent=QModelIndex()):
         """Removes rows from the model."""
         if row < 0 or row + count > len(self._nodes):
@@ -131,7 +142,7 @@ class NodesModel(QAbstractItemModel):
         if not index.isValid():
             return Qt.ItemFlag.NoItemFlags
 
-        return Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled ### | Qt.ItemFlag.ItemIsEditable
+        return Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsEditable
 
     def index(self, row:int, column:int, parent=QModelIndex()):
         if parent.isValid():

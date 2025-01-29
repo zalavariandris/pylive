@@ -35,6 +35,7 @@ from pylive.NetworkXGraphEditor.nx_graph_shapes import (
 
 from bidict import bidict
 from collections import defaultdict
+from pylive.QtGraphEditor.edges_model import EdgesModel
 from pylive.QtGraphEditor.qt_graph_editor_delegate import QGraphEditorDelegate
 
 from pylive.utils.qt import signalsBlocked
@@ -56,7 +57,7 @@ class QGraphEditorScene(QGraphicsScene):
         super().__init__()
 
         self._nodes: QStandardItemModel | None = None
-        self._edges: QStandardItemModel | None = None
+        self._edges: EdgesModel | None = None
         self._node_selection:QItemSelectionModel|None = None
         self._delegate: QGraphEditorDelegate
         self.setDelegate(QGraphEditorDelegate())
@@ -108,7 +109,7 @@ class QGraphEditorScene(QGraphicsScene):
                 self._node_selection.setCurrentIndex(new_selection.at(0).topLeft(), QItemSelectionModel.SelectionFlag.Current)
             self._node_selection.select(new_selection, QItemSelectionModel.SelectionFlag.ClearAndSelect)
 
-    def setModel(self, nodes: QAbstractItemModel, edges:QAbstractItemModel):
+    def setModel(self, nodes: QAbstractItemModel, edges:EdgesModel):
         if self._nodes:
             # Nodes
             self._nodes.modelReset.disconnect(self._onNodesReset)
@@ -149,7 +150,7 @@ class QGraphEditorScene(QGraphicsScene):
         # layout items
         self.layout()
 
-    def model(self)->tuple[QStandardItemModel|None, QStandardItemModel|None]:
+    def model(self)->tuple[QStandardItemModel|None, EdgesModel|None]:
         return self._nodes, self._edges
 
     def _moveAttachedLinks(self, node_editor:QGraphicsItem):
@@ -159,8 +160,8 @@ class QGraphEditorScene(QGraphicsScene):
         for edge_editor in chain(self._node_in_links[node_editor], self._node_out_links[node_editor]):
             assert edge_editor in self._link_graphics_objects.values(), f"got: {edge_editor} not in {[_ for _ in self._link_graphics_objects.values()]}"
             edge_index = self._link_graphics_objects.inverse[edge_editor]
-            source_index = self._edges.data(edge_index, self.SourceRole)
-            target_index = self._edges.data(edge_index, self.TargetRole)
+            source_index = self._edges.source(edge_index)
+            target_index = self._edges.target(edge_index)
             source_node = self._node_graphics_objects[source_index]
             target_node = self._node_graphics_objects[target_index]
             self._delegate.updateLinkPosition(edge_editor, source_node, target_node)
@@ -241,19 +242,17 @@ class QGraphEditorScene(QGraphicsScene):
 
         for row in range(first, last+1):
             ### create edge editor
-            index = QPersistentModelIndex(self._edges.index(row, 0))
-            if edge_editor := self._delegate.createEdgeEditor(index):
-                self._edges.data(index, self.SourceRole)
-                persistent = QPersistentModelIndex(index)
-                self._link_graphics_objects[persistent] = edge_editor
-
+            edge_index = self._edges.index(row, 0)
+            if edge_editor := self._delegate.createEdgeEditor(edge_index):
+                persistent_edge_index = QPersistentModelIndex(edge_index)
+                self._link_graphics_objects[persistent_edge_index] = edge_editor
                 self.addItem( edge_editor )
 
-                # TODO UPDATE LINKS POSITION
-                source_index:QPersistentModelIndex = self._edges.data(index, self.SourceRole)
-                target_index:QPersistentModelIndex = self._edges.data(index, self.TargetRole)
-                source_node_editor = self._node_graphics_objects[source_index]
-                target_node_editor = self._node_graphics_objects[target_index]
+                #UPDATE LINKS POSITION
+                source_node_index:QPersistentModelIndex = self._edges.source(persistent_edge_index)
+                target_node_index:QPersistentModelIndex = self._edges.target(persistent_edge_index)
+                source_node_editor = self._node_graphics_objects[source_node_index]
+                target_node_editor = self._node_graphics_objects[target_node_index]
 
                 self._node_out_links[source_node_editor].append(edge_editor)
                 self._node_in_links[target_node_editor].append(edge_editor)
@@ -358,8 +357,8 @@ class QGraphEditorScene(QGraphicsScene):
 
         for row in range(self._edges.rowCount()):
             edge_index = self._edges.index(row, 0)
-            source_node_index = self._edges.data(edge_index, self.SourceRole)
-            target_node_index = self._edges.data(edge_index, self.TargetRole)
+            source_node_index = self._edges.source(edge_index)
+            target_node_index = self._edges.target(edge_index)
             G.add_edge(source_node_index, target_node_index)
         pos = hiearchical_layout_with_nx(G, scale=200)
         for N, (x, y) in pos.items():

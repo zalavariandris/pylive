@@ -6,6 +6,7 @@ from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 from networkx.classes import graphviews
 
+from pylive.QtGraphEditor.definitions_model import DefinitionItem, DefinitionsModel
 from pylive.qt_options_dialog import QOptionDialog
 from pylive.utils import group_consecutive_numbers
 from pylive.utils.qt import modelReset, signalsBlocked
@@ -18,137 +19,7 @@ from dataclasses import dataclass
 
 from fields_model import FieldsModel, FieldItem
 from nodes_model import NodesModel, NodeItem
-
-
-@dataclass
-class EdgeItem:
-    source: QPersistentModelIndex
-    target: QPersistentModelIndex
-    inlet: str
-
-
-class LinksModel(QAbstractListModel):
-    ObjectRole = Qt.ItemDataRole.UserRole
-    SourceRole = Qt.ItemDataRole.UserRole+1
-    TargetRole = Qt.ItemDataRole.UserRole+2
-    InletRole = Qt.ItemDataRole.EditRole
-
-    def __init__(self, nodes:QAbstractItemModel, parent: QObject|None=None) -> None:
-        super().__init__(parent)
-
-        self._related_nodes = nodes
-        nodes.rowsRemoved.connect(self._onRelatedModelRowsRemoved)
-
-        self._edges:list[EdgeItem] = []
-
-    def _onRelatedModelRowsRemoved(self, parent:QModelIndex, first:int, last:int):
-        edge_rows_to_remove = []
-        for row, edge in enumerate(self._edges):
-            SourceExists = first > edge.source.row() or edge.source.row() >last
-            TargetExists = first > edge.target.row() or edge.target.row() >last
-
-            if not SourceExists or not TargetExists:
-                edge_rows_to_remove.append(row)
-
-        edge_row_groups = group_consecutive_numbers(edge_rows_to_remove)
-
-        for first, last in edge_row_groups:
-            self.removeRows(first, count=last-first+1)
-
-    def rowCount(self, parent=QModelIndex()):
-        """Returns the number of rows in the model."""
-        return len(self._edges)
-
-    def data(self, index:QModelIndex|QPersistentModelIndex, role:Qt.ItemDataRole):
-        """Returns the data for the given index and role."""
-        if not index.isValid() or not 0 <= index.row() < len(self._edges):
-            return None
-
-        edge = self._edges[index.row()]
-
-        match role:
-            case Qt.ItemDataRole.DisplayRole:
-                return f"{edge.source.data(Qt.ItemDataRole.DisplayRole)}\n|--{edge.inlet}->\n{edge.target.data(Qt.ItemDataRole.DisplayRole)}"
-            
-            case self.ObjectRole:
-                return edge  # Return the entire person dictionary for custom use
-        
-            case self.SourceRole:
-                return edge.source
-            
-            case self.TargetRole:
-                return edge.target
-            
-            case self.InletRole:
-                return edge.inlet
-
-            case _:
-                return None
-
-    def roleNames(self):
-        """Returns a dictionary mapping custom role numbers to role names."""
-        return {
-            Qt.ItemDataRole.DisplayRole: b'display',
-            self.SourceRole:             b'source',
-            self.TargetRole:             b'target',
-            self.InletRole:              b'inlet',
-            self.ObjectRole:             b'object'
-        }
-
-    def insertRows(self, row, count, parent=QModelIndex()):
-        raise NotImplementedError()
-
-    def addEdgeItem(self, edge:EdgeItem):
-        assert isinstance(edge.source, (QModelIndex, QPersistentModelIndex)) 
-        assert isinstance(edge.target, (QModelIndex, QPersistentModelIndex))
-        assert isinstance(edge.inlet, str)
-        assert edge.source.model() == self._related_nodes
-        assert edge.target.model() == self._related_nodes
-
-        """Inserts rows into the model."""
-        if not isinstance(edge.source, (QModelIndex, QPersistentModelIndex)):
-            return False
-
-        if edge.source.model() != self._related_nodes:
-            return False
-
-        if not isinstance(edge.source, (QModelIndex, QPersistentModelIndex)):
-            return False
-        if edge.target.model() != self._related_nodes:
-            return False
-
-        print("add edge")
-
-        parent = QModelIndex()
-        row = self.rowCount()
-        count=1
-        print("beginInsertRows", row, row + count - 1)
-        self.beginInsertRows(parent, row, row + count - 1)
-        for _ in range(count):
-            source = QPersistentModelIndex(edge.source)
-            target = QPersistentModelIndex(edge.target)
-            self._edges.insert(row, edge)
-        self.endInsertRows()
-        return True
-
-    def removeRows(self, row:int, count:int, parent=QModelIndex()):
-        """Removes rows from the model."""
-        if row < 0 or row + count > len(self._edges):
-            return False
-
-        self.beginRemoveRows(parent, row, row + count - 1)
-        for row in range(row+count-1, row, -1):
-            edge = self._edges[row]
-            del self._edges[row]
-        self.endRemoveRows()
-        return True
-
-    def flags(self, index):
-        """Returns the item flags for the given index."""
-        if not index.isValid():
-            return Qt.ItemFlag.NoItemFlags
-
-        return Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled ### | Qt.ItemFlag.ItemIsEditable
+from edges_model import EdgesModel, EdgeItem
 
 
 from qt_graph_editor_scene import QGraphEditorScene
@@ -328,19 +199,16 @@ class Window(QWidget):
         self._filepath = "None"
 
         ### MODEL
-        self.definitions = QStandardItemModel()
-        self.nodes = NodesModel(definitions=self.definitions)
+        self.definitions = DefinitionsModel()
+        self.nodes = NodesModel()
         self.node_selection = QItemSelectionModel(self.nodes)
-        self.edges = LinksModel(nodes=self.nodes)
+        self.edges = EdgesModel(nodes=self.nodes)
         
         # configure model
-        self.nodes.setHeaderData(0, Qt.Orientation.Horizontal, "name")
-        self.edges.setHeaderData(0, Qt.Orientation.Horizontal, "edge")
-        self.edges.rowsInserted.connect(lambda parent, first, last:  print(parent, first, last))
         self.node_selection = QItemSelectionModel(self.nodes)
 
         ### Widgets
-        self.definitions_list_view = QListView(self)
+        self.definitions_list_view = QTableView(self)
         self.definitions_list_view.setEditTriggers(QAbstractItemView.EditTrigger.DoubleClicked)
         self.definitions_list_view.setItemDelegate(DefinitionsEditorDelegate())
         self.definitions_list_view.setModel(self.definitions)
@@ -349,11 +217,13 @@ class Window(QWidget):
         self.nodes_list_view.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.nodes_list_view.setModel(self.nodes)
         self.nodes_list_view.setSelectionModel(self.node_selection)
+        self.nodes_list_view.setSelectionModel(self.node_selection)
+        self.nodes_list_view.setSelectionMode(QAbstractItemView.SelectionMode.MultiSelection)
 
-        self.edges_list_view = QListView(self)
-        self.edges_list_view.setItemDelegate(ListTileDelegate())
-        self.edges_list_view.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-        self.edges_list_view.setModel(self.edges)
+        # self.edges_list_view = QTableView(self)
+        # self.edges_list_view.setItemDelegate(ListTileDelegate())
+        # self.edges_list_view.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        # self.edges_list_view.setModel(self.edges)
 
         self.graph_view = QGraphicsView()
         self.graph_view.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
@@ -361,23 +231,16 @@ class Window(QWidget):
         self.graph_view.setRenderHint(QPainter.RenderHint.Antialiasing, True)
         self.graph_view.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
         self.graph_view.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
-
-        self.node_inspector = NodeInspector()
-        self.node_selection.currentChanged.connect(self._onCurrentNodeChanged)
-
-        # self.graph_view.installEventFilter(self)
+        self.graph_view.installEventFilter(self)
         graph_scene = QGraphEditorScene()
         graph_scene.setModel(self.nodes, self.edges)
         graph_scene.setSceneRect(QRectF(-400, -400, 800, 800))
         graph_scene.setSelectionModel(self.node_selection)
         self.graph_view.setScene(graph_scene)
 
-        # nodelist = QListView()
-        # nodelist.setModel(self.nodes)
-        # nodelist.setSelectionModel(self.node_selection)
-        # nodelist.setSelectionMode(QAbstractItemView.SelectionMode.MultiSelection)
-        # edgelist = QListView()
-        # edgelist.setModel(self.edges)
+        self.node_inspector = NodeInspector()
+        self.node_selection.currentChanged.connect(self._onCurrentNodeChanged)
+
 
         # Actions
         # init_definitions_action = QAction("Init definitions", self)
@@ -413,13 +276,10 @@ class Window(QWidget):
         # grid_layout.addWidget(edgelist, 1, 1)
         grid_layout.addWidget(self.definitions_list_view, 0, 0, 1, 1) #row, col, row span, col spn
         grid_layout.addWidget(self.nodes_list_view,       0, 1, 1, 1)
-        grid_layout.addWidget(self.edges_list_view,       0, 2, 1, 1)
         grid_layout.addWidget(self.node_inspector,        0, 3, 1, 1)
-        grid_layout.addWidget(self.graph_view,            0, 4, 1, 1)
-        # grid_layout.addWidget(self.graph_view,         0, 1, 1, 1)
-        # grid_layout.addWidget(self.document_viewer,    0, 2, 1, 1)
+        grid_layout.addWidget(self.graph_view,            1, 0, 1, 4)
         self.statusbar = QStatusBar(self)
-        grid_layout.addWidget(self.statusbar, 1,0,1,3)
+        grid_layout.addWidget(self.statusbar, 2,0,1,4)
         self.setLayout(grid_layout)
 
         # self.init_definitions()
@@ -435,17 +295,18 @@ class Window(QWidget):
         self._is_modified = m
 
     def _onCurrentNodeChanged(self, current, previous):
-        print("_onCurrentNodeChanged", current)
-        if not current.isValid():
-            return
+        ...
+        # print("_onCurrentNodeChanged", current)
+        # if not current.isValid():
+        #     return
 
-        node_item:NodeItem = cast(NodeItem, self.nodes.data(current, self.nodes.ObjectRole))
-        assert isinstance(node_item, NodeItem)
+        # node_item:NodeItem = cast(NodeItem, self.nodes.item
+        # assert isinstance(node_item, NodeItem)
 
 
-        print("- ", node_item.fields)
+        # print("- ", node_item.fields)
 
-        self.node_inspector.setNode(node_item)
+        # self.node_inspector.setNode(node_item)
 
 
 
@@ -490,17 +351,15 @@ class Window(QWidget):
         # Clear and load data into the new model!
         _definition_index_by_name = dict()
         self.definitions.blockSignals(True)
-        self.definitions.clear()
+        self.definitions.removeRows(0, self.definitions.rowCount())
         import inspect
         for row, code in enumerate(data['definitions']):
             ### get python function from string
             # the string should contain a single function definition
             try:
                 name, func = get_python_function_from_string(code)
-                item = QStandardItem()
-                item.setData(name, Qt.ItemDataRole.DisplayRole)
-                item.setData(code, Qt.ItemDataRole.EditRole)
-                self.definitions.insertRow(row, item)
+                self.definitions.insertDefinitionItem(row, 
+                    DefinitionItem(name=name,source=code))
                 _definition_index_by_name[name] = row
             except Exception as err:
                 print("ERROR", err)
@@ -533,6 +392,8 @@ class Window(QWidget):
 
         self.edges.blockSignals(False)
         self.edges.modelReset.emit()
+
+        return True
 
 
     def deserialize(self, text:str):

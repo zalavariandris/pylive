@@ -32,14 +32,14 @@ class FieldsModel(QAbstractItemModel):
     def rowCount(self, parent: QModelIndex|QPersistentModelIndex = QModelIndex()) -> int:
         return len(self._fields)
 
-    def columnCount(self, parent: QModelIndex|QPersistentModelIndex = QModelIndex()) -> int:
-        return 2
-
     def headerData(self, section: int, orientation: Qt.Orientation, role: int = Qt.ItemDataRole.DisplayRole) -> Any:
         if orientation == Qt.Orientation.Horizontal and role==Qt.ItemDataRole.DisplayRole:
             return ["name", "value"][section]
         else:
             return super().headerData(section, orientation, role)
+
+    def columnCount(self, parent: QModelIndex|QPersistentModelIndex = QModelIndex()) -> int:
+        return 2
 
     def data(self, index: QModelIndex|QPersistentModelIndex, role: int = Qt.ItemDataRole.DisplayRole) -> Any:
         if not index.isValid() or not 0 <= index.row() < len(self._fields):
