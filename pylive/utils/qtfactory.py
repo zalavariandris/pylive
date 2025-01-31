@@ -13,8 +13,27 @@ def label(text:str)->QLabel:
     return lbl
 
 """ LAYOUTS """
-def vboxlayout(*children:list)->QVBoxLayout:
+def boxlayout(direction:QBoxLayout.Direction, children:Sequence[QWidget|QLayout|QLayoutItem], stretch:Sequence[int]=[])->QBoxLayout:
+    layout = QBoxLayout(direction)
+    layout.setSpacing(0)
+    layout.setContentsMargins(0,0,0,0)
+    for child in children:
+        match child:
+            case QLayoutItem():
+                layout.addItem(child)
+            case QLayout():
+                layout.addLayout(child)
+            case QWidget():
+                layout.addWidget(child)
+            
+            
+
+    return layout
+
+def vboxlayout(children:Sequence[QWidget|QLayout|QLayoutItem], stretch:Sequence[int]=[])->QVBoxLayout:
     layout = QVBoxLayout()
+    layout.setSpacing(0)
+    layout.setContentsMargins(0,0,0,0)
     for child in children:
         match child:
             case QWidget():
@@ -24,8 +43,89 @@ def vboxlayout(*children:list)->QVBoxLayout:
             case QLayoutItem():
                 layout.addItem(child)
 
+    for i, value in enumerate(stretch):
+        layout.setStretch(i, value)
+
     return layout
 
+def widgetitem(widget: QWidget, alignment:Qt.AlignmentFlag=0):
+    layout_item = QWidgetItem(widget)
+    layout_item.setAlignment(alignment)
+    return layout_item
+
+def hboxlayout(children:Sequence[QWidget|QLayout|QLayoutItem], stretch:Sequence[int]=[])->QHBoxLayout:
+    layout = QHBoxLayout()
+    layout.setSpacing(0)
+    layout.setContentsMargins(0,0,0,0)
+
+    for i, child in enumerate(children):
+        match child:
+            case QWidget():
+                layout.addWidget(child)
+
+            case QLayout():
+                layout.addLayout(child)
+            case QLayoutItem():
+                layout.addItem(child)
+
+    for i, value in enumerate(stretch):
+        layout.setStretch(i, value)
+
+
+
+    return layout
+
+def splitter(orientation:Qt.Orientation, children:Sequence[QWidget])->QSplitter:
+    splitter = QSplitter(orientation)
+    for child in children:
+        splitter.addWidget(child)
+
+    count = len(children)
+    splitter.setSizes([splitter.width()//len(children) for _ in range( count )])
+    return splitter
+
+def tabwidget(pages:dict[str, QWidget]):
+    tabwidget = QTabWidget()
+    tabwidget.setDocumentMode(True)
+
+    for label, page in pages.items():
+        tabwidget.addTab(page, label)
+
+    return tabwidget
+
+def widget(layout:QLayout):
+    widget = QWidget()
+    widget.setLayout(layout)
+    return widget
+
+def gridlayout(cells:dict[tuple[int, int]|tuple[int,int,int]|tuple[int,int,int,int], QWidget|QLayoutItem])->QGridLayout:
+    layout = QGridLayout()
+    for position, element in cells.items():
+        match element:
+            case QWidget():
+                layout.addWidget(element, *position)
+            case QLayoutItem():
+                layout.addItem(element, *position)
+                
+        
+
+    return layout
+
+
+# # def addItem  (item: QLayoutItem, row:int, column:int, rowSpan:int = 1, columnSpan:int = 1, alignment:Qt.AlignmentFlag.Alignment = Qt.Alignment())
+
+# def addLayout(layout, row:int,     column:int, alignment:Qt.AlignmentFlag = 0):
+#     ...
+# def addWidget(widget, row:int,     column:int, alignment:Qt.AlignmentFlag = 0):
+#     ...
+
+# def addLayout(layout, row:int,     column:int,     rowSpan:int, columnSpan:int, Qt::Alignment alignment = 0)
+# def addWidget(widget, fromRow:int, fromColumn:int, rowSpan:int, columnSpan:int, Qt::Alignment alignment = 0)
+
+
+# gridlayout([
+#     ()
+# ])
 
 type FormRowType=tuple[QWidget, QWidget]\
     | QLayout\

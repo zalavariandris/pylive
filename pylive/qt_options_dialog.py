@@ -1,3 +1,5 @@
+### todo: Support arbitrary QAbstractItemModel
+
 from enum import IntEnum
 from typing import *
 from PySide6.QtCore import *

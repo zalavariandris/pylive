@@ -7,6 +7,7 @@ from PySide6.QtWidgets import *
 from networkx.classes import graphviews
 
 from pylive.QtGraphEditor.definitions_model import DefinitionItem, DefinitionsModel
+from pylive.QtGraphEditor.tile_widget import TileWidget
 from pylive.qt_options_dialog import QOptionDialog
 from pylive.utils import group_consecutive_numbers
 from pylive.utils.qt import modelReset, signalsBlocked
@@ -22,6 +23,8 @@ from nodes_model import NodesModel, NodeItem
 from edges_model import EdgesModel, EdgeItem
 
 
+from pylive.utils.qtfactory import gridlayout
+from pylive.utils.unique import make_unique_id
 from qt_graph_editor_scene import QGraphEditorScene
 from pylive.QtScriptEditor.script_edit import ScriptEdit
 
@@ -130,61 +133,69 @@ class FilterCurrentProxyModel(QSortFilterProxyModel):
 from enum import IntEnum
 
 
-class NodeInspector(QWidget):
+# class NodeInspector(QWidget):
+#     def __init__(self, parent:QWidget|None=None):
+#         super().__init__(parent=parent)
+#         self._node : NodeItem|None = None
+
+#         main_layout = QVBoxLayout()
+#         self._header_label = QLabel()
+#         self._fields_form = QFormLayout()
+
+#         self._fields_list = QListView()
+
+#         menubar = QMenuBar(self)
+#         add_field_action = QAction("add field", self)
+#         add_field_action.triggered.connect(lambda: self._add_new_field())
+#         menubar.addAction(add_field_action)
+#         remove_field_action = QAction("remove field", self)
+#         remove_field_action.triggered.connect(lambda: self._remove_selected_field())
+#         menubar.addAction(remove_field_action)
+
+#         main_layout.setMenuBar(menubar)
+#         main_layout.addWidget(self._header_label)
+#         main_layout.addWidget(self._fields_list)
+#         # main_layout.addLayout(self._fields_form)
+
+
+#         self.setLayout(main_layout)
+    
+#     def setNode(self, node:NodeItem):
+#         definitions_model = node.definition.model()
+#         definition_name = definitions_model.data(node.definition, Qt.ItemDataRole.DisplayRole)
+#         self._header_label.setText(f"<h1>{node.name}</h1><p>{definition_name}</p>")
+#         self._fields_list.setModel(node.fields)
+#         self._node = node
+
+
+
+#         # for row in range(node.fields.rowCount()):
+#         #     index = node.fields.index(row, 0)
+#         #     name = index.data(Qt.ItemDataRole.DisplayRole)
+#         #     value = FieldsListModel.Roles.Value
+#         #     self._fields_form.addRow(name, QLabel(f"{value}"))
+
+#     @Slot()
+#     def _add_new_field(self):
+#         if not self._node:
+#             return False
+#         print("add new field")
+#         field_item = FieldItem("new field", "no value")
+#         self._node.fields.insertFieldItem(self._node.fields.rowCount(), field_item)
+
+
+#     @Slot()
+#     def _remove_selected_field(self):
+#         if not self._node:
+#             return False
+
+
+class PropertyTableView(QTableView):
     def __init__(self, parent:QWidget|None=None):
         super().__init__(parent=parent)
-        self._node : NodeItem|None = None
-
-        main_layout = QVBoxLayout()
-        self._header_label = QLabel()
-        self._fields_form = QFormLayout()
-
-        self._fields_list = QListView()
-
-        menubar = QMenuBar(self)
-        add_field_action = QAction("add field", self)
-        add_field_action.triggered.connect(lambda: self._add_new_field())
-        menubar.addAction(add_field_action)
-        remove_field_action = QAction("remove field", self)
-        remove_field_action.triggered.connect(lambda: self._remove_selected_field())
-        menubar.addAction(remove_field_action)
-
-        main_layout.setMenuBar(menubar)
-        main_layout.addWidget(self._header_label)
-        main_layout.addWidget(self._fields_list)
-        # main_layout.addLayout(self._fields_form)
-
-
-        self.setLayout(main_layout)
-    
-    def setNode(self, node:NodeItem):
-        definitions_model = node.definition.model()
-        definition_name = definitions_model.data(node.definition, Qt.ItemDataRole.DisplayRole)
-        self._header_label.setText(f"<h1>{node.name}</h1><p>{definition_name}</p>")
-        self._fields_list.setModel(node.fields)
-        self._node = node
 
 
 
-        # for row in range(node.fields.rowCount()):
-        #     index = node.fields.index(row, 0)
-        #     name = index.data(Qt.ItemDataRole.DisplayRole)
-        #     value = FieldsListModel.Roles.Value
-        #     self._fields_form.addRow(name, QLabel(f"{value}"))
-
-    @Slot()
-    def _add_new_field(self):
-        if not self._node:
-            return False
-        print("add new field")
-        field_item = FieldItem("new field", "no value")
-        self._node.fields.insertFieldItem(self._node.fields.rowCount(), field_item)
-
-
-    @Slot()
-    def _remove_selected_field(self):
-        if not self._node:
-            return False
 
 
 class Window(QWidget):
@@ -208,22 +219,25 @@ class Window(QWidget):
         self.node_selection = QItemSelectionModel(self.nodes)
 
         ### Widgets
-        self.definitions_list_view = QTableView(self)
-        self.definitions_list_view.setEditTriggers(QAbstractItemView.EditTrigger.DoubleClicked)
-        self.definitions_list_view.setItemDelegate(DefinitionsEditorDelegate())
-        self.definitions_list_view.setModel(self.definitions)
+        self.definitions_table_view = QTableView()
+        self.definitions_table_view.setEditTriggers(QAbstractItemView.EditTrigger.DoubleClicked)
+        self.definitions_table_view.setItemDelegate(DefinitionsEditorDelegate())
+        self.definitions_table_view.setModel(self.definitions)
+        self.definitions_table_view.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
 
-        self.nodes_list_view = QListView(self)
-        self.nodes_list_view.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-        self.nodes_list_view.setModel(self.nodes)
-        self.nodes_list_view.setSelectionModel(self.node_selection)
-        self.nodes_list_view.setSelectionModel(self.node_selection)
-        self.nodes_list_view.setSelectionMode(QAbstractItemView.SelectionMode.MultiSelection)
+        self.nodes_sheet_table_view = QTableView()
+        self.nodes_sheet_table_view.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.nodes_sheet_table_view.setModel(self.nodes)
+        self.nodes_sheet_table_view.setSelectionModel(self.node_selection)
+        self.nodes_sheet_table_view.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
 
-        # self.edges_list_view = QTableView(self)
-        # self.edges_list_view.setItemDelegate(ListTileDelegate())
-        # self.edges_list_view.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-        # self.edges_list_view.setModel(self.edges)
+        self.edges_sheet_table_view = QTableView(self)
+        self.edges_sheet_table_view.setItemDelegate(ListTileDelegate())
+        self.edges_sheet_table_view.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.edges_sheet_table_view.setModel(self.edges)
+        self.edges_sheet_table_view.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+
+
 
         self.graph_view = QGraphicsView()
         self.graph_view.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
@@ -238,9 +252,77 @@ class Window(QWidget):
         graph_scene.setSelectionModel(self.node_selection)
         self.graph_view.setScene(graph_scene)
 
-        self.node_inspector = NodeInspector()
-        self.node_selection.currentChanged.connect(self._onCurrentNodeChanged)
+        ### NODEINSPECTOR
+        # self.node_inspector = QWidget()
+        self.node_inspector = QFrame(self)
+        self.node_inspector.setFrameShape(QFrame.Shape.StyledPanel)  # Styled panel for the frame
+        self.node_inspector.setFrameShadow(QFrame.Shadow.Raised)
+        inspector_header_tile = TileWidget()
+        property_editor = PropertyTableView()
+        property_editor.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        property_editor.setModel(None)
+        inspector_layout = QVBoxLayout()
+        inspector_layout.addWidget(inspector_header_tile)
+        inspector_layout.addWidget(property_editor)
+        create_button = QPushButton("create")
+        delete_button = QPushButton("delete")
+        button_layout = QHBoxLayout()
+        button_layout.addWidget(create_button)
+        button_layout.addWidget(delete_button)
+        inspector_layout.addLayout(button_layout)
+        help_label = QLabel("Help")
+        inspector_layout.addWidget(help_label)
+        self.node_inspector.setLayout(inspector_layout)
 
+        def create_field():
+            current_node_index = self.node_selection.currentIndex()
+            if self.node_selection.hasSelection() and current_node_index.isValid():
+                node_item = self.nodes.data(current_node_index.siblingAtColumn(0), Qt.ItemDataRole.UserRole)
+                new_field = FieldItem(make_unique_id(), "value")
+                node_item.fields.insertFieldItem(node_item.fields.rowCount(), new_field)
+        create_button.clicked.connect(lambda: create_field())
+
+        def delete_fields():
+            current_node_index = self.node_selection.currentIndex()
+            if self.node_selection.hasSelection() and current_node_index.isValid():
+                node_item = self.nodes.data(current_node_index.siblingAtColumn(0), Qt.ItemDataRole.UserRole)
+                selected_rows = list(set(_.row() for _ in property_editor.selectedIndexes()))
+                for row in sorted(selected_rows, reverse=True):
+                    node_item.fields.removeRows(row, 1)
+
+
+        delete_button.clicked.connect(lambda: delete_fields())
+
+        def show_node_inspector():
+            current_node_index = self.node_selection.currentIndex()
+            if self.node_selection.hasSelection() and current_node_index.isValid():
+                self.node_inspector.show()
+                node_item = self.nodes.data(current_node_index.siblingAtColumn(0), Qt.ItemDataRole.UserRole)
+                print(node_item.name, "")
+                inspector_header_tile.setHeading(f"#{current_node_index.row()} {node_item.name}")
+                property_editor.setModel(node_item.fields)
+                
+                    
+            else:
+                print("hide inspector")
+                self.node_inspector.hide()
+                property_editor.setModel(None)
+
+        self.node_selection.currentChanged.connect(show_node_inspector)
+        self.node_selection.selectionChanged.connect(show_node_inspector)
+
+        ### PREVIEW WIDGET
+        self.preview = QWidget()
+        preview_layout = QVBoxLayout()
+        preview_layout.addWidget(QLabel("Preview Area"), alignment=Qt.AlignmentFlag.AlignCenter)
+        self.preview.setLayout(preview_layout)
+
+        ### STATUS BAR WIDGET
+        self.statusbar = QStatusBar()
+        self.statusbar.showMessage("status bar")
+
+        ### DEFINITION CODE EDITOR
+        self.definition_script_editor = ScriptEdit()
 
         # Actions
         # init_definitions_action = QAction("Init definitions", self)
@@ -270,17 +352,60 @@ class Window(QWidget):
         # menubar.addAction(layout_action)
 
         ### Layout
-        grid_layout = QGridLayout()
-        grid_layout.setMenuBar(menubar)
-        # grid_layout.addWidget(nodelist, 1, 0)
-        # grid_layout.addWidget(edgelist, 1, 1)
-        grid_layout.addWidget(self.definitions_list_view, 0, 0, 1, 1) #row, col, row span, col spn
-        grid_layout.addWidget(self.nodes_list_view,       0, 1, 1, 1)
-        grid_layout.addWidget(self.node_inspector,        0, 3, 1, 1)
-        grid_layout.addWidget(self.graph_view,            1, 0, 1, 4)
-        self.statusbar = QStatusBar(self)
-        grid_layout.addWidget(self.statusbar, 2,0,1,4)
-        self.setLayout(grid_layout)
+        import pylive.utils.qtfactory as qf
+
+        # def show_node_in_inspector(index):
+        #     node_item = index.data(Qt.ItemDataRole.UserRole)
+        #     self.node_inspector.setNode(node_item)
+        # self.node_selection.currentChanged.connect(show_node_in_inspector)
+
+        def create_graph_panel():
+            panel = QWidget()
+            grid_layout = QGridLayout()
+            panel.setLayout(grid_layout)
+
+            grid_layout.addWidget(self.graph_view, 0, 0)
+            grid_layout.addWidget(self.node_inspector,0,0, Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignRight)
+            panel.setLayout(grid_layout)
+            return panel
+
+        main_layout = qf.vboxlayout([
+            qf.splitter(Qt.Orientation.Horizontal, [
+                qf.tabwidget({
+                    'graph': create_graph_panel(),
+                    'sheets': qf.widget(qf.hboxlayout([
+                        qf.vboxlayout([QLabel("nodes"), self.nodes_sheet_table_view]),
+                        qf.vboxlayout([QLabel("edges"), self.edges_sheet_table_view]),
+                        # qf.vboxlayout([QLabel("edges"), self.fields_sheet_table_view])
+                    ])),
+                    'definitions': qf.widget(qf.hboxlayout([
+                        self.definitions_table_view,
+                        self.definition_script_editor,
+                    ], stretch=(1,1)))
+                }),
+                self.preview
+            ]),
+            self.statusbar
+        ])
+        self.statusbar.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
+
+        
+        main_layout.setMenuBar(menubar)
+        self.setLayout(main_layout)
+
+
+
+        # grid_layout = QGridLayout()
+        # grid_layout.setMenuBar(menubar)
+        # # grid_layout.addWidget(nodelist, 1, 0)
+        # # grid_layout.addWidget(edgelist, 1, 1)
+        # grid_layout.addWidget(self.definitions_list_view, 0, 0, 1, 1) #row, col, row span, col spn
+        # grid_layout.addWidget(self.nodes_list_view,       0, 1, 1, 1)
+        # grid_layout.addWidget(self.node_inspector,        0, 3, 1, 1)
+        # grid_layout.addWidget(self.graph_view,            1, 0, 1, 4)
+        # self.statusbar = QStatusBar(self)
+        # grid_layout.addWidget(self.statusbar, 2,0,1,4)
+        # self.setLayout(grid_layout)
 
         # self.init_definitions()
 
@@ -293,21 +418,6 @@ class Window(QWidget):
 
     def setIsModified(self, m:bool):
         self._is_modified = m
-
-    def _onCurrentNodeChanged(self, current, previous):
-        ...
-        # print("_onCurrentNodeChanged", current)
-        # if not current.isValid():
-        #     return
-
-        # node_item:NodeItem = cast(NodeItem, self.nodes.item
-        # assert isinstance(node_item, NodeItem)
-
-
-        # print("- ", node_item.fields)
-
-        # self.node_inspector.setNode(node_item)
-
 
 
     @Slot()
@@ -374,7 +484,12 @@ class Window(QWidget):
             func_name = node['func']
             def_row = _definition_index_by_name[func_name]
 
-            self.nodes.addNodeItem(node['name'], definition=self.definitions.index(def_row, 0))
+            self.nodes.addNodeItem(
+                NodeItem(
+                    name=node['name'], 
+                    definition=QPersistentModelIndex( self.definitions.index(def_row, 0) )
+                )
+            )
             _node_row_by_name[node['name']] = row
         self.nodes.blockSignals(False)
         self.nodes.modelReset.emit()
@@ -582,6 +697,9 @@ class Window(QWidget):
                 return True
 
         return super().eventFilter(watched, event)
+
+    def sizeHint(self):
+        return QSize(2048, 900)
 
 
 if __name__ == "__main__":

@@ -7,6 +7,8 @@ from PySide6.QtWidgets import *
 
 from dataclasses import dataclass, fields
 
+from pylive.utils.unique import make_unique_id
+
 @dataclass
 class FieldItem:
     name: str
@@ -135,7 +137,8 @@ class FieldsModel(QAbstractItemModel):
             return False
 
         self.beginRemoveRows(parent, row, row + count - 1)
-        for row in range(row+count-1, row, -1):
+        for row in reversed(range(row, row+count)):
+            print(f"del, field at: {row}")
             del self._fields[row]
         self.endRemoveRows()
         return True
@@ -158,13 +161,25 @@ if __name__ == "__main__":
     fields_table_view.setModel(fields_model)
     fields_list_view = QListView()
     fields_list_view.setModel(fields_model)
-    add_field_action = QAction("add",window)
+    
     def add_field():
-        fields_model.insertFieldItem(0, FieldItem("new field", 5, False))
-
+        fields_model.insertFieldItem(0, FieldItem(make_unique_id(), 5, False))
+    add_field_action = QAction("add",window)
     add_field_action.triggered.connect(add_field)
+
+    def delete_field():
+        selected_rows = list(set(idx.row() for idx in fields_table_view.selectedIndexes()))
+        for row in sorted(selected_rows, reverse=True):
+            print("removeRows", row)
+            fields_model.removeRows(row, 1)
+
+    remove_field_action = QAction("delete",window)
+    remove_field_action.triggered.connect(delete_field)
+
+
     menubar = QMenuBar()
     menubar.addAction(add_field_action)
+    menubar.addAction(remove_field_action)
     main_layout.setMenuBar(menubar)
     main_layout.addWidget(fields_table_view)
     main_layout.addWidget(fields_list_view)

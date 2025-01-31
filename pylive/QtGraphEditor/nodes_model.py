@@ -66,6 +66,9 @@ class NodesModel(QAbstractItemModel):
                         return ", ".join(field_names)
                     else:
                         return ""
+        elif role == Qt.ItemDataRole.UserRole:
+            return item
+
         return None
 
     def setData(self, index: QModelIndex|QPersistentModelIndex, value:Any, role: int = Qt.ItemDataRole.DisplayRole) -> Any:
@@ -103,15 +106,10 @@ class NodesModel(QAbstractItemModel):
         self.endInsertRows()
         return True
 
-    def addNodeItem(self, name:str, definition:QModelIndex, fields:FieldsModel=FieldsModel()):
+    def addNodeItem(self, item:NodeItem):
         self.beginInsertRows(QModelIndex(), self.rowCount(), self.rowCount())
 
-        self._nodes.append(NodeItem(
-            name=name, 
-            definition= QPersistentModelIndex(definition),
-            dirty= True,
-            fields=fields
-        ))
+        self._nodes.append(item)
         self.endInsertRows()
 
     def insertNodeItem(self, row:int, item:NodeItem):
@@ -126,7 +124,7 @@ class NodesModel(QAbstractItemModel):
             return False
 
         self.beginRemoveRows(parent, row, row + count - 1)
-        for row in range(row+count-1, row, -1):
+        for row in reversed(range(row, row+count)):
             del self._nodes[row]
         self.endRemoveRows()
         return True

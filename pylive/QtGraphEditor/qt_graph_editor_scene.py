@@ -98,11 +98,12 @@ class QGraphEditorScene(QGraphicsScene):
 
             # group selected rows to QItemSelectionRange
             from pylive.utils import group_consecutive_numbers
-            new_selection  = QItemSelection()
-            for start_row, end_row in group_consecutive_numbers(selected_rows):
-                top_left = self._nodes.index(start_row, 0)
-                bottom_right = self._nodes.index(end_row, 0)
-                new_selection.append(QItemSelectionRange(top_left, bottom_right))
+            new_selection = QItemSelection()
+            if selected_rows:
+                for row_range in group_consecutive_numbers(selected_rows):
+                    top_left = self._nodes.index(row_range.start, 0)
+                    bottom_right = self._nodes.index(row_range.stop-1, 0)
+                    new_selection.append(QItemSelectionRange(top_left, bottom_right))
 
             # set the selection
             if new_selection.count()>0:
