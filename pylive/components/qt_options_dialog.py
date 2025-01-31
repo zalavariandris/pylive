@@ -8,7 +8,7 @@ from PySide6.QtWidgets import *
 
 
 class QOptionDialog(QDialog):
-    def __init__(self, items:Sequence[str], title="Choose an Option", parent:QWidget|None=None):
+    def __init__(self, source_model:QAbstractItemModel, title="Choose an Option", parent:QWidget|None=None):
         super().__init__(parent=parent)
         self.setWindowTitle(title)
         self.setModal(True)
@@ -26,27 +26,29 @@ class QOptionDialog(QDialog):
         # self.setStyleSheet("background: transparent;")
         # self.setAttribute(Qt.WidgetAttribute.WA_OpaquePaintEvent, True)
 
-        self.items = items
-
         # Create layout
-        main_layout = QVBoxLayout()
+            
+        self._allow_empty_selection = False
 
         # Setup Search
         self.line_edit = QLineEdit()
         self.line_edit.setPlaceholderText("Search...")
-        main_layout.addWidget(self.line_edit)
+
+
+
 
         # Setup List
-        self.optionsmodel = QStringListModel([f"{item}" for item in items])
+        
         self.filteredmodel = QSortFilterProxyModel()
-        self.filteredmodel.setSourceModel(self.optionsmodel)
+        self.filteredmodel.setSourceModel(source_model)
         self.filteredmodel.setFilterCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
         self.line_edit.textChanged.connect(self.filteredmodel.setFilterWildcard)
 
-        self.listview = QListView()
-        self.listview.setModel(self.filteredmodel)
-        self.listview.setSelectionMode(QListView.SelectionMode.SingleSelection)
-        main_layout.addWidget(self.listview)
+        self._listview = QListView()
+        self._listview.setModel(self.filteredmodel)
+        self._listview.setSelectionMode(QListView.SelectionMode.SingleSelection)
+
+
 
         # OK and Cancel buttons
         button_layout = QHBoxLayout()
@@ -58,109 +60,129 @@ class QOptionDialog(QDialog):
         # Connect buttons
         ok_button.clicked.connect(self.accept)
         cancel_button.clicked.connect(self.reject)
+
+        main_layout = QVBoxLayout()
+
+        main_layout.addWidget(self.line_edit)
+        main_layout.addWidget(self._listview)
         main_layout.addLayout(button_layout)
+        main_layout.setStretch(0,0)
+        main_layout.setStretch(1,10)
+        main_layout.setStretch(2,0)
 
         self.setLayout(main_layout)
+
         self.line_edit.setFocus()
 
         # Select the first item by default
-        if items:
-            self.listview.setCurrentIndex(self.filteredmodel.index(0, 0))
+        self._listview.setCurrentIndex(self.filteredmodel.index(0, 0))
 
         # Adjust the dialog size based on the content
-        self.line_edit.textChanged.connect(self.adjust_dialog_size)
-        self.adjust_dialog_size()
+        # self.line_edit.textChanged.connect(self._adjust_dialog_size)
+        self.filteredmodel.modelReset.connect(lambda: self._adjust_dialog_size())
+        self.filteredmodel.rowsInserted.connect(lambda: self._adjust_dialog_size())
+        self.filteredmodel.rowsRemoved.connect(lambda: self._adjust_dialog_size())
+        self._adjust_dialog_size()
 
         # Enable event filter for keyboard navigation
         self.line_edit.installEventFilter(self)
 
 
+        self.adjustSize()
 
-    def adjust_dialog_size(self):
+        self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.MinimumExpanding)
+
+
+    def setAllowEmptySelection(self, value:bool):
+        self._allow_empty_selection = value
+
+    def allowEmptySelection(self)->bool:
+        return self._allow_empty_selection
+
+    def sizeHint(self) -> QSize:
+        return QSize(300,50)
+
+    def _adjust_dialog_size(self):
         """Adjust the height of the list view and the dialog dynamically based on content."""
         row_count = self.filteredmodel.rowCount()
         if row_count > 0:
             # Get the height of one row and multiply by the number of rows
-            row_height = self.listview.sizeHintForRow(0)
+            row_height = self._listview.sizeHintForRow(0)
             max_visible_rows = 10  # Limit maximum visible rows
             visible_rows = min(row_count, max_visible_rows)
-            list_height = row_height * visible_rows + 2  # Add a small margin
-            self.listview.setFixedHeight(list_height)
+            list_height = row_height * visible_rows + 4  # Add a small margin
+            self._listview.setMinimumHeight(list_height)
         else:
-            self.listview.setFixedHeight(0)
+            self._listview.setMinimumHeight(0)
 
-        # Adjust dialog size based on its content
-        # self.setMinimumSize(QSize(30, 100))
-        # self.setMaximumSize(QSize(400, 800))
+
         self.adjustSize()  # Resize the dialog based on its content (line edit, listview, buttons)
-        # self.setMinimumSize(self.size())
-        # self.setMaximumSize(self.size())
-        # self.setFixedSize(self.size())
 
     def eventFilter(self, obj, event:QEvent):
         if obj == self.line_edit and event.type() == event.Type.KeyPress:
-            current_index = self.listview.currentIndex()
+            current_index = self._listview.currentIndex()
             if event.key() == Qt.Key.Key_Up:
                 # Move up in the list
-                self.move_selection(current_index, direction=-1)
+                self._move_selection(current_index, direction=-1)
                 return True
             elif event.key() == Qt.Key.Key_Down:
                 # Move down in the list
-                self.move_selection(current_index, direction=1)
+                self._move_selection(current_index, direction=1)
                 return True
+            # elif not current_index.isValid() and self.filteredmodel.rowCount()>0:
+            #     self._move_selection(QModelIndex())
+            #     return True
+
         return super().eventFilter(obj, event)
 
-    def move_selection(self, current_index, direction):
+    def _move_selection(self, current_index, direction):
         """Move selection up or down based on direction."""
-        if not current_index.isValid():
-            return
 
         row_count = self.filteredmodel.rowCount()
         if row_count == 0:
             return
 
-        # Calculate new row index
-        new_row = current_index.row() + direction
-        if 0 <= new_row < row_count:
-            new_index = self.filteredmodel.index(new_row, 0)
-            self.listview.setCurrentIndex(new_index)
-            self.listview.scrollTo(new_index)  # Ensure visibility of the selection
+        if not current_index.isValid():
+            first_index = self._listview.model().index(0,0)
+            self._listview.setCurrentIndex(first_index)
 
-    def optionValue(self)->str:
-        """Return the selected option or None if no option is selected."""
-        indexes = self.listview.selectedIndexes()
-        if indexes:
-            return indexes[0].data()
-        return None
-
-    def textValue(self):
-        return self.line_edit.text()
-
-    @staticmethod
-    def getOption(options, parent:QWidget|None=None):
-        """Static method to open dialog and return selected option."""
-        dialog = QOptionDialog(options, parent=parent)
-        result = dialog.exec()
-        return dialog.optionValue() if result == QDialog.DialogCode.Accepted else None
-
-    @staticmethod
-    def getItem(parent, 
-        title:str, 
-        label:str, 
-        items:Sequence[str],
-        current:int, 
-        editable:bool=False
-    )->tuple[str|None, bool]:
-
-        dialog = QOptionDialog(items, title, parent=parent)
-        result = dialog.exec()
-
-        if result == QDialog.DialogCode.Accepted:
-            return str(dialog.optionValue()), True
         else:
-            return None, False 
 
+            # Calculate new row index
+            new_row = current_index.row() + direction
+            if 0 <= new_row < row_count:
+                new_index = self.filteredmodel.index(new_row, 0)
+                self._listview.setCurrentIndex(new_index)
+                self._listview.scrollTo(new_index)  # Ensure visibility of the selection
+            elif new_row<0 and self._allow_empty_selection:
+                self._listview.setCurrentIndex(QModelIndex())
 
+    def selectedOption(self)->QModelIndex:
+        return self._listview.currentIndex()
+
+    def filterText(self)->str:
+        return self.line_edit.text()
+    # def optionValue(self)->str:
+    #     """Return the selected option or None if no option is selected."""
+    #     indexes = self.listview.selectedIndexes()
+    #     if indexes:
+    #         return indexes[0].data()
+    #     return None
+
+    # def textValue(self):
+    #     return self.line_edit.text()
+
+    @staticmethod
+    def getOption(options:list[str], parent:QWidget|None=None)->str|None:
+        """Static method to open dialog and return selected option."""
+        options_model = QStringListModel([f"{item}" for item in options])
+        dialog = QOptionDialog(options_model, parent=parent)
+        result = dialog.exec()
+        if result == QDialog.DialogCode.Accepted:
+            indexes = dialog._listview.selectedIndexes()
+            return indexes[0].data()
+        else:
+            return None
 
 
 if __name__ == "__main__":

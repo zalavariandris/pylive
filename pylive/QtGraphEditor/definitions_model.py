@@ -5,11 +5,17 @@ from PySide6.QtWidgets import *
 
 from dataclasses import dataclass, fields
 
+from pylive.QtGraphEditor.nodes_model import NodeItem
+
 @dataclass
 class DefinitionItem:
     name: str
     source: str
     error: str|None=None
+
+    @property
+    def function(self)->Callable|None:
+        ...
 
 
 from enum import IntEnum
@@ -75,8 +81,14 @@ class DefinitionsModel(QAbstractItemModel):
         self.endInsertRows()
         return True
 
-    def fieldItem(self, row:int):
+    def item(self, row)->DefinitionItem:
         return self._definitions[row]
+
+    def itemFromIndex(self, index:QModelIndex|QPersistentModelIndex)->DefinitionItem|None:
+        if index.isValid() and index.model() == self:
+            row = index.row()
+            if row>=0 and row < len(self._definitions):
+                return self._definitions[row]
 
     def insertRows(self, row: int, count: int, parent: QModelIndex | QPersistentModelIndex = QModelIndex()) -> bool:
         if len(self._definitions) <= row or row < 0:

@@ -69,10 +69,9 @@ class ScriptEdit(QPlainTextEdit):
         ### Edit Numbers ###
         self.number_editor = TextEditNumberEditor(self)
 
-
-    def sizeHint(self) -> QSize:
-        width = self.fontMetrics().horizontalAdvance('O') * 70
-        return QSize(width, int(width*8/7))
+    # def sizeHint(self) -> QSize:
+    #     width = self.fontMetrics().horizontalAdvance('O') * 70
+    #     return QSize(width, int(width*8/7))
 
     def contextMenuEvent(self, e:QContextMenuEvent):
         from pylive.declerative_qt import (

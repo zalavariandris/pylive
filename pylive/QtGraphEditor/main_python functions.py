@@ -7,8 +7,8 @@ from PySide6.QtWidgets import *
 from networkx.classes import graphviews
 
 from pylive.QtGraphEditor.definitions_model import DefinitionItem, DefinitionsModel
-from pylive.QtGraphEditor.tile_widget import TileWidget
-from pylive.qt_options_dialog import QOptionDialog
+from pylive.components.tile_widget import TileWidget
+from pylive.components.qt_options_dialog import QOptionDialog
 from pylive.utils import group_consecutive_numbers
 from pylive.utils.qt import modelReset, signalsBlocked
 
@@ -22,9 +22,8 @@ from fields_model import FieldsModel, FieldItem
 from nodes_model import NodesModel, NodeItem
 from edges_model import EdgesModel, EdgeItem
 
-
 from pylive.utils.qtfactory import gridlayout
-from pylive.utils.unique import make_unique_id
+from pylive.utils.unique import make_unique_id, make_unique_name
 from qt_graph_editor_scene import QGraphEditorScene
 from pylive.QtScriptEditor.script_edit import ScriptEdit
 
@@ -253,8 +252,7 @@ class Window(QWidget):
         self.graph_view.setScene(graph_scene)
 
         ### NODEINSPECTOR
-        # self.node_inspector = QWidget()
-        self.node_inspector = QFrame(self)
+        self.node_inspector = QFrame()
         self.node_inspector.setFrameShape(QFrame.Shape.StyledPanel)  # Styled panel for the frame
         self.node_inspector.setFrameShadow(QFrame.Shadow.Raised)
         inspector_header_tile = TileWidget()
@@ -271,6 +269,10 @@ class Window(QWidget):
         button_layout.addWidget(delete_button)
         inspector_layout.addLayout(button_layout)
         help_label = QLabel("Help")
+        definition_editor = ScriptEdit()
+        # definition_editor.setSizeAdjustPolicy(QScrollArea.SizeAdjustPolicy.AdjustToContents)
+        # definition_editor.setMaximumSize(QSize(256,256))
+        inspector_layout.addWidget(definition_editor)
         inspector_layout.addWidget(help_label)
         self.node_inspector.setLayout(inspector_layout)
 
@@ -297,10 +299,16 @@ class Window(QWidget):
             current_node_index = self.node_selection.currentIndex()
             if self.node_selection.hasSelection() and current_node_index.isValid():
                 self.node_inspector.show()
-                node_item = self.nodes.data(current_node_index.siblingAtColumn(0), Qt.ItemDataRole.UserRole)
-                print(node_item.name, "")
-                inspector_header_tile.setHeading(f"#{current_node_index.row()} {node_item.name}")
+                node_item = self.nodes.nodeItemFromIndex(current_node_index)
+                assert node_item
+                inspector_header_tile.setHeading(f"{node_item.name}")
+                inspector_header_tile.setSubHeading(f"{node_item.definition.data(Qt.ItemDataRole.DisplayRole)}")
                 property_editor.setModel(node_item.fields)
+                definition_item = self.definitions.itemFromIndex(node_item.definition)
+                if definition_item:
+                    definition_editor.setPlainText(definition_item.source)
+                else:
+                    definition_editor.setPlainText("")
                 
                     
             else:
@@ -366,6 +374,7 @@ class Window(QWidget):
 
             grid_layout.addWidget(self.graph_view, 0, 0)
             grid_layout.addWidget(self.node_inspector,0,0, Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignRight)
+            self.node_inspector.hide()
             panel.setLayout(grid_layout)
             return panel
 
@@ -468,8 +477,8 @@ class Window(QWidget):
             # the string should contain a single function definition
             try:
                 name, func = get_python_function_from_string(code)
-                self.definitions.insertDefinitionItem(row, 
-                    DefinitionItem(name=name,source=code))
+                definition_item = DefinitionItem(name=name, source=code)
+                self.definitions.insertDefinitionItem(row, definition_item)
                 _definition_index_by_name[name] = row
             except Exception as err:
                 print("ERROR", err)
@@ -482,12 +491,12 @@ class Window(QWidget):
         for row, node in enumerate(data['nodes']):
             print(node)
             func_name = node['func']
-            def_row = _definition_index_by_name[func_name]
+            definition_row = _definition_index_by_name[func_name]
 
             self.nodes.addNodeItem(
                 NodeItem(
                     name=node['name'], 
-                    definition=QPersistentModelIndex( self.definitions.index(def_row, 0) )
+                    definition=QPersistentModelIndex( self.definitions.index(definition_row, 0) )
                 )
             )
             _node_row_by_name[node['name']] = row
@@ -633,29 +642,88 @@ class Window(QWidget):
 
     @Slot()
     def create_new_node(self):
-        ###
-        if self.definitions_model.rowCount()==0:
-            QMessageBox.warning(self, "No definions!", "Please create function definitions!")
-            return
+        dialog = QDialog()
+        dialog.setWindowTitle("Create Node")
+        dialog.setModal(True)
+        layout = QVBoxLayout()
 
-        from itertools import chain
-        # node_name, accepted =  QOptionDialog.getItem(self , "Title", "label", ['print', "write"], 0, editable=True)
-        definitions = dict()
-        for row in range(self.definitions_model.rowCount()):
-            definition_index = self.definitions_model.index(row, 0)
-            name = definition_index.data(Qt.ItemDataRole.DisplayRole)
-            func = definition_index.data(self.DefinitionFunctionRole)
-            definitions[name]  = definition_index
+        ## popup definition selector
+        dialog = QOptionDialog(self.definitions)
+        dialog.setAllowEmptySelection(True)
+        result = dialog.exec() # consider using open and the finished signal
+        print(result)
+        if result == QDialog.DialogCode.Accepted:
+            selected_definition_index = dialog.selectedOption()
+            if selected_definition_index.isValid():
+                definition_name = selected_definition_index.data(Qt.ItemDataRole.DisplayRole)
+                all_node_names = [self.nodes.nodeItem(row).name for row in range(self.nodes.rowCount())]
+                print(selected_definition_index)
+                node_item = NodeItem(
+                    name = make_unique_name(f"{definition_name}1", all_node_names), 
+                    definition=QPersistentModelIndex(selected_definition_index), 
+                    fields=FieldsModel(), 
+                    dirty=True
+                )
+                self.nodes.addNodeItem(node_item)
+            else:
+                from textwrap import dedent
+
+                new_definition_name = dialog.filterText()
+                assert new_definition_name not in [self.definitions.index(row, 0).data(Qt.ItemDataRole.DisplayRole) for row in range(self.definitions.rowCount())]
+                source  = dedent(f"""\
+                def {new_definition_name}():
+                  ...
+                """)
+                definition_item = DefinitionItem(new_definition_name, source, None)
+                row = self.definitions.rowCount()
+                self.definitions.insertDefinitionItem(row, definition_item)
+                new_definition_index = self.definitions.index(row, 0)
+                assert new_definition_index.isValid()
+
+                all_node_names = [self.nodes.nodeItem(row).name for row in range(self.nodes.rowCount())] 
+                node_item = NodeItem(
+                    make_unique_name(f"{new_definition_name}1", all_node_names), 
+                    QPersistentModelIndex(new_definition_index), 
+                    FieldsModel(), 
+                    dirty=True
+                )
+                self.nodes.addNodeItem(node_item)
+                print("create new definition", dialog.filterText())
+
+
+        """Static method to open dialog and return selected option."""
+        # options_model = QStringListModel([f"{item}" for item in options])
+        # dialog = QOptionDialog(options_model, parent=parent)
+        # result = dialog.exec()
+        # if result == QDialog.DialogCode.Accepted:
+        #     indexes = dialog._listview.selectedIndexes()
+        #     return indexes[0].data()
+        # else:
+        #     return None
+
+        # ###
+        # if self.definitions.rowCount()==0:
+        #     QMessageBox.warning(self, "No definions!", "Please create function definitions!")
+        #     return
+
+        # from itertools import chain
+        # # node_name, accepted =  QOptionDialog.getItem(self , "Title", "label", ['print', "write"], 0, editable=True)
+        # definitions = dict()
+        # for row in range(self.definitions.rowCount()):
+        #     definition_index = self.definitions.index(row, 0)
+        #     name = definition_index.data(Qt.ItemDataRole.DisplayRole)
+        #     func = definition_index.data(self.DefinitionFunctionRole)
+        #     definitions[name]  = definition_index
        
-        definition_key, accepted =  QOptionDialog.getItem(self , "Title", "label", [_ for _ in definitions.keys()] , 0)
-        if definition_key and accepted:
-            from pylive.utils.unique import make_unique_name
-            node_names = [self.nodes.data(self.nodes.index(row, 0), Qt.ItemDataRole.DisplayRole) for row in  range(self.nodes.rowCount())]
-            node_key = make_unique_name(f"{definition_key}1", node_names)
-            item = QStandardItem()
-            item.setData(f"{node_key}", Qt.ItemDataRole.DisplayRole)
-            item.setData(definitions[definition_key], self.NodeDefinitionRole)
-            self.nodes.insertRow(self.nodes.rowCount(), item)
+        # definition_key, accepted =  QOptionDialog.getItem(self , "Title", "label", [_ for _ in definitions.keys()] , 0)
+        # if definition_key and accepted:
+        #     from pylive.utils.unique import make_unique_name
+        #     node_names = [self.nodes.data(self.nodes.index(row, 0), Qt.ItemDataRole.DisplayRole) for row in  range(self.nodes.rowCount())]
+        #     node_key = make_unique_name(f"{definition_key}1", node_names)
+        #     item = QStandardItem()
+        #     item.setData(f"{node_key}", Qt.ItemDataRole.DisplayRole)
+        #     item.setData(definitions[definition_key], self.NodeDefinitionRole)
+        #     self.nodes.insertRow(self.nodes.rowCount(), item)
 
     @Slot()
     def delete_selected_nodes(self):

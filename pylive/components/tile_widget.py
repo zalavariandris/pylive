@@ -28,7 +28,7 @@ class TileWidget(QWidget):
     def setHeading(self, heading:str):
         self._heading.setText(f"<h2>{heading}</h2>")
 
-    def setSubheading(self, subheading:str):
+    def setSubHeading(self, subheading:str):
         self._subheading.setText(subheading)
 
 

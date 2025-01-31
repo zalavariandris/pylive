@@ -7,7 +7,7 @@ from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 from networkx.classes import graphviews
 
-from pylive.qt_options_dialog import QOptionDialog
+
 from pylive.utils import group_consecutive_numbers
 from pylive.utils.qt import modelReset, signalsBlocked
 
@@ -111,6 +111,15 @@ class NodesModel(QAbstractItemModel):
 
         self._nodes.append(item)
         self.endInsertRows()
+
+    def nodeItem(self, row)->NodeItem:
+        return self._nodes[row]
+
+    def nodeItemFromIndex(self, index:QModelIndex)->NodeItem|None:
+        if index.isValid() and index.model() == self:
+            row = index.row()
+            if row>=0 and row < len(self._nodes):
+                return self._nodes[row]
 
     def insertNodeItem(self, row:int, item:NodeItem):
         self.beginInsertRows(QModelIndex(), row, row)
