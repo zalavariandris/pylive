@@ -319,11 +319,19 @@ class Window(QWidget):
             if node['kind']!='UniqueFunction':
                 raise NotImplementedError("for now only 'UniqueFunction's are supported!")
 
+
+            fields_model = FieldsModel()
+            if fields:=node.get("fields", None):
+                for row, (name, value) in enumerate(fields.items()):
+                    field_item = FieldItem(name, value, editable=True)
+                    fields_model.insertFieldItem(row, field_item)
+
             self.nodes.addNodeItem(
                 UniqueFunctionItem(
                     kind="UniqueFunction",
                     label=node['label'],
-                    source= node['source']
+                    source= node['source'],
+                    fields = fields_model
                 )
             )
             if node['label'].startswith("#"):
