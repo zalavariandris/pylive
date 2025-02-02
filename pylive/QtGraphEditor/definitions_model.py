@@ -5,17 +5,25 @@ from PySide6.QtWidgets import *
 
 from dataclasses import dataclass, fields
 
-from pylive.QtGraphEditor.nodes_model import NodeItem
 
-@dataclass
-class DefinitionItem:
-    name: str
-    source: str
-    error: str|None=None
+# class FunctionSourceItem(QStandardItem):
+#     ...
 
-    @property
-    def function(self)->Callable|None:
-        ...
+
+# # Custom item representing a folder.
+# class FolderItem(QStandardItem):
+#     # Define a unique type value for folder items.
+#     # QStandardItem.UserType is available as a class attribute.
+#     FolderType:int = QStandardItem.ItemType.UserType + 1
+
+#     def __init__(self, text):
+#         super().__init__(text)
+#         # Optionally, you could set an icon:
+#         # self.setIcon(QIcon(":/icons/folder.png"))
+
+#     # Override the type() method to return the custom type.
+#     def type(self) -> int:
+#         return FolderItem.FolderType
 
 
 from enum import IntEnum
@@ -23,7 +31,7 @@ class DefinitionsModel(QAbstractItemModel):
     """Model for the detail view"""
     def __init__(self):
         super().__init__()
-        self._definitions:list[DefinitionItem] = []
+        self._definitions:list[dict] = []
 
     def rowCount(self, parent: QModelIndex|QPersistentModelIndex = QModelIndex()) -> int:
         return len(self._definitions)
@@ -118,7 +126,7 @@ class DefinitionsModel(QAbstractItemModel):
             return False
 
         self.beginRemoveRows(parent, row, row + count - 1)
-        for row in range(row+count-1, row, -1):
+        for row in reversed(range(row, row+count)):
             del self._definitions[row]
         self.endRemoveRows()
         return True

@@ -16,17 +16,14 @@
 # from the widgets to a delegate, or the graphsene itself
 
 
-from contextlib import contextmanager
 from typing import *
 from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
-from networkx import to_pandas_adjacency
 
 from pylive.NetworkXGraphEditor.nx_graph_shapes import (
     BaseNodeItem,
     BaseLinkItem,
-    distribute_items_horizontal
 )
 
 ##############

@@ -1,28 +1,43 @@
 
 from collections import defaultdict
 from typing import *
-from typing_extensions import deprecated
 from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
-from networkx.classes import graphviews
-
-
-from pylive.utils import group_consecutive_numbers
-from pylive.utils.qt import modelReset, signalsBlocked
 
 
 from dataclasses import dataclass, field
-from fields_model import FieldsModel
+from pylive.QtGraphEditor.fields_model import FieldsModel
 
+
+class NodeItem:
+    kind: Literal["UniqueFunction", "Expression", "ModuleFunction"]
+    label:str
+    dirty:bool=True
+    fields: FieldsModel = field(default_factory=FieldsModel)
 
 @dataclass
-class NodeItem:
-    name: str
-    #content
-    definition: QPersistentModelIndex = field(default_factory=QPersistentModelIndex)
-    fields: FieldsModel = field(default_factory=FieldsModel)
+class ExpressionItem(NodeItem):
+    expression:str    
+
+@dataclass
+class ModuleFunctionItem(NodeItem):
+    source:str
+    module: str
+    func: str 
+
+@dataclass
+class LocalFunctionItem:
+    definition: QModelIndex
+
+@dataclass
+class UniqueFunctionItem:
+    kind: Literal["UniqueFunction", "Expression", "ModuleFunction"]
+    label:str
+    source:str  
     dirty:bool=True
+    fields: FieldsModel = field(default_factory=FieldsModel)
+      
 
 
 class NodesModel(QAbstractItemModel):
@@ -52,9 +67,9 @@ class NodesModel(QAbstractItemModel):
         if role==Qt.ItemDataRole.DisplayRole or role==Qt.ItemDataRole.EditRole:
             match index.column():
                 case 0:
-                    return item.name
+                    return item.label
                 case 1:
-                    return item.definition.data(Qt.ItemDataRole.DisplayRole)
+                    return ""# item.definition.data(Qt.ItemDataRole.DisplayRole)
                 case 2:
                     return f"{item.dirty}"
                 case 3:

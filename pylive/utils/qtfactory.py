@@ -169,3 +169,11 @@ def lineedit(contents="", /, placeholder="", onTextChanged:Callable|None=None)->
         lineedit.textChanged.connect(onTextChanged)
 
     return lineedit
+
+
+
+def menubar(actions:Sequence[QAction])->QMenuBar:
+    menubar = QMenuBar()
+    for action in actions:
+        menubar.addAction(action)
+    return menubar

@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import *
 from PySide6.QtCore import *
 from PySide6.QtGui import *
@@ -5,16 +6,20 @@ from PySide6.QtWidgets import *
 
 import inspect
 
+
 class PyFunctionsModel(QAbstractItemModel):
     ErrorRole = Qt.ItemDataRole.UserRole+1
     """Model for the detail view"""
     def __init__(self):
         super().__init__()
-        self._functions:list[Callable] = []
+        self._sources:list[str] = []
+
+        self./
+        self._cached_functions:dict[str, Callable] = dict()
         self._errors:dict[Callable, Exception] = dict()
 
     def rowCount(self, parent: QModelIndex|QPersistentModelIndex = QModelIndex()) -> int:
-        return len(self._functions)
+        return len(self._sources)
 
     def headerData(self, section: int, orientation: Qt.Orientation, role: int = Qt.ItemDataRole.DisplayRole) -> Any:
         if orientation == Qt.Orientation.Horizontal and role==Qt.ItemDataRole.DisplayRole:
@@ -26,29 +31,22 @@ class PyFunctionsModel(QAbstractItemModel):
         return 2
 
     def functionName(self, row:int):
-        if 0 <= row and row < len(self._functions):
-            func = self._functions[row]
+        if 0 <= row and row < len(self._sources):
+            func = self._sources[row]
             return func.__name__
 
     def functionSource(self, row:int):
-        if 0 <= row and row < len(self._functions):
-            func = self._functions[row]
-            try:
-                source = inspect.getsource(func)
-                from textwrap import dedent
-                return dedent(source)
-            except TypeError:
-                return None
-            except OSError:
-                return None
+            return self._sources[row]
 
     def setFunctionSource(self, row:int, source:str)->bool:
         capture = {'__builtins__':__builtins__}
         try:
             exec(source, capture)
         except SyntaxError as err:
+            print(f"SyntaxError: {err}")
             return False
         except Exception as err:
+            print(f"Exception occured: {err}")
             return False
 
         capture_functions:list[tuple[str, Callable]] = []
@@ -58,16 +56,15 @@ class PyFunctionsModel(QAbstractItemModel):
                     capture_functions.append( (name, attribute) )
 
         if len(capture_functions)!=1:
-            raise ValueError("")
+            return False
 
         name, func = capture_functions[0]
-        assert callable(func), f"got: {func}"
-
+        if not callable(func):
+            return False
 
         self._functions[row] = func
         self.dataChanged.emit(self.index(row, 0), self.index(row, 2))
         return True
-
 
     def functionError(self, row:int)->Exception|None:
         func = self._functions[row]
@@ -87,27 +84,43 @@ class PyFunctionsModel(QAbstractItemModel):
 
                     case Qt.ItemDataRole.DecorationRole:
                         func = self._functions[index.row()]
+                        QColor("red")
                         if func in self._errors:
-                            return QColor.red
+                            return QColor("red")
 
                     case Qt.ItemDataRole.UserRole:
                         func = self._functions[index.row()]
                         return func
 
             case 1: #source
+                print("!!!!!!!!!!!!!!!!!")
+                print(self._functions)
                 if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
                     return self.functionSource(index.row())
 
 
-
-
         return None
+
+    def parent(self, index: QModelIndex|QPersistentModelIndex) -> QModelIndex:
+        return QModelIndex()
 
     def setData(self, index: QModelIndex|QPersistentModelIndex, value:Any, role: int = Qt.ItemDataRole.DisplayRole) -> Any:
         if not index.isValid() or not 0 <= index.row() < len(self._functions):
             return False
         return False
 
+    def index(self, row: int, column: int, parent: QModelIndex|QPersistentModelIndex = QModelIndex()) -> QModelIndex:
+        if not self.hasIndex(row, column, parent):
+            return QModelIndex()
+        return self.createIndex(row, column)
+
+    def functionFromIndex(self, index:QModelIndex|QPersistentModelIndex)->Callable|None:
+        if index.isValid() and index.model() == self:
+            row = index.row()
+            if row>=0 and row < len(self._functions):
+                return self._functions[row]
+
+    ### 
     def insertFunction(self, row:int, func:Callable):
         assert isinstance(row, int)
         assert callable(func)
@@ -116,23 +129,15 @@ class PyFunctionsModel(QAbstractItemModel):
         self.endInsertRows()
         return True
 
-    def functionFromIndex(self, index:QModelIndex|QPersistentModelIndex)->Callable|None:
-        if index.isValid() and index.model() == self:
-            row = index.row()
-            if row>=0 and row < len(self._functions):
-                return self._functions[row]
-
     def insertRows(self, row: int, count: int, parent: QModelIndex | QPersistentModelIndex = QModelIndex()) -> bool:
-        raise ValueError("cannot add empty rows")
-        return False
-
-    def index(self, row: int, column: int, parent: QModelIndex|QPersistentModelIndex = QModelIndex()) -> QModelIndex:
-        if not self.hasIndex(row, column, parent):
-            return QModelIndex()
-        return self.createIndex(row, column)
-
-    def parent(self, index: QModelIndex|QPersistentModelIndex) -> QModelIndex:
-        return QModelIndex()
+        assert isinstance(row, int)
+        def func():
+            ...
+        assert callable(func)
+        self.beginInsertRows(QModelIndex(), row, row+count-1)
+        self._functions[row:row] = [func for _ in range(count)]
+        self.endInsertRows()
+        return True
 
     def removeRows(self, row:int, count:int, parent=QModelIndex()):
         """Removes rows from the model."""
@@ -140,7 +145,7 @@ class PyFunctionsModel(QAbstractItemModel):
             return False
 
         self.beginRemoveRows(parent, row, row + count - 1)
-        for row in range(row+count-1, row, -1):
+        for row in reversed(range(row, row+count)):
             del self._functions[row]
         self.endRemoveRows()
         return True
@@ -186,6 +191,7 @@ if __name__ == "__main__":
     selection.currentChanged.connect(show_source_in_editor)
 
     def set_current_source():
+        print("set current source")
         new_source = function_editor.toPlainText()
         current = selection.currentIndex().siblingAtColumn(1)
         model.setFunctionSource(current.row(), new_source)

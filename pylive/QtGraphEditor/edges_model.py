@@ -145,12 +145,9 @@ class EdgesModel(QAbstractItemModel):
         if edge.target.model() != self._related_nodes:
             return False
 
-        print("add edge")
-
         parent = QModelIndex()
         row = self.rowCount()
         count=1
-        print("beginInsertRows", row, row + count - 1)
         self.beginInsertRows(parent, row, row + count - 1)
         for _ in range(count):
             source = QPersistentModelIndex(edge.source)
@@ -165,8 +162,7 @@ class EdgesModel(QAbstractItemModel):
             return False
 
         self.beginRemoveRows(parent, row, row + count - 1)
-        for row in range(row+count-1, row, -1):
-            edge = self._edges[row]
+        for row in reversed(range(row, row+count)):
             del self._edges[row]
         self.endRemoveRows()
         return True

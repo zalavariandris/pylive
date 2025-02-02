@@ -136,9 +136,8 @@ class FieldsModel(QAbstractItemModel):
         if row < 0 or row + count > len(self._fields):
             return False
 
-        self.beginRemoveRows(parent, row, row + count - 1)
+        self.beginRemoveRows(parent, row, row + count-1)
         for row in reversed(range(row, row+count)):
-            print(f"del, field at: {row}")
             del self._fields[row]
         self.endRemoveRows()
         return True

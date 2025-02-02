@@ -51,7 +51,6 @@ class QGraphEditorDelegate(QObject):
         labelitem.setParentItem(node)
         node.setGeometry(QRectF(0, 0, labelitem.textWidth(),20))
         node.scenePositionChanged.connect(lambda node=node: self.nodePositionChanged.emit(node))
-        print("node editor created")
         return node
 
     def updateNodeEditor(self, node_idx:QModelIndex|QPersistentModelIndex, editor:'BaseNodeItem')->None:
@@ -60,7 +59,6 @@ class QGraphEditorDelegate(QObject):
     def createEdgeEditor(self, edge_idx:QModelIndex|QPersistentModelIndex)->BaseLinkItem:
         link = RoundedLinkShape(f"{edge_idx.data(Qt.ItemDataRole.EditRole)}", orientation=Qt.Orientation.Horizontal)
         link.setZValue(-1)
-        print("create edge editor")
         return link
 
     def updateEdgeEditor(self, edge_idx:QModelIndex|QPersistentModelIndex, editor:'BaseLinkItem')->None:

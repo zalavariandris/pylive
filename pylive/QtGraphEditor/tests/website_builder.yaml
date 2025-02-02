@@ -1,0 +1,30 @@
+definitions:
+- |
+  def read_text(path:str)->str:
+    from pathlib import Path
+    return Path(path).read_text()
+- |
+  def markdown_to_html(md:str)->str:
+    return "HTML" + md
+
+nodes:
+- kind: UniqueFunction
+  label: "#read_abstract"
+  source: |
+    def read_text(path:str)->str:
+      from pathlib import Path
+      return Path(path).read_text()
+  fields:
+    path: "index.html"
+
+- kind: UniqueFunction
+  label: "#parse_abstract"
+  source: |
+    def markdown_to_html(md:str)->str:
+      return "HTML" + md
+
+edges:
+  - source: "#read_abstract"
+    target: "#parse_abstract"
+    inlet: md
+
