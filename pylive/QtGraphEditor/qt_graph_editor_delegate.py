@@ -22,7 +22,15 @@ class StandardNodeItem(BaseNodeItem):
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
         self.setAcceptHoverEvents(True)
 
-    def paint(self, painter, option, widget=None):
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
+        
+        self._heading_label = QGraphicsTextItem(f"Heading")
+        self._heading_label.setPos(0,-2)
+        self._heading_label.setParentItem(self)
+        self._heading_label.adjustSize()
+        self.setGeometry(QRectF(0, 0, self._heading_label.textWidth(),20))
+
+    def paint(self, painter, option:QStyleOption, widget=None):
         rect = self.geometry()
 
         pen = painter.pen()
@@ -34,6 +42,12 @@ class StandardNodeItem(BaseNodeItem):
         rect.moveTo(QPoint(0,0))
         painter.drawRoundedRect(rect, 6,6)
 
+    def setHeading(self, text:str):
+        self._heading_label.setPlainText(text)
+        self._heading_label.adjustSize()
+        self.setPreferredSize(self._heading_label.textWidth(),20)
+        self.adjustSize()
+
 
 class QGraphEditorDelegate(QObject):
     """Any QGraphicsItem can be used as a node or an edge graphics
@@ -41,20 +55,15 @@ class QGraphEditorDelegate(QObject):
     updateLinkPosition will be called when a linked node position changed"""
 
     nodePositionChanged = Signal(QGraphicsItem)
-    def createNodeEditor(self, node_idx:QModelIndex|QPersistentModelIndex)->BaseNodeItem:
+    def createNodeEditor(self, index:QModelIndex|QPersistentModelIndex)->BaseNodeItem:
         node = StandardNodeItem()
-        node.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
-        
-        labelitem = QGraphicsTextItem(f"{node_idx.data(Qt.ItemDataRole.DisplayRole)}")
-        labelitem.adjustSize()
-        labelitem.setPos(0,-2)
-        labelitem.setParentItem(node)
-        node.setGeometry(QRectF(0, 0, labelitem.textWidth(),20))
+        node.setHeading(f"{index.data(Qt.ItemDataRole.DisplayRole)}")
         node.scenePositionChanged.connect(lambda node=node: self.nodePositionChanged.emit(node))
         return node
 
-    def updateNodeEditor(self, node_idx:QModelIndex|QPersistentModelIndex, editor:'BaseNodeItem')->None:
-        ...
+    def updateNodeEditor(self, index:QModelIndex|QPersistentModelIndex, editor:'BaseNodeItem')->None:
+        editor = cast(StandardNodeItem, editor)
+        editor.setHeading( index.data(Qt.ItemDataRole.DisplayRole) )
 
     def createEdgeEditor(self, edge_idx:QModelIndex|QPersistentModelIndex)->BaseLinkItem:
         link = RoundedLinkShape(f"{edge_idx.data(Qt.ItemDataRole.EditRole)}", orientation=Qt.Orientation.Horizontal)

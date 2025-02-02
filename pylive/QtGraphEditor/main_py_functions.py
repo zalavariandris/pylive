@@ -4,6 +4,7 @@ from typing import *
 from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
+from networkx import reverse
 
 
 # from pylive.QtGraphEditor.definitions_model import DefinitionsModel
@@ -17,7 +18,7 @@ from pylive.components.qt_options_dialog import QOptionDialog
 
 # from pylive.QtGraphEditor.py_functions_model import PyFunctionsModel
 from pylive.QtGraphEditor.fields_model import FieldsModel, FieldItem
-from pylive.QtGraphEditor.nodes_model import NodesModel, NodeItem, UniqueFunctionItem
+from pylive.QtGraphEditor.nodes_model import NodesModel, UniqueFunctionItem
 from pylive.QtGraphEditor.edges_model import EdgesModel, EdgeItem
 
 from pylive.utils.unique import make_unique_id, make_unique_name
@@ -95,8 +96,6 @@ class Window(QWidget):
         inspector_layout.addLayout(button_layout)
         help_label = QLabel("Help")
         node_function_source_editor = ScriptEdit()
-        # definition_editor.setSizeAdjustPolicy(QScrollArea.SizeAdjustPolicy.AdjustToContents)
-        # definition_editor.setMaximumSize(QSize(256,256))
         inspector_layout.addWidget(node_function_source_editor)
         inspector_layout.addWidget(help_label)
         self.node_inspector.setLayout(inspector_layout)
@@ -116,10 +115,17 @@ class Window(QWidget):
                 selected_rows = list(set(_.row() for _ in property_editor.selectedIndexes()))
                 for row in sorted(selected_rows, reverse=True):
                     node_item.fields.removeRows(row, 1)
-
-
         delete_button.clicked.connect(lambda: delete_fields())
 
+        def update_source():
+            current_node_index = self.node_selection.currentIndex()
+            if self.node_selection.hasSelection() and current_node_index.isValid():
+                new_source = node_function_source_editor.toPlainText()
+                self.nodes.setUniqueFunctionSource(current_node_index, new_source)
+                print("set source")
+
+        
+        node_function_source_editor.textChanged.connect(update_source)
         def show_node_inspector():
             current_node_index = self.node_selection.currentIndex()
             if self.node_selection.hasSelection() and current_node_index.isValid():
@@ -134,18 +140,26 @@ class Window(QWidget):
                     node_function_source_editor.setPlainText(source)
                 else:
                     node_function_source_editor.setPlainText("")
+                self.nodes.dataChanged.connect(print)
+
             else:
                 self.node_inspector.hide()
                 property_editor.setModel(None)
+                self.nodes.dataChanged.connect(print)
 
         self.node_selection.currentChanged.connect(show_node_inspector)
         self.node_selection.selectionChanged.connect(show_node_inspector)
 
+
+        self.node_selection.currentChanged.connect(self.evaluate)
+        self.node_selection.selectionChanged.connect(self.evaluate)
+
+        self.nodes.dataChanged.connect(self.evaluate)
+
         ### PREVIEW WIDGET
-        self.preview = QWidget()
-        preview_layout = QVBoxLayout()
-        preview_layout.addWidget(QLabel("Preview Area"), alignment=Qt.AlignmentFlag.AlignCenter)
-        self.preview.setLayout(preview_layout)
+        self.preview = QLabel("Preview Label")
+        self.preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        # self.preview.setWordWrapMode(QTextOption.WrapMode.WrapAtWordBoundaryOrAnywhere)
 
         ### STATUS BAR WIDGET
         self.statusbar = QStatusBar()
@@ -221,8 +235,13 @@ class Window(QWidget):
     def eventFilter(self, watched, event):
         if watched == self.graph_view:
             if event.type() == QEvent.Type.MouseButtonDblClick:
-                self.create_new_node()
+
+                event = cast(QMouseEvent, event)
+                mouse_pos = event.pos()
+                scene_pos = self.graph_view.mapToScene(mouse_pos)
+                self.create_new_node(scene_pos)
                 return True
+
 
         return super().eventFilter(watched, event)
 
@@ -275,24 +294,7 @@ class Window(QWidget):
         import yaml
         data = yaml.load(text, Loader=yaml.SafeLoader)
 
-        def parse_python_function(code:str)->tuple[str, Callable]:
-            import inspect
-            capture = {'__builtins__':__builtins__}
-            try:
-                exec(code, capture)
-            except SyntaxError as err:
-                raise err
-            except Exception as err:
-                raise err
-            functions:list[tuple[str, Callable]] = []
-            for name, attribute in capture.items():
-                if name!='__builtins__':
-                    if callable(attribute) and not inspect.isclass(attribute):
-                        functions.append( (name, attribute) )
-
-            if len(functions)!=1:
-                raise ValueError("")
-            return functions[0]
+        
 
         # Clear and load data into the new model!
         ### create definition items
@@ -331,7 +333,8 @@ class Window(QWidget):
                     kind="UniqueFunction",
                     label=node['label'],
                     source= node['source'],
-                    fields = fields_model
+                    fields = fields_model,
+                    dirty = True
                 )
             )
             if node['label'].startswith("#"):
@@ -360,97 +363,86 @@ class Window(QWidget):
     def serialize(self)->str:
         import yaml
         return yaml.dump({
-            'definitions': self.definitions,
+            'nodes': [],
+            'edges': []
         })
 
     @Slot()
     def saveFile(self):
         ...
 
+    def _evaluate_node(self, node_index:QModelIndex|QPersistentModelIndex):
+        from pylive.utils.evaluate_python import parse_python_function, call_function_with_stored_args
+        node_item = self.nodes.nodeItem(node_index.row())
+        assert node_item.kind == "UniqueFunction"
+        node_item = cast(UniqueFunctionItem, node_item)
+        """recursively evaluate nodes, from top to bottom"""
+        ### load arguments achestors
+        kwargs = dict()
+        inputs = [_ for _ in self.edges.inputs(node_index)]
+        print("in edges:", inputs)
+        for source_node_index, inlet in self.edges.inputs(node_index):
+            print(f"EVALUATE SOURCE {inlet}: {source_node_index}")
+            kwargs[inlet] = self._evaluate_node(source_node_index)
+            
+
+        ### load arguments from fields
+        for row in range(node_item.fields.rowCount()):
+            field_item = node_item.fields.fieldItem(row)
+            if field_item.name in kwargs:
+                continue # skip connected fields
+            
+            kwargs[field_item.name] = field_item.value
+
+        print("_evaluate", node_index, kwargs)
+        # evaluate functions with 
+        func_name, func = parse_python_function(node_item.source)
+        result = call_function_with_stored_args(func, kwargs)
+        return result
+
     @Slot()
-    def create_new_node(self):
+    def evaluate(self)->bool:
+        current_node_index = self.node_selection.currentIndex()
+        if not current_node_index.isValid():
+            return True
+
+        try:
+            result = self._evaluate_node(current_node_index)
+            self.preview.setText(str(result))
+            self.preview.setStyleSheet("")
+        except SyntaxError as err:
+            self.preview.setText(str(err))
+            self.preview.setStyleSheet("color: red")
+            return False
+        except Exception as err:
+            self.preview.setText(str(err))
+            self.preview.setStyleSheet("color: red")
+            return False
+
+        return True
+
+    @Slot()
+    def create_new_node(self, position:QPointF=QPointF()):
         dialog = QDialog()
         dialog.setWindowTitle("Create Node")
         dialog.setModal(True)
         layout = QVBoxLayout()
 
         ## popup definition selector
-        dialog = QOptionDialog(self.definitions)
-        dialog.setAllowEmptySelection(True)
-        result = dialog.exec() # consider using open and the finished signal
-        print(result)
-        if result == QDialog.DialogCode.Accepted:
-            selected_definition_index = dialog.selectedOption()
-            if selected_definition_index.isValid():
-                definition_name = selected_definition_index.data(Qt.ItemDataRole.DisplayRole)
-                all_node_names = [self.nodes.nodeItem(row).name for row in range(self.nodes.rowCount())]
-                print(selected_definition_index)
-                node_item = NodeItem(
-                    name = make_unique_name(f"{definition_name}1", all_node_names), 
-                    definition=QPersistentModelIndex(selected_definition_index), 
-                    fields=FieldsModel(), 
-                    dirty=True
-                )
-                self.nodes.addNodeItem(node_item)
-            else:
-                from textwrap import dedent
+        self.nodes.addNodeItem(UniqueFunctionItem(
+            kind="UniqueFunction",
+            label="new node",
+            fields=FieldsModel(),
+            source="""def func():\n  ...""",
+            dirty=True
+        ))
 
-                new_definition_name = dialog.filterText()
-                assert new_definition_name not in [self.definitions.index(row, 0).data(Qt.ItemDataRole.DisplayRole) for row in range(self.definitions.rowCount())]
-                source  = dedent(f"""\
-                def {new_definition_name}():
-                  ...
-                """)
-                definition_item = DefinitionItem(new_definition_name, source, None)
-                row = self.definitions.rowCount()
-                self.definitions.insertDefinitionItem(row, definition_item)
-                new_definition_index = self.definitions.index(row, 0)
-                assert new_definition_index.isValid()
-
-                all_node_names = [self.nodes.nodeItem(row).name for row in range(self.nodes.rowCount())] 
-                node_item = NodeItem(
-                    make_unique_name(f"{new_definition_name}1", all_node_names), 
-                    QPersistentModelIndex(new_definition_index), 
-                    FieldsModel(), 
-                    dirty=True
-                )
-                self.nodes.addNodeItem(node_item)
-                print("create new definition", dialog.filterText())
-
-
-        """Static method to open dialog and return selected option."""
-        # options_model = QStringListModel([f"{item}" for item in options])
-        # dialog = QOptionDialog(options_model, parent=parent)
-        # result = dialog.exec()
-        # if result == QDialog.DialogCode.Accepted:
-        #     indexes = dialog._listview.selectedIndexes()
-        #     return indexes[0].data()
-        # else:
-        #     return None
-
-        # ###
-        # if self.definitions.rowCount()==0:
-        #     QMessageBox.warning(self, "No definions!", "Please create function definitions!")
-        #     return
-
-        # from itertools import chain
-        # # node_name, accepted =  QOptionDialog.getItem(self , "Title", "label", ['print', "write"], 0, editable=True)
-        # definitions = dict()
-        # for row in range(self.definitions.rowCount()):
-        #     definition_index = self.definitions.index(row, 0)
-        #     name = definition_index.data(Qt.ItemDataRole.DisplayRole)
-        #     func = definition_index.data(self.DefinitionFunctionRole)
-        #     definitions[name]  = definition_index
-       
-        # definition_key, accepted =  QOptionDialog.getItem(self , "Title", "label", [_ for _ in definitions.keys()] , 0)
-        # if definition_key and accepted:
-        #     from pylive.utils.unique import make_unique_name
-        #     node_names = [self.nodes.data(self.nodes.index(row, 0), Qt.ItemDataRole.DisplayRole) for row in  range(self.nodes.rowCount())]
-        #     node_key = make_unique_name(f"{definition_key}1", node_names)
-        #     item = QStandardItem()
-        #     item.setData(f"{node_key}", Qt.ItemDataRole.DisplayRole)
-        #     item.setData(definitions[definition_key], self.NodeDefinitionRole)
-        #     self.nodes.insertRow(self.nodes.rowCount(), item)
+        #
+        node_index = self.nodes.index(self.nodes.rowCount()-1, 0)
+        scene = cast(QGraphEditorScene, self.graph_view.scene())
+        node_graphics_item = scene.nodeGraphicsObject(node_index)
+        if node_graphics_item := scene.nodeGraphicsObject(node_index):
+            node_graphics_item.setPos(position)
 
     @Slot()
     def delete_selected_nodes(self):

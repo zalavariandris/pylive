@@ -43,3 +43,23 @@ def call_function_with_stored_args(func: Callable, stored_args: Dict[str, Any]) 
                 kw_args[param_name] = stored_args[param_name]
     
     return func(*pos_args, **kw_args)
+
+
+def parse_python_function(code:str)->tuple[str, Callable]:
+    import inspect
+    capture = {'__builtins__':__builtins__}
+    try:
+        exec(code, capture)
+    except SyntaxError as err:
+        raise err
+    except Exception as err:
+        raise err
+    functions:list[tuple[str, Callable]] = []
+    for name, attribute in capture.items():
+        if name!='__builtins__':
+            if callable(attribute) and not inspect.isclass(attribute):
+                functions.append( (name, attribute) )
+
+    if len(functions)!=1:
+        raise ValueError("")
+    return functions[0]

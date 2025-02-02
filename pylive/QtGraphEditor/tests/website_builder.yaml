@@ -15,7 +15,7 @@ nodes:
       from pathlib import Path
       return Path(path).read_text()
   fields:
-    path: "index.html"
+    path: "./tests/website_builder.yaml"
 
 - kind: UniqueFunction
   label: "#parse_abstract"
