@@ -80,8 +80,16 @@ class NodesModel(QAbstractItemModel):
             elif role==Qt.ItemDataRole.EditRole:
                 return item.source
 
-
         return None
+
+    def mimeData(self, indexes: Sequence[QModelIndex]) -> QMimeData:
+        mimeData = QMimeData()
+        data = QByteArray()
+        for index in indexes:
+            if index.isValid():
+                data.append(str(index.row()).encode() + b",")  # Convert data to string
+        mimeData.setData("application/node_row", data)
+        return mimeData
 
     def setUniqueFunctionSource(self, index:QModelIndex, source:str):
         row = index.row()

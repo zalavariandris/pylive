@@ -122,7 +122,6 @@ class Window(QWidget):
             if self.node_selection.hasSelection() and current_node_index.isValid():
                 new_source = node_function_source_editor.toPlainText()
                 self.nodes.setUniqueFunctionSource(current_node_index, new_source)
-                print("set source")
 
         
         node_function_source_editor.textChanged.connect(update_source)
@@ -142,12 +141,12 @@ class Window(QWidget):
                     node_function_source_editor.setPlainText(source)
                 else:
                     node_function_source_editor.setPlainText("")
-                self.nodes.dataChanged.connect(print)
+                # self.nodes.dataChanged.connect(print)
 
             else:
                 self.node_inspector.hide()
                 property_editor.setModel(None)
-                self.nodes.dataChanged.connect(print)
+                # self.nodes.dataChanged.connect(print)
 
         self.node_selection.currentChanged.connect(show_node_inspector)
         self.node_selection.selectionChanged.connect(show_node_inspector)

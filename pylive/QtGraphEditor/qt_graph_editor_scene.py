@@ -313,62 +313,25 @@ class QGraphEditorScene(QGraphicsScene):
         if editor:=self._link_graphics_objects.get(edge_idx):
             return cast(BaseLinkItem, editor)
 
-    def edgeSourceGraphicsObject(self, edge_idx):
-        ...
-
-    def edgeTargetGraphicsObject(self, edge_idx):
-        ...
-
-    def inEdgeGraphicsObjects(self, node_idx):
-        ...
-
-    def outEdgeGraphicsobject(self, node_idx):
-        ...
-
-    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
-        match event.type():
-            case QEvent.Type.GraphicsSceneMouseMove:
-                event = cast(QGraphicsSceneMouseEvent, event)
-                self._delegate.updateLinkPosition(self._draft, QPointF(0,0), event.scenePos())
-                return True
-            case QEvent.Type.GraphicsSceneMouseRelease:
-                self._link_loop.exit()
-                return True
-            case _:
-                pass
-        return super().eventFilter(watched, event)
-
-    def startEdge(self, supportedActions):
-        """ Initiate the drag operation """
-        index = self.currentIndex()
-        if not index.isValid():
-            return
-
-        mimeData = self.model().mimeData([index])
-        drag = QDrag(self)
-        drag.setMimeData(mimeData)
-        
-        # Execute drag
-        if drag.exec(Qt.MoveAction) == Qt.MoveAction:
-            self.model().removeRow(index.row())  # Remove item after move
-
-    def nodeAt(self, position: QPointF) -> QPersistentModelIndex | None:
+    def nodeIndexAt(self, position: QPointF) -> QModelIndex:
+        assert self._nodes
         for item in self.items(position, deviceTransform=QTransform()):
             try:
-                node_id =  self._node_graphics_objects.inverse[item]
-                return node_id
+                node_id:QPersistentModelIndex =  self._node_graphics_objects.inverse[item]
+                return self._nodes.index(node_id.row(), 0)
             except KeyError:
                 continue
-        return
+        return self._nodes.index(-1, 0)
 
-    def edgeAt(self, position: QPointF) -> QPersistentModelIndex | None:
+    def edgeIndexAt(self, position: QPointF) -> QModelIndex:
+        assert self._edges
         for item in self.items(position, deviceTransform=QTransform()):
             try:
-                edge_id =  self._link_graphics_objects.inverse[item]
-                return edge_id
+                edge_id:QPersistentModelIndex =  self._link_graphics_objects.inverse[item]
+                return self._edges.index(edge_id.row(), 0)
             except KeyError:
                 continue
-        return
+        return self._edges.index(-1, 0)
 
     def layout(self):
         assert self._nodes
@@ -390,25 +353,82 @@ class QGraphEditorScene(QGraphicsScene):
             widget = self._node_graphics_objects[N]
             widget.setPos(y, x)
 
-    # @override
-    # def sendEvent(self, item:QGraphicsItem, event:QEvent)->bool:
-    #     print("send event")
-    #     return super().sendEvent(item, event)
+    """DRAG AND DROP"""
+    # def eventFilter(self, watched: QObject, event: QEvent) -> bool:
+    #     match event.type():
+    #         case QEvent.Type.GraphicsSceneMouseMove:
+    #             event = cast(QGraphicsSceneMouseEvent, event)
+    #             self._delegate.updateLinkPosition(self._draft, QPointF(0,0), event.scenePos())
+    #             return True
+    #         case QEvent.Type.GraphicsSceneMouseRelease:
+    #             self._link_loop.exit()
+    #             return True
+    #         case _:
+    #             pass
+    #     return super().eventFilter(watched, event)
 
-    # def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
-    #     if outlet_id:=self.outletAt(event.scenePos()):
-    #         node_id, outlet_key = outlet_id
-    #         self.tool = NXNetworkLinkTool(self)
-    #         self.tool.startFromOutlet(node_id, outlet_key)
-    #     elif inlet_id:=self.inletAt(event.scenePos()):
-    #         node_id, inlet_key = inlet_id
-    #         self.tool = NXNetworkLinkTool(self)
-    #         self.tool.startFromInlet(node_id, inlet_key)
-    #     elif node_id:=self.nodeAt(event.scenePos()):
-    #         super().mousePressEvent(event)
-    #     elif edge_id:=self.edgeAt(event.scenePos()):
-    #         super().mousePressEvent(event)
+    def startDrag(self, supportedActions=[]):
+        """ Initiate the drag operation """
+        assert self._node_selection
+        assert self._nodes
+        index = self._node_selection.currentIndex()
+        if not index.isValid():
+            return
 
+        mimeData = self._nodes.mimeData([index])
+        drag = QDrag(self)
+        drag.setMimeData(mimeData)
+
+        self._draft_link = self._delegate.createEdgeEditor(QModelIndex())
+        self.addItem(self._draft_link)
+        
+        # Execute drag
+        if drag.exec(Qt.DropAction.LinkAction) == Qt.DropAction.LinkAction:
+            print("drop")
+            # self.model().removeRow(index.row())  # Remove item after move
+
+    def dragEnterEvent(self, event):
+        """ Accept drag events """
+        if event.mimeData().hasText():
+            event.acceptProposedAction()
+
+    def dragMoveEvent(self, event):
+        assert self._nodes
+        target_index = self.nodeIndexAt(event.scenePos())
+
+        def source_row_from_mime(mimeData)->int:
+            mimeData = event.mimeData()
+            if mimeData.hasFormat("application/node_row"):
+                data = mimeData.data("application/node_row")  # Get QByteArray
+                text = bytes(data).decode("utf-8").strip(",")  # Convert to string and remove trailing comma
+                rows = [int(row) for row in text.split(",") if row]  # Convert back to integers
+                return rows[0]
+            return -1
+
+        source_row = source_row_from_mime(event.mimeData())
+        source_index = self._nodes.index(source_row, 0)
+        source_widget=self.nodeGraphicsObject(source_index)
+
+        target_widget = self.nodeGraphicsObject(target_index)
+
+        if source_widget and target_widget:
+            self._delegate.updateLinkPosition(self._draft_link, source_widget, target_widget)
+            event.acceptProposedAction()
+            return
+        elif source_widget:
+            print("no item")
+            self._delegate.updateLinkPosition(self._draft_link, source_widget, event.scenePos())
+
+    def dropEvent(self, event):
+        node_index = self.nodeIndexAt(event.scenePos())
+        if node_index.isValid():
+            if target_graphics_object := self.nodeGraphicsObject(node_index):
+                self._delegate.updateLinkPosition(self._draft_link, QPointF(), target_graphics_object)
+                event.acceptProposedAction()
+                return
+        print("no item")
+        self._delegate.updateLinkPosition(self._draft_link, QPointF(), event.scenePos())
+        
 
 if __name__ == "__main__":
     app = QApplication()

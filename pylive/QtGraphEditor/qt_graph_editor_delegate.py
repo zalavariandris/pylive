@@ -163,7 +163,7 @@ class QGraphEditorDelegate(QObject):
             
         node_widget.insertOutlet(0, "out")
 
-        node_widget.pressed.connect(lambda: parent.startEdge())
+        node_widget.pressed.connect(lambda: parent.startDrag())
 
         # node_widget.installEventFilter(self)
 
