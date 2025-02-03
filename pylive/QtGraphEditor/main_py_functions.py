@@ -234,8 +234,6 @@ class Window(QWidget):
         main_layout.setMenuBar(menubar)
         self.setLayout(main_layout)
 
-    
-
     def sizeHint(self):
         return QSize(2048, 900) 
 

@@ -160,18 +160,59 @@ class QGraphEditorDelegate(QObject):
 
         for idx, inlet in enumerate(node_data_item.inlets()):
             node_widget.insertInlet(idx, inlet)
+            
         node_widget.insertOutlet(0, "out")
-        
-        def initiate_connection(graph_scene, node_index,  outlet_name):
-            graph_scene.initiateConnection(node_index, outlet_name)
 
-        node_widget.outletPressed.connect(lambda name, scene=parent, index=index: 
-            initiate_connection(scene, index, name) )
+        node_widget.pressed.connect(lambda: parent.startEdge())
+
+        # node_widget.installEventFilter(self)
+
+        # for port, _ in node_widget._inlets:
+        #     port.setAcceptDrops(True)
+        #     port.installEventFilter(self)
+        
+        # def initiate_connection(graph_scene, node_index,  outlet_name):
+        #     if graph_scene.views():
+        #         return
+
+        #     scene_view = graph_scene.views()[0]
+        #     drag = QDrag(scene_view)
+        #     drag.e
+        #     # mimeData = QMimeData()
+
+        #     # mimeDatamsetText(outlet_name);
+        #     # drag->setMimeData(mimeData);
+        #     # # graph_scene.initiateConnection(node_index, outlet_name)
+
+        # node_widget.outletPressed.connect(lambda name, scene=parent, index=index: 
+        #     initiate_connection(scene, index, name) )
             
         return node_widget
 
-    def nodeEditorEvent(self, event:QEvent, model:QAbstractItemModel, option:QStyleOptionViewItem, index:QModelIndex)->bool:
-        return False
+    # def nodeEditorEvent(self, event:QEvent, model:QAbstractItemModel, option:QStyleOptionViewItem, index:QModelIndex)->bool:
+    #     return False
+
+    # def eventFilter(self, watched: QObject, event: QEvent) -> bool:
+    #     if event.type() == QEvent.Type.GraphicsSceneMousePress:
+    #         print("event filter")
+    #         event = cast(QGraphicsSceneMouseEvent, event)
+    #         drag = QDrag(event.widget())
+    #         mime = QMimeData()
+    #         drag.setMimeData(mime)
+    #         app = QApplication.instance()
+    #         app.installEventFilter(drag)
+    #         drag.exec()
+    #         app.removeEventFilter(drag)
+    #         return True
+
+    #     elif event.type() == QEvent.Type.GraphicsSceneMouseMove:
+    #         print("move move")
+
+    #     elif event.type() == QEvent.Type.GraphicsSceneDragEnter:
+    #         print("drag enter")
+    #         return True
+
+    #     return super().eventFilter(watched, event)
 
     def updateNodeEditor(self, index:QModelIndex|QPersistentModelIndex, editor:'BaseNodeItem')->None:
         editor = cast(StandardNodeItem, editor)
