@@ -71,6 +71,7 @@ class QGraphEditorScene(QGraphicsScene):
         # self._inlet_graphics_objects: bidict[tuple[QPersistentModelIndex, str], QGraphicsItem] = bidict()
         
         self._draft_link: BaseLinkItem | None = None
+        self._link_loop = QEventLoop(self)
 
         # self._attribute_editors: bidict[tuple[QPersistentModelIndex, str], QGraphicsItem] = bidict()
 
@@ -194,7 +195,6 @@ class QGraphEditorScene(QGraphicsScene):
         self.layout()
 
     def _onEdgesReset(self):
-
         assert self._edges
         ### clear graph
         self._link_graphics_objects.clear()
@@ -212,7 +212,7 @@ class QGraphEditorScene(QGraphicsScene):
         for row in range(first, last+1):
             ### create node editor
             node_idx = self._nodes.index(row, 0)
-            if node_editor := self._delegate.createNodeEditor(node_idx):
+            if node_editor := self._delegate.createNodeEditor(self, node_idx):
                 persistent_node = QPersistentModelIndex(node_idx)
                 assert persistent_node.isValid(), "invalid persistent node?"
                 self._node_graphics_objects[persistent_node] = node_editor
@@ -324,6 +324,35 @@ class QGraphEditorScene(QGraphicsScene):
 
     def outEdgeGraphicsobject(self, node_idx):
         ...
+
+
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
+        match event.type():
+            case QEvent.Type.GraphicsSceneMouseMove:
+                event = cast(QGraphicsSceneMouseEvent, event)
+                self._delegate.updateLinkPosition(self._draft, QPointF(0,0), event.scenePos())
+                return True
+            case QEvent.Type.GraphicsSceneMouseRelease:
+                self._link_loop.exit()
+                return True
+            case _:
+                pass
+        return super().eventFilter(watched, event)
+
+    def initiateConnection(self, node_idx, outlet_name):
+        print("initiateConnection!!!!!!!!!")
+        self._draft = self._delegate.createEdgeEditor(QModelIndex())
+        
+        app = QApplication.instance()
+        assert isinstance(app, QGuiApplication)
+        self.direction = 'forward'
+
+        self.addItem(self._draft)
+        app.installEventFilter(self)
+        self._link_loop.exec()
+        app.removeEventFilter(self)
+        self._draft = None
+        
 
     def nodeAt(self, position: QPointF) -> QPersistentModelIndex | None:
         for item in self.items(position, deviceTransform=QTransform()):

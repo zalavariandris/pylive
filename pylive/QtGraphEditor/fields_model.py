@@ -126,7 +126,7 @@ class FieldsModel(QAbstractItemModel):
     def index(self, row: int, column: int, parent: QModelIndex|QPersistentModelIndex = QModelIndex()) -> QModelIndex:
         if not self.hasIndex(row, column, parent):
             return QModelIndex()
-        return self.createIndex(row, column)
+        return self.createIndex(row, column, self._fields[row])
 
     def parent(self, index: QModelIndex|QPersistentModelIndex) -> QModelIndex:
         return QModelIndex()

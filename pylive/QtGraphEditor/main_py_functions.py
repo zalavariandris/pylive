@@ -130,13 +130,15 @@ class Window(QWidget):
             current_node_index = self.node_selection.currentIndex()
             if self.node_selection.hasSelection() and current_node_index.isValid():
                 self.node_inspector.show()
+
+                
+                inspector_header_tile.setHeading(self.nodes.data(current_node_index, Qt.ItemDataRole.DisplayRole))
+                # inspector_header_tile.setSubHeading(f"{node_item.definition.data(Qt.ItemDataRole.DisplayRole)}")
                 node_item = self.nodes.nodeItemFromIndex(current_node_index)
                 assert node_item
-                inspector_header_tile.setHeading(f"{node_item.label}")
-                # inspector_header_tile.setSubHeading(f"{node_item.definition.data(Qt.ItemDataRole.DisplayRole)}")
-                property_editor.setModel(node_item.fields)
+                property_editor.setModel(node_item.fields())
 
-                if source:= node_item.source:
+                if source:= node_item.source():
                     node_function_source_editor.setPlainText(source)
                 else:
                     node_function_source_editor.setPlainText("")
@@ -232,21 +234,10 @@ class Window(QWidget):
         main_layout.setMenuBar(menubar)
         self.setLayout(main_layout)
 
-    def eventFilter(self, watched, event):
-        if watched == self.graph_view:
-            if event.type() == QEvent.Type.MouseButtonDblClick:
-
-                event = cast(QMouseEvent, event)
-                mouse_pos = event.pos()
-                scene_pos = self.graph_view.mapToScene(mouse_pos)
-                self.create_new_node(scene_pos)
-                return True
-
-
-        return super().eventFilter(watched, event)
+    
 
     def sizeHint(self):
-        return QSize(2048, 900)
+        return QSize(2048, 900) 
 
     def fileFilter(self):
         return ".yaml"
@@ -329,13 +320,7 @@ class Window(QWidget):
                     fields_model.insertFieldItem(row, field_item)
 
             self.nodes.addNodeItem(
-                UniqueFunctionItem(
-                    kind="UniqueFunction",
-                    label=node['label'],
-                    source= node['source'],
-                    fields = fields_model,
-                    dirty = True
-                )
+                UniqueFunctionItem(node['source'], fields_model)
             )
             if node['label'].startswith("#"):
                 _nodes_with_id[node['label']] = row
@@ -430,11 +415,7 @@ class Window(QWidget):
 
         ## popup definition selector
         self.nodes.addNodeItem(UniqueFunctionItem(
-            kind="UniqueFunction",
-            label="new node",
-            fields=FieldsModel(),
             source="""def func():\n  ...""",
-            dirty=True
         ))
 
         #

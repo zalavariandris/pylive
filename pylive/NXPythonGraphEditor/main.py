@@ -13,7 +13,7 @@ from pylive.NetworkXGraphEditor.nx_network_scene_delegate import NXNetworkSceneD
 
 from pylive.NetworkXGraphEditor.nx_node_inspector_view import NXNodeInspectorView
 
-from pylive.qt_options_dialog import QOptionDialog
+from pylive.components.qt_options_dialog import QOptionDialog
 from pylive.utils.unique import make_unique_name
 
 from pylive.utils import qtfactory as Q

@@ -8,41 +8,40 @@ from PySide6.QtWidgets import *
 
 from dataclasses import dataclass, field
 from pylive.QtGraphEditor.fields_model import FieldsModel
+from pylive.utils.evaluate_python import parse_python_function
 
 
-# class NodeItem(Protocol):
-#     kind: Literal["UniqueFunction", "Expression", "ModuleFunction"]
-#     label:str
-#     dirty:bool=True
-#     fields: FieldsModel = field(default_factory=FieldsModel)
-
-# @dataclass
-# class ExpressionItem(NodeItem):
-#     expression:str    
-
-# @dataclass
-# class ModuleFunctionItem(NodeItem):
-#     source:str
-#     module: str
-#     func: str 
-
-# @dataclass
-# class LocalFunctionItem:
-#     definition: QModelIndex
-
-@dataclass
+import inspect
 class UniqueFunctionItem:
-    kind: Literal["UniqueFunction", "Expression", "ModuleFunction"]
-    label:str
-    source:str  
-    dirty:bool
-    fields: FieldsModel
+    def __init__(self, source:str, fields:FieldsModel|None=None):
+        self._source = source
+        self._fields = fields or FieldsModel()
+        self._cached_func = None
+
+    def source(self):
+        return self._source
+
+    def func(self):
+        if not self._cached_func:
+            self._cached_func = parse_python_function(self._source)
+        return self._cached_func
+
+    def setSource(self, source:str):
+        self._source = source
+
+    def inlets(self)->Sequence[str]:
+        func = self.func()
+        sig = inspect.signature(func)
+        return tuple(_ for _ in sig.parameters)
+
+    def fields(self):
+        return self._fields
+
+    def kind(self):
+        return "UniqueFunction"
 
 
 class NodesModel(QAbstractItemModel):
-
-
-
     def __init__(self, parent: QObject|None=None) -> None:
         super().__init__(parent)
         self._nodes:list[UniqueFunctionItem] = []
@@ -58,7 +57,7 @@ class NodesModel(QAbstractItemModel):
             return super().headerData(section, orientation, role)
 
     def columnCount(self, parent: QModelIndex|QPersistentModelIndex = QModelIndex()) -> int:
-        return 2
+        return 1
 
     def data(self, index: QModelIndex|QPersistentModelIndex, role: int = Qt.ItemDataRole.DisplayRole) -> Any:
         if not index.isValid() or not 0 <= index.row() < len(self._nodes):
@@ -68,7 +67,7 @@ class NodesModel(QAbstractItemModel):
 
         if index.column()==0:
             if role==Qt.ItemDataRole.DisplayRole:
-                first_line = item.source.split("\n")[0]
+                first_line = item.source().split("\n")[0]
                 import re
                 pattern = r"def\s+(?P<func_name>\w+)\s*\("
                 match = re.search(pattern, first_line)
@@ -81,23 +80,13 @@ class NodesModel(QAbstractItemModel):
             elif role==Qt.ItemDataRole.EditRole:
                 return item.source
 
-            elif role==Qt.ItemDataRole.BackgroundRole:
-                return None if item.dirty else QColor("red")
-
-        elif index.column()==1:
-            if role==Qt.ItemDataRole.DisplayRole or role==Qt.ItemDataRole.EditRole:
-                return str(item.label)
-
-        elif index.column()==2:
-            if role==Qt.ItemDataRole.DisplayRole or role==Qt.ItemDataRole.EditRole:
-                return bool(item.dirty)
 
         return None
 
     def setUniqueFunctionSource(self, index:QModelIndex, source:str):
         row = index.row()
         node_item = self._nodes[row]
-        node_item.source = source
+        node_item.setSource(source)
         self.dataChanged.emit(
             index.siblingAtColumn(0), index.siblingAtColumn(0), 
             [
@@ -117,11 +106,11 @@ class NodesModel(QAbstractItemModel):
             if role==Qt.ItemDataRole.EditRole:
                 item.source = value
 
-        elif index.column()==1 and role==Qt.ItemDataRole.EditRole:
-            item.label = str(value)
+        # elif index.column()==1 and role==Qt.ItemDataRole.EditRole:
+        #     item.label = str(value)
 
-        elif index.column()==2 and role==Qt.ItemDataRole.EditRole:
-            item.dirty = bool(value)
+        # elif index.column()==2 and role==Qt.ItemDataRole.EditRole:
+        #     item.dirty = bool(value)
 
         return None
 
@@ -132,10 +121,7 @@ class NodesModel(QAbstractItemModel):
         self.beginInsertRows(parent, row, row + count - 1)
         for _ in range(count):
             node = UniqueFunctionItem(
-                kind="UniqueFunction",
-                label="",
                 source="""def func():/n  ...""",
-                dirty=True,
                 fields=FieldsModel()
             )
             self._nodes.append(node)
@@ -190,7 +176,7 @@ class NodesModel(QAbstractItemModel):
         if parent.isValid():
             return QModelIndex()
 
-        return self.createIndex(row, column)
+        return self.createIndex(row, column, self._nodes[row])
 
     def parent(self, index:QModelIndex|QPersistentModelIndex)->QModelIndex:
         return QModelIndex()  # No parent for this flat model
@@ -207,7 +193,7 @@ if __name__ == "__main__":
     list_view.setModel(model)
     add_field_action = QAction("add",window)
     def add_field():
-        model.insertNodeItem(0, NodeItem("new node", QPersistentModelIndex(), FieldsModel(), True))
+        model.insertNodeItem(0, UniqueFunctionItem("new node", QPersistentModelIndex(), FieldsModel(), True))
 
     add_field_action.triggered.connect(add_field)
     menubar = QMenuBar()
