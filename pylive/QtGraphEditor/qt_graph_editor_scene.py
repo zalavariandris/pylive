@@ -454,7 +454,15 @@ class QGraphEditorScene(QGraphicsScene):
         if not index.isValid():
             return
 
-        mimeData = self._nodes.mimeData([index])
+        def serializeCurrentRow(self)->QMimeData:
+            mimeData = QMimeData()
+            data = QByteArray()
+            for index in indexes:
+                if index.isValid():
+                    data.append(str(index.row()).encode() + b",")  # Convert data to string
+            mimeData.setData("application/node_row", data)
+            return mimeData
+            
         drag = QDrag(self)
         drag.setMimeData(mimeData)
 
@@ -468,35 +476,53 @@ class QGraphEditorScene(QGraphicsScene):
 
     def dragEnterEvent(self, event):
         """ Accept drag events """
+        print("drag enter")
         if event.mimeData().hasText():
             event.acceptProposedAction()
 
     def dragMoveEvent(self, event):
         assert self._nodes
+        print("drag move")
         target_index = self.nodeIndexAt(event.scenePos())
 
-        def source_row_from_mime(mimeData)->int:
+        def deserializeMimeData(mimeData)->list[int]:
             mimeData = event.mimeData()
             if mimeData.hasFormat("application/node_row"):
                 data = mimeData.data("application/node_row")  # Get QByteArray
                 text = bytes(data).decode("utf-8").strip(",")  # Convert to string and remove trailing comma
                 rows = [int(row) for row in text.split(",") if row]  # Convert back to integers
-                return rows[0]
-            return -1
+                return rows
+            return []
 
-        source_row = source_row_from_mime(event.mimeData())
-        source_index = self._nodes.index(source_row, 0)
-        source_widget=self.nodeWidget(source_index)
 
-        target_widget = self.nodeWidget(target_index)
+        # def source_row_from_mime(mimeData)->int:
+        #     if mimeData.hasFormat("application/node_row"):
+        #         data = mimeData.data("application/node_row")  # Get QByteArray
+        #         text = bytes(data).decode("utf-8").strip(",")  # Convert to string and remove trailing comma
+        #         rows = [int(row) for row in text.split(",") if row]  # Convert back to integers
+        #         return rows[0]
+        #     return -1
 
-        if source_widget and target_widget:
-            self._delegate.updateLinkPosition(self._draft_link, source_widget, target_widget)
-            event.acceptProposedAction()
-            return
-        elif source_widget:
-            print("no item")
-            self._delegate.updateLinkPosition(self._draft_link, source_widget, event.scenePos())
+
+        mime = deserializeMimeData(event.mimeData())
+        print(mime)
+
+
+        # source_row = source_row_from_mime(event.mimeData())
+        # source_index = self._nodes.index(source_row, 0)
+        # source_widget=self.nodeWidget(source_index)
+
+        # target_widget = self.nodeWidget(target_index)
+
+        # if source_widget and target_widget:
+        #     self._delegate.updateLinkPosition(self._draft_link, source_widget, target_widget)
+        #     event.acceptProposedAction()
+        #     return
+        # elif source_widget:
+        #     print("no item")
+        #     self._delegate.updateLinkPosition(self._draft_link, source_widget, event.scenePos())
+        # else:
+        #     raise ValueError()
 
     def dropEvent(self, event):
         node_index = self.nodeIndexAt(event.scenePos())
