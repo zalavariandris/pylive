@@ -17,6 +17,7 @@
 
 
 from typing import *
+from typing import override
 from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
@@ -50,6 +51,8 @@ from pylive.utils.unique import make_unique_id
 class QGraphEditorScene(QGraphicsScene):
     SourceRole = Qt.ItemDataRole.UserRole+1
     TargetRole = Qt.ItemDataRole.UserRole+2
+    InletsRole = Qt.ItemDataRole.UserRole+3
+    OutletsRole = Qt.ItemDataRole.UserRole+4
 
     def __init__(self, ):
         super().__init__()
@@ -66,6 +69,8 @@ class QGraphEditorScene(QGraphicsScene):
         # store model widget relations
         self._node_graphics_objects: bidict[QPersistentModelIndex, QGraphicsItem] = bidict()
         self._link_graphics_objects: bidict[QPersistentModelIndex, QGraphicsItem] = bidict()
+        self._inlet_graphics_objects: bidict[tuple[QPersistentModelIndex, object], QGraphicsItem] = bidict()
+        self._outlet_graphics_objects: bidict[tuple[QPersistentModelIndex, object], QGraphicsItem] = bidict()
         self._node_in_links:defaultdict[QGraphicsItem, list[QGraphicsItem]] = defaultdict(list) # Notes: store attached links, because the underlzing model has to find the relevant edges  and thats is O(n)
         self._node_out_links:defaultdict[QGraphicsItem, list[QGraphicsItem]] = defaultdict(list) # Notes: store attached links, because the underlzing model has to find the relevant edges  and thats is O(n)
         # self._outlet_graphics_objects: bidict[tuple[QPersistentModelIndex, str], QGraphicsItem] = bidict()
@@ -270,11 +275,29 @@ class QGraphEditorScene(QGraphicsScene):
     def addNodes(self, indexes:Iterable[QPersistentModelIndex]):
         assert self._nodes
         for node_index in indexes:
-            print(node_index)
             if node_editor := self._delegate.createNodeEditor(self, node_index):
                 assert node_index.isValid(), "invalid persistent node?"
                 self._node_graphics_objects[node_index] = node_editor
-                self.addItem( node_editor )
+
+                if inlets := node_index.data(self.InletsRole):
+                    assert isinstance(inlets, list)
+                    self._addInlets(node_index, inlets)
+
+                if outlets := node_index.data(self.OutletsRole):
+                    assert isinstance(outlets, list)
+                    self._addOutlets(node_index, outlets)
+                    
+    def _addInlets(self, node_index:QModelIndex|QPersistentModelIndex, inlets:list[Hashable]):
+        node_editor = self._node_graphics_objects[QPersistentModelIndex(node_index)]
+        for inlet in inlets:
+            if inlet_editor := self._delegate.createInletEditor(node_editor, node_index, inlet):
+                self._inlet_graphics_objects[(node_index, inlet)] = inlet_editor
+
+    def _addOutlets(self, node_index:QModelIndex|QPersistentModelIndex, outlets:list[Hashable]):
+        node_editor = self._node_graphics_objects[QPersistentModelIndex(node_index)]
+        for outlet in outlets:
+            if outlet_editor := self._delegate.createOutletEditor(node_editor, node_index, outlet):
+                self._outlet_graphics_objects[(node_index, outlet)] = outlet_editor
 
     def removeNodes(self, indexes:Iterable[QPersistentModelIndex]):
         assert self._nodes
@@ -421,8 +444,10 @@ class QGraphEditorScene(QGraphicsScene):
     #             pass
     #     return super().eventFilter(watched, event)
 
+
     def startDrag(self, supportedActions=[]):
         """ Initiate the drag operation """
+        print("start drag")
         assert self._node_selection
         assert self._nodes
         index = self._node_selection.currentIndex()
@@ -503,20 +528,14 @@ if __name__ == "__main__":
         row+=1
         item = QStandardItem()
         item.setData(f"node{row}", Qt.ItemDataRole.DisplayRole)
+        item.setData(["in1", "in2"], QGraphEditorScene.InletsRole)
+        item.setData(["out"], QGraphEditorScene.OutletsRole)
         nodes.insertRow(nodes.rowCount(), item)
 
     def delete_selected_nodes():
         indexes:list[QModelIndex] = node_selection.selectedRows(column=0)
         for index in sorted(indexes, key=lambda row:index.row(), reverse=True):
             nodes.removeRows(index.row(), 1)
-
-    def create_new_port():
-        current_node_index = node_selection.currentIndex()
-        if current_node_index.isValid():
-            item = QStandardItem()
-            item.setData(f"port({make_unique_id()})", Qt.ItemDataRole.DisplayRole)
-            node_item = nodes.item(current_node_index.row(), 0)
-            node_item.appendRow(item)
 
     def connect_selected_nodes():
         print("connect selected nodes")
@@ -573,8 +592,6 @@ if __name__ == "__main__":
     add_node_action.triggered.connect(create_new_node)
     delete_node_action = QAction("delete node", window)
     delete_node_action.triggered.connect(delete_selected_nodes)
-    add_port_action = QAction("add new port", window)
-    add_port_action.triggered.connect(create_new_port)
     connect_selected_nodes_action = QAction("connect selected nodes", window)
     connect_selected_nodes_action.triggered.connect(connect_selected_nodes)
     remove_edge_action = QAction("remove edge", window)
@@ -583,12 +600,12 @@ if __name__ == "__main__":
     layout_action.triggered.connect(graph_scene.layout)
 
     menubar = QMenuBar()
-    menubar.addAction(add_node_action)
-    menubar.addAction(delete_node_action)
-    menubar.addAction(add_port_action)
-    menubar.addAction(connect_selected_nodes_action)
-    menubar.addAction(remove_edge_action)
-    menubar.addAction(layout_action)
+    menu = menubar.addMenu("Actions")
+    menu.addAction(add_node_action)
+    menu.addAction(delete_node_action)
+    menu.addAction(connect_selected_nodes_action)
+    menu.addAction(remove_edge_action)
+    menu.addAction(layout_action)
 
     grid_layout = QGridLayout()
     grid_layout.setMenuBar(menubar)
@@ -600,3 +617,4 @@ if __name__ == "__main__":
     window.show()
 
     app.exec()
+

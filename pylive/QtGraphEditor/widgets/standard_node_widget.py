@@ -8,16 +8,14 @@ from pylive.QtGraphEditor.widgets.standard_port_widget import StandardPortWidget
 
 class StandardNodeWidget(BaseNodeItem):
     pressed = Signal()
-    inletPressed = Signal(str)
-    outletPressed = Signal(str)
     def __init__(self, parent:QGraphicsItem|None=None):
         super().__init__(parent=parent)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
 
         ### ports
-        self._inlets:list[tuple[StandardPortWidget, QMetaObject.Connection]] = []
-        self._outlets:list[tuple[StandardPortWidget, QMetaObject.Connection]] = []
+        self._inlets:list[StandardPortWidget] = []
+        self._outlets:list[StandardPortWidget] = []
         self.geometryChanged.connect(self._layout_ports)
         
         ### label
@@ -46,45 +44,42 @@ class StandardNodeWidget(BaseNodeItem):
         self.setPreferredSize(self._heading_label.textWidth(),20)
         self.adjustSize()
 
-    def insertInlet(self, idx, name):
-        item = StandardPortWidget(name, self)
-        connection = item.pressed.connect(lambda name=name: self.inletPressed.emit(name))
-        self._inlets.append( (item, connection) )
+    def insertInlet(self, idx:int, item:QGraphicsItem):
+        self._inlets.append( item )
+        item.setParentItem(self)
+        self._layout_ports()
+
+    def insertOutlet(self, idx, item:QGraphicsItem):
+        self._outlets.append( item )
+        item.setParentItem(self)
         self._layout_ports()
         
-    def removeInlet(self, idx:int):
-        item, connection = self._inlets[idx]
-        item.pressed.disconnect(connection)
+    def takeInlet(self, idx:int)->QGraphicsItem:
+        item, = self._inlets[idx]
         if scene:=item.scene():
             scene.removeItem(item)
         del self._inlets[idx]
-
-    def insertOutlet(self, idx, name):
-        item = StandardPortWidget(name, self)
-        connection = item.pressed.connect(lambda name=name: self.outletPressed.emit(name))
-        self._outlets.append( (item, connection) )
-        self._layout_ports()
+        return item
         
-    def removeOutlet(self, idx:int):
-        item, connection = self._outlets[idx]
-        item.pressed.disconnect(connection)
+    def takeOutlet(self, idx:int):
+        item = self._outlets[idx]
         if scene:=item.scene():
             scene.removeItem(item)
         del self._outlets[idx]
+        return item
 
     def _layout_ports(self):
-        for item, connection in self._inlets:
+        for item in self._inlets:
             item.setPos(0, -4)
-        distribute_items_horizontal([item for item, _ in self._inlets], self.boundingRect().adjusted(6,0,-6,0))
+        distribute_items_horizontal([item for item in self._inlets], self.boundingRect().adjusted(6,0,-6,0))
         
-        for item, connection in self._outlets:
+        for item in self._outlets:
             item.setPos(0, self.geometry().height()+4)
-        distribute_items_horizontal([item for item, _ in self._outlets], self.boundingRect().adjusted(6,0,-6,0))
+        distribute_items_horizontal([item for item in self._outlets], self.boundingRect().adjusted(6,0,-6,0))
         
     def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         self.pressed.emit()
         return super().mousePressEvent(event)
-
 
 if __name__ == "__main__":
     app = QApplication()

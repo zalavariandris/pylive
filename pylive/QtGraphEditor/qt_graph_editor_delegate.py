@@ -17,6 +17,7 @@ from pylive.NetworkXGraphEditor.nx_network_model import (
 from pylive.QtGraphEditor.nodes_model import UniqueFunctionItem
 from pylive.QtGraphEditor.fields_model import FieldItem
 from pylive.QtGraphEditor.widgets.standard_node_widget import StandardNodeWidget
+from pylive.QtGraphEditor.widgets.standard_port_widget import StandardPortWidget
 
 
 
@@ -31,7 +32,7 @@ class QGraphEditorDelegate(QObject):
         node_widget = StandardNodeWidget()
         node_widget.setHeading(f"{index.data(Qt.ItemDataRole.DisplayRole)}")
         node_widget.scenePositionChanged.connect(lambda node=node_widget: self.nodePositionChanged.emit(node))
-        
+        parent.addItem(node_widget)
         # node_data_item = cast(UniqueFunctionItem, index.internalPointer())
         # for idx, inlet in enumerate(node_data_item.inlets()):
         #     node_widget.insertInlet(idx, inlet)
@@ -64,6 +65,27 @@ class QGraphEditorDelegate(QObject):
         #     initiate_connection(scene, index, name) )
             
         return node_widget
+
+    def createInletEditor(self, parent:QGraphicsItem, node_index:QModelIndex|QPersistentModelIndex, inlet:object):
+        port_editor = StandardPortWidget(f"{inlet}", parent)
+        parent = cast(StandardNodeWidget, parent)
+        parent.insertInlet(0, port_editor)
+        # item.pressed.connect(lambda name=name: self.inletPressed.emit(name))
+
+    def createOutletEditor(self, parent:QGraphicsItem, node_index:QModelIndex|QPersistentModelIndex, outlet:object):
+        port_editor = StandardPortWidget(f"{outlet}", parent)
+        parent = cast(StandardNodeWidget, parent)
+        parent.insertOutlet(0, port_editor)
+
+        def on_press(port_editor=port_editor):
+            print("outlet pressed", port_editor)
+            scene = port_editor.scene()
+            print("  scene: ", scene)
+            scene.startDrag()
+        port_editor.pressed.connect(on_press)
+
+        # item.pressed.connect(lambda name=name: self.inletPressed.emit(name))
+
 
     # def nodeEditorEvent(self, event:QEvent, model:QAbstractItemModel, option:QStyleOptionViewItem, index:QModelIndex)->bool:
     #     return False
