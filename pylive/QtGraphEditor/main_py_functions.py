@@ -341,7 +341,6 @@ class Window(QWidget):
 
         return True
 
-    
     def serialize(self)->str:
         import yaml
         return yaml.dump({
@@ -418,8 +417,8 @@ class Window(QWidget):
         #
         node_index = self.nodes.index(self.nodes.rowCount()-1, 0)
         scene = cast(QGraphEditorScene, self.graph_view.scene())
-        node_graphics_item = scene.nodeGraphicsObject(node_index)
-        if node_graphics_item := scene.nodeGraphicsObject(node_index):
+        node_graphics_item = scene.nodeWidget(node_index)
+        if node_graphics_item := scene.nodeWidget(node_index):
             node_graphics_item.setPos(position)
 
     @Slot()
@@ -454,8 +453,6 @@ class Window(QWidget):
         indexes:list[QModelIndex] = self.edge_selection.selectedRows(column=0)
         for index in sorted(indexes, key=lambda idx:idx.row(), reverse=True):
             self.edges.removeRows(index.row(), 1)
-
-    
 
 
 if __name__ == "__main__":

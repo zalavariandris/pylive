@@ -4,45 +4,9 @@ from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
 from pylive.NetworkXGraphEditor.nx_graph_shapes import BaseNodeItem, PortShape, distribute_items_horizontal
+from pylive.QtGraphEditor.widgets.standard_port_widget import StandardPortWidget
 
-
-class StandardPortItem(QGraphicsWidget):
-    pressed = Signal()
-    def __init__(self, label:str, parent:QGraphicsItem|None):
-        super().__init__(parent=parent)
-        self.setAcceptHoverEvents(True)
-
-        self._circle_item = QGraphicsEllipseItem(QRectF(-2.5,-2.5,5,5))
-        self._circle_item.setBrush(self.palette().text())
-        self._circle_item.setPen(Qt.PenStyle.NoPen)
-        self._circle_item.setParentItem(self)
-        self._circle_item.setAcceptHoverEvents(True)
-
-
-        self._nameitem = QGraphicsTextItem(f"{label}")
-        self._nameitem.setParentItem(self)
-        self._nameitem.setPos(-6,-26)
-        self._nameitem.hide()
-        self._nameitem.setAcceptHoverEvents(True)
-        self.setFiltersChildEvents(True)
-
-    def boundingRect(self) -> QRectF:
-        ellipse_bbox = QRectF(-6,-6,12,12)
-        return ellipse_bbox
-
-    def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
-        self.pressed.emit()
-        return super().mousePressEvent(event)
-
-    def hoverEnterEvent(self, event: QGraphicsSceneHoverEvent):
-        self._circle_item.setPen(QPen(self.palette().text(), 2))
-        self._nameitem.show()
-
-    def hoverLeaveEvent(self, event: QGraphicsSceneHoverEvent):
-        self._circle_item.setPen(Qt.PenStyle.NoPen)
-        self._nameitem.hide()
-
-class StandardNodeItem(BaseNodeItem):
+class StandardNodeWidget(BaseNodeItem):
     pressed = Signal()
     inletPressed = Signal(str)
     outletPressed = Signal(str)
@@ -52,8 +16,8 @@ class StandardNodeItem(BaseNodeItem):
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
 
         ### ports
-        self._inlets:list[tuple[StandardPortItem, QMetaObject.Connection]] = []
-        self._outlets:list[tuple[StandardPortItem, QMetaObject.Connection]] = []
+        self._inlets:list[tuple[StandardPortWidget, QMetaObject.Connection]] = []
+        self._outlets:list[tuple[StandardPortWidget, QMetaObject.Connection]] = []
         self.geometryChanged.connect(self._layout_ports)
         
         ### label
@@ -83,7 +47,7 @@ class StandardNodeItem(BaseNodeItem):
         self.adjustSize()
 
     def insertInlet(self, idx, name):
-        item = StandardPortItem(name, self)
+        item = StandardPortWidget(name, self)
         connection = item.pressed.connect(lambda name=name: self.inletPressed.emit(name))
         self._inlets.append( (item, connection) )
         self._layout_ports()
@@ -96,7 +60,7 @@ class StandardNodeItem(BaseNodeItem):
         del self._inlets[idx]
 
     def insertOutlet(self, idx, name):
-        item = StandardPortItem(name, self)
+        item = StandardPortWidget(name, self)
         connection = item.pressed.connect(lambda name=name: self.outletPressed.emit(name))
         self._outlets.append( (item, connection) )
         self._layout_ports()
@@ -136,7 +100,7 @@ if __name__ == "__main__":
     view.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
     view.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
 
-    node_item = StandardNodeItem()
+    node_item = StandardNodeWidget()
     for idx, name in enumerate(["in1", "in2", "in3"]):
         node_item.insertInlet(idx, name)
 
