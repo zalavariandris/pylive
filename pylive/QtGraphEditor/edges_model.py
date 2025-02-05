@@ -120,22 +120,22 @@ class EdgesModel(QAbstractItemModel):
 
         return [(u, k) for u, v, k in self._DAG.in_edges([QPersistentModelIndex(target_node_index)], keys=True)]
 
-    #deprecate
-    def source(self, index: QModelIndex|QPersistentModelIndex)->QPersistentModelIndex:
-        item = self._edges_list[index.row()]
-        return item.source
+    # #deprecate
+    # def source(self, index: QModelIndex|QPersistentModelIndex)->QPersistentModelIndex:
+    #     item = self._edges_list[index.row()]
+    #     return item.source
 
-    #deprecate
-    def target(self, index: QModelIndex|QPersistentModelIndex)->QPersistentModelIndex:
-        item = self._edges_list[index.row()]
-        return item.target
+    # #deprecate
+    # def target(self, index: QModelIndex|QPersistentModelIndex)->QPersistentModelIndex:
+    #     item = self._edges_list[index.row()]
+    #     return item.target
 
-    #deprecate
-    def ancestors(self, node_index:QModelIndex, topological=True)->Iterable[QPersistentModelIndex]:
-        if not nx.is_directed_acyclic_graph(self._DAG):
-            raise ValueError("the graph must be a DAG")
-        for n in nx.ancestors(self._DAG, QPersistentModelIndex(node_index)):
-            yield n
+    # #deprecate
+    # def ancestors(self, node_index:QModelIndex, topological=True)->Iterable[QPersistentModelIndex]:
+    #     if not nx.is_directed_acyclic_graph(self._DAG):
+    #         raise ValueError("the graph must be a DAG")
+    #     for n in nx.ancestors(self._DAG, QPersistentModelIndex(node_index)):
+    #         yield n
 
     def insertRows(self, row, count, parent=QModelIndex()):
         raise NotImplementedError()
@@ -178,7 +178,7 @@ class EdgesModel(QAbstractItemModel):
         self.endInsertRows()
         return True
 
-    def edgeItem(self, row):
+    def edgeItem(self, row:int):
         return self._edges_list[row]
 
     def removeRows(self, row:int, count:int, parent=QModelIndex()):

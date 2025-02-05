@@ -21,7 +21,7 @@ from pylive.QtGraphEditor.widgets.standard_port_widget import StandardPortWidget
 
 
 
-class QGraphEditorDelegate(QObject):
+class StandardGraphDelegate(QObject):
     """Any QGraphicsItem can be used as a node or an edge graphics
     the delegate must emit a nodePositionchanged Signal, when a node position changed
     updateLinkPosition will be called when a linked node position changed"""
@@ -33,96 +33,40 @@ class QGraphEditorDelegate(QObject):
         node_widget.setHeading(f"{index.data(Qt.ItemDataRole.DisplayRole)}")
         node_widget.scenePositionChanged.connect(lambda node=node_widget: self.nodePositionChanged.emit(node))
         parent.addItem(node_widget)
-        # node_data_item = cast(UniqueFunctionItem, index.internalPointer())
-        # for idx, inlet in enumerate(node_data_item.inlets()):
-        #     node_widget.insertInlet(idx, inlet)
-        
-            
-        # node_widget.insertOutlet(0, "out")
-
-        # node_widget.pressed.connect(lambda: parent.startDrag())
-
-        # node_widget.installEventFilter(self)
-
-        # for port, _ in node_widget._inlets:
-        #     port.setAcceptDrops(True)
-        #     port.installEventFilter(self)
-        
-        # def initiate_connection(graph_scene, node_index,  outlet_name):
-        #     if graph_scene.views():
-        #         return
-
-        #     scene_view = graph_scene.views()[0]
-        #     drag = QDrag(scene_view)
-        #     drag.e
-        #     # mimeData = QMimeData()
-
-        #     # mimeDatamsetText(outlet_name);
-        #     # drag->setMimeData(mimeData);
-        #     # # graph_scene.initiateConnection(node_index, outlet_name)
-
-        # node_widget.outletPressed.connect(lambda name, scene=parent, index=index: 
-        #     initiate_connection(scene, index, name) )
-            
         return node_widget
 
-    def createInletEditor(self, parent:QGraphicsItem, node_index:QModelIndex|QPersistentModelIndex, inlet:object):
+    def createInletEditor(self, parent:QGraphicsItem, node_index:QModelIndex|QPersistentModelIndex, inlet:object)->QGraphicsWidget:
         port_editor = StandardPortWidget(f"{inlet}", parent)
         parent = cast(StandardNodeWidget, parent)
         parent.insertInlet(0, port_editor)
         # item.pressed.connect(lambda name=name: self.inletPressed.emit(name))
+        return port_editor
 
-    def createOutletEditor(self, parent:QGraphicsItem, node_index:QModelIndex|QPersistentModelIndex, outlet:object):
+    def createOutletEditor(self, parent:QGraphicsItem, node_index:QModelIndex|QPersistentModelIndex, outlet:object)->QGraphicsWidget:
         port_editor = StandardPortWidget(f"{outlet}", parent)
+        port_editor._nameitem.setPos(-24,0)
         parent = cast(StandardNodeWidget, parent)
         parent.insertOutlet(0, port_editor)
 
-        def on_press(port_editor=port_editor):
-            print("outlet pressed", port_editor)
-            scene = port_editor.scene()
-            print("  scene: ", scene)
-            scene.startDrag()
+        def on_press(node_index=node_index, port_editor=port_editor):
+            scene = cast('QGraphEditorScene', port_editor.scene())
+            scene.startDragOutlet(node_index.row())
+            
         port_editor.pressed.connect(on_press)
+        return port_editor
 
-        # item.pressed.connect(lambda name=name: self.inletPressed.emit(name))
-
-
-    # def nodeEditorEvent(self, event:QEvent, model:QAbstractItemModel, option:QStyleOptionViewItem, index:QModelIndex)->bool:
-    #     return False
-
-    # def eventFilter(self, watched: QObject, event: QEvent) -> bool:
-    #     if event.type() == QEvent.Type.GraphicsSceneMousePress:
-    #         print("event filter")
-    #         event = cast(QGraphicsSceneMouseEvent, event)
-    #         drag = QDrag(event.widget())
-    #         mime = QMimeData()
-    #         drag.setMimeData(mime)
-    #         app = QApplication.instance()
-    #         app.installEventFilter(drag)
-    #         drag.exec()
-    #         app.removeEventFilter(drag)
-    #         return True
-
-    #     elif event.type() == QEvent.Type.GraphicsSceneMouseMove:
-    #         print("move move")
-
-    #     elif event.type() == QEvent.Type.GraphicsSceneDragEnter:
-    #         print("drag enter")
-    #         return True
-
-    #     return super().eventFilter(watched, event)
-
-    def updateNodeEditor(self, index:QModelIndex|QPersistentModelIndex, editor:'BaseNodeItem')->None:
+    def updateNodeEditor(self, index:QModelIndex|QPersistentModelIndex, editor:QGraphicsItem)->None:
         editor = cast(StandardNodeWidget, editor)
         editor.setHeading( index.data(Qt.ItemDataRole.DisplayRole) )
 
     ### EDGE DELEGATE
     def createEdgeEditor(self, edge_idx:QModelIndex|QPersistentModelIndex)->BaseLinkItem:
-        link = RoundedLinkShape(f"{edge_idx.data(Qt.ItemDataRole.EditRole)}", orientation=Qt.Orientation.Horizontal)
+        label = edge_idx.data(Qt.ItemDataRole.DisplayRole)
+        link = RoundedLinkShape(label if label else "", orientation=Qt.Orientation.Horizontal)
         link.setZValue(-1)
         return link
 
-    def updateEdgeEditor(self, edge_idx:QModelIndex|QPersistentModelIndex, editor:'BaseLinkItem')->None:
+    def updateEdgeEditor(self, edge_idx:QModelIndex|QPersistentModelIndex, editor:QGraphicsItem)->None:
         ...
 
     def updateLinkPosition(self, 

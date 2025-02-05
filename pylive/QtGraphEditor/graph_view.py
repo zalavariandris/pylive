@@ -22,10 +22,6 @@ from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
-from pylive.NetworkXGraphEditor.nx_graph_shapes import (
-    BaseNodeItem,
-    BaseLinkItem,
-)
 
 ##############
 # GRAPHSCENE #
@@ -34,7 +30,7 @@ from pylive.NetworkXGraphEditor.nx_graph_shapes import (
 from bidict import bidict
 from collections import defaultdict
 from pylive.QtGraphEditor.edges_model import EdgeItem, EdgesModel
-from pylive.QtGraphEditor.qt_graph_editor_delegate import QGraphEditorDelegate
+from pylive.QtGraphEditor.standard_graph_delegate import StandardGraphDelegate
 
 from pylive.utils.qt import modelReset, signalsBlocked
 from pylive.utils.unique import make_unique_id
@@ -60,8 +56,8 @@ class QGraphEditorScene(QGraphicsScene):
         self._nodes: QAbstractItemModel | None = None
         self._edges: EdgesModel | None = None
         self._node_selection:QItemSelectionModel|None = None
-        self._delegate: QGraphEditorDelegate
-        self.setDelegate(QGraphEditorDelegate())
+        self._delegate: StandardGraphDelegate
+        self.setDelegate(StandardGraphDelegate())
 
         # configure QGraphicsScene
         # self.setItemIndexMethod(QGraphicsScene.ItemIndexMethod.NoIndex)
@@ -69,14 +65,14 @@ class QGraphEditorScene(QGraphicsScene):
         # store model widget relations
         self._node_graphics_objects: bidict[QPersistentModelIndex, QGraphicsItem] = bidict()
         self._link_graphics_objects: bidict[QPersistentModelIndex, QGraphicsItem] = bidict()
-        self._inlet_graphics_objects: bidict[tuple[QPersistentModelIndex, object], QGraphicsItem] = bidict()
-        self._outlet_graphics_objects: bidict[tuple[QPersistentModelIndex, object], QGraphicsItem] = bidict()
+        self._inlet_graphics_objects: bidict[tuple[QPersistentModelIndex, str], QGraphicsItem] = bidict()
+        self._outlet_graphics_objects: bidict[tuple[QPersistentModelIndex, str], QGraphicsItem] = bidict()
         self._node_in_links:defaultdict[QGraphicsItem, list[QGraphicsItem]] = defaultdict(list) # Notes: store attached links, because the underlzing model has to find the relevant edges  and thats is O(n)
         self._node_out_links:defaultdict[QGraphicsItem, list[QGraphicsItem]] = defaultdict(list) # Notes: store attached links, because the underlzing model has to find the relevant edges  and thats is O(n)
         # self._outlet_graphics_objects: bidict[tuple[QPersistentModelIndex, str], QGraphicsItem] = bidict()
         # self._inlet_graphics_objects: bidict[tuple[QPersistentModelIndex, str], QGraphicsItem] = bidict()
         
-        self._draft_link: BaseLinkItem | None = None
+        self._draft_link: QGraphicsItem | None = None
         self._link_loop = QEventLoop(self)
 
         # self._attribute_editors: bidict[tuple[QPersistentModelIndex, str], QGraphicsItem] = bidict()
@@ -135,16 +131,21 @@ class QGraphEditorScene(QGraphicsScene):
         assert self._edges
         from itertools import chain
 
+        
+
         for edge_editor in chain(self._node_in_links[node_editor], self._node_out_links[node_editor]):
+            edge_index = self._link_graphics_objects.inverse[edge_editor]
             assert edge_editor in self._link_graphics_objects.values(), f"got: {edge_editor} not in {[_ for _ in self._link_graphics_objects.values()]}"
             edge_index = self._link_graphics_objects.inverse[edge_editor]
-            source_index = self._edges.source(edge_index)
-            target_index = self._edges.target(edge_index)
-            source_node = self._node_graphics_objects[source_index]
-            target_node = self._node_graphics_objects[target_index]
-            self._delegate.updateLinkPosition(edge_editor, source_node, target_node)
+            edge_item = self._edges.edgeItem(edge_index.row())
+            source_index = edge_item.source
+            target_index = edge_item.target
+            edge_key = edge_item.key
+            source_outlet_widget = self._outlet_graphics_objects[(source_index, "out")]
+            target_inlet_widget = self._inlet_graphics_objects[(target_index, edge_key)]
+            self._delegate.updateLinkPosition(edge_editor, source_outlet_widget, target_inlet_widget)
 
-    def setDelegate(self, delegate:QGraphEditorDelegate):
+    def setDelegate(self, delegate:StandardGraphDelegate):
         self._delegate = delegate
         self._delegate.nodePositionChanged.connect(self._moveAttachedLinks)
 
@@ -287,17 +288,19 @@ class QGraphEditorScene(QGraphicsScene):
                     assert isinstance(outlets, list)
                     self._addOutlets(node_index, outlets)
                     
-    def _addInlets(self, node_index:QModelIndex|QPersistentModelIndex, inlets:list[Hashable]):
+    def _addInlets(self, node_index:QModelIndex|QPersistentModelIndex, inlets:list[str]):
         node_editor = self._node_graphics_objects[QPersistentModelIndex(node_index)]
         for inlet in inlets:
             if inlet_editor := self._delegate.createInletEditor(node_editor, node_index, inlet):
-                self._inlet_graphics_objects[(node_index, inlet)] = inlet_editor
+                inlet_id = QPersistentModelIndex(node_index), inlet
+                self._inlet_graphics_objects[inlet_id] = inlet_editor
 
-    def _addOutlets(self, node_index:QModelIndex|QPersistentModelIndex, outlets:list[Hashable]):
+    def _addOutlets(self, node_index:QModelIndex|QPersistentModelIndex, outlets:list[str]):
         node_editor = self._node_graphics_objects[QPersistentModelIndex(node_index)]
         for outlet in outlets:
             if outlet_editor := self._delegate.createOutletEditor(node_editor, node_index, outlet):
-                self._outlet_graphics_objects[(node_index, outlet)] = outlet_editor
+                outlet_id = QPersistentModelIndex(node_index), outlet
+                self._outlet_graphics_objects[outlet_id] = outlet_editor
 
     def removeNodes(self, indexes:Iterable[QPersistentModelIndex]):
         assert self._nodes
@@ -320,14 +323,22 @@ class QGraphEditorScene(QGraphicsScene):
                 self.addItem( edge_editor )
 
                 #UPDATE LINKS POSITION
-                source_node_index:QPersistentModelIndex = self._edges.source(edge_index)
-                target_node_index:QPersistentModelIndex = self._edges.target(edge_index)
+                edge_item = self._edges.edgeItem(edge_index.row())
+                source_node_index = edge_item.source
+                target_node_index = edge_item.target
+
                 source_node_editor = self._node_graphics_objects[source_node_index]
                 target_node_editor = self._node_graphics_objects[target_node_index]
 
                 self._node_out_links[source_node_editor].append(edge_editor)
                 self._node_in_links[target_node_editor].append(edge_editor)
-                self._delegate.updateLinkPosition(edge_editor, source_node_editor, target_node_editor)
+                
+
+                
+                edge_key = edge_item.key
+                source_outlet_widget = self._outlet_graphics_objects[(source_node_index, "out")]
+                target_inlet_widget = self._inlet_graphics_objects[(target_node_index, edge_key)]
+                self._delegate.updateLinkPosition(edge_editor, source_outlet_widget, target_inlet_widget)
 
     def removeEdges(self, indexes:Iterable[QPersistentModelIndex]):
         assert self._edges
@@ -375,40 +386,64 @@ class QGraphEditorScene(QGraphicsScene):
     ### <<< Handle Model Signals
 
     ### <<< Map the interactive graphics ids to widgets
-    def nodeWidget(self, node_index: QModelIndex) -> BaseNodeItem|None:
+    def nodeWidget(self, node_index: QModelIndex) -> QGraphicsItem|None:
         assert self._nodes
-        # if node_id not in [_ for _ in self._nodes.nodes()]:
-        #     raise KeyError(f"model has no node: {node_id}")
         if editor:=self._node_graphics_objects.get(QPersistentModelIndex(node_index)):
             return editor
 
-    def linkWidget(self, edge_index:QModelIndex) -> BaseLinkItem|None:
+    def outletWidget(self, node_index: QModelIndex, outlet:str) -> QGraphicsItem|None:
+        assert self._nodes
+        outlet_id = QPersistentModelIndex(node_index), outlet
+        assert node_index.isValid(), f"got: {node_index}"
+        assert outlet == "out"
+        if editor:=self._outlet_graphics_objects.get(outlet_id):
+            return editor
+        else:
+            print("all outlet widget:", self._outlet_graphics_objects)
+
+    def inletWidget(self, node_index: QModelIndex, inlet:str) -> QGraphicsItem|None:
+        assert self._nodes
+        inlet_id = QPersistentModelIndex(node_index), inlet
+        if editor:=self._inlet_graphics_objects.get(inlet_id):
+            return editor
+
+    def linkWidget(self, edge_index:QModelIndex) -> QGraphicsItem|None:
         assert self._edges
         if not edge_index.isValid():
             raise KeyError()
 
-        if editor:=self._link_graphics_objects.get(edge_index):
-            return cast(BaseLinkItem, editor)
+        if editor:=self._link_graphics_objects.get(QPersistentModelIndex(edge_index), None):
+            return editor
 
-    def nodeIndexAt(self, position: QPointF) -> QModelIndex:
+    def nodeIndexAt(self, position: QPointF) -> QModelIndex|None:
         assert self._nodes
-        for item in self.items(position, deviceTransform=QTransform()):
-            try:
-                node_id:QPersistentModelIndex =  self._node_graphics_objects.inverse[item]
+        rect = QRectF(position.x()-4,position.y()-4,8,8)
+        for item in self.items(rect, deviceTransform=QTransform()):
+            if node_id :=  self._node_graphics_objects.inverse.get(item, None):
                 return self._nodes.index(node_id.row(), 0)
-            except KeyError:
-                continue
-        return self._nodes.index(-1, 0)
 
-    def edgeIndexAt(self, position: QPointF) -> QModelIndex:
+    def inletIndexAt(self, position: QPointF)->tuple[QModelIndex, str]|None:
+        assert self._nodes
+        rect = QRectF(position.x()-4,position.y()-4,8,8)
+        for item in self.items(rect, deviceTransform=QTransform()):
+            if node_inlet :=  self._inlet_graphics_objects.inverse.get(item, None):
+                node_id, inlet = node_inlet
+                return self._nodes.index(node_id.row(), 0), inlet
+
+    def outletIndexAt(self, position: QPointF)->tuple[QModelIndex, str]|None:
+        assert self._nodes
+        rect = QRectF(position.x()-4,position.y()-4,8,8)
+        for item in self.items(rect, deviceTransform=QTransform()):
+            if node_outlet :=  self._outlet_graphics_objects.inverse.get(item, None):
+                node_id, outlet = node_outlet
+                return self._nodes.index(node_id.row(), 0), outlet
+
+    def edgeIndexAt(self, position: QPointF) -> QModelIndex|None:
         assert self._edges
-        for item in self.items(position, deviceTransform=QTransform()):
-            try:
-                edge_id:QPersistentModelIndex =  self._link_graphics_objects.inverse[item]
+        rect = QRectF(position.x()-4,position.y()-4,8,8)
+        for item in self.items(rect, deviceTransform=QTransform()):
+            if edge_id :=  self._link_graphics_objects.inverse.get(item, None):
                 return self._edges.index(edge_id.row(), 0)
-            except KeyError:
-                continue
-        return self._edges.index(-1, 0)
 
     def layout(self):
         assert self._nodes
@@ -430,110 +465,76 @@ class QGraphEditorScene(QGraphicsScene):
             widget = self._node_graphics_objects[N]
             widget.setPos(y, x)
 
-    """DRAG AND DROP"""
-    # def eventFilter(self, watched: QObject, event: QEvent) -> bool:
-    #     match event.type():
-    #         case QEvent.Type.GraphicsSceneMouseMove:
-    #             event = cast(QGraphicsSceneMouseEvent, event)
-    #             self._delegate.updateLinkPosition(self._draft, QPointF(0,0), event.scenePos())
-    #             return True
-    #         case QEvent.Type.GraphicsSceneMouseRelease:
-    #             self._link_loop.exit()
-    #             return True
-    #         case _:
-    #             pass
-    #     return super().eventFilter(watched, event)
-
-
-    def startDrag(self, supportedActions=[]):
+    def startDragOutlet(self, node_row:int):
         """ Initiate the drag operation """
-        print("start drag")
         assert self._node_selection
         assert self._nodes
-        index = self._node_selection.currentIndex()
-        if not index.isValid():
-            return
 
-        def serializeCurrentRow(self)->QMimeData:
-            mimeData = QMimeData()
-            data = QByteArray()
-            for index in indexes:
-                if index.isValid():
-                    data.append(str(index.row()).encode() + b",")  # Convert data to string
-            mimeData.setData("application/node_row", data)
-            return mimeData
-            
+
+
+        mime = QMimeData()
+        mime.setData('application/outlet', f"{node_row}/out".encode("utf-8"))
         drag = QDrag(self)
-        drag.setMimeData(mimeData)
+        drag.setMimeData(mime)
 
         self._draft_link = self._delegate.createEdgeEditor(QModelIndex())
         self.addItem(self._draft_link)
         
         # Execute drag
-        if drag.exec(Qt.DropAction.LinkAction) == Qt.DropAction.LinkAction:
-            print("drop")
-            # self.model().removeRow(index.row())  # Remove item after move
+        action = drag.exec(Qt.DropAction.LinkAction)
+        if action == Qt.DropAction.LinkAction:
+            print("link aciton")
+        self.removeItem(self._draft_link)
+        self._draft_link = None
 
     def dragEnterEvent(self, event):
         """ Accept drag events """
-        print("drag enter")
-        if event.mimeData().hasText():
+        if event.mimeData().hasFormat('application/outlet'):
             event.acceptProposedAction()
 
     def dragMoveEvent(self, event):
         assert self._nodes
-        print("drag move")
-        target_index = self.nodeIndexAt(event.scenePos())
+        
+        if event.mimeData().hasFormat('application/outlet'):
+            source = event.mimeData().data('application/outlet').toStdString().split("/")
+            source_row, source_outlet = int(source[0]), source[1]
+            source_node_index = self._nodes.index(source_row, 0)
+            source_outlet_widget = self.outletWidget(source_node_index, source_outlet)
 
-        def deserializeMimeData(mimeData)->list[int]:
-            mimeData = event.mimeData()
-            if mimeData.hasFormat("application/node_row"):
-                data = mimeData.data("application/node_row")  # Get QByteArray
-                text = bytes(data).decode("utf-8").strip(",")  # Convert to string and remove trailing comma
-                rows = [int(row) for row in text.split(",") if row]  # Convert back to integers
-                return rows
-            return []
-
-
-        # def source_row_from_mime(mimeData)->int:
-        #     if mimeData.hasFormat("application/node_row"):
-        #         data = mimeData.data("application/node_row")  # Get QByteArray
-        #         text = bytes(data).decode("utf-8").strip(",")  # Convert to string and remove trailing comma
-        #         rows = [int(row) for row in text.split(",") if row]  # Convert back to integers
-        #         return rows[0]
-        #     return -1
+            assert isinstance(source_row, int)
+            assert source_outlet == "out"
+            assert source_node_index.isValid()
+            assert source_outlet_widget
 
 
-        mime = deserializeMimeData(event.mimeData())
-        print(mime)
+            target_node_index, inlet = self.inletIndexAt(event.scenePos()) or (None, None)
+            target_inlet_widget = self.inletWidget(target_node_index, inlet) if (target_node_index and inlet) else None
 
+            if source_outlet_widget and target_inlet_widget:
+                self._delegate.updateLinkPosition(self._draft_link, source_outlet_widget, target_inlet_widget)
+            elif source_outlet_widget:
+                self._delegate.updateLinkPosition(self._draft_link, source_outlet_widget, event.scenePos())
+  
 
-        # source_row = source_row_from_mime(event.mimeData())
-        # source_index = self._nodes.index(source_row, 0)
-        # source_widget=self.nodeWidget(source_index)
-
-        # target_widget = self.nodeWidget(target_index)
-
-        # if source_widget and target_widget:
-        #     self._delegate.updateLinkPosition(self._draft_link, source_widget, target_widget)
-        #     event.acceptProposedAction()
-        #     return
-        # elif source_widget:
-        #     print("no item")
-        #     self._delegate.updateLinkPosition(self._draft_link, source_widget, event.scenePos())
-        # else:
-        #     raise ValueError()
 
     def dropEvent(self, event):
-        node_index = self.nodeIndexAt(event.scenePos())
-        if node_index.isValid():
-            if target_graphics_object := self.nodeWidget(node_index):
-                self._delegate.updateLinkPosition(self._draft_link, QPointF(), target_graphics_object)
-                event.acceptProposedAction()
-                return
-        print("no item")
-        self._delegate.updateLinkPosition(self._draft_link, QPointF(), event.scenePos())
+        assert self._nodes
+        if event.mimeData().hasFormat('application/outlet'):
+            source = event.mimeData().data('application/outlet').toStdString().split("/")
+            source_row, source_outlet = int(source[0]), source[1]
+            source_node_index = self._nodes.index(source_row, 0)
+
+            target_node_index = self.nodeIndexAt(event.scenePos())
+
+            if source_node_index and target_node_index:
+                assert self._edges
+                self._edges.addEdgeItem(EdgeItem(
+                    QPersistentModelIndex(source_node_index), 
+                    QPersistentModelIndex(target_node_index),
+                    "key"
+                ))
         
+    
 
 if __name__ == "__main__":
     app = QApplication()
@@ -571,6 +572,8 @@ if __name__ == "__main__":
 
         target_node = node_selection.currentIndex().siblingAtColumn(0)
         assert target_node.isValid()
+        inlets = nodes.data(target_node, QGraphEditorScene.InletsRole)
+        assert len(inlets)>0
         for source_node in node_selection.selectedRows(0):
             if target_node == source_node:
                 continue
@@ -579,7 +582,7 @@ if __name__ == "__main__":
             edges.addEdgeItem(EdgeItem(
                 source=QPersistentModelIndex(source_node),
                 target=QPersistentModelIndex(target_node),
-                key="edge"
+                key=inlets[0]
             ))
 
     def delete_selected_edges():
@@ -592,7 +595,7 @@ if __name__ == "__main__":
 
     window = QWidget()
 
-    nodelist = QTreeView()
+    nodelist = QListView()
     nodelist.setModel(nodes)
     nodelist.setSelectionModel(node_selection)
     nodelist.setSelectionMode(QAbstractItemView.SelectionMode.MultiSelection)
