@@ -42,7 +42,8 @@ def _group_consecutive_numbers_clever(numbers:Iterable[int])->Iterable[range]:
     return ranges
 
 def _group_consecutive_numbers_readable(numbers:list[int])->Iterable[range]:
-    assert len(numbers)>0
+    if not len(numbers)>0:
+        return []
 
     first = last = numbers[0]
     for n in numbers[1:]:

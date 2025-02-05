@@ -38,10 +38,10 @@ class EdgesModel(QAbstractItemModel):
             if not SourceExists or not TargetExists:
                 edge_rows_to_remove.append(row)
 
-        edge_row_groups = group_consecutive_numbers(edge_rows_to_remove)
-
-        for first, last in edge_row_groups:
-            self.removeRows(first, count=last-first+1)
+        edge_row_groups = [_ for _ in group_consecutive_numbers(edge_rows_to_remove)]
+        print(edge_row_groups)
+        for edge_range in edge_row_groups:
+            self.removeRows(edge_range.start, count=edge_range.stop-edge_range.start)
 
     def rowCount(self, parent=QModelIndex()):
         """Returns the number of rows in the model."""
@@ -86,29 +86,33 @@ class EdgesModel(QAbstractItemModel):
             return None
 
         item = self._edges_list[index.row()]
+        from pylive.QtGraphEditor.graph_view import QGraphEditorScene
+        # if role==Qt.ItemDataRole.DisplayRole or role==Qt.ItemDataRole.EditRole:
+        match index.column():
+            case 0:
+                match role:
+                    case Qt.ItemDataRole.DisplayRole:
+                        return f"{item.key}"
+                    case Qt.ItemDataRole.EditRole:
+                        return item.key
+                    case QGraphEditorScene.SourceRole:
+                        return item.source
+                    case QGraphEditorScene.TargetRole:
+                        return item.target
 
-        if role==Qt.ItemDataRole.DisplayRole or role==Qt.ItemDataRole.EditRole:
-            match index.column():
-                case 0:
-                    match role:
-                        case Qt.ItemDataRole.DisplayRole:
-                            return f"{item.key}"
-                        case Qt.ItemDataRole.EditRole:
-                            return item.key
-
-                case 1:
-                    match role:
-                        case Qt.ItemDataRole.DisplayRole:
-                            return f"{item.source.data(Qt.ItemDataRole.DisplayRole)}"
-                        case Qt.ItemDataRole.EditRole:
-                            return item.source
-                    
-                case 2:
-                    match role:
-                        case Qt.ItemDataRole.DisplayRole:
-                            return f"{item.target.data(Qt.ItemDataRole.DisplayRole)}"
-                        case Qt.ItemDataRole.EditRole:
-                            return item.target
+            case 1:
+                match role:
+                    case Qt.ItemDataRole.DisplayRole:
+                        return f"{item.source.data(Qt.ItemDataRole.DisplayRole)}"
+                    case Qt.ItemDataRole.EditRole:
+                        return item.source
+                
+            case 2:
+                match role:
+                    case Qt.ItemDataRole.DisplayRole:
+                        return f"{item.target.data(Qt.ItemDataRole.DisplayRole)}"
+                    case Qt.ItemDataRole.EditRole:
+                        return item.target
 
                 
 

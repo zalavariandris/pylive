@@ -62,7 +62,7 @@ class StandardGraphDelegate(QObject):
     ### EDGE DELEGATE
     def createEdgeEditor(self, edge_idx:QModelIndex|QPersistentModelIndex)->BaseLinkItem:
         label = edge_idx.data(Qt.ItemDataRole.DisplayRole)
-        link = RoundedLinkShape(label if label else "", orientation=Qt.Orientation.Horizontal)
+        link = RoundedLinkShape(label if label else "", orientation=Qt.Orientation.Vertical)
         link.setZValue(-1)
         return link
 

@@ -131,8 +131,6 @@ class QGraphEditorScene(QGraphicsScene):
         assert self._edges
         from itertools import chain
 
-        
-
         for edge_editor in chain(self._node_in_links[node_editor], self._node_out_links[node_editor]):
             edge_index = self._link_graphics_objects.inverse[edge_editor]
             assert edge_editor in self._link_graphics_objects.values(), f"got: {edge_editor} not in {[_ for _ in self._link_graphics_objects.values()]}"
@@ -445,7 +443,7 @@ class QGraphEditorScene(QGraphicsScene):
             if edge_id :=  self._link_graphics_objects.inverse.get(item, None):
                 return self._edges.index(edge_id.row(), 0)
 
-    def layout(self):
+    def layout(self, orientation=Qt.Orientation.Vertical, scale=100):
         assert self._nodes
         assert self._edges
         from pylive.utils.graph import hiearchical_layout_with_nx
@@ -457,13 +455,19 @@ class QGraphEditorScene(QGraphicsScene):
 
         for row in range(self._edges.rowCount()):
             edge_index = self._edges.index(row, 0)
-            source_node_index = self._edges.source(edge_index)
-            target_node_index = self._edges.target(edge_index)
+            source_node_index = self._edges.data(edge_index, QGraphEditorScene.SourceRole)
+            target_node_index = self._edges.data(edge_index, QGraphEditorScene.TargetRole)
+            assert source_node_index
+            assert target_node_index
             G.add_edge(source_node_index, target_node_index)
-        pos = hiearchical_layout_with_nx(G, scale=200)
+        pos = hiearchical_layout_with_nx(G, scale=scale)
         for N, (x, y) in pos.items():
             widget = self._node_graphics_objects[N]
-            widget.setPos(y, x)
+            match orientation:
+                case Qt.Orientation.Vertical:
+                    widget.setPos(x, y)
+                case Qt.Orientation.Horizontal:
+                    widget.setPos(y, x)
 
     def startDragOutlet(self, node_row:int):
         """ Initiate the drag operation """
@@ -540,7 +544,6 @@ if __name__ == "__main__":
     app = QApplication()
 
     ### model state
-
     nodes = QStandardItemModel()
     nodes.setHeaderData(0, Qt.Orientation.Horizontal, "name")
     edges = EdgesModel(nodes=nodes)
@@ -561,7 +564,8 @@ if __name__ == "__main__":
 
     def delete_selected_nodes():
         indexes:list[QModelIndex] = node_selection.selectedRows(column=0)
-        for index in sorted(indexes, key=lambda row:index.row(), reverse=True):
+        indexes.sort(key=lambda index:index.row())
+        for index in reversed(indexes):
             nodes.removeRows(index.row(), 1)
 
     def connect_selected_nodes():
@@ -570,18 +574,18 @@ if __name__ == "__main__":
         if len(node_selection.selectedRows(0))<2:
             return
 
-        target_node = node_selection.currentIndex().siblingAtColumn(0)
-        assert target_node.isValid()
-        inlets = nodes.data(target_node, QGraphEditorScene.InletsRole)
+        target_node_index = node_selection.currentIndex().siblingAtColumn(0)
+        assert target_node_index.isValid()
+        inlets = nodes.data(target_node_index, QGraphEditorScene.InletsRole)
         assert len(inlets)>0
-        for source_node in node_selection.selectedRows(0):
-            if target_node == source_node:
+        for source_node_index in node_selection.selectedRows(0):
+            if target_node_index == source_node_index:
                 continue
 
-            assert source_node.isValid()
+            assert source_node_index.isValid()
             edges.addEdgeItem(EdgeItem(
-                source=QPersistentModelIndex(source_node),
-                target=QPersistentModelIndex(target_node),
+                source=QPersistentModelIndex(source_node_index),
+                target=QPersistentModelIndex(target_node_index),
                 key=inlets[0]
             ))
 
@@ -593,14 +597,12 @@ if __name__ == "__main__":
     nodes.rowsInserted.connect(lambda: print("rows inserted"))
     ### view
 
-    window = QWidget()
-
     nodelist = QListView()
     nodelist.setModel(nodes)
     nodelist.setSelectionModel(node_selection)
     nodelist.setSelectionMode(QAbstractItemView.SelectionMode.MultiSelection)
 
-    edgelist = QListView()
+    edgelist = QTableView()
     edgelist.setModel(edges)
 
     graph_view = QGraphicsView()
@@ -617,30 +619,31 @@ if __name__ == "__main__":
     graph_scene.setSelectionModel(node_selection)
     graph_view.setScene(graph_scene)
 
-    add_node_action = QAction("add new node", window)
-    add_node_action.triggered.connect(create_new_node)
-    delete_node_action = QAction("delete node", window)
-    delete_node_action.triggered.connect(delete_selected_nodes)
-    connect_selected_nodes_action = QAction("connect selected nodes", window)
-    connect_selected_nodes_action.triggered.connect(connect_selected_nodes)
-    remove_edge_action = QAction("remove edge", window)
-    remove_edge_action.triggered.connect(delete_selected_edges)
-    layout_action = QAction("layout", window)
-    layout_action.triggered.connect(graph_scene.layout)
+    ### ACTIONS
+    window = QWidget()
+    add_node_action = QPushButton("add new node", window)
+    add_node_action.pressed.connect(create_new_node)
+    delete_node_action = QPushButton("delete node", window)
+    delete_node_action.pressed.connect(delete_selected_nodes)
+    connect_selected_nodes_action = QPushButton("connect selected nodes", window)
+    connect_selected_nodes_action.pressed.connect(connect_selected_nodes)
+    remove_edge_action = QPushButton("remove edge", window)
+    remove_edge_action.pressed.connect(delete_selected_edges)
+    layout_action = QPushButton("layout", window)
+    layout_action.pressed.connect(graph_scene.layout)
 
-    menubar = QMenuBar()
-    menu = menubar.addMenu("Actions")
-    menu.addAction(add_node_action)
-    menu.addAction(delete_node_action)
-    menu.addAction(connect_selected_nodes_action)
-    menu.addAction(remove_edge_action)
-    menu.addAction(layout_action)
+    buttons_layout = QGridLayout()
+    buttons_layout.addWidget(add_node_action, 0, 0)
+    buttons_layout.addWidget(delete_node_action, 0, 1)
+    buttons_layout.addWidget(connect_selected_nodes_action, 1, 0)
+    buttons_layout.addWidget(remove_edge_action, 1, 1)
+    buttons_layout.addWidget(layout_action, 2, 0, 1, 2)
 
     grid_layout = QGridLayout()
-    grid_layout.setMenuBar(menubar)
+    grid_layout.addLayout(buttons_layout, 0, 0)
     grid_layout.addWidget(nodelist, 1, 0)
-    grid_layout.addWidget(edgelist, 1, 1)
-    grid_layout.addWidget(graph_view, 0, 0, 1, 3)
+    grid_layout.addWidget(edgelist, 2, 0)
+    grid_layout.addWidget(graph_view, 0, 1, 3, 1)
 
     window.setLayout(grid_layout)
     window.show()
