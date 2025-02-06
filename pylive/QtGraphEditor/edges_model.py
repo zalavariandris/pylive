@@ -86,7 +86,7 @@ class EdgesModel(QAbstractItemModel):
             return None
 
         item = self._edges_list[index.row()]
-        from pylive.QtGraphEditor.graph_view import QGraphEditorScene
+        from pylive.QtGraphEditor.dag_editor_view import DAGEditorView
         # if role==Qt.ItemDataRole.DisplayRole or role==Qt.ItemDataRole.EditRole:
         match index.column():
             case 0:
@@ -95,9 +95,9 @@ class EdgesModel(QAbstractItemModel):
                         return f"{item.key}"
                     case Qt.ItemDataRole.EditRole:
                         return item.key
-                    case QGraphEditorScene.SourceRole:
+                    case DAGEditorView.SourceRole:
                         return item.source
-                    case QGraphEditorScene.TargetRole:
+                    case DAGEditorView.TargetRole:
                         return item.target
 
             case 1:

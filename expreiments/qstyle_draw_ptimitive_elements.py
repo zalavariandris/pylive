@@ -78,6 +78,7 @@ class PrimitiveElementWidget(QWidget):
             ...
             rect = QRect(x, y, width, height)
             option = QStyleOption()  # Generic style option
+            option.initFrom(self)
             option.rect = rect
             
             style.drawPrimitive(pe, option, painter, self)
@@ -161,6 +162,7 @@ class ControlElementWidget(QWidget):
             ...
             rect = QRect(x, y, width, height)
             option = QStyleOption()  # Generic style option
+            option.initFrom(self)
             option.rect = rect
             
             style.drawControl(ce, option, painter, self)
@@ -207,6 +209,7 @@ class ComplexControlWidget(QWidget):
             ...
             rect = QRect(x, y, width, height)
             option = QStyleOptionComplex()  # Generic style option
+            option.initFrom(self)
             option.rect = rect
             
             style.drawComplexControl(cc, option, painter, self)

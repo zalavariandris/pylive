@@ -20,23 +20,23 @@ class StandardNodeWidget(BaseNodeItem):
         
         ### label
         self._heading_label = QGraphicsTextItem(f"Heading")
-        self._heading_label.setPos(0,-2)
-        self._heading_label.setParentItem(self)
-        self._heading_label.adjustSize()
-        self.setGeometry(QRectF(0, 0, self._heading_label.textWidth(), 20))
+        # self._heading_label.setPos(0,-2)
+        # self._heading_label.setParentItem(self)
+        # self._heading_label.adjustSize()
+        # self.setGeometry(QRectF(0, 0, self._heading_label.textWidth(), 20))
 
 
-    def paint(self, painter, option:QStyleOption, widget=None):
-        rect = self.geometry()
+    def paint(self, painter: QPainter, option, widget=None):
+        # Create a QStyleOptionButton for the button
+        style_option = QStyleOptionButton()
+        style_option.initFrom(widget)
+        style_option.text = self._heading_label.toPlainText()
+        style_option.state = QStyle.State_Enabled | QStyle.State_Raised
+        style_option.rect = self.boundingRect().toRect()  # Convert QRectF to QRect
 
-        pen = painter.pen()
-        pen.setBrush(self.palette().text())
-        if self.isSelected():
-            pen.setBrush(self.palette().accent())
-        painter.setPen(pen)
-
-        rect.moveTo(QPoint(0,0))
-        painter.drawRoundedRect(rect, 6,6)
+        # Use the widget's style to draw the button
+        if widget:
+            widget.style().drawControl(QStyle.CE_PushButton, style_option, painter, widget)
 
     def setHeading(self, text:str):
         self._heading_label.setPlainText(text)

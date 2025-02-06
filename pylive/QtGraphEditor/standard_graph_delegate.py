@@ -28,7 +28,7 @@ class StandardGraphDelegate(QObject):
 
     ### NODE DELEGATE
     nodePositionChanged = Signal(QGraphicsItem)
-    def createNodeEditor(self, parent:'QGraphEditorScene', index:QModelIndex|QPersistentModelIndex)->BaseNodeItem:
+    def createNodeEditor(self, parent:QGraphicsScene, index:QModelIndex|QPersistentModelIndex)->BaseNodeItem:
         node_widget = StandardNodeWidget()
         node_widget.setHeading(f"{index.data(Qt.ItemDataRole.DisplayRole)}")
         node_widget.scenePositionChanged.connect(lambda node=node_widget: self.nodePositionChanged.emit(node))
@@ -48,11 +48,11 @@ class StandardGraphDelegate(QObject):
         parent = cast(StandardNodeWidget, parent)
         parent.insertOutlet(0, port_editor)
 
-        def on_press(node_index=node_index, port_editor=port_editor):
-            scene = cast('QGraphEditorScene', port_editor.scene())
-            scene.startDragOutlet(node_index.row())
+        # def on_press(node_index=node_index, port_editor=port_editor):
+        #     scene = cast('QGraphEditorScene', port_editor.scene())
+        #     scene.startDragOutlet(node_index.row())
             
-        port_editor.pressed.connect(on_press)
+        # port_editor.pressed.connect(on_press)
         return port_editor
 
     def updateNodeEditor(self, index:QModelIndex|QPersistentModelIndex, editor:QGraphicsItem)->None:
