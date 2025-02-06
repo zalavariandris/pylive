@@ -5,7 +5,7 @@ from PySide6.QtWidgets import *
 
 class StandardPortWidget(QGraphicsWidget):
     pressed = Signal()
-    def __init__(self, label:str, parent:QGraphicsItem|None):
+    def __init__(self, label:str, parent:QGraphicsItem|None=None):
         super().__init__(parent=parent)
         self.setAcceptHoverEvents(True)
         self._circle_item = QGraphicsEllipseItem(QRectF(-2.5,-2.5,5,5))

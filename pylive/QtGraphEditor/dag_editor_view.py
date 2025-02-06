@@ -145,7 +145,7 @@ class DAGEditorView(QGraphicsView):
             edge_key = edge_item.key
             source_outlet_widget = self._outlet_graphics_objects[(source_index, "out")]
             target_inlet_widget = self._inlet_graphics_objects[(target_index, edge_key)]
-            self._delegate.updateLinkPosition(edge_editor, source_outlet_widget, target_inlet_widget)
+            self._delegate.updateEdgePosition(edge_editor, source_outlet_widget, target_inlet_widget)
 
     def setDelegate(self, delegate:StandardGraphDelegate):
         self._delegate = delegate
@@ -219,7 +219,6 @@ class DAGEditorView(QGraphicsView):
 
     def _onNodesInserted(self, parent:QModelIndex, first:int, last:int):
         assert self._nodes
-        print("on nodes inserted")
         indexes = [
             QPersistentModelIndex(self._nodes.index(row, 0)) 
             for row in range(first, last+1)
@@ -278,7 +277,7 @@ class DAGEditorView(QGraphicsView):
     def addNodes(self, indexes:Iterable[QPersistentModelIndex]):
         assert self._nodes
         for node_index in indexes:
-            if node_editor := self._delegate.createNodeEditor(self.scene(), node_index):
+            if node_editor := self._delegate.createNodeWidget(self.scene(), node_index):
                 assert node_index.isValid(), "invalid persistent node?"
                 self._node_graphics_objects[node_index] = node_editor
 
@@ -293,14 +292,14 @@ class DAGEditorView(QGraphicsView):
     def _addInlets(self, node_index:QModelIndex|QPersistentModelIndex, inlets:list[str]):
         node_editor = self._node_graphics_objects[QPersistentModelIndex(node_index)]
         for inlet in inlets:
-            if inlet_editor := self._delegate.createInletEditor(node_editor, node_index, inlet):
+            if inlet_editor := self._delegate.createInletWidget(node_editor, node_index, inlet):
                 inlet_id = QPersistentModelIndex(node_index), inlet
                 self._inlet_graphics_objects[inlet_id] = inlet_editor
 
     def _addOutlets(self, node_index:QModelIndex|QPersistentModelIndex, outlets:list[str]):
         node_editor = self._node_graphics_objects[QPersistentModelIndex(node_index)]
         for outlet in outlets:
-            if outlet_editor := self._delegate.createOutletEditor(node_editor, node_index, outlet):
+            if outlet_editor := self._delegate.createOutletWidget(node_editor, node_index, outlet):
                 outlet_id = QPersistentModelIndex(node_index), outlet
                 self._outlet_graphics_objects[outlet_id] = outlet_editor
 
@@ -314,13 +313,13 @@ class DAGEditorView(QGraphicsView):
         assert self._nodes
         for node_index in indexes:
             if editor := self._node_graphics_objects.get(node_index, None):
-                self._delegate.updateNodeEditor(node_index, editor)
+                self._delegate.updateNodeWidget(node_index, editor)
 
     def addEdges(self, indexes:Iterable[QPersistentModelIndex]):
         assert self._edges
         for edge_index in indexes:
             ### create edge editor
-            if edge_editor := self._delegate.createEdgeEditor(edge_index):
+            if edge_editor := self._delegate.createEdgeWidget(edge_index):
                 self._link_graphics_objects[edge_index] = edge_editor
                 self.scene().addItem( edge_editor )
 
@@ -340,7 +339,7 @@ class DAGEditorView(QGraphicsView):
                 edge_key = edge_item.key
                 source_outlet_widget = self._outlet_graphics_objects[(source_node_index, "out")]
                 target_inlet_widget = self._inlet_graphics_objects[(target_node_index, edge_key)]
-                self._delegate.updateLinkPosition(edge_editor, source_outlet_widget, target_inlet_widget)
+                self._delegate.updateEdgePosition(edge_editor, source_outlet_widget, target_inlet_widget)
 
     def removeEdges(self, indexes:Iterable[QPersistentModelIndex]):
         assert self._edges
@@ -356,7 +355,7 @@ class DAGEditorView(QGraphicsView):
     def updateEdges(self, indexes:Iterable[QPersistentModelIndex]):
         for edge_index in indexes:
             if editor := self._link_graphics_objects.get(edge_index, None):
-                self._delegate.updateEdgeEditor(edge_index, editor)
+                self._delegate.updateEdgeWidget(edge_index, editor)
 
     def changeNodeSelection(self, select: Iterable[QPersistentModelIndex], deselect:Iterable[QPersistentModelIndex]):
         with signalsBlocked(self):
@@ -416,15 +415,6 @@ class DAGEditorView(QGraphicsView):
         if editor:=self._link_graphics_objects.get(QPersistentModelIndex(edge_index), None):
             return editor
 
-    # def eventFilter(self, watched: QObject, event: QEvent) -> bool:
-    #     match event.type():
-    #         case QEvent.Type.GraphicsSceneMousePress:
-    #             print("scene mouse press")
-    #         case QEvent.Type.MouseButtonPress:
-    #             print("mousepress")
-
-    #     return super().eventFilter(watched, event)
-
     def nodeIndexAt(self, pos: QPoint) -> QModelIndex|None:
         """Returns the topmost node at position pos, which is in viewport coordinates."""
         assert self._nodes
@@ -432,7 +422,7 @@ class DAGEditorView(QGraphicsView):
             if node_id :=  self._node_graphics_objects.inverse.get(item, None):
                 return self._nodes.index(node_id.row(), 0)
 
-    def inletIndexAt(self, position: QPoint)->tuple[QModelIndex, str]|None:
+    def inletIndexAt(self, pos: QPoint)->tuple[QModelIndex, str]|None:
         """Returns the topmost inlet at position pos, which is in viewport coordinates."""
         assert self._nodes
         for item in self.items(pos.x()-4,pos.y()-4,8,8):
@@ -481,17 +471,18 @@ class DAGEditorView(QGraphicsView):
                 case Qt.Orientation.Horizontal:
                     widget.setPos(y, x)
 
-    def startDragOutlet(self, node_row:int):
+    ### DRAG inlets, outlets, edges
+    def startDragOutlet(self, node_row:int, outlet_name:str):
         """ Initiate the drag operation """
         assert self._node_selection
         assert self._nodes
 
         mime = QMimeData()
-        mime.setData('application/outlet', f"{node_row}/out".encode("utf-8"))
+        mime.setData('application/outlet', f"{node_row}/{outlet_name}".encode("utf-8"))
         drag = QDrag(self)
         drag.setMimeData(mime)
 
-        self._draft_link = self._delegate.createEdgeEditor(QModelIndex())
+        self._draft_link = self._delegate.createEdgeWidget(QModelIndex())
         self.scene().addItem(self._draft_link)
         
         # Execute drag
@@ -501,98 +492,320 @@ class DAGEditorView(QGraphicsView):
         self.scene().removeItem(self._draft_link)
         self._draft_link = None
 
-    def dragEnterEvent(self, event):
+    def startDragInlet(self, node_row:int, inlet_name:str):
+        """ Initiate the drag operation """
+        assert self._node_selection
+        assert self._nodes
+
+        mime = QMimeData()
+        mime.setData('application/inlet', f"{node_row}/{inlet_name}".encode("utf-8"))
+        drag = QDrag(self)
+        drag.setMimeData(mime)
+
+        self._draft_link = self._delegate.createEdgeWidget(QModelIndex())
+        self.scene().addItem(self._draft_link)
+        
+        # Execute drag
+        action = drag.exec(Qt.DropAction.LinkAction)
+        if action == Qt.DropAction.LinkAction:
+            print("link aciton")
+        self.scene().removeItem(self._draft_link)
+        self._draft_link = None
+
+    def startDragEdge(self, index:QModelIndex, endpoint:Literal['source', 'target'])->None:
+        """ Initiate the drag operation """
+        assert self._node_selection
+        assert self._nodes
+        source_node_index = index.data(self.SourceRole)
+        target_node_index = index.data(self.TargetRole)
+        outlet_name = "out"
+        inlet_name = index.data(Qt.ItemDataRole.EditRole)
+
+        mime = QMimeData()
+        match endpoint:
+            case 'source':
+                mime.setData('application/edge/outlet', f"{source_node_index.row()}/{outlet_name}".encode("utf-8"))
+            case 'target':
+                mime.setData('application/edge/inlet', f"{target_node_index.row()}/{inlet_name}".encode("utf-8"))
+        drag = QDrag(self)
+        drag.setMimeData(mime)
+
+        self._draft_link = self.linkWidget(index)
+        
+        # Execute drag
+        action = drag.exec(Qt.DropAction.LinkAction)
+        if action == Qt.DropAction.LinkAction:
+            print("link aciton")
+        self._draft_link = None
+
+    def startDragEdgeInlet(self, index:QModelIndex):
+        """ Initiate the drag from edge inlet operation """
+        target_node_index = index.data(self.TargetRole)
+        inlet_name = index.data(Qt.ItemDataRole.EditRole)
+
+        mime = QMimeData()
+
+        mime.setData('application/edge/inlet', f"{target_node_index.row()}/{inlet_name}".encode("utf-8"))
+        drag = QDrag(self)
+        drag.setMimeData(mime)
+
+        self._draft_link = self.linkWidget(index)
+        
+        # Execute drag
+        action = drag.exec(Qt.DropAction.LinkAction)
+        if action == Qt.DropAction.LinkAction:
+            print("link aciton")
+        self._draft_link = None
+
+    def startDragEdgeOutlet(self, index:QModelIndex):
+        source_node_index = index.data(self.SourceRole)
+        outlet_name = "out"
+
+        mime = QMimeData()
+        mime.setData('application/edge/outlet', f"{source_node_index.row()}/{outlet_name}".encode("utf-8"))
+        drag = QDrag(self)
+        drag.setMimeData(mime)
+
+        self._draft_link = self.linkWidget(index)
+        
+        # Execute drag
+        action = drag.exec(Qt.DropAction.LinkAction)
+        if action == Qt.DropAction.LinkAction:
+            print("link aciton")
+        self._draft_link = None
+
+    def dragMoveEvent(self, event:QDragMoveEvent):
+        assert self._nodes
+        
+        if event.mimeData().hasFormat('application/outlet'):
+            self.dragMoveOutletEvent(event)
+            
+        if event.mimeData().hasFormat('application/inlet'):
+            self.dragMoveInletEvent(event)
+
+        if event.mimeData().hasFormat('application/edge/outlet'):
+            self.dragMoveEdgeOutletEvent(event)
+
+        if event.mimeData().hasFormat('application/edge/inlet'):
+            self.dragMoveEdgeInletEvent(event)
+
+    def dragMoveOutletEvent(self, event):
+        assert self._nodes
+        source = event.mimeData().data('application/outlet').toStdString().split("/")
+        source_row, source_outlet = int(source[0]), source[1]
+        source_node_index = self._nodes.index(source_row, 0)
+        source_outlet_widget = self.outletWidget(source_node_index, source_outlet)
+
+        assert isinstance(source_row, int)
+        assert source_outlet == "out"
+        assert source_node_index.isValid()
+        assert source_outlet_widget
+
+        target_node_index, inlet = self.inletIndexAt(event.position().toPoint()) or (None, None)
+        target_inlet_widget = self.inletWidget(target_node_index, inlet) if (target_node_index and inlet) else None
+
+        if source_outlet_widget and target_inlet_widget:
+            self._delegate.updateEdgePosition(self._draft_link, source_outlet_widget, target_inlet_widget)
+        elif source_outlet_widget:
+            scene_pos = self.mapToScene(event.position().toPoint())
+            self._delegate.updateEdgePosition(self._draft_link, source_outlet_widget, scene_pos)
+
+    def dragMoveInletEvent(self, event:QDragMoveEvent):
+        assert self._nodes
+        source = event.mimeData().data('application/inlet').toStdString().split("/")
+        source_row, source_outlet = int(source[0]), source[1]
+        source_node_index = self._nodes.index(source_row, 0)
+        source_inlet_widget = self.inletWidget(source_node_index, source_outlet)
+
+        assert isinstance(source_row, int)
+        assert source_node_index.isValid()
+        assert source_inlet_widget
+
+        target_node_index, outlet = self.outletIndexAt(event.position().toPoint()) or (None, None)
+        target_outlet_widget = self.outletWidget(target_node_index, outlet) if (target_node_index and outlet) else None
+
+        if source_inlet_widget and target_outlet_widget:
+            self._delegate.updateEdgePosition(self._draft_link, target_outlet_widget, source_inlet_widget)
+        elif source_inlet_widget:
+            scene_pos = self.mapToScene(event.position().toPoint())
+            self._delegate.updateEdgePosition(self._draft_link, scene_pos, source_inlet_widget)
+
+    def dragMoveEdgeInletEvent(self, event:QDragMoveEvent):
+        assert self._nodes
+        source = event.mimeData().data('application/edge/inlet').toStdString().split("/")
+        source_row, source_outlet = int(source[0]), source[1]
+        source_node_index = self._nodes.index(source_row, 0)
+        source_inlet_widget = self.inletWidget(source_node_index, source_outlet)
+
+        assert isinstance(source_row, int)
+        assert source_node_index.isValid()
+        assert source_inlet_widget
+
+        target_node_index, outlet = self.outletIndexAt(event.position().toPoint()) or (None, None)
+        target_outlet_widget = self.outletWidget(target_node_index, outlet) if (target_node_index and outlet) else None
+
+        if source_inlet_widget and target_outlet_widget:
+            self._delegate.updateEdgePosition(self._draft_link, target_outlet_widget, source_inlet_widget)
+        elif source_inlet_widget:
+            scene_pos = self.mapToScene(event.position().toPoint())
+            self._delegate.updateEdgePosition(self._draft_link, scene_pos, source_inlet_widget)
+
+    def dragMoveEdgeOutletEvent(self, event:QDragMoveEvent):
+        assert self._nodes
+        source = event.mimeData().data('application/edge/outlet').toStdString().split("/")
+        source_row, source_outlet = int(source[0]), source[1]
+        source_node_index = self._nodes.index(source_row, 0)
+        source_outlet_widget = self.outletWidget(source_node_index, source_outlet)
+
+        assert isinstance(source_row, int)
+        assert source_outlet == "out"
+        assert source_node_index.isValid()
+        assert source_outlet_widget
+
+        target_node_index, inlet = self.inletIndexAt(event.position().toPoint()) or (None, None)
+        target_inlet_widget = self.inletWidget(target_node_index, inlet) if (target_node_index and inlet) else None
+
+        if source_outlet_widget and target_inlet_widget:
+            self._delegate.updateEdgePosition(self._draft_link, source_outlet_widget, target_inlet_widget)
+        elif source_outlet_widget:
+            scene_pos = self.mapToScene(event.position().toPoint())
+            self._delegate.updateEdgePosition(self._draft_link, source_outlet_widget, scene_pos)
+
+    def dragEnterEvent(self, event:QDragEnterEvent):
         """ Accept drag events """
         if event.mimeData().hasFormat('application/outlet'):
             event.acceptProposedAction()
+        elif event.mimeData().hasFormat('application/inlet'):
+            event.acceptProposedAction()
+        elif event.mimeData().hasFormat('application/edge/outlet'):
+            event.acceptProposedAction()
+        elif event.mimeData().hasFormat('application/edge/inlet'):
+            event.acceptProposedAction()
 
-    def dragMoveEvent(self, event):
-        assert self._nodes
+    def dropEvent(self, event:QDropEvent):
         
         if event.mimeData().hasFormat('application/outlet'):
-            source = event.mimeData().data('application/outlet').toStdString().split("/")
-            source_row, source_outlet = int(source[0]), source[1]
-            source_node_index = self._nodes.index(source_row, 0)
-            source_outlet_widget = self.outletWidget(source_node_index, source_outlet)
+            self.dropOutletEvent(event)
 
-            assert isinstance(source_row, int)
-            assert source_outlet == "out"
-            assert source_node_index.isValid()
-            assert source_outlet_widget
+        if event.mimeData().hasFormat('application/inlet'):
+            self.dropInletEvent(event)
 
+    def dropOutletEvent(self, event:QDropEvent):
+        assert self._nodes
+        source = event.mimeData().data('application/outlet').toStdString().split("/")
+        source_row, source_outlet = int(source[0]), source[1]
+        source_node_index = self._nodes.index(source_row, 0)
 
-            target_node_index, inlet = self.inletIndexAt(event.pos()) or (None, None)
-            target_inlet_widget = self.inletWidget(target_node_index, inlet) if (target_node_index and inlet) else None
+        target_inlet_id = self.inletIndexAt(event.position().toPoint())
 
-            if source_outlet_widget and target_inlet_widget:
-                self._delegate.updateLinkPosition(self._draft_link, source_outlet_widget, target_inlet_widget)
-            elif source_outlet_widget:
-                self._delegate.updateLinkPosition(self._draft_link, source_outlet_widget, event.scenePos())
+        if source_node_index and target_inlet_id:
+            assert self._edges
+            target_node_index, inlet_name = target_inlet_id
+            self._edges.addEdgeItem(EdgeItem(
+                QPersistentModelIndex(source_node_index), 
+                QPersistentModelIndex(target_node_index),
+                inlet_name
+            ))
+
+    def dropInletEvent(self, event:QDropEvent):
+        assert self._nodes
+        # parse mime data
+        source_data = event.mimeData().data('application/inlet').toStdString().split("/")
+        source_row, source_inlet_name = int(source_data[0]), source_data[1]
+        source_node_index = self._nodes.index(source_row, 0)
+
+        source_inlet_id = source_node_index, source_inlet_name
+        target_outlet_id = self.outletIndexAt(event.position().toPoint())
+
+        if source_inlet_id and target_outlet_id:
+            assert self._edges
+            target_node_index, outlet_name = target_outlet_id
+            self._edges.addEdgeItem(EdgeItem(
+                QPersistentModelIndex(target_node_index),
+                QPersistentModelIndex(source_node_index), 
+                source_inlet_name
+            ))
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
-        self._forwardMouseEvent(event, "Press")
-        return super().mousePressEvent(event)
+        if not self._handleMouseEvent(event):
+            return super().mousePressEvent(event)
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
-        self._forwardMouseEvent(event, "Release")
-        return super().mouseReleaseEvent(event)
+        if not self._handleMouseEvent(event):
+            return super().mouseReleaseEvent(event)
 
-    def _forwardMouseEvent(self, event: QMouseEvent, action: str) -> None:
-        event_map = {
-            "_node_graphics_objects":   getattr(self, f"node{action}Event"),
-            "_outlet_graphics_objects": getattr(self, f"outlet{action}Event"),
-            "_inlet_graphics_objects":  getattr(self, f"inlet{action}Event"),
-            "_link_graphics_objects":   getattr(self, f"edge{action}Event"),
-        }
-    
-        for item in self.items(event.pos()):
-            for widget_map, event_handler in event_map.items():
-                if item in getattr(self, widget_map).inverse:
-                    event_handler(item, event)
-                    break  # Stop checking once the first match is found
+    def _handleMouseEvent(self, event: QMouseEvent) -> bool:
+        def event_action(event: QMouseEvent):
+            match event.type():
+                case event.Type.MouseButtonPress:
+                    return "Press"
+                case event.Type.MouseButtonRelease:
+                    return "Release"
 
-    def nodePressEvent(self, item:QGraphicsItem, event: QMouseEvent) -> None:
-        print("node press event")
+        def item_kind(item):
+            if item in self._outlet_graphics_objects.inverse:
+                return 'outlet', self._outlet_graphics_objects.inverse[item]
+            elif item in self._inlet_graphics_objects.inverse:
+                return 'inlet', self._inlet_graphics_objects.inverse[item]
+            elif item in self._node_graphics_objects.inverse:
+                return 'node', self._node_graphics_objects.inverse[item]
+            elif item in self._link_graphics_objects.inverse:
+                return 'edge', self._link_graphics_objects.inverse[item]
+            return None, None
 
-    def outletPressEvent(self, item:QGraphicsItem, event: QMouseEvent) -> None:
-        print("outlet press event")
 
-    def inletPressEvent(self, item:QGraphicsItem, event: QMouseEvent) -> None:
-        print("inlet press event")
+        action = event_action(event)
+        for item in self.items(event.position().toPoint()):
+            kind, item_id=item_kind(item)
+            if kind:
+                item_event_handler = getattr(self, f"{kind}{action}Event")
 
-    def edgePressEvent(self, item:QGraphicsItem, event: QMouseEvent) -> None:
-        print("edge press event")
+                return item_event_handler(item_id, event)
+        return False
 
-    def nodeReleaseEvent(self, item:QGraphicsItem, event: QMouseEvent) -> None:
-        print("node release event")
+    def nodePressEvent(self, index:QPersistentModelIndex, event: QMouseEvent) -> bool:
+        return False
 
-    def outletReleaseEvent(self, item:QGraphicsItem, event: QMouseEvent) -> None:
-        print("outlet release event")
+    def outletPressEvent(self, outlet_id:tuple[QPersistentModelIndex, str], event: QMouseEvent) -> bool:
+        node_index, outlet_name = outlet_id
+        self.startDragOutlet(node_index.row(), outlet_name)
+        return True
 
-    def inletReleaseEvent(self, item:QGraphicsItem, event: QMouseEvent) -> None:
-        print("inlet release event")
+    def inletPressEvent(self, inlet_id:tuple[QPersistentModelIndex, str], event: QMouseEvent) -> bool:
+        node_index, inlet_name = inlet_id
+        self.startDragInlet(node_index.row(), inlet_name)
+        return True
 
-    def edgeReleaseEvent(self, item:QGraphicsItem, event: QMouseEvent) -> None:
-        print("edge release event")
+    def edgePressEvent(self, index:QModelIndex, event: QMouseEvent) -> bool:
+        source_node_index = index.data(self.SourceRole)
+        target_node_index = index.data(self.TargetRole)
+        outlet_id = source_node_index, "out"
+        inlet_id = target_node_index, index.data(Qt.ItemDataRole.EditRole)
+        assert outlet_id in self._outlet_graphics_objects, f"got {outlet_id}"
+        assert inlet_id in self._inlet_graphics_objects, f"got {inlet_id}"
+        outlet_widget = self._outlet_graphics_objects[outlet_id]
+        inlet_widget = self._inlet_graphics_objects[inlet_id]
+        mouse_pos = self.mapToScene(event.position().toPoint())
 
-    def dropEvent(self, event):
-        assert self._nodes
-        if event.mimeData().hasFormat('application/outlet'):
-            source = event.mimeData().data('application/outlet').toStdString().split("/")
-            source_row, source_outlet = int(source[0]), source[1]
-            source_node_index = self._nodes.index(source_row, 0)
+        d1 = (mouse_pos-outlet_widget.pos()).manhattanLength()
+        d2 = (mouse_pos-inlet_widget.pos()).manhattanLength()
+        if d1<d2:
+            self.startDragEdgeOutlet(index)
+        else:
+            self.startDragEdgeInlet(index)
+        return True
 
-            target_node_index = self.nodeIndexAt(event.pos())
+    def nodeReleaseEvent(self, item:QGraphicsItem, event: QMouseEvent) -> bool:
+        return False
 
-            if source_node_index and target_node_index:
-                assert self._edges
-                self._edges.addEdgeItem(EdgeItem(
-                    QPersistentModelIndex(source_node_index), 
-                    QPersistentModelIndex(target_node_index),
-                    "key"
-                ))
-        
-    
+    def outletReleaseEvent(self, item:QGraphicsItem, event: QMouseEvent) -> bool:
+        return False
+
+    def inletReleaseEvent(self, item:QGraphicsItem, event: QMouseEvent) -> bool:
+        return False
+
+    def edgeReleaseEvent(self, item:QGraphicsItem, event: QMouseEvent) -> bool:
+        return False
 
 if __name__ == "__main__":
     app = QApplication()
@@ -608,7 +821,6 @@ if __name__ == "__main__":
     row = 0
     def create_new_node():
         global row
-        print("create node {row}")
         row+=1
         item = QStandardItem()
         item.setData(f"node{row}", Qt.ItemDataRole.DisplayRole)
@@ -623,8 +835,6 @@ if __name__ == "__main__":
             nodes.removeRows(index.row(), 1)
 
     def connect_selected_nodes():
-        print("connect selected nodes")
-
         if len(node_selection.selectedRows(0))<2:
             return
 
@@ -648,9 +858,7 @@ if __name__ == "__main__":
         for index in sorted(indexes, key=lambda index:index.row(), reverse=True):
             edges.removeRows(index.row(), 1)
 
-    nodes.rowsInserted.connect(lambda: print("rows inserted"))
     ### view
-
     nodelist = QListView()
     nodelist.setModel(nodes)
     nodelist.setSelectionModel(node_selection)

@@ -20,23 +20,23 @@ class StandardNodeWidget(BaseNodeItem):
         
         ### label
         self._heading_label = QGraphicsTextItem(f"Heading")
-        # self._heading_label.setPos(0,-2)
-        # self._heading_label.setParentItem(self)
-        # self._heading_label.adjustSize()
-        # self.setGeometry(QRectF(0, 0, self._heading_label.textWidth(), 20))
+        self._heading_label.setPos(0,-2)
+        self._heading_label.setParentItem(self)
+        self._heading_label.adjustSize()
+        self.setGeometry(QRectF(0, 0, self._heading_label.textWidth(), 20))
 
 
-    def paint(self, painter: QPainter, option, widget=None):
-        # Create a QStyleOptionButton for the button
-        style_option = QStyleOptionButton()
-        style_option.initFrom(widget)
-        style_option.text = self._heading_label.toPlainText()
-        style_option.state = QStyle.State_Enabled | QStyle.State_Raised
-        style_option.rect = self.boundingRect().toRect()  # Convert QRectF to QRect
+    def paint(self, painter, option:QStyleOption, widget=None):
+        rect = self.geometry()
 
-        # Use the widget's style to draw the button
-        if widget:
-            widget.style().drawControl(QStyle.CE_PushButton, style_option, painter, widget)
+        pen = painter.pen()
+        pen.setBrush(self.palette().text())
+        if self.isSelected():
+            pen.setBrush(self.palette().accent())
+        painter.setPen(pen)
+
+        rect.moveTo(QPoint(0,0))
+        painter.drawRoundedRect(rect, 6,6)
 
     def setHeading(self, text:str):
         self._heading_label.setPlainText(text)
@@ -97,16 +97,18 @@ if __name__ == "__main__":
 
     node_item = StandardNodeWidget()
     for idx, name in enumerate(["in1", "in2", "in3"]):
-        node_item.insertInlet(idx, name)
+        inlet = StandardPortWidget(name)
+        inlet.pressed.connect(lambda name=name: print(f"inlet {name} pressed") )
+        node_item.insertInlet(idx, inlet)
 
     for idx, name in enumerate(["out"]):
-        node_item.insertOutlet(idx, name)
+        outlet = StandardPortWidget(name)
+        outlet.pressed.connect(lambda name=name: print(f"outlet {name} pressed") )
+        node_item.insertOutlet(idx, outlet)
     scene = QGraphicsScene()
     scene.addItem(node_item)
 
     node_item.pressed.connect(lambda: print("node pressed"))
-    node_item.inletPressed.connect(lambda name: print(f"inlet pressed: {name}"))
-    node_item.outletPressed.connect(lambda name: print(f"outlet pressed: {name}"))
 
     view.setScene(scene)
 
