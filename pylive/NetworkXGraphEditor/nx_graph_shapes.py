@@ -154,25 +154,6 @@ class VertexShape(InteractiveShape):
         painter.drawRoundedRect(self.boundingRect(), 4, 4)
 
 
-
-
-def distribute_items_horizontal(items, rect:QRectF):
-            num_items = len(items)
-            
-            if num_items < 1:
-                return
-
-            if num_items <2:
-                items[0].setX(rect.center().x())
-                return
-
-            # Calculate horizontal spacing
-            spacing = rect.width() / (num_items - 1)
-            for i, item in enumerate(items):
-                x = rect.left() + i * spacing
-                item.setX(x)
-
-
 class PortShape(InteractiveShape):
     def __init__(self, name:str, parent:QGraphicsItem|None=None):
         super().__init__(parent)

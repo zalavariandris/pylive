@@ -54,7 +54,7 @@ if __name__ == "__main__":
 """
 )
 
-from pylive.preview_widget import PreviewWidget
+from pylive.QtTerminal.preview_widget import PreviewWidget
 
 
 class LiveScript(QWidget):

@@ -3,19 +3,21 @@ from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
-from pylive.NetworkXGraphEditor.nx_graph_shapes import BaseNodeItem, PortShape, distribute_items_horizontal
-from pylive.QtGraphEditor.widgets.standard_port_widget import StandardPortWidget
+# from pylive.QtGraphEditor.widgets.graph_shapes import BaseNodeItem
+from pylive.utils.qt import distribute_items_horizontal
 
-class StandardNodeWidget(BaseNodeItem):
+class StandardNodeWidget(QGraphicsWidget):
     pressed = Signal()
+    scenePositionChanged = Signal()
     def __init__(self, parent:QGraphicsItem|None=None):
         super().__init__(parent=parent)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges)
 
         ### ports
-        self._inlets:list[StandardPortWidget] = []
-        self._outlets:list[StandardPortWidget] = []
+        self._inlets:list[QGraphicsItem] = []
+        self._outlets:list[QGraphicsItem] = []
         self.geometryChanged.connect(self._layout_ports)
         
         ### label
@@ -25,6 +27,10 @@ class StandardNodeWidget(BaseNodeItem):
         self._heading_label.adjustSize()
         self.setGeometry(QRectF(0, 0, self._heading_label.textWidth(), 20))
 
+    def itemChange(self, change: QGraphicsItem.GraphicsItemChange, value: Any) -> Any:
+        if change == QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
+            self.scenePositionChanged.emit()
+        return super().itemChange(change, value)
 
     def paint(self, painter, option:QStyleOption, widget=None):
         rect = self.geometry()
@@ -55,7 +61,7 @@ class StandardNodeWidget(BaseNodeItem):
         self._layout_ports()
         
     def takeInlet(self, idx:int)->QGraphicsItem:
-        item, = self._inlets[idx]
+        item = self._inlets[idx]
         if scene:=item.scene():
             scene.removeItem(item)
         del self._inlets[idx]
@@ -85,7 +91,7 @@ if __name__ == "__main__":
     app = QApplication()
 
     ### model state
-
+    from pylive.QtGraphEditor.widgets.standard_port_widget import StandardPortWidget
 
     view = QGraphicsView()
     view.setDragMode(QGraphicsView.DragMode.RubberBandDrag)

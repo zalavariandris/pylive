@@ -7,8 +7,10 @@ from pylive.NetworkXGraphEditor.nx_graph_shapes import (
     ArrowLinkShape, RoundedLinkShape,
     BaseNodeItem,
     BaseLinkItem, 
-    PortShape, distribute_items_horizontal
+    PortShape
 )
+
+from pylive.utils.qt import distribute_items_horizontal
 
 from pylive.NetworkXGraphEditor.nx_network_model import (
     NXNetworkModel,
@@ -28,21 +30,21 @@ class StandardGraphDelegate(QObject):
 
     ### NODE DELEGATE
     nodePositionChanged = Signal(QGraphicsItem)
-    def createNodeWidget(self, parent:QGraphicsScene, index:QModelIndex|QPersistentModelIndex)->BaseNodeItem:
+    def createNodeWidget(self, parent:QGraphicsScene, index:QModelIndex|QPersistentModelIndex)->QGraphicsItem:
         node_widget = StandardNodeWidget()
         node_widget.setHeading(f"{index.data(Qt.ItemDataRole.DisplayRole)}")
         node_widget.scenePositionChanged.connect(lambda node=node_widget: self.nodePositionChanged.emit(node))
         parent.addItem(node_widget)
         return node_widget
 
-    def createInletWidget(self, parent:QGraphicsItem, node_index:QModelIndex|QPersistentModelIndex, inlet:object)->QGraphicsWidget:
+    def createInletWidget(self, parent:QGraphicsItem, node_index:QModelIndex|QPersistentModelIndex, inlet:object)->QGraphicsItem:
         port_editor = StandardPortWidget(f"{inlet}", parent)
         parent = cast(StandardNodeWidget, parent)
         parent.insertInlet(0, port_editor)
         # item.pressed.connect(lambda name=name: self.inletPressed.emit(name))
         return port_editor
 
-    def createOutletWidget(self, parent:QGraphicsItem, node_index:QModelIndex|QPersistentModelIndex, outlet:object)->QGraphicsWidget:
+    def createOutletWidget(self, parent:QGraphicsItem, node_index:QModelIndex|QPersistentModelIndex, outlet:object)->QGraphicsItem:
         port_editor = StandardPortWidget(f"{outlet}", parent)
         port_editor._nameitem.setPos(-24,0)
         parent = cast(StandardNodeWidget, parent)
@@ -60,7 +62,7 @@ class StandardGraphDelegate(QObject):
         editor.setHeading( index.data(Qt.ItemDataRole.DisplayRole) )
 
     ### EDGE DELEGATE
-    def createEdgeWidget(self, edge_idx:QModelIndex|QPersistentModelIndex)->BaseLinkItem:
+    def createEdgeWidget(self, edge_idx:QModelIndex|QPersistentModelIndex)->QGraphicsItem:
         label = edge_idx.data(Qt.ItemDataRole.DisplayRole)
         link = RoundedLinkShape(label if label else "", orientation=Qt.Orientation.Vertical)
         link.setZValue(-1)
@@ -70,8 +72,11 @@ class StandardGraphDelegate(QObject):
         ...
 
     def updateEdgePosition(self, 
-        edge_editor, 
+        edge_editor: QGraphicsItem, 
         source:QGraphicsItem|QPointF, 
         target:QGraphicsItem|QPointF
     ):
-        edge_editor.move(source, target)
+        edge_widget = cast(RoundedLinkShape, edge_editor)
+        edge_widget.move(source, target)
+
+

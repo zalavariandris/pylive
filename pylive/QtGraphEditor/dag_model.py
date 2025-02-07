@@ -19,29 +19,71 @@ class EdgeItem:
 import networkx as nx
 
 
-class EdgesModel(QAbstractItemModel):
+class DAGModel(QAbstractItemModel):
     def __init__(self, nodes:QAbstractItemModel, parent: QObject|None=None) -> None:
         super().__init__(parent)
+        self._nodes = nodes
+        # nodes.rowsRemoved.connect(self._onRelatedModelRowsRemoved)
+        # nodes.rowsMoved.connect(self._onRelatedModelRowsMoved)
 
-        self._related_nodes = nodes
-        nodes.rowsRemoved.connect(self._onRelatedModelRowsRemoved)
-
-        self._DAG = nx.MultiDiGraph()
+        self._DAG:nx.MultiDiGraph = nx.MultiDiGraph()
         self._edges_list:list[EdgeItem] = []
+
+    def nodes(self):
+        return self._nodes
 
     def _onRelatedModelRowsRemoved(self, parent:QModelIndex, first:int, last:int):
         edge_rows_to_remove = []
         for row, edge in enumerate(self._edges_list):
-            SourceExists = first > edge.source.row() or edge.source.row() >last
-            TargetExists = first > edge.target.row() or edge.target.row() >last
-
-            if not SourceExists or not TargetExists:
+            SourceExists = first <= edge.source.row() <= last
+            TargetExists = first <= edge.target.row() <= last
+            if SourceExists or TargetExists:
                 edge_rows_to_remove.append(row)
 
         edge_row_groups = [_ for _ in group_consecutive_numbers(edge_rows_to_remove)]
         print(edge_row_groups)
         for edge_range in edge_row_groups:
             self.removeRows(edge_range.start, count=edge_range.stop-edge_range.start)
+
+    def _onRelatedModelRowsMoved(self, parent: QModelIndex, start: int, end: int, destinationParent: QModelIndex, destinationRow: int):
+        """
+        Adjusts edge references when nodes are moved.
+        
+        - `start`: First moved row
+        - `end`: Last moved row
+        - `destinationRow`: New starting position
+        """
+
+        if parent != destinationParent:
+            return  # Ignore moves across different parents
+
+        moved_range = set(range(start, end + 1))
+        offset = destinationRow - start
+        index_map = {}
+
+        for edge in self._edges_list:
+            old_source_row = edge.source.row()
+            old_target_row = edge.target.row()
+
+            # Update source index
+            if old_source_row in moved_range:
+                new_source_row = old_source_row + offset
+                index_map[old_source_row] = new_source_row
+                edge.source = self._nodes.index(new_source_row, 0)
+
+            # Update target index
+            if old_target_row in moved_range:
+                new_target_row = old_target_row + offset
+                index_map[old_target_row] = new_target_row
+                edge.target = self._nodes.index(new_target_row, 0)
+
+        # Rebuild DAG with updated indices
+        self._DAG.clear()
+        for edge in self._edges_list:
+            self._DAG.add_edge(edge.source, edge.target, edge.key)
+
+        self.dataChanged.emit(QModelIndex(), QModelIndex())  # Notify views of the change
+
 
     def rowCount(self, parent=QModelIndex()):
         """Returns the number of rows in the model."""
@@ -119,7 +161,7 @@ class EdgesModel(QAbstractItemModel):
         return None
 
     def inputs(self, target_node_index:QModelIndex|QPersistentModelIndex)->Sequence[tuple[QModelIndex, str]]:
-        if not target_node_index.isValid() or target_node_index.model() != self._related_nodes:
+        if not target_node_index.isValid() or target_node_index.model() != self._nodes:
             return []
 
         return [(u, k) for u, v, k in self._DAG.in_edges([QPersistentModelIndex(target_node_index)], keys=True)]
@@ -141,8 +183,6 @@ class EdgesModel(QAbstractItemModel):
     #     for n in nx.ancestors(self._DAG, QPersistentModelIndex(node_index)):
     #         yield n
 
-    def insertRows(self, row, count, parent=QModelIndex()):
-        raise NotImplementedError()
 
     def topologicalSort(self, nodes:Iterable[QModelIndex])->Sequence[QPersistentModelIndex]:
         subgraph:nx.MultiDiGraph = self._DAG.subgraph([QPersistentModelIndex(_) for _ in nodes])
@@ -152,8 +192,8 @@ class EdgesModel(QAbstractItemModel):
         assert isinstance(edge.source, (QModelIndex, QPersistentModelIndex)) 
         assert isinstance(edge.target, (QModelIndex, QPersistentModelIndex))
         assert isinstance(edge.key, str)
-        assert edge.source.model() == self._related_nodes
-        assert edge.target.model() == self._related_nodes
+        assert edge.source.model() == self._nodes
+        assert edge.target.model() == self._nodes
 
         assert edge.source.column() == 0
         assert edge.target.column() == 0
@@ -162,12 +202,12 @@ class EdgesModel(QAbstractItemModel):
         if not isinstance(edge.source, (QModelIndex, QPersistentModelIndex)):
             return False
 
-        if edge.source.model() != self._related_nodes:
+        if edge.source.model() != self._nodes:
             return False
 
         if not isinstance(edge.source, (QModelIndex, QPersistentModelIndex)):
             return False
-        if edge.target.model() != self._related_nodes:
+        if edge.target.model() != self._nodes:
             return False
 
         parent = QModelIndex()
@@ -203,7 +243,8 @@ class EdgesModel(QAbstractItemModel):
         if not index.isValid():
             return Qt.ItemFlag.NoItemFlags
 
-        return Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled ### | Qt.ItemFlag.ItemIsEditable
+        flags = Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled
+        return flags
 
     def index(self, row:int, column:int, parent=QModelIndex()):
         if parent.isValid():
@@ -214,62 +255,5 @@ class EdgesModel(QAbstractItemModel):
     def parent(self, index:QModelIndex|QPersistentModelIndex)->QModelIndex:
         return QModelIndex()  # No parent for this flat model
 
-    def source_nodes(self, node_index:QModelIndex):
-        ...
 
-if __name__ == "__main__":
-    from nodes_model import NodesModel, NodeItem
-    app = QApplication()
-    window = QWidget()
-    
-    # models
-    nodes_model = NodesModel()
-    edges_model = EdgesModel(nodes_model)
-    
 
-    # widgets
-    node_list = QTableView()
-    node_list.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
-    node_list.setSelectionMode(QTableView.SelectionMode.ExtendedSelection)
-    node_list.setModel(nodes_model)
-    for row, name in enumerate(["node1", "node2", "node3"]):
-        nodes_model.insertNodeItem(row, NodeItem(name) )
-
-    # links_list = QListView()
-    # links_list.setModel(edges_model)
-    links_table = QTableView()
-    links_table.setModel(edges_model)
-
-    # actions
-    def link_selected_nodes():
-        source = node_list.currentIndex()
-
-        selected_rows = {index.siblingAtColumn(0) for index in node_list.selectedIndexes()}
-        for target in selected_rows:
-            if target!=source:
-                edges_model.addEdgeItem(EdgeItem(
-                    QPersistentModelIndex(source), 
-                    QPersistentModelIndex(target), 
-                    "in")
-                )
-
-    def remove_selected_link():
-        print("remove selected link")
-
-    link_selected_action = QAction("link selected", window)
-    link_selected_action.triggered.connect(link_selected_nodes)
-    remove_link_action = QAction("remove link", window)
-    remove_link_action.triggered.connect(remove_selected_link)
-
-    menubar = QMenuBar()
-    menubar.addAction(link_selected_action)
-
-    # layout
-    main_layout = QHBoxLayout()
-    main_layout.setMenuBar(menubar)
-    main_layout.addWidget(node_list)
-    main_layout.addWidget(links_table)
-    # main_layout.addWidget(links_list)
-    window.setLayout(main_layout)
-    window.show()
-    app.exec()
