@@ -57,9 +57,9 @@ class StandardGraphDelegate(QObject):
         # port_editor.pressed.connect(on_press)
         return port_editor
 
-    def updateNodeWidget(self, index:QModelIndex|QPersistentModelIndex, editor:QGraphicsItem)->None:
-        editor = cast(StandardNodeWidget, editor)
-        editor.setHeading( index.data(Qt.ItemDataRole.DisplayRole) )
+    def updateNodeWidget(self, index:QModelIndex|QPersistentModelIndex, node_widget:QGraphicsItem)->None:
+        node_widget = cast(StandardNodeWidget, node_widget)
+        node_widget.setHeading( index.data(Qt.ItemDataRole.DisplayRole) )
 
     ### EDGE DELEGATE
     def createEdgeWidget(self, edge_idx:QModelIndex|QPersistentModelIndex)->QGraphicsItem:

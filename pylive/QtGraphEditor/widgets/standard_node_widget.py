@@ -25,7 +25,7 @@ class StandardNodeWidget(QGraphicsWidget):
         self._heading_label.setPos(0,-2)
         self._heading_label.setParentItem(self)
         self._heading_label.adjustSize()
-        self.setGeometry(QRectF(0, 0, self._heading_label.textWidth(), 20))
+        self.setGeometry(QRectF(0, 0, self._heading_label.textWidth(), 150))
 
     def itemChange(self, change: QGraphicsItem.GraphicsItemChange, value: Any) -> Any:
         if change == QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
