@@ -26,7 +26,7 @@ class StandardEdgesModel(QAbstractItemModel):
         self._nodes = nodes
         nodes.rowsRemoved.connect(self._onRelatedModelRowsRemoved)
 
-        self._DAG:nx.MultiDiGraph = nx.MultiDiGraph()
+        self._DAG:nx.MultiDiGraph[T] = nx.MultiDiGraph()
         self._edges_list:list[StandardEdgeItem] = []
 
     def nodes(self)->QAbstractItemModel|None:
@@ -34,11 +34,11 @@ class StandardEdgesModel(QAbstractItemModel):
 
     def source(self, row:int)->tuple[QModelIndex, str]:
         edge_item = self.edgeItem(row)
-        return self.index(edge_item.source.row(), 0), edge_item.outlet
+        return self._nodes.index(edge_item.source.row(), 0), edge_item.outlet
 
     def target(self, row:int)->tuple[QModelIndex, str]:
         edge_item = self.edgeItem(row)
-        return self.index(edge_item.target.row(), 0), edge_item.inlet
+        return self._nodes.index(edge_item.target.row(), 0), edge_item.inlet
 
     def addEdgeItem(self, edge:StandardEdgeItem):
         assert isinstance(edge.source, (QModelIndex, QPersistentModelIndex)) 

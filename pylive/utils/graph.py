@@ -1,6 +1,7 @@
 from collections import deque
 from typing import Generator, Hashable
 import networkx as nx
+from typing import *
 
 def dependents(G:nx.MultiDiGraph, start_node:Hashable):
     queue = deque([start_node])
@@ -79,7 +80,8 @@ def hiearchical_layout_with_grandalf(G, scale=1):
 
 
 import networkx as nx
-def hiearchical_layout_with_nx(G:nx.DiGraph, scale=100):
+T = TypeVar('T')
+def hiearchical_layout_with_nx(G:nx.DiGraph, scale=100)->dict[Any, tuple[float, float]]:
     for layer, nodes in enumerate(
         reversed(tuple(nx.topological_generations(G)))
     ):

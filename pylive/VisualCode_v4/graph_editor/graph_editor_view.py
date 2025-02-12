@@ -203,33 +203,6 @@ class GraphEditorView(QGraphicsView):
         # set selection model
         self._node_selection = node_selection
 
-    def _updateSelectionModel(self):
-        """called when the graphicsscene selection has changed"""
-        if not self._node_selection:
-            return
-        assert self._nodes
-  
-        # # get selected rows
-        # selected_rows = []
-        # for item in self.scene().selectedItems():
-        #     if index := self._node_graphics_objects.inverse.get(item, None):
-        #         selected_rows.append(index.row())
-        # selected_rows.sort()
-
-        # # group selected rows to QItemSelectionRange
-        # from pylive.utils import group_consecutive_numbers
-        # new_selection = QItemSelection()
-        # if selected_rows:
-        #     for row_range in group_consecutive_numbers(selected_rows):
-        #         top_left = self._nodes.index(row_range.start, 0)
-        #         bottom_right = self._nodes.index(row_range.stop-1, self._nodes.columnCount())
-        #         new_selection.append(QItemSelectionRange(top_left, bottom_right))
-
-        # # set the selection
-        # if new_selection.count()>0:
-        #     self._node_selection.setCurrentIndex(new_selection.at(0).topLeft(), QItemSelectionModel.SelectionFlag.Current)
-        # self._node_selection.select(new_selection, QItemSelectionModel.SelectionFlag.ClearAndSelect)
-
     ### <<< Handle Model Signals
     def _onNodesReset(self):
         assert self._nodes
@@ -360,7 +333,7 @@ class GraphEditorView(QGraphicsView):
     def _addEdges(self, indexes:Iterable[QPersistentModelIndex]):
         assert self._edges and isinstance(self._edges, EdgesModelProtocol)
         indexes = list(indexes)
-        assert all(index.model() == self for index in indexes), f"got: {indexes}"
+        assert all(index.model() == self._edges for index in indexes), f"got: {indexes}"
         for edge_index in indexes:
             ### create edge editor
             if edge_editor := self._delegate.createEdgeWidget(edge_index):
@@ -398,35 +371,84 @@ class GraphEditorView(QGraphicsView):
             if editor := self._link_graphics_objects.get(edge_index, None):
                 self._delegate.updateEdgeWidget(edge_index, editor)
 
-    def changeNodeSelection(self, select: Iterable[QPersistentModelIndex], deselect:Iterable[QPersistentModelIndex]):
-        with signalsBlocked(self):
-            for node_index in select:
-                editor = self._node_graphics_objects[node_index]
-                editor.setSelected(True)
+    # def changeNodeWidgetSelection(self, select: Iterable[QPersistentModelIndex], deselect:Iterable[QPersistentModelIndex]):
+    #     # collect actual widget selection changes
+    #     node_widget_selection_changes = dict()
+    #     for node_index in select:
+    #         node_widget = self.nodeWidget(node_index)
+    #         assert node_widget
+    #         if not node_widget.isSelected():
+    #             node_widget_selection_changes[node_widget] = True
+            
+    #     for node_index in deselect:
+    #         node_widget = self.nodeWidget(node_index)
+    #         assert node_widget
+    #         if node_widget.isSelected():
+    #             node_widget_selection_changes[node_widget] = False
+    #         node_widget.setSelected(False)
 
-            for node_index in deselect:
-                editor = self._node_graphics_objects[node_index]
-                editor.setSelected(False)
+    #     if len(node_widget_selection_changes)>0:
+    #         print("change node selection")
+    #         with signalsBlocked(self.scene()):
+    #             for node_widget, isSelected in node_widget_selection_changes.items():
+    #                 node_widget.setSelected(isSelected)
 
-        self.scene().selectionChanged.emit()
+    #         self.scene().selectionChanged.emit()
 
     def _onSelectionChanged(self, selected: QItemSelection, deselected: QItemSelection):
         """on selection model changed"""
-        if selected.count()>0 or deselected.count()>0:
-            selected_indexes = (
-                QPersistentModelIndex(index)
-                for index in selected.indexes()
-            )
 
-            deselected_indexes = (
-                QPersistentModelIndex(index)
-                for index in deselected.indexes()
-            )
-            self.changeNodeSelection(selected_indexes, deselected_indexes)
+        ### update widgets seleection
+        selected_node_widgets = []
+        for node_index in selected.indexes():
+            node_widget = self.nodeWidget(node_index)
+            if node_widget:
+                if not node_widget.isSelected():
+                    selected_node_widgets.append(node_widget)
+
+        deselected_node_widgets = []
+        for node_index in deselected.indexes():
+            node_widget = self.nodeWidget(node_index)
+            if node_widget:
+                if node_widget.isSelected():
+                    deselected_node_widgets.append(node_widget)
+
+        if len(selected_node_widgets)>0 or len(deselected_node_widgets)>0:
+            with signalsBlocked(self.scene()):
+                for node_widget in selected_node_widgets:
+                    node_widget.setSelected(True)
+
+                for node_widget in deselected_node_widgets:
+                    node_widget.setSelected(False)
+
+    def _updateSelectionModel(self):
+        """called when the graphicsscene selection has changed"""
+        assert self._node_selection
+        assert self._nodes
+  
+        selected_items = list(self.scene().selectedItems())
+        selected_node_widgets = list(filter(lambda item: item in self._node_graphics_objects.inverse, selected_items))
+        selected_node_indexes = [self._node_graphics_objects.inverse[node_widget] for node_widget in selected_node_widgets]
+        selected_node_rows = sorted(node_index.row() for node_index in selected_node_indexes)
+
+        from pylive.utils import group_consecutive_numbers
+        selected_row_ranges = list( group_consecutive_numbers(selected_node_rows) )
+
+        new_selection = QItemSelection()
+        for row_range in selected_row_ranges:
+            top_left = self._nodes.index(row_range.start, 0)
+            bottom_right = self._nodes.index(row_range.stop-1, self._nodes.columnCount()-1)
+            selection_range = QItemSelectionRange(top_left, bottom_right)
+            new_selection.append(selection_range)
+
+        if new_selection.count()>0:
+            self._node_selection.setCurrentIndex(new_selection.at(0).topLeft(), QItemSelectionModel.SelectionFlag.Current)
+
+        self._node_selection.select(new_selection, QItemSelectionModel.SelectionFlag.ClearAndSelect)
 
     ### <<< Handle Model Signals
 
-    ### <<< Map the interactive graphics ids to widgets
+    ### Map the interactive graphics ids to widgets >>>
     def nodeWidget(self, node_index: QModelIndex|QPersistentModelIndex) -> QGraphicsItem|None:
         assert self._nodes
         assert node_index.isValid() and node_index.model() == self._nodes, f"got: {node_index}"
@@ -503,14 +525,14 @@ class GraphEditorView(QGraphicsView):
             target_node_index, _ = self._edges.target(edge_index.row())
 
             G.add_edge(source_node_index, target_node_index)
-        pos = hiearchical_layout_with_nx(G, scale=scale)
-        for N, (x, y) in pos.items():
-            widget = self._node_graphics_objects[N]
-            match orientation:
-                case Qt.Orientation.Vertical:
-                    widget.setPos(x, y)
-                case Qt.Orientation.Horizontal:
-                    widget.setPos(y, x)
+        pos:dict[QModelIndex, tuple[float, float]] = hiearchical_layout_with_nx(G, scale=scale)
+        for node_index, (x, y) in pos.items():
+            if node_widget := self.nodeWidget(node_index):
+                match orientation:
+                    case Qt.Orientation.Vertical:
+                        node_widget.setPos(x, y)
+                    case Qt.Orientation.Horizontal:
+                        node_widget.setPos(y, x)
 
     ### DRAG inlets, outlets, edges
     def startDragOutlet(self, node_row:int, outlet_name:str):
@@ -953,7 +975,7 @@ def main():
     from pylive.VisualCode_v4.graph_editor.standard_edges_model import StandardEdgeItem, StandardEdgesModel
     edges = StandardEdgesModel(nodes=nodes)
     node_selection = QItemSelectionModel(nodes)
-    # edge_selection = QItemSelectionModel(edges)
+    edge_selection = QItemSelectionModel(edges)
 
     def listen(model):
         model.modelReset.connect(lambda: print("modelReset"))
@@ -1020,6 +1042,7 @@ def main():
     edgelist = QTableView()
     edgelist.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
     edgelist.setModel(edges)
+    edgelist.setSelectionModel(edge_selection)
     edgelist.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
 
     graph_view = GraphEditorView()
