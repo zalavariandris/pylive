@@ -18,14 +18,14 @@ class StandardGraphDelegate(QObject):
 
     ### NODE DELEGATE
     nodePositionChanged = Signal(QGraphicsItem)
-    def createNodeWidget(self, parent:QGraphicsScene, index:QModelIndex|QPersistentModelIndex)->QGraphicsItem:
+    def createNodeWidget(self, parent:QGraphicsScene, index:QModelIndex)->QGraphicsItem:
         node_widget = StandardNodeWidget()
         node_widget.setHeading(f"{index.data(Qt.ItemDataRole.DisplayRole)}")
         node_widget.scenePositionChanged.connect(lambda node=node_widget: self.nodePositionChanged.emit(node))
         parent.addItem(node_widget)
         return node_widget
 
-    def createInletWidget(self, parent:QGraphicsItem, node_index:QModelIndex|QPersistentModelIndex, inlet:object)->QGraphicsItem:
+    def createInletWidget(self, parent:QGraphicsItem, node_index:QModelIndex, inlet:object)->QGraphicsItem:
         port_editor = StandardPortWidget(f"{inlet}", parent)
         parent = cast(StandardNodeWidget, parent)
         parent.insertInlet(0, port_editor)

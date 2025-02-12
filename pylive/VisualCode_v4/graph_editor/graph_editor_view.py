@@ -193,12 +193,12 @@ class GraphEditorView(QGraphicsView):
 
     def setSelectionModel(self, node_selection:QItemSelectionModel):
         if self._node_selection:
-            self._node_selection.selectionChanged.disconnect(self._onSelectionChanged)
-            self.scene().selectionChanged.disconnect(self._updateSelectionModel)
+            self._node_selection.selectionChanged.disconnect(self._onNodeSelectionChanged)
+            self.scene().selectionChanged.disconnect(self._syncNodeSelectionModel)
 
         if node_selection:
-            node_selection.selectionChanged.connect(self._onSelectionChanged)
-            self.scene().selectionChanged.connect(self._updateSelectionModel)
+            node_selection.selectionChanged.connect(self._onNodeSelectionChanged)
+            self.scene().selectionChanged.connect(self._syncNodeSelectionModel)
 
         # set selection model
         self._node_selection = node_selection
@@ -294,7 +294,6 @@ class GraphEditorView(QGraphicsView):
             if node_editor := self._delegate.createNodeWidget(self.scene(), node_index):
                 assert node_index.isValid(), "invalid persistent node?"
                 self._node_graphics_objects[node_index] = node_editor
-                print("add nodes", node_editor)
 
                 if inlets := self._nodes.inlets(node_index.row()):
                     assert isinstance(inlets, list)
@@ -371,57 +370,37 @@ class GraphEditorView(QGraphicsView):
             if editor := self._link_graphics_objects.get(edge_index, None):
                 self._delegate.updateEdgeWidget(edge_index, editor)
 
-    # def changeNodeWidgetSelection(self, select: Iterable[QPersistentModelIndex], deselect:Iterable[QPersistentModelIndex]):
-    #     # collect actual widget selection changes
-    #     node_widget_selection_changes = dict()
-    #     for node_index in select:
-    #         node_widget = self.nodeWidget(node_index)
-    #         assert node_widget
-    #         if not node_widget.isSelected():
-    #             node_widget_selection_changes[node_widget] = True
-            
-    #     for node_index in deselect:
-    #         node_widget = self.nodeWidget(node_index)
-    #         assert node_widget
-    #         if node_widget.isSelected():
-    #             node_widget_selection_changes[node_widget] = False
-    #         node_widget.setSelected(False)
-
-    #     if len(node_widget_selection_changes)>0:
-    #         print("change node selection")
-    #         with signalsBlocked(self.scene()):
-    #             for node_widget, isSelected in node_widget_selection_changes.items():
-    #                 node_widget.setSelected(isSelected)
-
-    #         self.scene().selectionChanged.emit()
-
-    def _onSelectionChanged(self, selected: QItemSelection, deselected: QItemSelection):
+    def _onNodeSelectionChanged(self, selected: QItemSelection, deselected: QItemSelection):
         """on selection model changed"""
+        assert self._node_selection
 
         ### update widgets seleection
-        selected_node_widgets = []
-        for node_index in selected.indexes():
-            node_widget = self.nodeWidget(node_index)
-            if node_widget:
-                if not node_widget.isSelected():
-                    selected_node_widgets.append(node_widget)
+        selected_node_indexes = set([
+            index.siblingAtColumn(0) 
+            for index in self._node_selection.selectedIndexes()
+        ])
 
-        deselected_node_widgets = []
-        for node_index in deselected.indexes():
-            node_widget = self.nodeWidget(node_index)
-            if node_widget:
-                if node_widget.isSelected():
-                    deselected_node_widgets.append(node_widget)
+        new_node_widgets_selection = set([
+            self.nodeWidget(index) 
+            for index in selected_node_indexes
+        ])
 
-        if len(selected_node_widgets)>0 or len(deselected_node_widgets)>0:
-            with signalsBlocked(self.scene()):
-                for node_widget in selected_node_widgets:
-                    node_widget.setSelected(True)
+        current_node_widgets_selection = set([
+            item for item in self.scene().selectedItems() 
+            if item in self._node_graphics_objects.inverse
+        ])
+        
+        from pylive.utils.diff import diff_set
+        node_widget_selection_change = diff_set(current_node_widgets_selection, new_node_widgets_selection)
 
-                for node_widget in deselected_node_widgets:
-                    node_widget.setSelected(False)
+        with signalsBlocked(self.scene()):
+            for node_widget in node_widget_selection_change.added:
+                node_widget.setSelected(True)
 
-    def _updateSelectionModel(self):
+            for node_widget in node_widget_selection_change.removed:
+                node_widget.setSelected(False)
+
+    def _syncNodeSelectionModel(self):
         """called when the graphicsscene selection has changed"""
         assert self._node_selection
         assert self._nodes
@@ -452,24 +431,25 @@ class GraphEditorView(QGraphicsView):
     def nodeWidget(self, node_index: QModelIndex|QPersistentModelIndex) -> QGraphicsItem|None:
         assert self._nodes
         assert node_index.isValid() and node_index.model() == self._nodes, f"got: {node_index}"
-        if editor:=self._node_graphics_objects.get(QPersistentModelIndex(node_index)):
-            return editor
+        node_id = QPersistentModelIndex(node_index)
+        if widget:=self._node_graphics_objects.get(node_id):
+            return widget
 
     def outletWidget(self, node_index: QModelIndex|QPersistentModelIndex, outlet:str) -> QGraphicsItem|None:
         assert self._nodes
         outlet_id = QPersistentModelIndex(node_index), outlet
         assert node_index.isValid(), f"got: {node_index}"
         assert outlet == "out"
-        if editor:=self._outlet_graphics_objects.get(outlet_id):
-            return editor
+        if widget:=self._outlet_graphics_objects.get(outlet_id):
+            return widget
         else:
-            print("all outlet widget:", self._outlet_graphics_objects)
+            return None
 
     def inletWidget(self, node_index: QModelIndex|QPersistentModelIndex, inlet:str) -> QGraphicsItem|None:
         assert self._nodes
         inlet_id = QPersistentModelIndex(node_index), inlet
-        if editor:=self._inlet_graphics_objects.get(inlet_id):
-            return editor
+        if widget:=self._inlet_graphics_objects.get(inlet_id):
+            return widget
 
     def linkWidget(self, edge_index:QModelIndex|QPersistentModelIndex) -> QGraphicsItem|None:
         assert self._edges
@@ -642,8 +622,6 @@ class GraphEditorView(QGraphicsView):
         elif event.mimeData().hasFormat('application/edge/target'):
             event.acceptProposedAction()
 
-        print("drag enter event")
-
     @override
     def dragMoveEvent(self, event:QDragMoveEvent):
         assert self._nodes
@@ -703,7 +681,6 @@ class GraphEditorView(QGraphicsView):
             self._delegate.updateEdgePosition(self._draft_link, scene_pos, source_inlet_widget)
 
     def dragMoveEdgeTargetEvent(self, event:QDragMoveEvent):
-        print("dragMoveEdgeTargetEvent")
         assert self._nodes and isinstance(self._nodes, NodesModelProtocol)
         assert self._edges and isinstance(self._edges, EdgesModelProtocol)
         assert self._draft_link
@@ -725,7 +702,6 @@ class GraphEditorView(QGraphicsView):
             self._delegate.updateEdgePosition(self._draft_link, source_outlet_widget, scene_pos)
 
     def dragMoveEdgeSourceEvent(self, event:QDragMoveEvent):
-        print("dragMoveEdgeSourceEvent")
         assert self._nodes and isinstance(self._nodes, NodesModelProtocol)
         assert self._edges and isinstance(self._edges, EdgesModelProtocol)
         assert self._draft_link
@@ -810,7 +786,6 @@ class GraphEditorView(QGraphicsView):
                 pass
 
     def dropEdgeTargetEvent(self, event:QDropEvent):
-        print("dragMoveEdgeTargetEvent")
         assert self._nodes and isinstance(self._nodes, NodesModelProtocol)
         assert self._edges and isinstance(self._edges, EdgesModelProtocol)
         edge_row = int(event.mimeData().data('application/edge/target').toStdString())
@@ -838,7 +813,6 @@ class GraphEditorView(QGraphicsView):
             self._edges.removeRow(edge_row)
 
     def dropEdgeSourceEvent(self, event:QDropEvent):
-        print("drop edge source event")
         assert self._nodes and isinstance(self._nodes, NodesModelProtocol)
         assert self._edges and isinstance(self._edges, EdgesModelProtocol)
         edge_row = int(event.mimeData().data('application/edge/target').toStdString())
@@ -1004,9 +978,7 @@ def main():
             nodes.removeRows(index.row(), 1)
 
     def connect_selected_nodes():
-        print(  node_selection.selectedIndexes() )
         selected_rows = set([index.row() for index in node_selection.selectedIndexes()])
-        print(selected_rows)
         if len(selected_rows)<2:
             return
 
@@ -1044,6 +1016,7 @@ def main():
     edgelist.setModel(edges)
     edgelist.setSelectionModel(edge_selection)
     edgelist.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+    edgelist.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
 
     graph_view = GraphEditorView()
     graph_view.setWindowTitle("NXNetworkScene")
