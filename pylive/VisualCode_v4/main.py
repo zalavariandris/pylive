@@ -17,7 +17,7 @@ from pylive.qt_components.qt_options_dialog import QOptionDialog
 # from pylive.QtGraphEditor.py_functions_model import PyFunctionsModel
 from fields_model import FieldsModel, FieldItem
 from nodes_model import NodesModel, UniqueFunctionItem
-from graph_editor.edges_model import EdgesModel, EdgeItem
+from graph_editor.standard_edges_model import StandardEdgesModel, StandardEdgeItem
 
 from pylive.utils.unique import make_unique_id, make_unique_name
 from pylive.VisualCode_v4.graph_editor.graph_editor_view import GraphEditorView
@@ -38,11 +38,10 @@ class Window(QWidget):
         ### MODEL
         # self.local_definitions = PyFunctionsModel()
         self.nodes = NodesModel()
-        self.edges = EdgesModel(nodes=self.nodes)
+        self.edges = StandardEdgesModel(nodes=self.nodes)
         self.node_selection = QItemSelectionModel(self.nodes)
+        self.edge_selection = QItemSelectionModel(self.edges)
         
-        # configure model
-        self.node_selection = QItemSelectionModel(self.nodes)
 
         ### Widgets
         self.definitions_table_view = QTableView()
@@ -56,10 +55,13 @@ class Window(QWidget):
         self.nodes_sheet_table_view.setModel(self.nodes)
         self.nodes_sheet_table_view.setSelectionModel(self.node_selection)
         self.nodes_sheet_table_view.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        self.nodes_sheet_table_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
 
         self.edges_sheet_table_view = QTableView(self)
         self.edges_sheet_table_view.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.edges_sheet_table_view.setModel(self.edges)
+        self.edges_sheet_table_view.setSelectionModel(self.edge_selection)
+        self.edges_sheet_table_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
         self.edges_sheet_table_view.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
 
         self.graph_view = GraphEditorView()

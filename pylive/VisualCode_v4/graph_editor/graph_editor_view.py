@@ -290,27 +290,24 @@ class GraphEditorView(QGraphicsView):
     def _addNodes(self, indexes:Iterable[QPersistentModelIndex]):
         assert self._nodes and isinstance(self._nodes, NodesModelProtocol)
         for node_index in indexes:
-
             if node_editor := self._delegate.createNodeWidget(self.scene(), node_index):
                 assert node_index.isValid(), "invalid persistent node?"
                 self._node_graphics_objects[node_index] = node_editor
 
                 if inlets := self._nodes.inlets(node_index.row()):
-                    assert isinstance(inlets, list)
                     self._addInlets(node_index, inlets)
 
                 if outlets := self._nodes.outlets(node_index.row()):
-                    assert isinstance(outlets, list)
                     self._addOutlets(node_index, outlets)
                     
-    def _addInlets(self, node_index:QModelIndex|QPersistentModelIndex, inlets:list[str]):
+    def _addInlets(self, node_index:QModelIndex|QPersistentModelIndex, inlets:Iterable[str]):
         node_editor = self._node_graphics_objects[QPersistentModelIndex(node_index)]
         for inlet in inlets:
             if inlet_editor := self._delegate.createInletWidget(node_editor, node_index, inlet):
                 inlet_id = QPersistentModelIndex(node_index), inlet
                 self._inlet_graphics_objects[inlet_id] = inlet_editor
 
-    def _addOutlets(self, node_index:QModelIndex|QPersistentModelIndex, outlets:list[str]):
+    def _addOutlets(self, node_index:QModelIndex|QPersistentModelIndex, outlets:Iterable[str]):
         node_editor = self._node_graphics_objects[QPersistentModelIndex(node_index)]
         for outlet in outlets:
             if outlet_editor := self._delegate.createOutletWidget(node_editor, node_index, outlet):
@@ -389,7 +386,7 @@ class GraphEditorView(QGraphicsView):
             item for item in self.scene().selectedItems() 
             if item in self._node_graphics_objects.inverse
         ])
-        
+
         from pylive.utils.diff import diff_set
         node_widget_selection_change = diff_set(current_node_widgets_selection, new_node_widgets_selection)
 
@@ -750,7 +747,7 @@ class GraphEditorView(QGraphicsView):
             if source_node_index and target_inlet_id:
                 assert self._edges
                 target_node_index, inlet_name = target_inlet_id
-                self._edges.addEdgeItem(StandardEdgeItem(
+                self._edges.appendEdgeItem(StandardEdgeItem(
                     QPersistentModelIndex(source_node_index), 
                     QPersistentModelIndex(target_node_index),
                     "out",
@@ -774,7 +771,7 @@ class GraphEditorView(QGraphicsView):
                 # new edge
                 assert self._edges
                 target_node_index, outlet_name = target_outlet_id
-                self._edges.addEdgeItem(StandardEdgeItem(
+                self._edges.appendEdgeItem(StandardEdgeItem(
                     QPersistentModelIndex(target_node_index),
                     QPersistentModelIndex(source_node_index), 
                     "out",
@@ -802,7 +799,7 @@ class GraphEditorView(QGraphicsView):
                 #remove
                 self._edges.removeRow(edge_row)
                 # create
-                self._edges.addEdgeItem(StandardEdgeItem(
+                self._edges.appendEdgeItem(StandardEdgeItem(
                     source = QPersistentModelIndex(edge_source_node_index),
                     target= QPersistentModelIndex(inlet_at_mouse[0]),
                     outlet=outlet,
@@ -815,7 +812,7 @@ class GraphEditorView(QGraphicsView):
     def dropEdgeSourceEvent(self, event:QDropEvent):
         assert self._nodes and isinstance(self._nodes, NodesModelProtocol)
         assert self._edges and isinstance(self._edges, EdgesModelProtocol)
-        edge_row = int(event.mimeData().data('application/edge/target').toStdString())
+        edge_row = int(event.mimeData().data('application/edge/source').toStdString())
         edge_source_node_index, outlet = self._edges.source(edge_row)
         edge_target_node_index, inlet = self._edges.target(edge_row)
         outlet_at_mouse = self.outletIndexAt(event.position().toPoint()) or None
@@ -828,7 +825,7 @@ class GraphEditorView(QGraphicsView):
                 #remove
                 self._edges.removeRow(edge_row)
                 # create
-                self._edges.addEdgeItem(StandardEdgeItem(
+                self._edges.appendEdgeItem(StandardEdgeItem(
                     source = QPersistentModelIndex(outlet_at_mouse[0]),
                     target= QPersistentModelIndex(edge_target_node_index),
                     outlet="out",
@@ -943,7 +940,6 @@ def main():
                 for outlet in self.data(self.index(row, 2), Qt.ItemDataRole.DisplayRole).split(";")
             ]
 
-
     nodes = MyNodesModel()
     nodes.setHeaderData(0, Qt.Orientation.Horizontal, "name")
     from pylive.VisualCode_v4.graph_editor.standard_edges_model import StandardEdgeItem, StandardEdgesModel
@@ -993,7 +989,7 @@ def main():
             source_node_index = nodes.index(source_node_row, 0)
             assert source_node_index.isValid()
 
-            edges.addEdgeItem(StandardEdgeItem(
+            edges.appendEdgeItem(StandardEdgeItem(
                 source=QPersistentModelIndex(source_node_index),
                 target=QPersistentModelIndex(target_node_index),
                 outlet="out",

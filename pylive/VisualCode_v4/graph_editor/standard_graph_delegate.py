@@ -32,7 +32,7 @@ class StandardGraphDelegate(QObject):
         # item.pressed.connect(lambda name=name: self.inletPressed.emit(name))
         return port_editor
 
-    def createOutletWidget(self, parent:QGraphicsItem, node_index:QModelIndex|QPersistentModelIndex, outlet:object)->QGraphicsItem:
+    def createOutletWidget(self, parent:QGraphicsItem, node_index:QModelIndex, outlet:object)->QGraphicsItem:
         port_editor = StandardPortWidget(f"{outlet}", parent)
         port_editor._nameitem.setPos(-24,0)
         parent = cast(StandardNodeWidget, parent)
@@ -45,18 +45,18 @@ class StandardGraphDelegate(QObject):
         # port_editor.pressed.connect(on_press)
         return port_editor
 
-    def updateNodeWidget(self, index:QModelIndex|QPersistentModelIndex, node_widget:QGraphicsItem)->None:
+    def updateNodeWidget(self, index:QModelIndex, node_widget:QGraphicsItem)->None:
         node_widget = cast(StandardNodeWidget, node_widget)
         node_widget.setHeading( index.data(Qt.ItemDataRole.DisplayRole) )
 
     ### EDGE DELEGATE
-    def createEdgeWidget(self, edge_idx:QModelIndex|QPersistentModelIndex)->QGraphicsItem:
+    def createEdgeWidget(self, edge_idx:QModelIndex)->QGraphicsItem:
         label = edge_idx.data(Qt.ItemDataRole.DisplayRole)
         link = RoundedLinkShape(label if label else "", orientation=Qt.Orientation.Vertical)
         link.setZValue(-1)
         return link
 
-    def updateEdgeWidget(self, edge_idx:QModelIndex|QPersistentModelIndex, editor:QGraphicsItem)->None:
+    def updateEdgeWidget(self, edge_idx:QModelIndex, editor:QGraphicsItem)->None:
         ...
 
     def updateEdgePosition(self, 

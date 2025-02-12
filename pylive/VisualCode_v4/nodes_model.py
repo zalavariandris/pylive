@@ -44,6 +44,12 @@ class NodesModel(QAbstractItemModel):
     def __init__(self, parent: QObject|None=None) -> None:
         super().__init__(parent)
         self._nodes:list[UniqueFunctionItem] = []
+
+    def inlets(self, row)->Sequence[str]:
+        return self._nodes[row].inlets()
+
+    def outlets(self, row)->Sequence[str]:
+        return ["out"]
         
     def rowCount(self, parent=QModelIndex()):
         """Returns the number of rows in the model."""

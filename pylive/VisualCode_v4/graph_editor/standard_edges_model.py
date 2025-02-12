@@ -40,7 +40,7 @@ class StandardEdgesModel(QAbstractItemModel):
         edge_item = self.edgeItem(row)
         return self._nodes.index(edge_item.target.row(), 0), edge_item.inlet
 
-    def addEdgeItem(self, edge:StandardEdgeItem):
+    def appendEdgeItem(self, edge:StandardEdgeItem):
         assert isinstance(edge.source, (QModelIndex, QPersistentModelIndex)) 
         assert isinstance(edge.target, (QModelIndex, QPersistentModelIndex))
         assert isinstance(edge.outlet, str)

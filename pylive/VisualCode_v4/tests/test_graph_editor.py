@@ -12,6 +12,30 @@ app= QApplication( sys.argv )
 from pylive.VisualCode_v4.graph_editor.graph_editor_view import GraphEditorView
 from pylive.VisualCode_v4.graph_editor.edges_model import EdgeItem, EdgesModel
 
+class MyNodesModel(QStandardItemModel):
+    def __init__(self, parent:QObject|None=None):
+        super().__init__(parent)
+
+    def inlets(self, row:int)->Sequence[str]:
+        return ["in"]
+
+    def outlets(self, row:int)->Sequence[str]:
+        return ["out"]
+
+    def addNode(self, name:str):
+        self.insertIt
+        self.insertRows(self.rowCount(), 1, QModelIndex())
+
+class TestCRUD(unittest.TestCase):
+    def test_node_widget_creation(self):
+        self.nodes = MyNodesModel()
+        self.edges = EdgesModel(nodes=self.nodes)
+        self.view = GraphEditorView()
+        self.view.setModel(self.nodes, self.edges)
+        self.view.show()
+
+        self.nodes.appendRow()
+
 
 class TestValidInletDrags(unittest.TestCase):
     def setUp(self):
