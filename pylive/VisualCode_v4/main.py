@@ -27,13 +27,11 @@ def log_call(fn, *args, **kwargs):
     print(f"{fn.__name__} was called")
     return fn(*args, **kwargs)
 
-
-
 class Window(QWidget):
-    # DefinitionFunctionRole = Qt.ItemDataRole.UserRole
-    # DefinitionErrorRole = Qt.ItemDataRole.UserRole+1
-    # NodeFunctionRole = Qt.ItemDataRole.UserRole+2
-    # NodeErrorRole = Qt.ItemDataRole.UserRole+3
+    DefinitionFunctionRole = Qt.ItemDataRole.UserRole
+    DefinitionErrorRole = Qt.ItemDataRole.UserRole+1
+    NodeFunctionRole = Qt.ItemDataRole.UserRole+2
+    NodeErrorRole = Qt.ItemDataRole.UserRole+3
     def __init__(self, parent:QWidget|None=None):
         super().__init__(parent=parent)
         ### document state
@@ -41,18 +39,11 @@ class Window(QWidget):
         self._filepath = "None"
 
         ### MODEL
-        # self.local_definitions = PyFunctionsModel()
         self.graph_item = PyGraphItem()
         self.node_selection = QItemSelectionModel(self.graph_item.nodes())
         self.edge_selection = QItemSelectionModel(self.graph_item.edges())
         
         ### Widgets
-        self.definitions_table_view = QTableView()
-        self.definitions_table_view.setEditTriggers(QAbstractItemView.EditTrigger.DoubleClicked)
-        # self.definitions_table_view.setItemDelegate(DefinitionsEditorDelegate())
-        # self.definitions_table_view.setModel(self.local_definitions)
-        # self.definitions_table_view.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
-
         self.nodes_sheet_table_view = QTableView()
         self.nodes_sheet_table_view.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.nodes_sheet_table_view.setModel(self.graph_item.nodes())
@@ -73,84 +64,84 @@ class Window(QWidget):
         self.graph_view.setSelectionModel(self.node_selection)
 
         ### NODEINSPECTOR
-        def create_node_inspector():
-            node_inspector = QFrame()
-            node_inspector.setFrameShape(QFrame.Shape.StyledPanel)  # Styled panel for the frame
-            node_inspector.setFrameShadow(QFrame.Shadow.Raised)
-            inspector_header_tile = TileWidget()
-            property_editor = QTableView()
-            property_editor.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
-            property_editor.setModel(None)
-            inspector_layout = QVBoxLayout()
-            inspector_layout.addWidget(inspector_header_tile)
-            inspector_layout.addWidget(property_editor)
-            create_button = QPushButton("create")
-            delete_button = QPushButton("delete")
-            button_layout = QHBoxLayout()
-            button_layout.addWidget(create_button)
-            button_layout.addWidget(delete_button)
-            inspector_layout.addLayout(button_layout)
-            help_label = QLabel("Help")
-            node_function_source_editor = ScriptEdit()
-            inspector_layout.addWidget(node_function_source_editor)
-            inspector_layout.addWidget(help_label)
-            node_inspector.setLayout(inspector_layout)
 
-            def create_field():
-                current_node_index = self.node_selection.currentIndex()
-                if self.node_selection.hasSelection() and current_node_index.isValid():
-                    node_item = self.graph_item.nodes().data(current_node_index.siblingAtColumn(0), Qt.ItemDataRole.UserRole)
-                    new_field = PyFieldItem(make_unique_id(), "value")
-                    node_item.fields.insertFieldItem(node_item.fields.rowCount(), new_field)
-            create_button.clicked.connect(lambda: create_field())
+        node_inspector = QFrame()
+        node_inspector.setFrameShape(QFrame.Shape.StyledPanel)  # Styled panel for the frame
+        node_inspector.setFrameShadow(QFrame.Shadow.Raised)
+        inspector_header_tile = TileWidget()
+        property_editor = QTableView()
+        property_editor.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        property_editor.setModel(None)
+        inspector_layout = QVBoxLayout()
+        inspector_layout.addWidget(inspector_header_tile)
+        inspector_layout.addWidget(property_editor)
+        create_button = QPushButton("create")
+        delete_button = QPushButton("delete")
+        button_layout = QHBoxLayout()
+        button_layout.addWidget(create_button)
+        button_layout.addWidget(delete_button)
+        inspector_layout.addLayout(button_layout)
+        help_label = QLabel("Help")
+        node_function_source_editor = ScriptEdit()
+        inspector_layout.addWidget(node_function_source_editor)
+        inspector_layout.addWidget(help_label)
+        node_inspector.setLayout(inspector_layout)
 
-            def delete_fields():
-                current_node_index = self.node_selection.currentIndex()
-                if self.node_selection.hasSelection() and current_node_index.isValid():
-                    node_item = self.graph_item.nodes().data(current_node_index.siblingAtColumn(0), Qt.ItemDataRole.UserRole)
-                    selected_rows = list(set(_.row() for _ in property_editor.selectedIndexes()))
-                    for row in sorted(selected_rows, reverse=True):
-                        node_item.fields.removeRows(row, 1)
-            delete_button.clicked.connect(lambda: delete_fields())
+        def create_field():
+            current_node_index = self.node_selection.currentIndex()
+            if self.node_selection.hasSelection() and current_node_index.isValid():
+                node_item = self.graph_item.nodes().data(current_node_index.siblingAtColumn(0), Qt.ItemDataRole.UserRole)
+                new_field = PyFieldItem(make_unique_id(), "value")
+                node_item.fields.insertFieldItem(node_item.fields.rowCount(), new_field)
+        create_button.clicked.connect(lambda: create_field())
 
-            def update_source():
-                current_node_index = self.node_selection.currentIndex()
-                if self.node_selection.hasSelection() and current_node_index.isValid():
-                    new_source = node_function_source_editor.toPlainText()
-                    self.graph_item.nodes().setUniqueFunctionSource(current_node_index, new_source)
-            node_function_source_editor.textChanged.connect(lambda: update_source())
+        def delete_fields():
+            current_node_index = self.node_selection.currentIndex()
+            if self.node_selection.hasSelection() and current_node_index.isValid():
+                node_item = self.graph_item.nodes().data(current_node_index.siblingAtColumn(0), Qt.ItemDataRole.UserRole)
+                selected_rows = list(set(_.row() for _ in property_editor.selectedIndexes()))
+                for row in sorted(selected_rows, reverse=True):
+                    node_item.fields.removeRows(row, 1)
+        delete_button.clicked.connect(lambda: delete_fields())
 
-            return node_inspector
+        def update_source():
+            current_node_index = self.node_selection.currentIndex()
+            if self.node_selection.hasSelection() and current_node_index.isValid():
+                new_source = node_function_source_editor.toPlainText()
+                self.graph_item.nodes().setUniqueFunctionSource(current_node_index, new_source)
+        node_function_source_editor.textChanged.connect(lambda: update_source())
 
-        # def update_node_inspector():
-        #     current_node_index = self.node_selection.currentIndex()
-        #     if self.node_selection.hasSelection() and current_node_index.isValid():
-        #         self.node_inspector.show()
+        self.node_inspector = node_inspector
+
+        def update_node_inspector():
+            current_node_index = self.node_selection.currentIndex()
+            if self.node_selection.hasSelection() and current_node_index.isValid():
+                self.node_inspector.show()
 
                 
-        #         inspector_header_tile.setHeading(self.graph_item.nodes().data(current_node_index, Qt.ItemDataRole.DisplayRole))
-        #         # inspector_header_tile.setSubHeading(f"{node_item.definition.data(Qt.ItemDataRole.DisplayRole)}")
-        #         node_item = self.graph_item.nodes().nodeItemFromIndex(current_node_index)
-        #         assert node_item is not None, f"cant be None, got: {node_item}"
-        #         property_editor.setModel(node_item.fields())
+                inspector_header_tile.setHeading(self.graph_item.nodes().data(current_node_index, Qt.ItemDataRole.DisplayRole))
+                # inspector_header_tile.setSubHeading(f"{node_item.definition.data(Qt.ItemDataRole.DisplayRole)}")
+                node_item = self.graph_item.nodes().nodeItemFromIndex(current_node_index)
+                assert node_item is not None, f"cant be None, got: {node_item}"
+                property_editor.setModel(node_item.fields())
 
-        #         if source:= node_item.source():
-        #             node_function_source_editor.setPlainText(source)
-        #         else:
-        #             node_function_source_editor.setPlainText("")
-        #         # self.nodes.dataChanged.connect(print)
+                if source:= node_item.source():
+                    node_function_source_editor.setPlainText(source)
+                else:
+                    node_function_source_editor.setPlainText("")
+                # self.nodes.dataChanged.connect(print)
 
-        #     else:
-        #         self.node_inspector.hide()
-        #         property_editor.setModel(None)
-        #         # self.nodes.dataChanged.connect(print)
+            else:
+                self.node_inspector.hide()
+                property_editor.setModel(None)
+                # self.nodes.dataChanged.connect(print)
 
-        # self.node_selection.currentChanged.connect(lambda: update_node_inspector())
-        # self.node_selection.selectionChanged.connect(lambda: update_node_inspector())
-
+        self.node_selection.currentChanged.connect(lambda: update_node_inspector())
+        self.node_selection.selectionChanged.connect(lambda: update_node_inspector())
         self.node_selection.currentChanged.connect(lambda: self.evaluate())
         self.node_selection.selectionChanged.connect(lambda: self.evaluate())
         self.graph_item.nodes().dataChanged.connect(lambda: self.evaluate())
+
         self.graph_item.edges().rowsInserted.connect(lambda: self.evaluate())
         self.graph_item.edges().rowsRemoved.connect(lambda: self.evaluate())
         self.graph_item.edges().dataChanged.connect(lambda: self.evaluate())
@@ -158,6 +149,7 @@ class Window(QWidget):
         ### PREVIEW WIDGET
         self.preview = QLabel("Preview Label")
         self.preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
         # self.preview.setWordWrapMode(QTextOption.WrapMode.WrapAtWordBoundaryOrAnywhere)
 
         ### STATUS BAR WIDGET
@@ -199,8 +191,8 @@ class Window(QWidget):
             panel.setLayout(grid_layout)
 
             grid_layout.addWidget(self.graph_view, 0, 0)
-            # grid_layout.addWidget(self.node_inspector,0,0, Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignRight)
-            # self.node_inspector.hide()
+            grid_layout.addWidget(self.node_inspector,0,0, Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignRight)
+            self.node_inspector.hide()
             panel.setLayout(grid_layout)
             return panel
 
@@ -210,18 +202,11 @@ class Window(QWidget):
                 qf.vboxlayout([QLabel("edges"), self.edges_sheet_table_view]),
             ]))
 
-        def create_definitions_panel():
-            return qf.widget(qf.hboxlayout([
-                self.definitions_table_view,
-                self.definition_script_editor,
-            ], stretch=(1,1)))
-
         main_layout = qf.vboxlayout([
             qf.splitter(Qt.Orientation.Horizontal, [
                 qf.tabwidget({
                     'graph': create_graph_panel(),
-                    'sheets': create_graph_sheets(),
-                    'definitions': create_definitions_panel()
+                    'sheets': create_graph_sheets()
                 }),
                 self.preview
             ]),
@@ -249,6 +234,7 @@ class Window(QWidget):
     def openFile(self, filepath:str|None=None)->bool:
         ### close current file
         if not self.closeFile():
+            print("Current file was not closed. Cancel opening file!")
             return False
 
         ### prompt file name
@@ -256,16 +242,20 @@ class Window(QWidget):
             filepath, _ = QFileDialog.getOpenFileName(self, 
                 "Open", self.fileFilter(), self.fileSelectFilter())
             if filepath is None: # cancelled
+                print("No file was selected. Cancel opening file!")
                 return False
 
         # read and parse existing text file
         try:
             self.graph_item.load(filepath)
             self.graph_view.centerNodes()
+            print(f"Successfully opened '{filepath}'!")
             return True
         except FileExistsError:
+            print("'{filepath}'' does not exist!")
             return False
-        except Exception:
+        except Exception as err:
+            print(f"Error occured while opening {filepath}", err)
             return False
 
     @Slot()
@@ -287,36 +277,31 @@ class Window(QWidget):
         ...
 
     def evaluate(self)->bool:
-        self.preview.setText(f"-nothing selected-")
-        self.preview.setStyleSheet("")
         current_node_index = self.node_selection.currentIndex()
-        print("evaluate", current_node_index)
-        from datetime import datetime
-        self.preview.setText(f"{datetime.now()}")
 
         if not current_node_index.isValid():
-            self.preview.setText(f"-nothing selected-")
+            self.preview.setText(f"-no selection ")
             self.preview.setStyleSheet("")
             return True
 
+        import textwrap
         try:
             result = self.graph_item.evaluateNode(current_node_index)
-            print("evaluate result:", result)
-            self.preview.setText(f"result\n{result}")
+            self.preview.setText(f"{result}")
             self.preview.setStyleSheet("")
         except SyntaxError as err:
             import traceback
             error_message = traceback.format_exc()
-            self.preview.setText(f"Error\n{err}\n{error_message}")
+            self.preview.setText(f"<h1>{err}</h1><p style='white-space: pre;'>{error_message}</p>")
             self.preview.setStyleSheet("color: red")
-            print("evaluate SyntaxError:", err)
+            print("evaluate Exception:", error_message)
             return False
         except Exception as err:
             import traceback
             error_message = traceback.format_exc()
-            self.preview.setText(f"Error\n{err}\n{error_message}")
+            self.preview.setText(f"<h1>{err}</h1><p style='white-space: pre;'>{error_message}</p>")
             self.preview.setStyleSheet("color: red")
-            print("evaluate Exception:", err)
+            print("evaluate Exception:", error_message)
             return False
 
         return True
@@ -357,7 +342,7 @@ if __name__ == "__main__":
     window = Window()
     window.show()
     from pathlib import Path
-    print(Path.cwd())
+    print("working directory:", Path.cwd())
     window.openFile("tests/website_builder.yaml")
     app.exec()
 

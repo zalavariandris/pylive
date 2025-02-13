@@ -18,6 +18,7 @@ class UniqueFunctionItem:
         self._fields = fields or PyFieldsModel()
         self._name = name
         self._cached_func = None
+        self._dirty = True
 
     def source(self):
         return self._source
@@ -44,21 +45,24 @@ class UniqueFunctionItem:
     def kind(self):
         return "UniqueFunction"
 
+    def dirty(self):
+        return self._dirty
+
 
 class PyNodesModel(QAbstractItemModel):
     def __init__(self, parent: QObject|None=None) -> None:
         super().__init__(parent)
-        self._nodes:list[UniqueFunctionItem] = []
+        self._node_items:list[UniqueFunctionItem] = []
 
     def inlets(self, row)->Sequence[str]:
-        return self._nodes[row].inlets()
+        return self._node_items[row].inlets()
 
     def outlets(self, row)->Sequence[str]:
         return ["out"]
         
     def rowCount(self, parent=QModelIndex()):
         """Returns the number of rows in the model."""
-        return len(self._nodes)
+        return len(self._node_items)
 
     def headerData(self, section: int, orientation: Qt.Orientation, role: int = Qt.ItemDataRole.DisplayRole) -> Any:
         if orientation == Qt.Orientation.Horizontal and role==Qt.ItemDataRole.DisplayRole:
@@ -70,10 +74,10 @@ class PyNodesModel(QAbstractItemModel):
         return 1
 
     def data(self, index: QModelIndex|QPersistentModelIndex, role: int = Qt.ItemDataRole.DisplayRole) -> Any:
-        if not index.isValid() or not 0 <= index.row() < len(self._nodes):
+        if not index.isValid() or not 0 <= index.row() < len(self._node_items):
             return None
 
-        item = self._nodes[index.row()]
+        item = self._node_items[index.row()]
 
         if index.column()==0:
             if role==Qt.ItemDataRole.DisplayRole:
@@ -94,7 +98,7 @@ class PyNodesModel(QAbstractItemModel):
 
     def setUniqueFunctionSource(self, index:QModelIndex, source:str):
         row = index.row()
-        node_item = self._nodes[row]
+        node_item = self._node_items[row]
         node_item.setSource(source)
         self.dataChanged.emit(
             index.siblingAtColumn(0), index.siblingAtColumn(0), 
@@ -106,10 +110,10 @@ class PyNodesModel(QAbstractItemModel):
         )
 
     def setData(self, index: QModelIndex|QPersistentModelIndex, value:Any, role: int = Qt.ItemDataRole.DisplayRole) -> Any:
-        if not index.isValid() or not 0 <= index.row() < len(self._nodes):
+        if not index.isValid() or not 0 <= index.row() < len(self._node_items):
             return None
 
-        item = self._nodes[index.row()]
+        item = self._node_items[index.row()]
 
         if index.column()==0:
             if role==Qt.ItemDataRole.EditRole:
@@ -124,7 +128,7 @@ class PyNodesModel(QAbstractItemModel):
         return None
 
     def insertRows(self, row:int, count:int, parent=QModelIndex()):
-        if len(self._nodes) <= row or row < 0:
+        if len(self._node_items) <= row or row < 0:
             return False
 
         self.beginInsertRows(parent, row, row + count - 1)
@@ -133,38 +137,38 @@ class PyNodesModel(QAbstractItemModel):
                 source="""def func():/n  ...""",
                 fields=PyFieldsModel()
             )
-            self._nodes.append(node)
+            self._node_items.append(node)
         self.endInsertRows()
         return True
 
     def addNodeItem(self, item:UniqueFunctionItem):
         self.beginInsertRows(QModelIndex(), self.rowCount(), self.rowCount())
-        self._nodes.append(item)
+        self._node_items.append(item)
         self.endInsertRows()
 
     def nodeItem(self, row)->UniqueFunctionItem:
-        return self._nodes[row]
+        return self._node_items[row]
 
     def nodeItemFromIndex(self, index:QModelIndex)->UniqueFunctionItem|None:
         if index.isValid() and index.model() == self:
             row = index.row()
-            if row>=0 and row < len(self._nodes):
-                return self._nodes[row]
+            if row>=0 and row < len(self._node_items):
+                return self._node_items[row]
 
     def insertNodeItem(self, row:int, item:UniqueFunctionItem):
         self.beginInsertRows(QModelIndex(), row, row)
-        self._nodes.insert(row, item)
+        self._node_items.insert(row, item)
         self.endInsertRows()
         return True
 
     def removeRows(self, row:int, count:int, parent=QModelIndex()):
         """Removes rows from the model."""
-        if row < 0 or row + count > len(self._nodes):
+        if row < 0 or row + count > len(self._node_items):
             return False
 
         self.beginRemoveRows(parent, row, row + count - 1)
         for row in reversed(range(row, row+count)):
-            del self._nodes[row]
+            del self._node_items[row]
         self.endRemoveRows()
         return True
 
@@ -185,7 +189,7 @@ class PyNodesModel(QAbstractItemModel):
         if parent.isValid():
             return QModelIndex()
 
-        return self.createIndex(row, column, self._nodes[row])
+        return self.createIndex(row, column, self._node_items[row])
 
     def parent(self, index:QModelIndex|QPersistentModelIndex)->QModelIndex:
         return QModelIndex()  # No parent for this flat model

@@ -13,13 +13,8 @@ from pathlib import Path
 class PyGraphItem(QObject):
     def __init__(self):
         ### document state
-        self._is_modified = False
-        self._filepath = "None"
         self._nodes_model = PyNodesModel()
         self._edges_model = StandardEdgesModel(self._nodes_model)
-
-    
-
 
     def nodes(self)->PyNodesModel:
         return self._nodes_model

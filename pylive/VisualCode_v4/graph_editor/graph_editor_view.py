@@ -112,7 +112,6 @@ class GraphEditorView(QGraphicsView):
         self._draft_link: QGraphicsItem | None = None
         self._link_loop = QEventLoop(self)
 
-
     def centerNodes(self):
         self.centerOn(self.scene().itemsBoundingRect().center())
 
@@ -535,130 +534,170 @@ class GraphEditorView(QGraphicsView):
                         node_widget.setPos(y, x)
 
     ### DRAG inlets, outlets, edges
-    def startDragOutlet(self, node_row:int, outlet_name:str):
-        """ Initiate the drag operation """
-        assert self._node_selection, "self._node_selection was not defined"
-        assert self._nodes, "self._nodes was not defined"
+    def _createDraftLink(self):
+        """Safely create draft link with state tracking"""
+        if self._draft_link:
+            # Clean up any existing draft
+            self.scene().removeItem(self._draft_link)
+            self._draft_link = None
+            
+        self._draft_link = self._delegate.createEdgeWidget(QModelIndex())
+        self.scene().addItem(self._draft_link)
 
+    def _cleanupDraftLink(self):
+        """Safely cleanup draft link"""
+        if self._draft_link:
+            self.scene().removeItem(self._draft_link)
+            self._draft_link = None
+
+    def startDragOutlet(self, node_row:int, outlet_name:str):
+        """Start outlet drag"""
+        assert self._nodes, "self._nodes was not defined"
+        
+        # Clean any existing state
+        self._drag_started = False
+        self._drag_valid = False
+        self._current_drag_type = None
+        self._cleanupDraftLink()
+
+        # Setup new drag
         mime = QMimeData()
         mime.setData('application/outlet', f"{node_row}/{outlet_name}".encode("utf-8"))
         drag = QDrag(self)
         drag.setMimeData(mime)
 
-        self._draft_link = self._delegate.createEdgeWidget(QModelIndex())
-        self.scene().addItem(self._draft_link)
+        # Create visual feedback
+        self._createDraftLink()
         
-        # Execute drag
-        action = drag.exec(Qt.DropAction.LinkAction)
-        if action == Qt.DropAction.LinkAction:
-            print("link aciton")
-        self.scene().removeItem(self._draft_link)
-        self._draft_link = None
+        try:
+            action = drag.exec(Qt.DropAction.LinkAction)
+        finally:
+            # Always cleanup
+            self._cleanupDraftLink()
 
     def startDragInlet(self, node_row:int, inlet_name:str):
         """ Initiate the drag operation """
-        assert self._node_selection, "self._node_selection was not defined"
         assert self._nodes, "self._nodes was not defined"
+        
+        # Clean any existing state
+        self._drag_started = False
+        self._drag_valid = False
+        self._current_drag_type = None
+        self._cleanupDraftLink()
 
+        # Setup new drag
         mime = QMimeData()
         mime.setData('application/inlet', f"{node_row}/{inlet_name}".encode("utf-8"))
         drag = QDrag(self)
         drag.setMimeData(mime)
 
-        self._draft_link = self._delegate.createEdgeWidget(QModelIndex())
-        self.scene().addItem(self._draft_link)
+        # Create visual feedback
+        self._createDraftLink()
         
         # Execute drag
-        action = drag.exec(Qt.DropAction.LinkAction)
-        if action == Qt.DropAction.LinkAction:
-            print("link aciton")
-        self.scene().removeItem(self._draft_link)
-        self._draft_link = None
+        try:
+            action = drag.exec(Qt.DropAction.LinkAction)
+        finally:
+            # Always cleanup
+            self._cleanupDraftLink()
 
-    def startDragEdge(self, index:QModelIndex, endpoint:Literal['source', 'target'])->None:
+    def startDragEdgeSource(self, edge_index:QModelIndex|QPersistentModelIndex):
         """ Initiate the drag operation """
         assert self._node_selection, "self._node_selection was not defined"
         assert self._nodes and isinstance(self._nodes, NodesModelProtocol), f"bad self._nodes, got{self._nodes}"
         assert self._edges and isinstance(self._edges, EdgesModelProtocol), f"bad self._edges, got{self._edges}"
-        source_node_index, outlet = self._edges.source(index.row())
-        target_node_index, inlet = self._edges.target(index.row())
 
-        mime = QMimeData()
-        match endpoint:
-            case 'source':
-                mime.setData('application/edge/outlet', f"{source_node_index.row()}/{outlet}".encode("utf-8"))
-            case 'target':
-                mime.setData('application/edge/inlet', f"{target_node_index.row()}/{inlet}".encode("utf-8"))
-        drag = QDrag(self)
-        drag.setMimeData(mime)
+        # Clean any existing state
+        self._drag_started = False
+        self._drag_valid = False
+        self._current_drag_type = None
+        self._cleanupDraftLink()
 
-        self._draft_link = self.linkWidget(index)
-        
-        # Execute drag
-        action = drag.exec(Qt.DropAction.LinkAction)
-        if action == Qt.DropAction.LinkAction:
-            print("link aciton")
-        self._draft_link = None
-
-    def startDragEdgeSource(self, edge_index:QModelIndex|QPersistentModelIndex):
+        # Setup new drag
         mime = QMimeData()
         mime.setData('application/edge/source', f"{edge_index.row()}".encode("utf-8"))
         drag = QDrag(self)
         drag.setMimeData(mime)
-
-        self._draft_link = self.linkWidget(edge_index)
         
         # Execute drag
-        action = drag.exec(Qt.DropAction.LinkAction)
-        if action == Qt.DropAction.LinkAction:
-            print("link aciton")
-        self._draft_link = None
+        try:
+            action = drag.exec(Qt.DropAction.LinkAction)
+        finally:
+            # Always cleanup
+            self._cleanupDraftLink()
 
     def startDragEdgeTarget(self, edge_index:QModelIndex|QPersistentModelIndex):
-        """ Initiate the drag from edge inlet operation """
-        mime = QMimeData()
+        """ Initiate the drag operation """
+        assert self._node_selection, "self._node_selection was not defined"
+        assert self._nodes and isinstance(self._nodes, NodesModelProtocol), f"bad self._nodes, got{self._nodes}"
+        assert self._edges and isinstance(self._edges, EdgesModelProtocol), f"bad self._edges, got{self._edges}"
 
+        # Clean any existing state
+        self._drag_started = False
+        self._drag_valid = False
+        self._current_drag_type = None
+        self._cleanupDraftLink()
+
+        # Setup new drag
+        mime = QMimeData()
         mime.setData('application/edge/target', f"{edge_index.row()}".encode("utf-8"))
         drag = QDrag(self)
         drag.setMimeData(mime)
-
-        self._draft_link = self.linkWidget(edge_index)
         
         # Execute drag
-        action = drag.exec(Qt.DropAction.LinkAction)
-        if action == Qt.DropAction.LinkAction:
-            print("link aciton")
-        self._draft_link = None
-
-    def dragEnterEvent(self, event:QDragEnterEvent):
-        """ Accept drag events """
-        if event.mimeData().hasFormat('application/outlet'):
-            event.accept()
-            event.acceptProposedAction()
-        elif event.mimeData().hasFormat('application/inlet'):
-            event.accept()
-            event.acceptProposedAction()
-        elif event.mimeData().hasFormat('application/edge/source'):
-            event.accept()
-            event.acceptProposedAction()
-        elif event.mimeData().hasFormat('application/edge/target'):
-            event.accept()
-            event.acceptProposedAction()
+        try:
+            action = drag.exec(Qt.DropAction.LinkAction)
+        finally:
+            # Always cleanup
+            self._cleanupDraftLink()
 
     @override
-    def dragMoveEvent(self, event:QDragMoveEvent):
-        assert self._nodes, "self._nodes was not defined"
-        if event.mimeData().hasFormat('application/outlet'):
-            self.dragMoveOutletEvent(event)
+    def dragEnterEvent(self, event: QDragEnterEvent):
+        """Handle drag enter with state tracking"""
+        mime = event.mimeData()
+        
+        # Reset state
+        self._drag_started = True
+        self._drag_valid = False
+        self._current_drag_type = None
+        
+        # Check valid mime types
+        if mime.hasFormat('application/outlet'):
+            self._current_drag_type = 'outlet'
+            self._drag_valid = True
+        elif mime.hasFormat('application/inlet'):
+            self._current_drag_type = 'inlet' 
+            self._drag_valid = True
+        elif mime.hasFormat('application/edge/source'):
+            self._current_drag_type = 'edge_source'
+            self._drag_valid = True
+        elif mime.hasFormat('application/edge/target'):
+            self._current_drag_type = 'edge_target'
+            self._drag_valid = True
             
-        if event.mimeData().hasFormat('application/inlet'):
-            self.dragMoveInletEvent(event)
+        if self._drag_valid:
+            event.accept()
+            event.acceptProposedAction()
+        else:
+            event.ignore()
 
-        if event.mimeData().hasFormat('application/edge/source'):
-            self.dragMoveEdgeSourceEvent(event)
-
-        if event.mimeData().hasFormat('application/edge/target'):
-            self.dragMoveEdgeTargetEvent(event)
+    @override
+    def dragMoveEvent(self, event: QDragMoveEvent):
+        """Handle drag move with state validation"""
+        if not self._drag_valid or not self._current_drag_type:
+            event.ignore()
+            return
+            
+        # Use state to determine handler
+        match self._current_drag_type:
+            case 'outlet':
+                self.dragMoveOutletEvent(event)
+            case 'inlet':
+                self.dragMoveInletEvent(event)
+            case 'edge_source':
+                self.dragMoveEdgeSourceEvent(event)
+            case 'edge_target':
+                self.dragMoveEdgeTargetEvent(event)
 
     def dragMoveOutletEvent(self, event:QDragMoveEvent):
         assert self._nodes, "self._nodes was not defined"
@@ -705,9 +744,9 @@ class GraphEditorView(QGraphicsView):
     def dragMoveEdgeTargetEvent(self, event:QDragMoveEvent):
         assert self._nodes and isinstance(self._nodes, NodesModelProtocol)
         assert self._edges and isinstance(self._edges, EdgesModelProtocol)
-        assert self._draft_link
+        assert not self._draft_link
         edge_row = int(event.mimeData().data('application/edge/target').toStdString())
-        edges_index = self._edges.index(edge_row, 0)
+        
         source_node_index, outlet = self._edges.source(edge_row)
         source_outlet_widget = self.outletWidget(source_node_index, outlet)
 
@@ -718,17 +757,22 @@ class GraphEditorView(QGraphicsView):
         target_inlet_widget = self.inletWidget(target_node_index, inlet_name) if (target_node_index and inlet_name) else None
 
         if source_outlet_widget and target_inlet_widget:
-            self._delegate.updateEdgePosition(self._draft_link, source_outlet_widget, target_inlet_widget)
+            edge_index = self._edges.index(edge_row, 0)
+            edge_widget = self.linkWidget(edge_index)
+            self._delegate.updateEdgePosition(edge_widget, source_outlet_widget, target_inlet_widget)
         elif source_outlet_widget:
+            edge_index = self._edges.index(edge_row, 0)
+            edge_widget = self.linkWidget(edge_index)
             scene_pos = self.mapToScene(event.position().toPoint())
-            self._delegate.updateEdgePosition(self._draft_link, source_outlet_widget, scene_pos)
+            self._delegate.updateEdgePosition(edge_widget, source_outlet_widget, scene_pos)
 
     def dragMoveEdgeSourceEvent(self, event:QDragMoveEvent):
         assert self._nodes and isinstance(self._nodes, NodesModelProtocol)
         assert self._edges and isinstance(self._edges, EdgesModelProtocol)
-        assert self._draft_link
+        assert not self._draft_link
 
         edge_row = int(event.mimeData().data('application/edge/source').toStdString())
+
         target_node_index, inlet = self._edges.target(int(edge_row))
 
         target_inlet_widget = self.inletWidget(target_node_index, inlet)
@@ -740,23 +784,37 @@ class GraphEditorView(QGraphicsView):
         source_outlet_widget = self.outletWidget(source_node_index, outlet_name) if (source_node_index and outlet_name) else None
 
         if source_outlet_widget and target_inlet_widget:
-            self._delegate.updateEdgePosition(self._draft_link, source_outlet_widget, target_inlet_widget)
+            edge_index = self._edges.index(edge_row, 0)
+            edge_widget = self.linkWidget(edge_index)
+            self._delegate.updateEdgePosition(edge_widget, source_outlet_widget, target_inlet_widget)
         elif target_inlet_widget:
+            edge_index = self._edges.index(edge_row, 0)
+            edge_widget = self.linkWidget(edge_index)
             scene_pos = self.mapToScene(event.position().toPoint())
-            self._delegate.updateEdgePosition(self._draft_link, scene_pos, target_inlet_widget)
+            self._delegate.updateEdgePosition(edge_widget, scene_pos, target_inlet_widget)
 
-    def dropEvent(self, event:QDropEvent):
-        if event.mimeData().hasFormat('application/outlet'):
-            self.dropOutletEvent(event)
-
-        elif event.mimeData().hasFormat('application/inlet'):
-            self.dropInletEvent(event)
-
-        elif event.mimeData().hasFormat('application/edge/source'):
-            self.dropEdgeSourceEvent(event)
-
-        elif event.mimeData().hasFormat('application/edge/target'):
-            self.dropEdgeTargetEvent(event)
+    @override
+    def dropEvent(self, event: QDropEvent):
+        """Handle drop with state cleanup"""
+        if not self._drag_valid or not self._current_drag_type:
+            event.ignore()
+            return
+            
+        try:
+            match self._current_drag_type:
+                case 'outlet':
+                    self.dropOutletEvent(event)
+                case 'inlet':
+                    self.dropInletEvent(event)
+                case 'edge_source':
+                    self.dropEdgeSourceEvent(event)
+                case 'edge_target':
+                    self.dropEdgeTargetEvent(event)
+        finally:
+            # Always clean up state
+            self._drag_started = False
+            self._drag_valid = False
+            self._current_drag_type = None
 
     def dropOutletEvent(self, event:QDropEvent):
         if event.proposedAction() == Qt.DropAction.LinkAction:
@@ -858,6 +916,19 @@ class GraphEditorView(QGraphicsView):
         else:
             # remove
             self._edges.removeRow(edge_row)
+
+    @override
+    def dragLeaveEvent(self, event: QDragLeaveEvent)->None:
+        """Handle drag leave with state cleanup"""
+        if self._draft_link and self._drag_started:
+            # Only clean up if we actually started the drag
+            self._cleanupDraftLink()
+            
+        self._drag_started = False
+        self._drag_valid = False
+        self._current_drag_type = None
+        
+        event.accept()
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         if not self._handleMouseEvent(event):
