@@ -25,14 +25,14 @@ class StandardGraphDelegate(QObject):
         parent.addItem(node_widget)
         return node_widget
 
-    def createInletWidget(self, parent:QGraphicsItem, node_index:QModelIndex, inlet:object)->QGraphicsItem:
+    def createInletWidget(self, parent:QGraphicsItem, node_index:QModelIndex, inlet:str)->QGraphicsItem:
         port_editor = StandardPortWidget(f"{inlet}", parent)
         parent = cast(StandardNodeWidget, parent)
         parent.insertInlet(0, port_editor)
         # item.pressed.connect(lambda name=name: self.inletPressed.emit(name))
         return port_editor
 
-    def createOutletWidget(self, parent:QGraphicsItem, node_index:QModelIndex, outlet:object)->QGraphicsItem:
+    def createOutletWidget(self, parent:QGraphicsItem, node_index:QModelIndex, outlet:str)->QGraphicsItem:
         port_editor = StandardPortWidget(f"{outlet}", parent)
         port_editor._nameitem.setPos(-24,0)
         parent = cast(StandardNodeWidget, parent)

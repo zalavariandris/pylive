@@ -10,14 +10,14 @@ from dataclasses import dataclass, fields
 from pylive.utils.unique import make_unique_id
 
 @dataclass
-class FieldItem:
+class PyFieldItem:
     name: str
     value: Any
     editable:bool=True
 
 
 from enum import IntEnum
-class FieldsModel(QAbstractItemModel):
+class PyFieldsModel(QAbstractItemModel):
     # class Roles(IntEnum):
     #     """Custom roles for detail view"""
     #     Name = Qt.ItemDataRole.DisplayRole
@@ -29,7 +29,7 @@ class FieldsModel(QAbstractItemModel):
     def __init__(self):
         super().__init__()
         self._node:dict|None = None
-        self._fields:list[FieldItem] = []
+        self._fields:list[PyFieldItem] = []
 
     def rowCount(self, parent: QModelIndex|QPersistentModelIndex = QModelIndex()) -> int:
         return len(self._fields)
@@ -84,11 +84,10 @@ class FieldsModel(QAbstractItemModel):
         else:
             return False
 
-    def insertFieldItem(self, row:int, field_item:FieldItem):
+    def insertFieldItem(self, row:int, field_item:PyFieldItem):
         self.beginInsertRows(QModelIndex(), row, row)
         self._fields.insert(row, field_item)
         self.endInsertRows()
-        print("insertFieldItem", field_item)
         return True
 
     def fieldItem(self, row:int):
@@ -108,7 +107,7 @@ class FieldsModel(QAbstractItemModel):
         row = self.rowCount()
         count=1
         self.beginInsertRows(QModelIndex(), row, row+count-1)
-        field_item = FieldItem("field", None)
+        field_item = PyFieldItem("field", None)
         for row in range(row, row+count-1):
             self._fields.insert(row, field_item)
         self.endInsertRows()
@@ -155,21 +154,20 @@ if __name__ == "__main__":
     app = QApplication()
     window = QWidget()
     main_layout = QHBoxLayout()
-    fields_model = FieldsModel()
+    fields_model = PyFieldsModel()
     fields_table_view = QTableView()
     fields_table_view.setModel(fields_model)
     fields_list_view = QListView()
     fields_list_view.setModel(fields_model)
     
     def add_field():
-        fields_model.insertFieldItem(0, FieldItem(make_unique_id(), 5, False))
+        fields_model.insertFieldItem(0, PyFieldItem(make_unique_id(), 5, False))
     add_field_action = QAction("add",window)
     add_field_action.triggered.connect(add_field)
 
     def delete_field():
         selected_rows = list(set(idx.row() for idx in fields_table_view.selectedIndexes()))
         for row in sorted(selected_rows, reverse=True):
-            print("removeRows", row)
             fields_model.removeRows(row, 1)
 
     remove_field_action = QAction("delete",window)

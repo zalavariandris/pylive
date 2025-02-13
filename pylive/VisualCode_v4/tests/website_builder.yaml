@@ -1,5 +1,5 @@
 nodes:
-- id: "read_abstract"
+- name: "read_abstract"
   kind: UniqueFunction
   source: |
     def read_text(path:str)->str:
@@ -8,7 +8,7 @@ nodes:
   fields:
     path: "./tests/website_builder.yaml"
 
-- id: "parse_abstract" 
+- name: "parse_abstract" 
   kind: UniqueFunction
   source: |
     def markdown_to_html(md:str)->str:

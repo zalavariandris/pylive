@@ -26,8 +26,12 @@ class StandardEdgesModel(QAbstractItemModel):
         self._nodes = nodes
         nodes.rowsRemoved.connect(self._onRelatedModelRowsRemoved)
 
-        self._DAG:nx.MultiDiGraph[T] = nx.MultiDiGraph()
+        self._DAG:nx.MultiDiGraph = nx.MultiDiGraph()
         self._edges_list:list[StandardEdgeItem] = []
+
+    def indexFromEdgeItem(self, edge_item:StandardEdgeItem, /)->QModelIndex:
+        row = self._edges_list.index(edge_item)
+        return self.index(row, 0, QModelIndex())
 
     def nodes(self)->QAbstractItemModel|None:
         return self._nodes

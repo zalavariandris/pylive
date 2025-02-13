@@ -6,19 +6,24 @@ from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
 
-from fields_model import FieldsModel
+from pylive.VisualCode_v4.py_fields_model import PyFieldsModel
 from pylive.utils.evaluate_python import parse_python_function
+
 
 
 import inspect
 class UniqueFunctionItem:
-    def __init__(self, source:str, fields:FieldsModel|None=None):
+    def __init__(self, source:str, name:str|None=None, fields:PyFieldsModel|None=None):
         self._source = source
-        self._fields = fields or FieldsModel()
+        self._fields = fields or PyFieldsModel()
+        self._name = name
         self._cached_func = None
 
     def source(self):
         return self._source
+
+    def name(self):
+        return self._name
 
     def func(self):
         if not self._cached_func:
@@ -40,7 +45,7 @@ class UniqueFunctionItem:
         return "UniqueFunction"
 
 
-class NodesModel(QAbstractItemModel):
+class PyNodesModel(QAbstractItemModel):
     def __init__(self, parent: QObject|None=None) -> None:
         super().__init__(parent)
         self._nodes:list[UniqueFunctionItem] = []
@@ -126,7 +131,7 @@ class NodesModel(QAbstractItemModel):
         for _ in range(count):
             node = UniqueFunctionItem(
                 source="""def func():/n  ...""",
-                fields=FieldsModel()
+                fields=PyFieldsModel()
             )
             self._nodes.append(node)
         self.endInsertRows()
@@ -190,14 +195,14 @@ if __name__ == "__main__":
     app = QApplication()
     window = QWidget()
     main_layout = QHBoxLayout()
-    model = NodesModel()
+    model = PyNodesModel()
     table_view = QTableView()
     table_view.setModel(model)
     list_view = QListView()
     list_view.setModel(model)
     add_field_action = QAction("add",window)
     def add_field():
-        model.insertNodeItem(0, UniqueFunctionItem("new node", QPersistentModelIndex(), FieldsModel(), True))
+        model.insertNodeItem(0, UniqueFunctionItem("new node", QPersistentModelIndex(), PyFieldsModel(), True))
 
     add_field_action.triggered.connect(add_field)
     menubar = QMenuBar()
