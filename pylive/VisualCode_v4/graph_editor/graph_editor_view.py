@@ -319,6 +319,7 @@ class GraphEditorView(QGraphicsView):
         for node_index in indexes:
             node_editor = self._node_graphics_objects[node_index]
             self.scene().removeItem(node_editor)
+            del self._node_graphics_objects[node_index]
 
     def _updateNodes(self, indexes:Iterable[QPersistentModelIndex], roles:list[int]):
         assert self._nodes
@@ -419,12 +420,20 @@ class GraphEditorView(QGraphicsView):
 
         if new_selection.count()>0:
             self._node_selection.setCurrentIndex(new_selection.at(0).topLeft(), QItemSelectionModel.SelectionFlag.Current)
-
+        else:
+            self._node_selection.setCurrentIndex(QModelIndex(), QItemSelectionModel.SelectionFlag.Clear)
         self._node_selection.select(new_selection, QItemSelectionModel.SelectionFlag.ClearAndSelect)
 
     ### <<< Handle Model Signals
 
     ### Map the interactive graphics ids to widgets >>>
+
+    def nodeWidgets(self)->Collection[QGraphicsItem]:
+        return [item for item in self._node_graphics_objects.values()]
+
+    def edgeWidgets(self)->Collection[QGraphicsItem]:
+        return [item for item in self._link_graphics_objects.values()]
+
     def nodeWidget(self, node_index: QModelIndex|QPersistentModelIndex) -> QGraphicsItem|None:
         assert self._nodes
         assert node_index.isValid() and node_index.model() == self._nodes, f"got: {node_index}"
@@ -593,7 +602,6 @@ class GraphEditorView(QGraphicsView):
 
     def startDragEdgeTarget(self, edge_index:QModelIndex|QPersistentModelIndex):
         """ Initiate the drag from edge inlet operation """
-        assert self._draft_link
         mime = QMimeData()
 
         mime.setData('application/edge/target', f"{edge_index.row()}".encode("utf-8"))

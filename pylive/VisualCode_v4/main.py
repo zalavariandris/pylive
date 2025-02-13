@@ -4,8 +4,6 @@ from typing import *
 from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
-from networkx import reverse
-
 
 # from pylive.QtGraphEditor.definitions_model import DefinitionsModel
 from pylive.qt_components.tile_widget import TileWidget
@@ -126,7 +124,7 @@ class Window(QWidget):
                 inspector_header_tile.setHeading(self.nodes.data(current_node_index, Qt.ItemDataRole.DisplayRole))
                 # inspector_header_tile.setSubHeading(f"{node_item.definition.data(Qt.ItemDataRole.DisplayRole)}")
                 node_item = self.nodes.nodeItemFromIndex(current_node_index)
-                assert node_item
+                assert node_item is not None, f"cant be None, got: {node_item}"
                 property_editor.setModel(node_item.fields())
 
                 if source:= node_item.source():
@@ -146,7 +144,6 @@ class Window(QWidget):
 
         self.node_selection.currentChanged.connect(self.evaluate)
         self.node_selection.selectionChanged.connect(self.evaluate)
-
         self.nodes.dataChanged.connect(self.evaluate)
 
         ### PREVIEW WIDGET
@@ -266,7 +263,6 @@ class Window(QWidget):
                     return False
         return True
 
-
     def deserialize(self, text:str)->bool:
         import yaml
         data = yaml.load(text, Loader=yaml.SafeLoader)
@@ -329,7 +325,7 @@ class Window(QWidget):
     def _evaluate_node(self, node_index:QModelIndex|QPersistentModelIndex):
         from pylive.utils.evaluate_python import parse_python_function, call_function_with_stored_args
         node_item = self.nodes.nodeItem(node_index.row())
-        assert node_item.kind == "UniqueFunction"
+        assert node_item.kind() == "UniqueFunction", f"Only UniqueFunction kind is supported, got:{node_item.kind()}"
         node_item = cast(UniqueFunctionItem, node_item)
         """recursively evaluate nodes, from top to bottom"""
         ### load arguments achestors
@@ -357,21 +353,35 @@ class Window(QWidget):
 
     @Slot()
     def evaluate(self)->bool:
+        self.preview.setText(f"-nothing selected-")
+        self.preview.setStyleSheet("")
         current_node_index = self.node_selection.currentIndex()
+        print("evaluate", current_node_index)
+        from datetime import datetime
+        self.preview.setText(f"{datetime.now()}")
         if not current_node_index.isValid():
+            self.preview.setText(f"-nothing selected-")
+            self.preview.setStyleSheet("")
             return True
 
         try:
             result = self._evaluate_node(current_node_index)
-            self.preview.setText(str(result))
+            print("evaluate result:", result)
+            self.preview.setText(f"result\n{result}")
             self.preview.setStyleSheet("")
         except SyntaxError as err:
-            self.preview.setText(str(err))
+            import traceback
+            error_message = traceback.format_exc()
+            self.preview.setText(f"Error\n{err}\n{error_message}")
             self.preview.setStyleSheet("color: red")
+            print("evaluate SyntaxError:", err)
             return False
         except Exception as err:
-            self.preview.setText(str(err))
+            import traceback
+            error_message = traceback.format_exc()
+            self.preview.setText(f"Error\n{err}\n{error_message}")
             self.preview.setStyleSheet("color: red")
+            print("evaluate Exception:", err)
             return False
 
         return True

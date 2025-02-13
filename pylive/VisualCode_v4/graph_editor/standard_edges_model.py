@@ -158,7 +158,7 @@ class StandardEdgesModel(QAbstractItemModel):
         edge_items:list[StandardEdgeItem] = []
         for u, v, k in self._DAG.in_edges([QPersistentModelIndex(target_node_index)], keys=True):
             edge_item = self._DAG.edges[ (u,v,k) ]["item"]
-            assert isinstance(edge_item, StandardEdgeItem)
+            assert isinstance(edge_item, StandardEdgeItem), f"got: {edge_item}"
             edge_items.append( edge_item )
 
         return edge_items
