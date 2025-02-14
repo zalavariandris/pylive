@@ -5,7 +5,7 @@ from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
 from pylive.VisualCode_v4.py_fields_model import PyFieldsModel, PyFieldItem
-from pylive.VisualCode_v4.py_nodes_model import PyNodesModel, UniqueFunctionItem
+from pylive.VisualCode_v4.py_nodes_model import PyNodesModel, PyNodeItem
 from pylive.VisualCode_v4.graph_editor.standard_edges_model import StandardEdgesModel, StandardEdgeItem
 
 from pathlib import Path
@@ -39,12 +39,14 @@ class PyGraphItem(QObject):
                     field_item = PyFieldItem(name, value, editable=True)
                     fields_model.insertFieldItem(row, field_item)
 
-            self._nodes_model.addNodeItem(
-                UniqueFunctionItem(
-                    node['source'], 
-                    name=node.get('name', None),
-                    fields=fields_model)
+            node_item = PyNodeItem(
+                name=node['name'],
+                code=node['source'],
+                error=None,
+                fields = fields_model,
+                dirty=True
             )
+            self._nodes_model.appendNodeItem(node_item)
 
             _node_row_by_name[node['name']] = row
 
@@ -90,8 +92,6 @@ class PyGraphItem(QObject):
     def evaluateNode(self, node_index:QModelIndex|QPersistentModelIndex):
         from pylive.utils.evaluate_python import parse_python_function, call_function_with_stored_args
         node_item = self._nodes_model.nodeItem(node_index.row())
-        assert node_item.kind() == "UniqueFunction", f"Only UniqueFunction kind is supported, got:{node_item.kind()}"
-        node_item = cast(UniqueFunctionItem, node_item)
         """recursively evaluate nodes, from top to bottom"""
         ### load arguments achestors
         kwargs = dict()
@@ -103,8 +103,8 @@ class PyGraphItem(QObject):
             
 
         ### load arguments from fields
-        for row in range(node_item.fields().rowCount()):
-            field_item = node_item.fields().fieldItem(row)
+        for row in range(node_item.fields.rowCount()):
+            field_item = node_item.fields.fieldItem(row)
             if field_item.name in kwargs:
                 continue # skip connected fields
             
@@ -112,7 +112,7 @@ class PyGraphItem(QObject):
 
         # print("_evaluate", node_index, kwargs)
         # evaluate functions with 
-        func = parse_python_function(node_item.source())
+        func = parse_python_function(node_item.code)
         result = call_function_with_stored_args(func, kwargs)
         return result
 

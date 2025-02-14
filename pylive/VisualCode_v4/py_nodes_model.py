@@ -10,52 +10,39 @@ from pylive.VisualCode_v4.py_fields_model import PyFieldsModel
 from pylive.utils.evaluate_python import parse_python_function
 
 
+from dataclasses import dataclass
 
-import inspect
-class UniqueFunctionItem:
-    def __init__(self, source:str, name:str|None=None, fields:PyFieldsModel|None=None):
-        self._source = source
-        self._fields = fields or PyFieldsModel()
-        self._name = name
-        self._cached_func = None
-        self._dirty = True
-
-    def source(self):
-        return self._source
-
-    def name(self):
-        return self._name
-
-    def func(self):
-        if not self._cached_func:
-            self._cached_func = parse_python_function(self._source)
-        return self._cached_func
-
-    def setSource(self, source:str):
-        self._source = source
-
-    def inlets(self)->Sequence[str]:
-        func = self.func()
-        sig = inspect.signature(func)
-        return tuple(_ for _ in sig.parameters)
-
-    def fields(self):
-        return self._fields
-
-    def kind(self):
-        return "UniqueFunction"
-
-    def dirty(self):
-        return self._dirty
+@dataclass
+class PyNodeItem:
+    name:str
+    code:str
+    error:Exception|None
+    dirty:bool
+    fields:PyFieldsModel
+    _cached_func:Callable|None = None
 
 
 class PyNodesModel(QAbstractItemModel):
     def __init__(self, parent: QObject|None=None) -> None:
         super().__init__(parent)
-        self._node_items:list[UniqueFunctionItem] = []
+        self._node_items:list[PyNodeItem] = []
+
+    def getNodeFunction(self, row:int)->Callable|None:
+        node_item = self._node_items[row]
+        if node_item._cached_func is None:
+            try:
+                node_item._cached_func = parse_python_function(node_item.code)
+            except Exception as err:
+                node_item._cached_func = None
+        return node_item._cached_func
 
     def inlets(self, row)->Sequence[str]:
-        return self._node_items[row].inlets()
+        if func:=self.getNodeFunction(row):
+            import inspect
+            print("inlets for function: ", func)
+            sig = inspect.signature(func)
+            return [name for name, param in sig.parameters.items()]
+        return []
 
     def outlets(self, row)->Sequence[str]:
         return ["out"]
@@ -64,68 +51,112 @@ class PyNodesModel(QAbstractItemModel):
         """Returns the number of rows in the model."""
         return len(self._node_items)
 
+    def columnCount(self, parent: QModelIndex|QPersistentModelIndex = QModelIndex()) -> int:
+        return 6
+
     def headerData(self, section: int, orientation: Qt.Orientation, role: int = Qt.ItemDataRole.DisplayRole) -> Any:
         if orientation == Qt.Orientation.Horizontal and role==Qt.ItemDataRole.DisplayRole:
-            return ["name", "definition", "dirty", "fields"][section]
+            return ["name", "code", "inlets", "outlets", "dirty", "error"][section]
         else:
             return super().headerData(section, orientation, role)
-
-    def columnCount(self, parent: QModelIndex|QPersistentModelIndex = QModelIndex()) -> int:
-        return 1
 
     def data(self, index: QModelIndex|QPersistentModelIndex, role: int = Qt.ItemDataRole.DisplayRole) -> Any:
         if not index.isValid() or not 0 <= index.row() < len(self._node_items):
             return None
 
-        item = self._node_items[index.row()]
+        node_item = self._node_items[index.row()]
 
-        if index.column()==0:
-            if role==Qt.ItemDataRole.DisplayRole:
-                first_line = item.source().split("\n")[0]
-                import re
-                pattern = r"def\s+(?P<func_name>\w+)\s*\("
-                match = re.search(pattern, first_line)
-                if match:
-                    return match.group("func_name") 
-                else:
-                    import textwrap
-                    return textwrap.shorten(first_line, width=12, placeholder="...")
+        match index.column():
+            case 0: # name
+                if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
+                    return node_item.name
 
-            elif role==Qt.ItemDataRole.EditRole:
-                return item.source
+            case 1: # code
+                if role==Qt.ItemDataRole.DisplayRole:
+                    first_line = node_item.code.split("\n")[0]
+                    import re
+                    pattern = r"def\s+(?P<func_name>\w+)\s*\("
+                    match = re.search(pattern, first_line)
+                    if match:
+                        return match.group("func_name") 
+                    else:
+                        import textwrap
+                        return textwrap.shorten(first_line, width=12, placeholder="...")
+
+                elif role==Qt.ItemDataRole.EditRole:
+                    return node_item.code
+
+            case 2: # inlets
+                if role==Qt.ItemDataRole.DisplayRole:
+                    return ", ".join(self.inlets(index.row()))
+
+            case 3: # outlets
+                if role==Qt.ItemDataRole.DisplayRole:
+                    return ", ".join(self.outlets(index.row()))
+
+            case 4: # dirty
+                if role==Qt.ItemDataRole.DisplayRole:
+                    return node_item.dirty
+
+            case 5: # error
+                if role==Qt.ItemDataRole.DisplayRole:
+                    return f"{node_item.error}"
 
         return None
 
-    def setUniqueFunctionSource(self, index:QModelIndex, source:str):
-        row = index.row()
-        node_item = self._node_items[row]
-        node_item.setSource(source)
-        self.dataChanged.emit(
-            index.siblingAtColumn(0), index.siblingAtColumn(0), 
-            [
-                Qt.ItemDataRole.DisplayRole, 
-                Qt.ItemDataRole.EditRole,
-                Qt.ItemDataRole.BackgroundRole
-            ]
-        )
+    def flags(self, index):
+        """Returns the item flags for the given index."""
+        if not index.isValid():
+            return Qt.ItemFlag.NoItemFlags
 
-    def setData(self, index: QModelIndex|QPersistentModelIndex, value:Any, role: int = Qt.ItemDataRole.DisplayRole) -> Any:
+        flags = Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled
+        if index.column() in (0, 1):
+            flags |= Qt.ItemFlag.ItemIsEditable
+        return flags
+
+    def setNodeCode(self, row:int, code:str):
+        node_item = self._node_items[row]
+        node_item.code = code
+        index = self.index(row, 0)
+
+        try:
+            func = self.getNodeFunction(row)
+            node_item._cached_func = func
+            node_item.error = None
+        except SyntaxError as err:
+            node_item.error = err
+        except Exception as err:
+            node_item.error = err
+
+        self.dataChanged.emit( # emit change for columns: code, inlets, outlets, dirty, error
+            index.sibling(index.row(), 1), 
+            index.sibling(index.row(), 5)
+        )
+        return True
+
+    def setData(self, index: QModelIndex|QPersistentModelIndex, value:Any, role: int = Qt.ItemDataRole.DisplayRole) -> bool:
         if not index.isValid() or not 0 <= index.row() < len(self._node_items):
             return None
 
-        item = self._node_items[index.row()]
+        node_item = self._node_items[index.row()]
 
-        if index.column()==0:
-            if role==Qt.ItemDataRole.EditRole:
-                item.source = value
 
-        # elif index.column()==1 and role==Qt.ItemDataRole.EditRole:
-        #     item.label = str(value)
+        match index.column():
+            case 0:
+                if role == Qt.ItemDataRole.EditRole:
+                    node_item.name = value
+                    self.dataChanged.emit(
+                        index.sibling(index.row(), 0), 
+                        index.sibling(index.row(), 0)
+                    )
 
-        # elif index.column()==2 and role==Qt.ItemDataRole.EditRole:
-        #     item.dirty = bool(value)
-
-        return None
+                    return True
+            case 1:
+                if role == Qt.ItemDataRole.EditRole:
+                    self.setNodeCode(index.row(), value)
+                    return True
+                    
+        return False
 
     def insertRows(self, row:int, count:int, parent=QModelIndex()):
         if len(self._node_items) <= row or row < 0:
@@ -133,29 +164,32 @@ class PyNodesModel(QAbstractItemModel):
 
         self.beginInsertRows(parent, row, row + count - 1)
         for _ in range(count):
-            node = UniqueFunctionItem(
-                source="""def func():/n  ...""",
+            node = PyNodeItem(
+                name="",
+                code="""def func():/n  ...""",
+                error=None,
+                dirty=False,
                 fields=PyFieldsModel()
             )
             self._node_items.append(node)
         self.endInsertRows()
         return True
 
-    def addNodeItem(self, item:UniqueFunctionItem):
+    def appendNodeItem(self, item:PyNodeItem):
         self.beginInsertRows(QModelIndex(), self.rowCount(), self.rowCount())
         self._node_items.append(item)
         self.endInsertRows()
 
-    def nodeItem(self, row)->UniqueFunctionItem:
+    def nodeItem(self, row)->PyNodeItem:
         return self._node_items[row]
 
-    def nodeItemFromIndex(self, index:QModelIndex)->UniqueFunctionItem|None:
+    def nodeItemFromIndex(self, index:QModelIndex)->PyNodeItem|None:
         if index.isValid() and index.model() == self:
             row = index.row()
             if row>=0 and row < len(self._node_items):
                 return self._node_items[row]
 
-    def insertNodeItem(self, row:int, item:UniqueFunctionItem):
+    def insertNodeItem(self, row:int, item:PyNodeItem):
         self.beginInsertRows(QModelIndex(), row, row)
         self._node_items.insert(row, item)
         self.endInsertRows()
@@ -178,13 +212,6 @@ class PyNodesModel(QAbstractItemModel):
         self.blockSignals(False)
         self.modelReset.emit()
 
-    def flags(self, index):
-        """Returns the item flags for the given index."""
-        if not index.isValid():
-            return Qt.ItemFlag.NoItemFlags
-
-        return Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsEditable
-
     def index(self, row:int, column:int, parent=QModelIndex()):
         if parent.isValid():
             return QModelIndex()
@@ -204,13 +231,21 @@ if __name__ == "__main__":
     table_view.setModel(model)
     list_view = QListView()
     list_view.setModel(model)
-    add_field_action = QAction("add",window)
-    def add_field():
-        model.insertNodeItem(0, UniqueFunctionItem("new node", QPersistentModelIndex(), PyFieldsModel(), True))
+    add_node_action = QAction("add",window)
+    def add_node():
+        node_item = PyNodeItem(
+            name="",
+            code="def func()\n  ...",
+            error=None,
+            dirty=True,
+            fields=PyFieldsModel()
+        )
 
-    add_field_action.triggered.connect(add_field)
+        model.insertNodeItem(0, node_item)
+
+    add_node_action.triggered.connect(add_node)
     menubar = QMenuBar()
-    menubar.addAction(add_field_action)
+    menubar.addAction(add_node_action)
     main_layout.setMenuBar(menubar)
     main_layout.addWidget(table_view)
     main_layout.addWidget(list_view)

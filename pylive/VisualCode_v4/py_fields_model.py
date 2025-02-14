@@ -94,7 +94,7 @@ class PyFieldsModel(QAbstractItemModel):
         return self._fields[row]
 
     def setNode(self, node: dict):
-        """Update the model with a new person"""
+        """Update the model with a new node"""
         self.beginResetModel()
         self._node = node
         self.endResetModel()

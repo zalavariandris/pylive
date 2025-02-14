@@ -14,7 +14,7 @@ from pylive.qt_components.qt_options_dialog import QOptionDialog
 
 # from pylive.QtGraphEditor.py_functions_model import PyFunctionsModel
 from py_fields_model import PyFieldsModel, PyFieldItem
-from py_nodes_model import PyNodesModel, UniqueFunctionItem
+from py_nodes_model import PyNodesModel, PyNodeItem
 from graph_editor.standard_edges_model import StandardEdgesModel, StandardEdgeItem
 
 from py_graph_item import PyGraphItem
@@ -26,6 +26,7 @@ from pylive.QtScriptEditor.script_edit import ScriptEdit
 def log_call(fn, *args, **kwargs):
     print(f"{fn.__name__} was called")
     return fn(*args, **kwargs)
+
 
 class Window(QWidget):
     DefinitionFunctionRole = Qt.ItemDataRole.UserRole
@@ -50,13 +51,15 @@ class Window(QWidget):
         self.nodes_sheet_table_view.setSelectionModel(self.node_selection)
         self.nodes_sheet_table_view.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.nodes_sheet_table_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
-
+        self.nodes_sheet_table_view.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        
         self.edges_sheet_table_view = QTableView(self)
         self.edges_sheet_table_view.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.edges_sheet_table_view.setModel(self.graph_item.edges())
         self.edges_sheet_table_view.setSelectionModel(self.edge_selection)
         self.edges_sheet_table_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
         self.edges_sheet_table_view.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        self.edges_sheet_table_view.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
 
         self.graph_view = GraphEditorView()
         self.graph_view.installEventFilter(self)
@@ -64,7 +67,6 @@ class Window(QWidget):
         self.graph_view.setSelectionModel(self.node_selection)
 
         ### NODEINSPECTOR
-
         node_inspector = QFrame()
         node_inspector.setFrameShape(QFrame.Shape.StyledPanel)  # Styled panel for the frame
         node_inspector.setFrameShadow(QFrame.Shadow.Raised)
@@ -108,7 +110,7 @@ class Window(QWidget):
             current_node_index = self.node_selection.currentIndex()
             if self.node_selection.hasSelection() and current_node_index.isValid():
                 new_source = node_function_source_editor.toPlainText()
-                self.graph_item.nodes().setUniqueFunctionSource(current_node_index, new_source)
+                self.graph_item.nodes().setNodeCode(current_node_index.row(), new_source)
         node_function_source_editor.textChanged.connect(lambda: update_source())
 
         self.node_inspector = node_inspector
@@ -118,15 +120,14 @@ class Window(QWidget):
             if self.node_selection.hasSelection() and current_node_index.isValid():
                 self.node_inspector.show()
 
-                
                 inspector_header_tile.setHeading(self.graph_item.nodes().data(current_node_index, Qt.ItemDataRole.DisplayRole))
                 # inspector_header_tile.setSubHeading(f"{node_item.definition.data(Qt.ItemDataRole.DisplayRole)}")
                 node_item = self.graph_item.nodes().nodeItemFromIndex(current_node_index)
                 assert node_item is not None, f"cant be None, got: {node_item}"
-                property_editor.setModel(node_item.fields())
+                property_editor.setModel(node_item.fields)
 
-                if source:= node_item.source():
-                    node_function_source_editor.setPlainText(source)
+                if code:= node_item.code:
+                    node_function_source_editor.setPlainText(code)
                 else:
                     node_function_source_editor.setPlainText("")
                 # self.nodes.dataChanged.connect(print)
@@ -314,9 +315,14 @@ class Window(QWidget):
         layout = QVBoxLayout()
 
         ## popup definition selector
-        self.graph_item.nodes().addNodeItem(UniqueFunctionItem(
-            source="""def func():\n  ...""",
-        ))
+        node_item = PyNodeItem(
+            name="",
+            code="""def func():\n  ...""",
+            error=None,
+            dirty=True,
+            fields = PyFieldsModel()
+        )
+        self.graph_item.nodes().appendNodeItem(node_item)
 
         #
         node_index = self.graph_item.nodes().index(self.graph_item.nodes().rowCount()-1, 0)

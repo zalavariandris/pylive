@@ -47,7 +47,7 @@ def call_function_with_stored_args(func: Callable, stored_args: Dict[str, Any]) 
 
 def parse_python_function(code:str)->Callable:
     """takes a python script and return the first function defined in the 
-    script. rais"""
+    script. raises Exceptions"""
     import inspect
     capture = {'__builtins__':__builtins__}
     try:
