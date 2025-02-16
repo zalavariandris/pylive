@@ -34,27 +34,40 @@ class InspectorView(QFrame):
         super().__init__(parent=parent)
         self._selection:QItemSelectionModel|None=None
         self._nodes:PyNodesModel|None=None
-
-
         self.setFrameShape(QFrame.Shape.StyledPanel)  # Styled panel for the frame
         self.setFrameShadow(QFrame.Shadow.Raised)
+        self.name_edit = QLineEdit()
         self.inspector_header_tile = TileWidget()
         self.property_editor = QTableView()
         self.property_editor.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.property_editor.setModel(None)
-        inspector_layout = QVBoxLayout()
-        inspector_layout.addWidget(self.inspector_header_tile)
-        inspector_layout.addWidget(self.property_editor)
+        main_layout = QVBoxLayout()
+        main_layout.addWidget(self.name_edit)
+        main_layout.addWidget(self.inspector_header_tile)
+        main_layout.addWidget(self.property_editor)
         self.node_function_source_editor = ScriptEdit()
-        inspector_layout.addWidget(self.node_function_source_editor)
-        self.setLayout(inspector_layout)
+        main_layout.addWidget(self.node_function_source_editor)
+        self.setLayout(main_layout)
 
-    def setNodesModel(self, nodes:PyNodesModel):
+
+
+        self.mapper = QDataWidgetMapper()
+        self.mapper.setSubmitPolicy(QDataWidgetMapper.SubmitPolicy.AutoSubmit)
+        
+        # self.mapper.addMapping(myLineEdit, 1);
+        # self.mapper.addMapping(myCountryChooser, 2);
+
+    def setNodesModel(self, nodes:PyNodesModel|None):
         if self._nodes:
-            nodes.dataChanged.disconnect(self._onDataChanged)
+            self._nodes.dataChanged.disconnect(self._onDataChanged)
 
         if nodes:
             nodes.dataChanged.connect(self._onDataChanged)
+            self.mapper.setModel(nodes)
+            self.mapper.addMapping(self.name_edit, 0)
+            self.name_edit.textChanged.connect(lambda: 
+                nodes.setData(nodes.index(self.mapper.currentIndex(), 0), self.name_edit.text())
+            )
 
         self._nodes = nodes
 
@@ -71,15 +84,17 @@ class InspectorView(QFrame):
         self.update_node_inspector()
 
     def _onCurrentChanged(self, current, previous):
+        self.mapper.setCurrentIndex(current.row())
         self.update_node_inspector()
 
     def update_node_inspector(self):
         assert self._selection
         assert self._nodes
+
         current_node_index = self._selection.currentIndex().siblingAtColumn(0)
         if current_node_index.isValid():
             self.show()
-
+            # self.name_edit.setText(self._nodes.data())
             self.inspector_header_tile.setHeading(self._nodes.data(current_node_index, Qt.ItemDataRole.DisplayRole))
             self.inspector_header_tile.setSubHeading(f"(inline function)")
             node_item = self._nodes.nodeItemFromIndex(current_node_index)

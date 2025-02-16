@@ -396,10 +396,12 @@ class GraphEditorView(QGraphicsView):
     def _updateNodes(self, indexes:Iterable[QModelIndex], roles:list[int]):
         assert self._nodes, "self._node cant be None"
         assert isinstance(self._nodes, NodesModelProtocol)
-        for node_index in filter(lambda idx: idx in self._node_widgets, indexes):
+        print("updateNodes")
+        for node_index in filter(lambda idx: QPersistentModelIndex(idx) in self._node_widgets, indexes):
 
             node_id = QPersistentModelIndex(node_index)
             node_widget = self.nodeWidget(node_id)
+            print("update node widget")
             self._delegate.updateNodeWidget(node_index, node_widget)
 
             self._removeInlets(node_index, self._node_inlets[node_id])

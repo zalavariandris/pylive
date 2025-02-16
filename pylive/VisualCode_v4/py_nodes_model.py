@@ -179,6 +179,9 @@ class PyNodesModel(QAbstractItemModel):
         if parent.isValid():
             return QModelIndex()
 
+        if row<0 or row >= len(self._node_items):
+            return QModelIndex()
+
         return self.createIndex(row, column, self._node_items[row])
 
     def parent(self, index:QModelIndex|QPersistentModelIndex)->QModelIndex:
