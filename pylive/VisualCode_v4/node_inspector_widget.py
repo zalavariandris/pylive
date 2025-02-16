@@ -15,27 +15,44 @@ class NodeInspectorWidget(QFrame):
 		self.setFrameShape(QFrame.Shape.StyledPanel)  # Styled panel for the frame
 		self.setFrameShadow(QFrame.Shadow.Raised)
 		inspector_header_tile = TileWidget()
-		property_editor = QTableWidget()
-		property_editor.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+		
+		property_editor = QWidget()
+		property_layout = QFormLayout()
+		property_editor.setLayout(property_layout)
+		property_layout.addRow("name", QLineEdit("hello"))
+		property_layout.addRow("source", QLineEdit("def func..."))
 		# property_editor.setModel(None)
+
 		inspector_layout = QVBoxLayout()
 		inspector_layout.addWidget(inspector_header_tile)
 		inspector_layout.addWidget(property_editor)
+
 		create_button = QPushButton("create")
 		delete_button = QPushButton("delete")
 		button_layout = QHBoxLayout()
 		button_layout.addWidget(create_button)
 		button_layout.addWidget(delete_button)
 		inspector_layout.addLayout(button_layout)
+
 		node_function_source_editor = ScriptEdit()
 		inspector_layout.addWidget(node_function_source_editor)
 		self.setLayout(inspector_layout)
+
+
+	def insertField(self, idx:int, name:str, value:Any):
+		...
+
+	def indexFromName(self, name:str):
+		...
+
+	def removeField(self, idx):
+		...
 
 
 		
 
 if __name__ == "__main__":
     app = QApplication()
-    window = NodeInspectorWidget()
-    window.show()
+    inspector = NodeInspectorWidget()
+    inspector.show()
     app.exec()

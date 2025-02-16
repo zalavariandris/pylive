@@ -10,6 +10,7 @@ from pylive.VisualCode_v4.graph_editor.standard_edges_model import StandardEdges
 
 from pathlib import Path
 
+
 class PyGraphItem(QObject):
     def __init__(self):
         ### document state
@@ -30,23 +31,17 @@ class PyGraphItem(QObject):
         _node_row_by_name = dict() # keep node name as references for the edge relations
         self._nodes_model.blockSignals(True)
         for row, node in enumerate(data['nodes']):
+            print("deserialize node:", node.get('fields'))
             if node['kind']!='UniqueFunction':
                 raise NotImplementedError("for now, only 'UniqueFunction's are supported!")
 
-            fields_model = PyFieldsModel()
-            if fields:=node.get("fields", None):
-                for row, (name, value) in enumerate(fields.items()):
-                    field_item = PyFieldItem(name, value, editable=True)
-                    fields_model.insertFieldItem(row, field_item)
-
+            fields = node.get('fields') or dict({'f': 1})
             node_item = PyNodeItem(
                 name=node['name'],
                 code=node['source'],
-                error=None,
-                fields = fields_model,
-                dirty=True
+                fields=fields
             )
-            self._nodes_model.appendNodeItem(node_item)
+            self._nodes_model.insertNodeItem(row, node_item)
 
             _node_row_by_name[node['name']] = row
 
@@ -90,30 +85,45 @@ class PyGraphItem(QObject):
         Path(path).write_text(text)
 
     def evaluateNode(self, node_index:QModelIndex|QPersistentModelIndex):
+        """recursively evaluate nodes, from top to bottom"""
         from pylive.utils.evaluate_python import parse_python_function, call_function_with_stored_args
         node_item = self._nodes_model.nodeItem(node_index.row())
-        """recursively evaluate nodes, from top to bottom"""
-        ### load arguments achestors
+
+        ### load arguments from achestors
         kwargs = dict()
-        inputs = [_ for _ in self._edges_model.in_edges(node_index)]
-        # print("in edges:", inputs)
         for edge_item in self._edges_model.in_edges(node_index):
             # print(f"EVALUATE SOURCE {edge_item.inlet}: {edge_item.source}")
             kwargs[edge_item.inlet] = self.evaluateNode(edge_item.source)
             
-
         ### load arguments from fields
-        for row in range(node_item.fields.rowCount()):
-            field_item = node_item.fields.fieldItem(row)
-            if field_item.name in kwargs:
+        for name, value in node_item.fields.items():
+            if name in kwargs:
                 continue # skip connected fields
-            
-            kwargs[field_item.name] = field_item.value
+            kwargs[name] = value
 
-        # print("_evaluate", node_index, kwargs)
         # evaluate functions with 
-        func = parse_python_function(node_item.code)
-        result = call_function_with_stored_args(func, kwargs)
-        return result
+        if not node_item.func:
+            success = self._nodes_model.compileNode(node_index.row())
+            if not success:
+                return
+
+        node_item = self._nodes_model.nodeItem(node_index.row())
+        assert node_item.func
+        try:
+            result = call_function_with_stored_args(node_item.func, kwargs)
+        except SyntaxError as err:
+            ...
+        except Exception as err:
+            ...
+        else:
+            
+
+            # set result
+            row = node_index.row()
+            headers = [self.nodes().headerData(section, Qt.Orientation.Horizontal) for section in range(self.nodes().columnCount())]
+            assert "result" in headers
+            column = headers.index("result")
+            self.nodes().setData(self.nodes().index(row, column), result)
+            return result
 
     

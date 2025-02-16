@@ -1,7 +1,7 @@
-from PyQt6.QtCore import QObject, pyqtProperty, pyqtSignal, pyqtSlot, QAbstractListModel, Qt, QModelIndex
-from PyQt6.QtQml import QQmlApplicationEngine
-from PyQt6.QtGui import QGuiApplication
-from PyQt6.QtQuickControls2 import QQuickStyle
+from PySide6.QtCore import *
+from PySide6.QtQml import *
+from PySide6.QtGui import *
+from PySide6.QtQuickControls2 import *
 import sys
 import os
 
@@ -13,19 +13,19 @@ class Person(QObject):
         self._occupation = occupation
         self._description = description
 
-    @pyqtProperty(str)
+    @Property(str)
     def name(self):
         return self._name
 
-    @pyqtProperty(int)
+    @Property(int)
     def age(self):
         return self._age
 
-    @pyqtProperty(str)
+    @Property(str)
     def occupation(self):
         return self._occupation
 
-    @pyqtProperty(str)
+    @Property(str)
     def description(self):
         return self._description
 
@@ -73,7 +73,7 @@ class PersonModel(QAbstractListModel):
 
         return None
 
-    @pyqtSlot(str, int, str, str)
+    @Slot(str, int, str, str)
     def add_person(self, name, age, occupation, description):
         self.beginInsertRows(QModelIndex(), self.rowCount(), self.rowCount())
         self._persons.append(Person(name, age, occupation, description))
@@ -99,7 +99,7 @@ def setup_qt_environment():
     QQuickStyle.setStyle("Basic")
 
 def main():
-    setup_qt_environment()
+    # setup_qt_environment()
     
     app = QGuiApplication(sys.argv)
     engine = QQmlApplicationEngine()

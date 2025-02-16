@@ -49,7 +49,7 @@ from PySide6.QtWidgets import *
 
 from bidict import bidict
 from collections import defaultdict
-from pylive.utils.qt import signalsBlocked
+from pylive.utils.qt import distribute_items_horizontal, signalsBlocked
 
 
 from pylive.VisualCode_v4.graph_editor.standard_graph_delegate import StandardGraphDelegate
@@ -62,6 +62,7 @@ class NodesModelProtocol(Protocol):
 
     def outlets(self, row)->Sequence[str]:
         ...
+
 
 @runtime_checkable
 class EdgesModelProtocol(Protocol):
@@ -105,6 +106,8 @@ class GraphEditorView(QGraphicsView):
         self._edge_widgets:   bidict[QPersistentModelIndex, QGraphicsItem] = bidict()
         self._inlet_widgets:  bidict[tuple[QPersistentModelIndex, str], QGraphicsItem] = bidict()
         self._outlet_widgets: bidict[tuple[QPersistentModelIndex, str], QGraphicsItem] = bidict()
+        self._node_inlets: dict[QPersistentModelIndex, list[str]] = defaultdict(list)
+        self._node_outlets:dict[QPersistentModelIndex, list[str]] = defaultdict(list)
 
         self._node_in_links:defaultdict[QGraphicsItem, list[QGraphicsItem]] = defaultdict(list) # Notes: store attached links, because the underlzing model has to find the relevant edges  and thats is O(n)
         self._node_out_links:defaultdict[QGraphicsItem, list[QGraphicsItem]] = defaultdict(list) # Notes: store attached links, because the underlzing model has to find the relevant edges  and thats is O(n)
@@ -174,11 +177,17 @@ class GraphEditorView(QGraphicsView):
             source, outlet = self._edges.source(edge_index.row())
             target, inlet = self._edges.target(edge_index.row())
 
-            source_outlet_widget = self.outletWidget(source, outlet)
-            target_inlet_widget = self.inletWidget(target, inlet)
-            assert source_outlet_widget, "outlet widget is None"
-            assert target_inlet_widget, "inlet widget is None"
-            self._delegate.updateEdgePosition(edge_widget, source_outlet_widget, target_inlet_widget)
+            try:
+                source_widget = self.outletWidget(source, outlet)
+            except KeyError:
+                source_widget = self.nodeWidget(source)
+
+            try:
+                target_widget = self.inletWidget(target, inlet)
+            except KeyError:
+                target_widget = self.nodeWidget(target)
+
+            self._delegate.updateEdgePosition(edge_widget, source_widget, target_widget)
 
     def setDelegate(self, delegate:StandardGraphDelegate):
         self._delegate = delegate
@@ -198,6 +207,7 @@ class GraphEditorView(QGraphicsView):
 
     ### <<< Handle Model Signals
     def _onNodesReset(self):
+        print("GraphEditorView->_onNodesReset")
         assert self._nodes, "self._nodes is None"
         ### clear graph
         self._node_widgets.clear()
@@ -205,8 +215,12 @@ class GraphEditorView(QGraphicsView):
         self._node_out_links.clear()
 
         ### populate graph with nodes
-        if self._nodes.rowCount()>0:
-            self._onNodesInserted(QModelIndex(), 0, self._nodes.rowCount()-1)
+        indexes = [
+            self._nodes.index(row, 0)
+            for row in range(self._nodes.rowCount())
+        ]
+
+        self._addNodes(indexes)
 
         # layout items
         self.layoutNodes()
@@ -245,10 +259,13 @@ class GraphEditorView(QGraphicsView):
         The optional roles argument can be used to specify which data roles have actually been modified.
         An empty vector in the roles argument means that all roles should be considered modified"""
         assert self._nodes, "self._nodes is None"
-        indexes = (
+        assert isinstance(self._nodes, NodesModelProtocol)
+
+        indexes = [
             self._nodes.index(row, 0)
             for row in range(top_left.row(), bottom_right.row()+1)
-        )
+        ]
+
         self._updateNodes(indexes, roles)
 
     def _onEdgesInserted(self, parent:QModelIndex, first:int, last:int):
@@ -291,25 +308,79 @@ class GraphEditorView(QGraphicsView):
             self._node_in_links[node_widget] = []
 
             if inlets := self._nodes.inlets(node_index.row()):
-                self._addInlets(node_index, inlets)
+                self._insertInlets(node_index, 0, inlets)
 
             if outlets := self._nodes.outlets(node_index.row()):
-                self._addOutlets(node_index, outlets)
-                    
-    def _addInlets(self, node_index:QModelIndex, inlets:Iterable[str]):
-        node_widget = self.nodeWidget(node_index)
-        for inlet in inlets:
-            inlet_widget = self._delegate.createInletWidget(node_widget, node_index, inlet)
-            inlet_id = QPersistentModelIndex(node_index), inlet
-            self._inlet_widgets[inlet_id] = inlet_widget
+                self._insertOutlets(node_index, 0, outlets)
 
-    def _addOutlets(self, node_index:QModelIndex, outlets:Iterable[str]):
+    def _insertInlets(self, node_index:QModelIndex, start:int, inlets:Iterable[str]):
+        node_id = QPersistentModelIndex(node_index)
+        node_widget = self.nodeWidget(node_index)
+        for i, inlet in enumerate(inlets, start=start):
+            inlet_widget = self._delegate.createInletWidget(node_widget, node_index, inlet, i)
+            inlet_widget.setParentItem(node_widget)
+            inlet_id = node_id, inlet
+            self._inlet_widgets[inlet_id] = inlet_widget
+            self._node_inlets[node_id].insert(i, inlet)
+
+        # layout inlets
+        inlet_widgets = [self.inletWidget(node_index, inlet) for inlet in self._node_inlets[node_id]]
+        distribute_items_horizontal(inlet_widgets, node_widget.boundingRect())
+
+        # layout edges
+        self._moveAttachedLinks(node_widget)
+
+    def _removeInlets(self, node_index:QModelIndex, inlets:Iterable[str]):
+        node_id = QPersistentModelIndex(node_index)
+        node_widget = self.nodeWidget(node_id)
+        for inlet in inlets:
+            inlet_id = QPersistentModelIndex(node_index), inlet
+            inlet_item = self._inlet_widgets[inlet_id]
+            self.scene().removeItem(inlet_item)
+            del self._inlet_widgets[inlet_id]
+            self._node_inlets[node_id].remove(inlet)
+        
+        # layout inlets
+        inlet_widgets = [self.inletWidget(node_index, inlet) for inlet in self._node_inlets[node_id]]
+        distribute_items_horizontal(inlet_widgets, node_widget.boundingRect())
+
+        # layout edges
+        self._moveAttachedLinks(node_widget)
+
+    def _insertOutlets(self, node_index:QModelIndex, start:int, outlets:Iterable[str]):
+        node_id = QPersistentModelIndex(node_index)
+        node_widget = self.nodeWidget(node_id)
+        for i, outlet in enumerate(outlets, start=start):
+            outlet_widget = self._delegate.createOutletWidget(node_widget, node_index, outlet, i)
+            outlet_id = QPersistentModelIndex(node_index), outlet
+            self._outlet_widgets[outlet_id] = outlet_widget
+            self._node_outlets[node_id].insert(i, outlet)
+        
+        # layout inlets
+        outlet_widgets = [self.outletWidget(node_index, outlet) for outlet in self._node_outlets[node_id]]
+        for outlet_widget in outlet_widgets:
+            outlet_widget.setY(node_widget.boundingRect().bottom())
+        distribute_items_horizontal(outlet_widgets, node_widget.boundingRect())
+
+        # layout edges
+        self._moveAttachedLinks(node_widget)
+
+    def _removeOutlets(self, node_index:QModelIndex, outlets:Iterable[str]):
         node_id = QPersistentModelIndex(node_index)
         node_widget = self.nodeWidget(node_id)
         for outlet in outlets:
-            outlet_widget = self._delegate.createOutletWidget(node_widget, node_index, outlet)
-            outlet_id = QPersistentModelIndex(node_index), outlet
-            self._outlet_widgets[outlet_id] = outlet_widget
+            outlet_id = node_id, outlet
+            outlet_item = self._outlet_widgets[outlet_id]
+            self.scene().removeItem(outlet_item)
+            del self._outlet_widgets[outlet_id]
+            self._node_outlets[node_id].remove(outlet)
+        
+        # layout inlets
+        outlet_widgets = [self.outletWidget(node_index, outlet) for outlet in self._node_outlets[node_id]]
+        distribute_items_horizontal(outlet_widgets, node_widget.boundingRect())
+
+        # layout edges
+        self._moveAttachedLinks(node_widget)
 
     def _removeNodes(self, indexes:Iterable[QModelIndex]):
         assert self._nodes, "self._noded cant be None"
@@ -323,11 +394,22 @@ class GraphEditorView(QGraphicsView):
             del self._node_widgets[node_id]
 
     def _updateNodes(self, indexes:Iterable[QModelIndex], roles:list[int]):
-        assert self._nodes, "self._noded cant be None"
-        for node_index in indexes:
+        assert self._nodes, "self._node cant be None"
+        assert isinstance(self._nodes, NodesModelProtocol)
+        for node_index in filter(lambda idx: idx in self._node_widgets, indexes):
+
             node_id = QPersistentModelIndex(node_index)
             node_widget = self.nodeWidget(node_id)
             self._delegate.updateNodeWidget(node_index, node_widget)
+
+            self._removeInlets(node_index, self._node_inlets[node_id])
+            self._removeOutlets(node_index, self._node_outlets[node_id])
+
+            inlets = self._nodes.inlets(node_index.row())
+            self._insertInlets(node_index, 0, inlets)
+
+            outlets = self._nodes.outlets(node_index.row())
+            self._insertOutlets(node_index, 0, outlets)
 
     def _addEdges(self, indexes:Iterable[QModelIndex]):
         assert self._edges and isinstance(self._edges, EdgesModelProtocol), f"bad self._edges, got{self._edges}"
@@ -344,20 +426,26 @@ class GraphEditorView(QGraphicsView):
             source_node_index, outlet = self._edges.source(edge_index.row())
             target_node_index, inlet = self._edges.target(edge_index.row())
 
-            source_node_editor = self.nodeWidget(source_node_index)
-            target_node_editor = self.nodeWidget(target_node_index)
-            assert source_node_editor, f"node widget does not exist for {source_node_index}"
-            assert target_node_editor, f"node widget does not exist for {target_node_index}"
+            
+            source_node_widget = self.nodeWidget(source_node_index)
+            target_node_widget = self.nodeWidget(target_node_index)
 
-            self._node_out_links[source_node_editor].append(edge_widget)
-            self._node_in_links[target_node_editor].append(edge_widget)
-            
-            target_inlet_widget = self.inletWidget(target_node_index, inlet)
-            source_outlet_widget = self.outletWidget(source_node_index, outlet)
-            assert target_inlet_widget, f"inlet widget does not exist for {inlet}"
-            assert source_outlet_widget, f"outlet widget does not exist for {outlet}"
-            
-            self._delegate.updateEdgePosition(edge_widget, source_outlet_widget, target_inlet_widget)
+            self._node_out_links[source_node_widget].append(edge_widget)
+            self._node_in_links[target_node_widget].append(edge_widget)
+
+
+            try:
+                source_widget = self.outletWidget(source_node_index, outlet)
+            except KeyError:
+                source_widget = target_node_widget
+
+            try:
+                target_widget = self.inletWidget(target_node_index, inlet)
+            except KeyError:
+                target_widget = target_node_widget
+
+
+            self._delegate.updateEdgePosition(edge_widget, source_widget, target_widget)
 
     def _removeEdges(self, indexes:Iterable[QModelIndex]):
         assert self._edges

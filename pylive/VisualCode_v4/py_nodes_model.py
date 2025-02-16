@@ -1,5 +1,6 @@
 
 from collections import defaultdict
+import inspect
 from typing import *
 from PySide6.QtCore import *
 from PySide6.QtGui import *
@@ -10,16 +11,25 @@ from pylive.VisualCode_v4.py_fields_model import PyFieldsModel
 from pylive.utils.evaluate_python import parse_python_function
 
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 @dataclass
 class PyNodeItem:
     name:str
     code:str
-    error:Exception|None
-    dirty:bool
-    fields:PyFieldsModel
-    _cached_func:Callable|None = None
+    fields:dict[str, Any]=field(default_factory=dict)
+    dirty:bool=True # code and fields dependent
+    status:Literal["initalized", "compiled", "evaluated", "error"] = "initalized"
+
+    # when compiled
+    func:Callable|None = None
+    inlets:list[str] = field(default_factory=list)
+
+    # when evaluated
+    result: object|None=None
+
+    # when error
+    error: Exception|None=None
 
 
 class PyNodesModel(QAbstractItemModel):
@@ -27,36 +37,47 @@ class PyNodesModel(QAbstractItemModel):
         super().__init__(parent)
         self._node_items:list[PyNodeItem] = []
 
-    def getNodeFunction(self, row:int)->Callable|None:
-        node_item = self._node_items[row]
-        if node_item._cached_func is None:
-            try:
-                node_item._cached_func = parse_python_function(node_item.code)
-            except Exception as err:
-                node_item._cached_func = None
-        return node_item._cached_func
-
     def inlets(self, row)->Sequence[str]:
-        if func:=self.getNodeFunction(row):
-            import inspect
-            print("inlets for function: ", func)
-            sig = inspect.signature(func)
-            return [name for name, param in sig.parameters.items()]
-        return []
+        node_item = self._node_items[row]
+        return node_item.inlets
 
     def outlets(self, row)->Sequence[str]:
         return ["out"]
-        
-    def rowCount(self, parent=QModelIndex()):
+
+    def compileNode(self, row:int):
+        print("compile node", row)
+        node_item = self.nodeItem(row)
+
+        try:
+            func = parse_python_function(node_item.code)
+        except SyntaxError as err:
+            self.setDataByColumnName(row, 'func', None)
+            self.setDataByColumnName(row, 'inlets', [])
+            self.setDataByColumnName(row, 'error', err)
+            return False
+        except Exception as err:
+            self.setDataByColumnName(row, 'func', None)
+            self.setDataByColumnName(row, 'inlets', [])
+            self.setDataByColumnName(row, 'error', err)
+            return False
+        else:
+            self.setDataByColumnName(row, 'func', func)
+            import inspect
+            sig = inspect.signature(func)
+            self.setDataByColumnName(row, 'inlets', [name for name, param in sig.parameters.items()])
+            self.setDataByColumnName(row, 'error', None)
+            return True
+
+    def rowCount(self, parent=QModelIndex())->int:
         """Returns the number of rows in the model."""
         return len(self._node_items)
 
     def columnCount(self, parent: QModelIndex|QPersistentModelIndex = QModelIndex()) -> int:
-        return 6
+        return 9
 
     def headerData(self, section: int, orientation: Qt.Orientation, role: int = Qt.ItemDataRole.DisplayRole) -> Any:
         if orientation == Qt.Orientation.Horizontal and role==Qt.ItemDataRole.DisplayRole:
-            return ["name", "code", "inlets", "outlets", "dirty", "error"][section]
+            return ["name", "code", "fields", "dirty", "status", "func", "inlets", "result", "error"][section]
         else:
             return super().headerData(section, orientation, role)
 
@@ -65,43 +86,11 @@ class PyNodesModel(QAbstractItemModel):
             return None
 
         node_item = self._node_items[index.row()]
-
-        match index.column():
-            case 0: # name
-                if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
-                    return node_item.name
-
-            case 1: # code
-                if role==Qt.ItemDataRole.DisplayRole:
-                    first_line = node_item.code.split("\n")[0]
-                    import re
-                    pattern = r"def\s+(?P<func_name>\w+)\s*\("
-                    match = re.search(pattern, first_line)
-                    if match:
-                        return match.group("func_name") 
-                    else:
-                        import textwrap
-                        return textwrap.shorten(first_line, width=12, placeholder="...")
-
-                elif role==Qt.ItemDataRole.EditRole:
-                    return node_item.code
-
-            case 2: # inlets
-                if role==Qt.ItemDataRole.DisplayRole:
-                    return ", ".join(self.inlets(index.row()))
-
-            case 3: # outlets
-                if role==Qt.ItemDataRole.DisplayRole:
-                    return ", ".join(self.outlets(index.row()))
-
-            case 4: # dirty
-                if role==Qt.ItemDataRole.DisplayRole:
-                    return node_item.dirty
-
-            case 5: # error
-                if role==Qt.ItemDataRole.DisplayRole:
-                    return f"{node_item.error}"
-
+        if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
+            attr = self.headerData(index.column(), Qt.Orientation.Horizontal)
+            value = getattr(node_item, attr)
+            return f"{value}"
+           
         return None
 
     def flags(self, index):
@@ -114,51 +103,33 @@ class PyNodesModel(QAbstractItemModel):
             flags |= Qt.ItemFlag.ItemIsEditable
         return flags
 
-    def setNodeCode(self, row:int, code:str):
+    def setDataByColumnName(self, row:int, attr:str, value:Any, role:int=Qt.ItemDataRole.DisplayRole):
+        headers = [
+            self.headerData(col, Qt.Orientation.Horizontal) 
+            for col in range(self.columnCount())
+        ]
+        assert attr in headers, f"{attr} must be in headers: {headers}"
+        column = headers.index(attr)
         node_item = self._node_items[row]
-        node_item.code = code
-        index = self.index(row, 0)
-
-        try:
-            func = self.getNodeFunction(row)
-            node_item._cached_func = func
-            node_item.error = None
-        except SyntaxError as err:
-            node_item.error = err
-        except Exception as err:
-            node_item.error = err
-
-        self.dataChanged.emit( # emit change for columns: code, inlets, outlets, dirty, error
-            index.sibling(index.row(), 1), 
-            index.sibling(index.row(), 5)
+        setattr(node_item, attr, value)
+        self.dataChanged.emit(
+            self.index(row, column), 
+            self.index(row, column)
         )
-        return True
 
     def setData(self, index: QModelIndex|QPersistentModelIndex, value:Any, role: int = Qt.ItemDataRole.DisplayRole) -> bool:
         if not index.isValid() or not 0 <= index.row() < len(self._node_items):
-            return None
+            return False
 
-        node_item = self._node_items[index.row()]
-
-
-        match index.column():
-            case 0:
-                if role == Qt.ItemDataRole.EditRole:
-                    node_item.name = value
-                    self.dataChanged.emit(
-                        index.sibling(index.row(), 0), 
-                        index.sibling(index.row(), 0)
-                    )
-
-                    return True
-            case 1:
-                if role == Qt.ItemDataRole.EditRole:
-                    self.setNodeCode(index.row(), value)
-                    return True
+        if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
+            node_item = self._node_items[index.row()]
+            attr = self.headerData(index.column(), Qt.Orientation.Horizontal)
+            setattr(node_item, attr, value)
+            self.dataChanged.emit(index, index)
                     
         return False
 
-    def insertRows(self, row:int, count:int, parent=QModelIndex()):
+    def insertRows(self, row:int, count:int, parent:QModelIndex|QPersistentModelIndex=QModelIndex()):
         if len(self._node_items) <= row or row < 0:
             return False
 
@@ -166,19 +137,11 @@ class PyNodesModel(QAbstractItemModel):
         for _ in range(count):
             node = PyNodeItem(
                 name="",
-                code="""def func():/n  ...""",
-                error=None,
-                dirty=False,
-                fields=PyFieldsModel()
+                code="""def func():/n  ..."""
             )
             self._node_items.append(node)
         self.endInsertRows()
         return True
-
-    def appendNodeItem(self, item:PyNodeItem):
-        self.beginInsertRows(QModelIndex(), self.rowCount(), self.rowCount())
-        self._node_items.append(item)
-        self.endInsertRows()
 
     def nodeItem(self, row)->PyNodeItem:
         return self._node_items[row]

@@ -25,29 +25,25 @@ class StandardGraphDelegate(QObject):
         parent.addItem(node_widget)
         return node_widget
 
-    def createInletWidget(self, parent:QGraphicsItem, node_index:QModelIndex, inlet:str)->QGraphicsItem:
-        port_editor = StandardPortWidget(f"{inlet}", parent)
-        parent = cast(StandardNodeWidget, parent)
-        parent.insertInlet(0, port_editor)
-        # item.pressed.connect(lambda name=name: self.inletPressed.emit(name))
+    def createInletWidget(self, parent:QGraphicsItem, node_index:QModelIndex, inlet:str, idx:int=-1)->QGraphicsItem:
+        port_editor = StandardPortWidget(f"{inlet}")
+        port_editor._nameitem.setPos(2,-24)
         return port_editor
 
-    def createOutletWidget(self, parent:QGraphicsItem, node_index:QModelIndex, outlet:str)->QGraphicsItem:
+    def createOutletWidget(self, parent:QGraphicsItem, node_index:QModelIndex, outlet:str, idx:int=-1)->QGraphicsItem:
         port_editor = StandardPortWidget(f"{outlet}", parent)
         port_editor._nameitem.setPos(-24,0)
-        parent = cast(StandardNodeWidget, parent)
-        parent.insertOutlet(0, port_editor)
-
-        # def on_press(node_index=node_index, port_editor=port_editor):
-        #     scene = cast('QGraphEditorScene', port_editor.scene())
-        #     scene.startDragOutlet(node_index.row())
-            
-        # port_editor.pressed.connect(on_press)
+        # parent = cast(StandardNodeWidget, parent)
+        # if idx<0:
+        #     idx = len(parent._outlets)
+        # parent.insertOutlet(idx, port_editor)
         return port_editor
 
     def updateNodeWidget(self, index:QModelIndex, node_widget:QGraphicsItem)->None:
         node_widget = cast(StandardNodeWidget, node_widget)
         node_widget.setHeading( index.data(Qt.ItemDataRole.DisplayRole) )
+
+        print("update node widget")
 
     ### EDGE DELEGATE
     def createEdgeWidget(self, edge_idx:QModelIndex)->QGraphicsItem:
