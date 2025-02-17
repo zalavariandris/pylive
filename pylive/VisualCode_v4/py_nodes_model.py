@@ -177,6 +177,10 @@ class PyNodesModel(QAbstractItemModel):
         return QModelIndex()  # No parent for this flat model
 
 
+
+
+
+
 if __name__ == "__main__":
     app = QApplication()
     window = QWidget()
@@ -193,7 +197,7 @@ if __name__ == "__main__":
             code="def func()\n  ...",
             error=None,
             dirty=True,
-            fields=PyFieldsModel()
+            fields=[]
         )
 
         model.insertNodeItem(0, node_item)

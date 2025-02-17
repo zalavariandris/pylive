@@ -4,6 +4,7 @@ from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
+
 class PyDataModel(QObject):
 	nodesInserted = Signal()
 	nodesAboutToBeRemoved = Signal()
@@ -69,13 +70,3 @@ class PyDataModel(QObject):
 
 	def evaluate(self, node_name):
 		...
-
-
-class PyDataNodesProxyModel(QAbstractItemModel):
-	def setSourceModel(self, source_model:PyDataModel):
-		self._source_model = source_model
-
-
-class PyDataEdgesProxyModel(QAbstractItemModel):
-	def setSourceModel(self, source_model:PyDataModel):
-		self._source_model = source_model

@@ -21,6 +21,9 @@ import networkx as nx
 
 
 class StandardEdgesModel(QAbstractItemModel):
+    inletsReset = Signal(QModelIndex)
+    outletsReset = Signal(QModelIndex)
+
     def __init__(self, nodes:QAbstractItemModel, parent: QObject|None=None) -> None:
         super().__init__(parent)
         self._nodes = nodes
@@ -33,13 +36,13 @@ class StandardEdgesModel(QAbstractItemModel):
         row = self._edges_list.index(edge_item)
         return self.index(row, 0, QModelIndex())
 
-    def nodes(self)->QAbstractItemModel|None:
+    def nodes(self)->QAbstractItemModel:
         return self._nodes
 
-    def inlets(self, node:QModelIndex)->Sequence[str]:
+    def inlets(self, node:QModelIndex, /)->Sequence[str]:
         return ['in']
 
-    def outlets(self, node:QModelIndex)->Sequence[str]:
+    def outlets(self, node:QModelIndex, /)->Sequence[str]:
         return ['out']
 
     def source(self, row:int)->tuple[QModelIndex, str]:
