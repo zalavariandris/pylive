@@ -33,3 +33,23 @@ def distribute_items_horizontal(items, rect:QRectF):
     for i, item in enumerate(items):
         x = rect.left() + i * spacing
         item.setX(x)
+
+def logModelSignals(model:QAbstractItemModel, prefix:str=""):
+    model.columnsAboutToBeInserted.connect(lambda *args: print(f"{prefix}, columnsAboutToBeInserted {args}"))
+    model.columnsAboutToBeMoved.connect(lambda *args: print(f"{prefix}, columnsAboutToBeMoved {args}"))
+    model.columnsAboutToBeRemoved.connect(lambda *args: print(f"{prefix}, columnsAboutToBeRemoved {args}"))
+    model.columnsInserted.connect(lambda *args: print(f"{prefix}, columnsInserted {args}"))
+    model.columnsMoved.connect(lambda *args: print(f"{prefix}, columnsMoved {args}"))
+    model.columnsRemoved.connect(lambda *args: print(f"{prefix}, columnsRemoved {args}"))
+    model.dataChanged.connect(lambda *args: print(f"{prefix}, dataChanged {args}"))
+    model.headerDataChanged.connect(lambda *args: print(f"{prefix}, headerDataChanged {args}"))
+    model.layoutAboutToBeChanged.connect(lambda *args: print(f"{prefix}, layoutAboutToBeChanged {args}"))
+    model.layoutChanged.connect(lambda *args: print(f"{prefix}, layoutChanged {args}"))
+    model.modelAboutToBeReset.connect(lambda *args: print(f"{prefix}, modelAboutToBeReset {args}"))
+    model.modelReset.connect(lambda *args: print(f"{prefix}, modelReset {args}"))
+    model.rowsAboutToBeInserted.connect(lambda *args: print(f"{prefix}, rowsAboutToBeInserted {args}"))
+    model.rowsAboutToBeMoved.connect(lambda *args: print(f"{prefix}, rowsAboutToBeMoved {args}"))
+    model.rowsAboutToBeRemoved.connect(lambda *args: print(f"{prefix}, rowsAboutToBeRemoved {args}"))
+    model.rowsInserted.connect(lambda *args: print(f"{prefix}, rowsInserted {args}"))
+    model.rowsMoved.connect(lambda *args: print(f"{prefix}, rowsMoved {args}"))
+    model.rowsRemoved.connect(lambda *args: print(f"{prefix}, rowsRemoved {args}"))

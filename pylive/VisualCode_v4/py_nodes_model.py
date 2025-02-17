@@ -44,30 +44,6 @@ class PyNodesModel(QAbstractItemModel):
     def outlets(self, row)->Sequence[str]:
         return ["out"]
 
-    def compileNode(self, row:int):
-        print("compile node", row)
-        node_item = self.nodeItem(row)
-
-        try:
-            func = parse_python_function(node_item.code)
-        except SyntaxError as err:
-            self.setDataByColumnName(row, 'func', None)
-            self.setDataByColumnName(row, 'inlets', [])
-            self.setDataByColumnName(row, 'error', err)
-            return False
-        except Exception as err:
-            self.setDataByColumnName(row, 'func', None)
-            self.setDataByColumnName(row, 'inlets', [])
-            self.setDataByColumnName(row, 'error', err)
-            return False
-        else:
-            self.setDataByColumnName(row, 'func', func)
-            import inspect
-            sig = inspect.signature(func)
-            self.setDataByColumnName(row, 'inlets', [name for name, param in sig.parameters.items()])
-            self.setDataByColumnName(row, 'error', None)
-            return True
-
     def rowCount(self, parent=QModelIndex())->int:
         """Returns the number of rows in the model."""
         return len(self._node_items)
@@ -103,15 +79,26 @@ class PyNodesModel(QAbstractItemModel):
             flags |= Qt.ItemFlag.ItemIsEditable
         return flags
 
-    def setDataByColumnName(self, row:int, attr:str, value:Any, role:int=Qt.ItemDataRole.DisplayRole):
+    def dataByColumnName(self, row, column_name:str, role:int=Qt.ItemDataRole.DisplayRole):
         headers = [
             self.headerData(col, Qt.Orientation.Horizontal) 
             for col in range(self.columnCount())
         ]
-        assert attr in headers, f"{attr} must be in headers: {headers}"
-        column = headers.index(attr)
+        assert column_name in headers, f"{column_name} must be in headers: {headers}"
+        column = headers.index(column_name)
         node_item = self._node_items[row]
-        setattr(node_item, attr, value)
+        return getattr(node_item, column_name)
+
+
+    def setDataByColumnName(self, row:int, column_name:str, value:Any, role:int=Qt.ItemDataRole.DisplayRole):
+        headers = [
+            self.headerData(col, Qt.Orientation.Horizontal) 
+            for col in range(self.columnCount())
+        ]
+        assert column_name in headers, f"{column_name} must be in headers: {headers}"
+        column = headers.index(column_name)
+        node_item = self._node_items[row]
+        setattr(node_item, column_name, value)
         self.dataChanged.emit(
             self.index(row, column), 
             self.index(row, column)
@@ -123,9 +110,11 @@ class PyNodesModel(QAbstractItemModel):
 
         if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
             node_item = self._node_items[index.row()]
-            attr = self.headerData(index.column(), Qt.Orientation.Horizontal)
-            setattr(node_item, attr, value)
-            self.dataChanged.emit(index, index)
+            column_name = self.headerData(index.column(), Qt.Orientation.Horizontal)
+            if getattr(node_item, column_name) != value:
+                setattr(node_item, column_name, value)
+                self.dataChanged.emit(index, index)
+                return True
                     
         return False
 

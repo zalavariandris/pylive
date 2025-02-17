@@ -36,6 +36,12 @@ class StandardEdgesModel(QAbstractItemModel):
     def nodes(self)->QAbstractItemModel|None:
         return self._nodes
 
+    def inlets(self, node:QModelIndex)->Sequence[str]:
+        return ['in']
+
+    def outlets(self, node:QModelIndex)->Sequence[str]:
+        return ['out']
+
     def source(self, row:int)->tuple[QModelIndex, str]:
         edge_item = self.edgeItem(row)
         return self._nodes.index(edge_item.source.row(), 0), edge_item.outlet
@@ -104,7 +110,6 @@ class StandardEdgesModel(QAbstractItemModel):
                 edge_rows_to_remove.append(row)
 
         edge_row_groups = [_ for _ in group_consecutive_numbers(edge_rows_to_remove)]
-        print(edge_row_groups)
         for edge_range in edge_row_groups:
             self.removeRows(edge_range.start, count=edge_range.stop-edge_range.start)
 
@@ -155,7 +160,8 @@ class StandardEdgesModel(QAbstractItemModel):
 
         return None
 
-    def in_edges(self, target_node_index:QModelIndex|QPersistentModelIndex)->Sequence[StandardEdgeItem]:
+    def inEdges(self, target_node_row:int)->Sequence[StandardEdgeItem]:
+        target_node_index = self._nodes.index(target_node_row,0)
         if not target_node_index.isValid() or target_node_index.model() != self._nodes:
             return []
 

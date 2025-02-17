@@ -46,11 +46,9 @@ from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
-
 from bidict import bidict
 from collections import defaultdict
 from pylive.utils.qt import distribute_items_horizontal, signalsBlocked
-
 
 from pylive.VisualCode_v4.graph_editor.standard_graph_delegate import StandardGraphDelegate
 from pylive.VisualCode_v4.graph_editor.standard_edges_model import StandardEdgesModel, StandardEdgeItem
@@ -72,8 +70,6 @@ class EdgesModelProtocol(Protocol):
     def target(self, row:int)->tuple[QModelIndex, str]:
         ...
 
-    def nodes(self)->QAbstractItemModel|None:
-        ...
 
 class GraphEditorView(QGraphicsView):
     # SourceRole = Qt.ItemDataRole.UserRole+1
@@ -207,7 +203,6 @@ class GraphEditorView(QGraphicsView):
 
     ### <<< Handle Model Signals
     def _onNodesReset(self):
-        print("GraphEditorView->_onNodesReset")
         assert self._nodes, "self._nodes is None"
         ### clear graph
         self._node_widgets.clear()
@@ -396,12 +391,10 @@ class GraphEditorView(QGraphicsView):
     def _updateNodes(self, indexes:Iterable[QModelIndex], roles:list[int]):
         assert self._nodes, "self._node cant be None"
         assert isinstance(self._nodes, NodesModelProtocol)
-        print("updateNodes")
         for node_index in filter(lambda idx: QPersistentModelIndex(idx) in self._node_widgets, indexes):
 
             node_id = QPersistentModelIndex(node_index)
             node_widget = self.nodeWidget(node_id)
-            print("update node widget")
             self._delegate.updateNodeWidget(node_index, node_widget)
 
             self._removeInlets(node_index, self._node_inlets[node_id])

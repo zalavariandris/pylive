@@ -43,8 +43,6 @@ class StandardGraphDelegate(QObject):
         node_widget = cast(StandardNodeWidget, node_widget)
         node_widget.setHeading( index.data(Qt.ItemDataRole.DisplayRole) )
 
-        print("update node widget")
-
     ### EDGE DELEGATE
     def createEdgeWidget(self, edge_idx:QModelIndex)->QGraphicsItem:
         label = edge_idx.data(Qt.ItemDataRole.DisplayRole)
