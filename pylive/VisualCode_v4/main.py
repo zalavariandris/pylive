@@ -71,10 +71,14 @@ class PyInspectorView(QFrame):
 
     def setModel(self, model: PyDataModel|None):
         if self._model:
-            self._model.nodeChanged.disconnect(self._onNodeChange)
+            self._model.nameChanged.disconnect(self._onNodeChange)
+            self._model.sourceChanged.disconnect(self._onNodeChange)
+            self._model.fieldsChanged.disconnect(self._onNodeChange)
 
         if model:
-            model.nodeChanged.connect(self._onNodeChange)
+            model.nameChanged.connect(self._onNodeChange)
+            model.sourceChanged.connect(self._onNodeChange)
+            model.fieldsChanged.connect(self._onNodeChange)
 
         self._model = model
 
@@ -273,64 +277,12 @@ class PyGraphView(QWidget):
         self._model = model
         self.resetUI()
 
-    def mapNodeToIndex(self, node:str)->QModelIndex:
-        ...
-
-    def mapIndexToNode(self, index:QModelIndex)->str:
-        ...
-
     def setSelectionModel(self, selection:PyNodeSelectionModel):
         if self._selection:
-            for conn in self._connections:
-                conn()
+            ...
 
         if selection:
-            def syncItemSelectionToNodes():
-                assert self._selection
-                nodes = self._selection.selectedNodes()
-                indexes = [self._item_by_node[node] for node in nodes]
-
-                rows = sorted( list( set([idx.row() for idx in indexes]) ) )
-
-                ranges = group_consecutive_numbers(rows)
-
-                item_selection = QItemSelection()
-                for r in ranges:
-                    r.start
-                    r.stop
-
-                    selection_range = QItemSelectionRange(
-                        self._item_model.index(r.start, 0), 
-                        self._item_model.index(r.stop, self._item_model.columnCount()-1))
-
-                    item_selection.append(selection_range)
-
-                self._item_selection_model.select(
-                    item_selection,
-                    QItemSelectionModel.SelectionFlag.ClearAndSelect
-                )
-            conn = selection.selectionChanged.connect(lambda: syncNodeSelectionToItems())
-            self._connections.append(lambda conn=conn: selection.selectionChanged.disconnect(conn))
-
-            def syncNodeSelectionToItems():
-                assert self._selection
-                """on selection model changed"""
-
-                ### update widgets seleection
-                selected_node_indexes = set([
-                    index.siblingAtColumn(0) 
-                    for index in self._item_selection_model.selectedIndexes()
-                ])
-
-                new_node_selection = [
-                    self._item_by_node.inverse[index]
-                    for index in selected_node_indexes
-                ]
-
-                self._selection.setSelection(new_node_selection)
-
-            conn = self._item_selection_model.selectionChanged.connect(lambda: syncItemSelectionToNodes())
-            self._connections.append(lambda conn=conn: selection.selectionChanged.disconnect(conn))
+           ...
 
         self._selection = selection
 
