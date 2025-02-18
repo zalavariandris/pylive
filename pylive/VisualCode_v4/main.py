@@ -4,6 +4,7 @@ from typing import *
 from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
+from shiboken6 import getAllValidWrappers
 
 # from pylive.QtGraphEditor.definitions_model import DefinitionsModel
 from pylive.qt_components.tile_widget import TileWidget
@@ -13,14 +14,17 @@ from pylive.qt_components.qt_options_dialog import QOptionDialog
 ### DATA ###
 
 # from pylive.QtGraphEditor.py_functions_model import PyFunctionsModel
-from py_graph_model import PyGraphModel
-from graph_editor.standard_edges_model import StandardEdgesModel, StandardEdgeItem
+from pylive.VisualCode_v4.py_data_model import PyDataModel, PyNodeSelectionModel
+from pylive.VisualCode_v4.graph_editor.standard_edges_model import StandardEdgeItem, StandardEdgesModel
 
 
 from pylive.VisualCode_v4.graph_editor.graph_editor_view import GraphEditorView
 from pylive.QtScriptEditor.script_edit import ScriptEdit
+from pylive.utils import group_consecutive_numbers
 from pylive.utils.qt import logModelSignals
+import pylive.utils.qtfactory as qf
 
+from bidict import bidict
 
 def log_call(fn, *args, **kwargs):
     print(f"{fn.__name__} was called")
@@ -30,13 +34,15 @@ def log_call(fn, *args, **kwargs):
 class PyInspectorView(QFrame):
     def __init__(self, parent:QWidget|None=None):
         super().__init__(parent=parent)
+        self._model:PyDataModel|None=None
         self._selection:QItemSelectionModel|None=None
-        self._nodes:PyNodesModel|None=None
-        self._edges:StandardEdgesModel|None=None
+        self.setupUI()
+
+    def setupUI(self):
         self.setFrameShape(QFrame.Shape.StyledPanel)  # Styled panel for the frame
         self.setFrameShadow(QFrame.Shadow.Raised)
 
-        self.name_edit = QLineEdit()
+        self.name_edit = QLineEdit("Name")
         self.inspector_header_tile = TileWidget()
 
         self.property_editor = QTableWidget()
@@ -52,6 +58,7 @@ class PyInspectorView(QFrame):
         main_layout.addWidget(self.property_editor)
         self.node_function_source_editor = ScriptEdit()
         main_layout.addWidget(self.node_function_source_editor)
+
         self.setLayout(main_layout)
 
         # map editors to data
@@ -62,37 +69,24 @@ class PyInspectorView(QFrame):
             self._onEditorChanged(1, self.node_function_source_editor.toPlainText())
         )
 
-    def setModel(self, nodes:PyNodesModel|None, edges:StandardEdgesModel|None):
-        if self._nodes:
-            self._nodes.dataChanged.disconnect(self._onDataChanged)
+    def setModel(self, model: PyDataModel|None):
+        if self._model:
+            self._model.nodeChanged.disconnect(self._onNodeChange)
 
-        if self._edges:
-            ...
+        if model:
+            model.nodeChanged.connect(self._onNodeChange)
 
-        if nodes:
-            nodes.dataChanged.connect(self._onDataChanged)
+        self._model = model
 
-        if edges:
-            ...
-
-        self._nodes = nodes
-        self._edges = edges
-
-    def setNodeSelectionModel(self, selection:QItemSelectionModel):
-        if self._selection:
-            self._selection.currentChanged.disconnect(self._onDataChanged)
-
-        if selection:
-            selection.currentChanged.connect(self._onCurrentChanged)
-
-        self._selection = selection
+    def setCurrent(self, node:str):
+        ...
 
     def currentRow(self)->int:
         if not self._selection:
             return -1
         return self._selection.currentIndex().row()
 
-    def _onDataChanged(self, tl, br, roles):
+    def _onNodeChange(self, tl, br, roles):
         self.update_node_inspector()
 
     def _onEditorChanged(self, column:int, value:Any):
@@ -161,12 +155,14 @@ class PyPreviewView(QWidget):
         self._nodes: PyNodesModel|None=None
         self._selection:QItemSelectionModel|None=None
 
-    
-        self._status_label = QLabel(self)
+        self.setupUI()
+
+    def setupUI(self):
+        self._status_label = QLabel("Status")
         self._status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)        
-        self._result_label = QLabel(self)
+        self._result_label = QLabel("Results")
         self._result_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._error_label = QLabel(self)
+        self._error_label = QLabel("Errors")
         self._error_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         main_layout = QVBoxLayout()
@@ -175,7 +171,7 @@ class PyPreviewView(QWidget):
         main_layout.addWidget(self._error_label)
         self.setLayout(main_layout)
 
-    def setNodesModel(self, nodes:PyNodesModel):
+    def setModel(self, model:PyDataModel):
         if self._nodes:
             nodes.dataChanged.disconnect(self._onDataChanged)
 
@@ -184,14 +180,8 @@ class PyPreviewView(QWidget):
 
         self._nodes = nodes
 
-    def setNodeSelectionModel(self, selection:QItemSelectionModel):
-        if self._selection:
-            self._selection.currentChanged.disconnect(self._onDataChanged)
-
-        if selection:
-            selection.currentChanged.connect(self._onCurrentChanged)
-
-        self._selection = selection
+    def setCurrent(self, node:str):
+        ...
 
     def _onDataChanged(self, tl, br, roles):
         assert self._selection
@@ -251,11 +241,238 @@ class PyPreviewView(QWidget):
 class PyGraphView(QWidget):
     def __init__(self, parent:QWidget|None=None):
         super().__init__(parent=parent)
-        self.graphview = GraphEditorView()
+        self._model: PyDataModel|None=None
+        self._selection:PyNodeSelectionModel|None=None
 
-    def setModel(self, model:PyGraphModel):
+        self._item_by_node:bidict[str, QModelIndex] = bidict()
+
+        self.setupUI()
+
+    def setupUI(self):
+        self.graph_view = GraphEditorView()
+        self._item_model = QStandardItemModel()
+        self._item_selection_model = QItemSelectionModel(self._item_model)
+        self._edges_model = StandardEdgesModel(self._item_model)
+        self.graph_view.setSelectionModel(self._item_selection_model)
+        self.graph_view.setModel(self._edges_model)
+
+        self.graph_view.installEventFilter(self)
+        main_layout = QVBoxLayout()
+        main_layout.addWidget(self.graph_view)
+        self.setLayout(main_layout)
+
+        self._connections = []
+
+    def setModel(self, model:PyDataModel|None):
+        if self._model:
+            ...
+        if model:
+            model.modelReset.connect(self.resetUI)
+            
+
+        self._model = model
+        self.resetUI()
+
+    def mapNodeToIndex(self, node:str)->QModelIndex:
+        ...
+
+    def mapIndexToNode(self, index:QModelIndex)->str:
+        ...
+
+    def setSelectionModel(self, selection:PyNodeSelectionModel):
+        if self._selection:
+            for conn in self._connections:
+                conn()
+
+        if selection:
+            def syncItemSelectionToNodes():
+                assert self._selection
+                nodes = self._selection.selectedNodes()
+                indexes = [self._item_by_node[node] for node in nodes]
+
+                rows = sorted( list( set([idx.row() for idx in indexes]) ) )
+
+                ranges = group_consecutive_numbers(rows)
+
+                item_selection = QItemSelection()
+                for r in ranges:
+                    r.start
+                    r.stop
+
+                    selection_range = QItemSelectionRange(
+                        self._item_model.index(r.start, 0), 
+                        self._item_model.index(r.stop, self._item_model.columnCount()-1))
+
+                    item_selection.append(selection_range)
+
+                self._item_selection_model.select(
+                    item_selection,
+                    QItemSelectionModel.SelectionFlag.ClearAndSelect
+                )
+            conn = selection.selectionChanged.connect(lambda: syncNodeSelectionToItems())
+            self._connections.append(lambda conn=conn: selection.selectionChanged.disconnect(conn))
+
+            def syncNodeSelectionToItems():
+                assert self._selection
+                """on selection model changed"""
+
+                ### update widgets seleection
+                selected_node_indexes = set([
+                    index.siblingAtColumn(0) 
+                    for index in self._item_selection_model.selectedIndexes()
+                ])
+
+                new_node_selection = [
+                    self._item_by_node.inverse[index]
+                    for index in selected_node_indexes
+                ]
+
+                self._selection.setSelection(new_node_selection)
+
+            conn = self._item_selection_model.selectionChanged.connect(lambda: syncItemSelectionToNodes())
+            self._connections.append(lambda conn=conn: selection.selectionChanged.disconnect(conn))
+
+        self._selection = selection
+
+    def resetUI(self):
+        assert self._model
+
+        self._edges_model.blockSignals(True)
+        self._item_model.blockSignals(True)
+        for row, name in enumerate(self._model.nodes()):
+            node_item = QStandardItem()
+            node_item.setText(name)
+            node_item.setData(self._model.nodeFields(name), StandardEdgesModel.InletsRole)
+            node_item.setData(['out'], StandardEdgesModel.OutletsRole)
+            self._item_model.insertRow(row, [
+                QStandardItem(name)
+            ])
+            node_index = self._item_model.index(row, 0)
+            self._item_by_node[name] = node_index
+
+        for i, (source, target, inlet) in enumerate(self._model.links()):
+            source_index = QPersistentModelIndex(self._item_by_node[source])
+            target_index = QPersistentModelIndex(self._item_by_node[target])
+            edge_item = StandardEdgeItem(
+                source=source_index,
+                target=target_index,
+                outlet="out",
+                inlet=inlet
+            )
+            self._edges_model.appendEdgeItem(edge_item)
+
+        self._item_model.blockSignals(False)
+        self._edges_model.blockSignals(False)
+        self._item_model.modelReset.emit()
+        self._edges_model.modelReset.emit()
+
+        self.graph_view.centerNodes()
+
+
+class PySheetsView(QWidget):
+    def __init__(self, parent:QWidget|None=None):
+        super().__init__(parent=parent)
+        self._model:PyDataModel|None=None
+        self._selection:PyNodeSelectionModel|None=None
+
+        self.setupUI()
+
+    def setupUI(self):
+        self.nodes_sheet = QTableWidget()
+        self.nodes_sheet.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        
+        # self.nodes_sheet_table_view.setSelectionModel(self.node_selection)
+        self.nodes_sheet.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        self.nodes_sheet.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
+        self.nodes_sheet.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        
+        self.edges_sheet = QTableWidget()
+        self.edges_sheet.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        
+
+        self.edges_sheet.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
+        self.edges_sheet.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        self.edges_sheet.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+
+        self.setLayout(qf.vboxlayout([
+            qf.vboxlayout([QLabel("nodes"), self.nodes_sheet]),
+            qf.vboxlayout([QLabel("edges"), self.edges_sheet]),
+        ]))
+
+    def setModel(self, model:PyDataModel|None):
+        signals = [
+            'modelReset',
+
+            'nodesAdded', 
+            'nodesRemoved', 
+
+            'nodesLinked',
+            'nodesUnlinked',
+
+            'nameChanged',
+            'sourceChanged',
+            'fieldsChanged',
+            'statusChanged',
+            'errorChanged',
+            'resultChanged'
+        ]
+        if self._model:
+            for signal in signals:
+                getattr(self._model, signal).disconnect(self.resetUI)
+
+        if model:
+            for signal in signals:
+                getattr(model, signal).connect(self.resetUI)
+
         self._model = model
 
+    def setSelectionModel(self, selection:PyNodeSelectionModel):
+        if self._selection:
+            ...
+
+        if selection:
+            ...
+
+        self._selection = selection
+
+    def resetUI(self):
+        self.nodes_sheet.clear()
+        if not self._model:
+            return
+
+        # reset nodes_sheet
+        self.nodes_sheet.setRowCount(self._model.nodeCount())
+        self.nodes_sheet.setColumnCount(6)
+        self.nodes_sheet.setHorizontalHeaderLabels([
+            "name", 'source', "fields", "status", "error", "result"
+        ])
+
+        for i, name in enumerate(self._model.nodes()):
+            source = self._model.nodeSource(name)
+            fields = self._model.nodeFields(name)
+            status = self._model.nodeStatus(name)
+            error = self._model.nodeError(name)
+            result = self._model.nodeResult(name)
+            
+            self.nodes_sheet.setItem(i, 0, QTableWidgetItem(name))
+            self.nodes_sheet.setItem(i, 1, QTableWidgetItem(source))
+            self.nodes_sheet.setItem(i, 2, QTableWidgetItem(",".join(fields)))
+            self.nodes_sheet.setItem(i, 3, QTableWidgetItem(status))
+            self.nodes_sheet.setItem(i, 4, QTableWidgetItem(f"{error}"))
+            self.nodes_sheet.setItem(i, 5, QTableWidgetItem(f"{result}"))
+
+        # reset edges
+        self.edges_sheet.setRowCount(self._model.linkCount())
+        self.edges_sheet.setColumnCount(3)
+        self.edges_sheet.setHorizontalHeaderLabels([
+            "source", 'target', "inlet"
+        ])
+
+        for i, (source, target, inlet) in enumerate(self._model.links()):
+            self.edges_sheet.setItem(i, 0, QTableWidgetItem(source))
+            self.edges_sheet.setItem(i, 1, QTableWidgetItem(target))
+            self.edges_sheet.setItem(i, 2, QTableWidgetItem(inlet))
+            
 
 class Window(QWidget):
     DefinitionFunctionRole = Qt.ItemDataRole.UserRole
@@ -270,79 +487,74 @@ class Window(QWidget):
         self._filepath = "None"
 
         ### MODEL
-        self.graph_model = PyGraphModel()
-        self.proxy_nodes_model = PyGraphNodesTableProxyModel(self.graph_model)
+        self.graph_model = PyDataModel()
+        self.node_selection_model = PyNodeSelectionModel(self.graph_model)
+
+        self.setupUI()
+
+    def setupUI(self):
+        ...
         # self.nodes_model = self.graph_model.nodes()
-        self.edges_model = self.graph_model.edges()
+
+        # self.edges_model = self.graph_model.edges()
         
-        self.node_selection = QItemSelectionModel(self.proxy_nodes_model)
-        self.edge_selection = QItemSelectionModel(self.edges_model)
+        
+        # self.edge_selection = QItemSelectionModel(self.edges_model)
 
         # logModelSignals(self.graph_model._nodes_model)
 
-        # compile nodes when inserted
-        @self.graph_model.nodesReset.connect
-        def _():
-            for row in range(self.graph_model.nodeCount()):
-                self.graph_model.compileNode(row) 
+        # # compile nodes when inserted
+        # @self.graph_model.nodesReset.connect
+        # def _():
+        #     for row in range(self.graph_model.nodeCount()):
+        #         self.graph_model.compileNode(row) 
         
-        @self.graph_model.nodesInserted.connect
-        def _(parent, first, last): 
-            for row in range(first, last+1):
-                self.graph_model.compileNode(row) 
+        # @self.graph_model.nodesInserted.connect
+        # def _(parent, first, last): 
+        #     for row in range(first, last+1):
+        #         self.graph_model.compileNode(row) 
 
-        # on source change, compile node
-        @self.graph_model.nodeChanged.connect
-        def _(tl:QModelIndex, br:QModelIndex, roles:list=[]):
-            headers = [self.graph_model._nodes_model.headerData(col, Qt.Orientation.Horizontal) for col in range(self.graph_item._nodes_model.columnCount())]
-            source_column = headers.index("code")
-            if source_column in range(tl.column(), br.column()+1):
-                for row in range(tl.row(), br.row()+1):
-                    self.graph_model.compileNode(row)
-                    self.graph_model.evaluateNode(row)
+        # # on source change, compile node
+        # @self.graph_model.nodeChanged.connect
+        # def _(tl:QModelIndex, br:QModelIndex, roles:list=[]):
+        #     headers = [self.graph_model._nodes_model.headerData(col, Qt.Orientation.Horizontal) for col in range(self.graph_item._nodes_model.columnCount())]
+        #     source_column = headers.index("code")
+        #     if source_column in range(tl.column(), br.column()+1):
+        #         for row in range(tl.row(), br.row()+1):
+        #             self.graph_model.compileNode(row)
+        #             self.graph_model.evaluateNode(row)
 
 
-        @self.node_selection.currentChanged.connect
-        def _(current:QModelIndex, previous:QModelIndex):
-            if current.isValid():
-                self.graph_model.evaluateNode(current.row())
-            else:
-                pass
-            # for row in range(first, last+1):
-            #     self.graph_model.evaluateNode(row) 
+        # @self.node_selection.currentChanged.connect
+        # def _(current:QModelIndex, previous:QModelIndex):
+        #     if current.isValid():
+        #         self.graph_model.evaluateNode(current.row())
+        #     else:
+        #         pass
+        #     # for row in range(first, last+1):
+        #     #     self.graph_model.evaluateNode(row) 
         
-        ### Widgets
-        self.nodes_sheet_table_view = QTableView()
-        self.nodes_sheet_table_view.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-        self.nodes_sheet_table_view.setModel(self.proxy_nodes_model)
-        
-        # self.nodes_sheet_table_view.setSelectionModel(self.node_selection)
-        self.nodes_sheet_table_view.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
-        self.nodes_sheet_table_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
-        self.nodes_sheet_table_view.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        
-        self.edges_sheet_table_view = QTableView(self)
-        self.edges_sheet_table_view.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-        self.edges_sheet_table_view.setModel(self.graph_model.edges())
-        self.edges_sheet_table_view.setSelectionModel(self.edge_selection)
-        self.edges_sheet_table_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
-        self.edges_sheet_table_view.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
-        self.edges_sheet_table_view.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        ### SheetsView
+        self.sheets_view = PySheetsView()
+        self.sheets_view.setModel(self.graph_model)
+        self.sheets_view.setSelectionModel(self.node_selection_model)
+        # self.sheets_view.setSelectionModel(self.node_selection)
 
-        self.graph_view = GraphEditorView()
-        self.graph_view.installEventFilter(self)
-        self.graph_view.setModel(self.graph_model.edges())
-        self.graph_view.setSelectionModel(self.node_selection)
+        ### GRAPH View
+        self.graph_view = PyGraphView()
+        self.graph_view.setModel(self.graph_model)
+        self.graph_view.setSelectionModel(self.node_selection_model)
+        # self.graph_view.setSelectionModel(self.selection_model)
 
-        ### NODEINSPECTOR
-        self.node_inspector = PyInspectorView()
-        self.node_inspector.setModel(self.graph_model._nodes_model, self.graph_model.edges())
-        self.node_inspector.setNodeSelectionModel(self.node_selection)
+        # ### NODEINSPECTOR
+        self.inspector_view = PyInspectorView()
+        # self.inspector_view.setModel(self.graph_model)
+        # self.inspector_view.setNodeSelectionModel(self.node_selection_model)
 
-        ### PREVIEW WIDGET
+        # ### PREVIEW WIDGET
         self.preview = PyPreviewView()
-        self.preview.setNodesModel(self.graph_model._nodes_model)
-        self.preview.setNodeSelectionModel(self.node_selection)
+        # self.preview.setModel(self.graph_model)
+        # self.preview.setSelectionModel(self.node_selection_model)
 
 
         # self.preview.setWordWrapMode(QTextOption.WrapMode.WrapAtWordBoundaryOrAnywhere)
@@ -351,8 +563,7 @@ class Window(QWidget):
         self.statusbar = QStatusBar()
         self.statusbar.showMessage("status bar")
 
-        ### DEFINITION CODE EDITOR
-        self.definition_script_editor = ScriptEdit()
+        ## MENUBAR
 
         # Actions
         open_action = QAction("open", self)
@@ -366,9 +577,9 @@ class Window(QWidget):
         remove_edge_action = QAction("remove edge", self)
         remove_edge_action.triggered.connect(lambda: self.delete_selected_edges())
         compile_node_action = QAction("compile selected node", self)
-        compile_node_action.triggered.connect(lambda: self.graph_item.compileNode(self.node_selection.currentIndex().row()))
+        compile_node_action.triggered.connect(lambda: self.graph_model.compileNode(self.selection_model.currentIndex().row()))
         evaluate_node_action = QAction("evaluate selected node", self)
-        evaluate_node_action.triggered.connect(lambda: self.graph_item.evaluateNode(self.node_selection.currentIndex().row()))
+        evaluate_node_action.triggered.connect(lambda: self.graph_model.evaluateNode(self.selection_model.currentIndex().row()))
 
         self.addActions([
             save_action,
@@ -380,28 +591,20 @@ class Window(QWidget):
             evaluate_node_action
         ])
 
-        ### menubar
         menubar = QMenuBar(parent=self)
         menubar.addActions(self.actions())
 
         ### Layout
-        import pylive.utils.qtfactory as qf
         def create_graph_panel():
             panel = QWidget()
             grid_layout = QGridLayout()
             panel.setLayout(grid_layout)
 
             grid_layout.addWidget(self.graph_view, 0, 0)
-            grid_layout.addWidget(self.node_inspector,0,0, Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignRight)
+            grid_layout.addWidget(self.inspector_view, 0, 0, Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignRight)
             # self.node_inspector.hide()
             panel.setLayout(grid_layout)
             return panel
-
-        def create_graph_sheets():
-            return qf.widget(qf.vboxlayout([
-                qf.vboxlayout([QLabel("nodes"), self.nodes_sheet_table_view]),
-                qf.vboxlayout([QLabel("edges"), self.edges_sheet_table_view]),
-            ]))
 
         main_layout = qf.vboxlayout([
             qf.splitter(Qt.Orientation.Horizontal, [
@@ -409,15 +612,15 @@ class Window(QWidget):
                 #     'graph': create_graph_panel(),
                 #     'sheets': create_graph_sheets()
                 # }),
-                create_graph_sheets(),
-                create_graph_panel(),
+                self.sheets_view,
+                self.graph_view,
+                self.inspector_view,
                 self.preview
             ]),
             self.statusbar
         ])
         self.statusbar.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
 
-        
         main_layout.setMenuBar(menubar)
         self.setLayout(main_layout)
 
@@ -451,14 +654,18 @@ class Window(QWidget):
         # read and parse existing text file
         try:
             self.graph_model.load(filepath)
-            self.graph_view.centerNodes()
             print(f"Successfully opened '{filepath}'!")
             return True
         except FileExistsError:
             print("'{filepath}'' does not exist!")
+            import traceback
+            traceback.print_exc()
             return False
         except Exception as err:
+            import traceback
+
             print(f"Error occured while opening {filepath}", err)
+            traceback.print_exc()
             return False
 
     @Slot()

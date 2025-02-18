@@ -24,6 +24,9 @@ class StandardEdgesModel(QAbstractItemModel):
     inletsReset = Signal(QModelIndex)
     outletsReset = Signal(QModelIndex)
 
+    InletsRole = Qt.ItemDataRole.UserRole+1
+    OutletsRole = Qt.ItemDataRole.UserRole+2
+
     def __init__(self, nodes:QAbstractItemModel, parent: QObject|None=None) -> None:
         super().__init__(parent)
         self._nodes = nodes
@@ -40,10 +43,10 @@ class StandardEdgesModel(QAbstractItemModel):
         return self._nodes
 
     def inlets(self, node:QModelIndex, /)->Sequence[str]:
-        return ['in']
+        return self._nodes.data(node, self.InletsRole) or ['in']
 
     def outlets(self, node:QModelIndex, /)->Sequence[str]:
-        return ['out']
+        return self._nodes.data(node, self.OutletsRole) or ['out']
 
     def source(self, row:int)->tuple[QModelIndex, str]:
         edge_item = self.edgeItem(row)

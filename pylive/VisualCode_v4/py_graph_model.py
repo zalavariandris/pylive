@@ -10,7 +10,7 @@ from pylive.utils.evaluate_python import parse_python_function
 
 
 class PyGraphModel(QObject):
-    nodesReset = Signal()
+    modelReset = Signal()
     nodesInserted = Signal(QModelIndex, int, int)
     nodesAboutToBeRemoved = Signal(QModelIndex, int, int)
     nodeChanged = Signal(QModelIndex, QModelIndex, list)

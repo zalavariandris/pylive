@@ -119,7 +119,6 @@ class GraphEditorView(QGraphicsView):
             self._edges.rowsAboutToBeRemoved.disconnect(self._onEdgesAboutToBeRemoved)
             self._edges.dataChanged.disconnect(self._onEdgeDataChanged)
 
-
         if edges:
             # Nodes
             edges.nodes().modelReset.connect(self._onNodesReset)
@@ -136,11 +135,10 @@ class GraphEditorView(QGraphicsView):
         self._edges = edges
 
         # populate initial scene
-
         if self._edges.nodes() and self._edges.nodes().rowCount()>0:
             self._onNodesInserted(QModelIndex(), 0, self._edges.nodes().rowCount()-1)
 
-        if self._edges and self._edges.rowCount()>0:
+        if self._edges and self._edges.rowCount() > 0:
             self._onEdgesInserted(QModelIndex(), 0, self._edges.nodes().rowCount()-1)
 
         # layout items
