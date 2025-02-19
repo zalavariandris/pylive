@@ -8,6 +8,7 @@ from PySide6.QtWidgets import *
 from dataclasses import dataclass
 
 from pylive.utils import group_consecutive_numbers
+from pylive.VisualCode_v4.graph_editor.graph_data_roles import GraphDataRole
 
 @dataclass
 class StandardEdgeItem:
@@ -19,13 +20,9 @@ class StandardEdgeItem:
 
 import networkx as nx
 
-
 class StandardEdgesModel(QAbstractItemModel):
     inletsReset = Signal(QModelIndex)
     outletsReset = Signal(QModelIndex)
-
-    InletsRole = Qt.ItemDataRole.UserRole+1
-    OutletsRole = Qt.ItemDataRole.UserRole+2
 
     def __init__(self, nodes:QAbstractItemModel, parent: QObject|None=None) -> None:
         super().__init__(parent)
@@ -43,10 +40,10 @@ class StandardEdgesModel(QAbstractItemModel):
         return self._nodes
 
     def inlets(self, node:QModelIndex, /)->Sequence[str]:
-        return self._nodes.data(node, self.InletsRole) or ['in']
+        return self._nodes.data(node, GraphDataRole.NodeInletsRole) or ['in']
 
     def outlets(self, node:QModelIndex, /)->Sequence[str]:
-        return self._nodes.data(node, self.OutletsRole) or ['out']
+        return self._nodes.data(node, GraphDataRole.NodeOutletsRole) or ['out']
 
     def source(self, row:int)->tuple[QModelIndex, str]:
         edge_item = self.edgeItem(row)
@@ -141,7 +138,14 @@ class StandardEdgesModel(QAbstractItemModel):
             return None
 
         item = self._edges_list[index.row()]
-        from pylive.VisualCode_v4.graph_editor.graph_editor_view import GraphEditorView
+        from pylive.VisualCode_v4.graph_editor.graph_data_roles import GraphDataRole
+
+        if role == GraphDataRole.LinkSourceRole:
+            return item.source, item.outlet
+
+        if role == GraphDataRole.LinkTargetRole:
+            return item.target, item.inlet
+
         # if role==Qt.ItemDataRole.DisplayRole or role==Qt.ItemDataRole.EditRole:
         match index.column():
             case 0: # source node
