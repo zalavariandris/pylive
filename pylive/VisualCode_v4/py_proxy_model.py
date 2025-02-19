@@ -121,7 +121,7 @@ class PyNodeProxyModel(QAbstractItemModel):
     def rowCount(self, parent:QModelIndex|QPersistentModelIndex=QModelIndex())->int:
         if not self._source_model:
             return 0
-        return self._source_model.nodeCount()
+        return len(self._nodes)
 
     def columnCount(self, parent:QModelIndex|QPersistentModelIndex=QModelIndex())->int:
         return 6
@@ -176,13 +176,13 @@ class PyLinkProxyModel(QAbstractItemModel):
         super().__init__(parent=parent)
         self._links:list[tuple[str, str, str]] = list()
 
-        self._nodes_model:QAbstractItemModel|None=None
+        self._items_model:PyNodeProxyModel|None=None
         self._source_model:PyDataModel|None=None
 
         self.setSourceModel(source_model)
 
-    def nodesModel(self)->QAbstractItemModel|None:
-        return self._nodes_model
+    def itemsModel(self)->QAbstractItemModel|None:
+        return self._items_model
 
     def setSourceModel(self, source_model:PyDataModel|None):
         if self._source_model:
@@ -194,9 +194,11 @@ class PyLinkProxyModel(QAbstractItemModel):
             self._source_model.nodesAboutToBeUnlinked.disconnect(self._on_source_nodes_about_to_be_unlinked)
             self._source_model.nodesUnlinked.disconnect(self._on_source_nodes_unlinked)
 
-            self._nodes_model = None
+            self._items_model = None
 
         if source_model:
+            self._items_model = PyNodeProxyModel(source_model)
+
             source_model.modelAboutToBeReset.connect(self.modelAboutToBeReset.emit)
             source_model.modelReset.connect(self._resetModel)
 
@@ -204,8 +206,6 @@ class PyLinkProxyModel(QAbstractItemModel):
             source_model.nodesLinked.connect(self._on_source_nodes_linked)
             source_model.nodesAboutToBeUnlinked.connect(self._on_source_nodes_about_to_be_unlinked)
             source_model.nodesUnlinked.connect(self._on_source_nodes_unlinked)
-
-            self._nodes_model = PyNodeProxyModel(source_model)
 
         self._source_model = source_model
         self._resetModel()
@@ -295,7 +295,7 @@ class PyLinkProxyModel(QAbstractItemModel):
     def rowCount(self, parent:QModelIndex|QPersistentModelIndex=QModelIndex())->int:
         if not self._source_model:
             return 0
-        return self._source_model.linkCount()
+        return len(self._links)
 
     def columnCount(self, parent:QModelIndex|QPersistentModelIndex=QModelIndex())->int:
         return 3
@@ -309,13 +309,16 @@ class PyLinkProxyModel(QAbstractItemModel):
         if not self._source_model:
             return None
 
+        if not self._items_model:
+            return None
+
         source, target, inlet = self.mapToSource(index)
 
         if role == GraphDataRole.LinkSourceRole:
-            return self._source_model
+            return self._items_model.mapFromSource(source), "out"
 
         if role == GraphDataRole.LinkTargetRole:
-            ...
+            return self._items_model.mapFromSource(target), inlet
 
         match index.column():
             case 0:

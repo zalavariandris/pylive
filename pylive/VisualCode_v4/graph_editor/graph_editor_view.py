@@ -52,16 +52,6 @@ from pylive.VisualCode_v4.graph_editor.graph_data_roles import GraphDataRole
 from pylive.utils.qt import distribute_items_horizontal, signalsBlocked
 
 from pylive.VisualCode_v4.graph_editor.standard_graph_delegate import StandardGraphDelegate
-from pylive.VisualCode_v4.graph_editor.standard_edges_model import StandardEdgesModel, StandardEdgeItem
-
-# @runtime_checkable
-# class NodesModelProtocol(Protocol):
-#     def inlets(self, row)->Sequence[str]:
-#         ...
-
-#     def outlets(self, row)->Sequence[str]:
-#         ...
-
 
 
 class GraphEditorView(QGraphicsView):
@@ -69,7 +59,8 @@ class GraphEditorView(QGraphicsView):
     TargetRole = Qt.ItemDataRole.UserRole+2
     InletsRole = Qt.ItemDataRole.UserRole+3
     OutletsRole = Qt.ItemDataRole.UserRole+4
-    nodesLinked = Signal(int, str, int, str)
+
+    nodesLinked = Signal(QModelIndex, QModelIndex, str, str)
 
     def __init__(self, parent:QWidget|None=None):
         super().__init__(parent=parent)
@@ -194,7 +185,8 @@ class GraphEditorView(QGraphicsView):
 
     ### <<< Handle Model Signals
     def _onNodesReset(self):
-        assert self._edges, "self._edges is None"
+        print("_onNodesReset!!!!!!!!!!!!!!!!!")
+        assert self._nodes, "self._nodes is None"
         ### clear graph
         self._node_widgets.clear()
         self._node_in_links.clear()
@@ -213,6 +205,7 @@ class GraphEditorView(QGraphicsView):
 
     def _onEdgesReset(self):
         assert self._edges, "self._edge is None"
+        print("_onEdgesReset!!!!!!!!!!!!!!!!!")
         ### clear graph
         self._edge_widgets.clear()
 
@@ -224,7 +217,7 @@ class GraphEditorView(QGraphicsView):
         self.layoutNodes()
 
     def _onNodesInserted(self, parent:QModelIndex, first:int, last:int):
-        assert self._edges, "self._edges is None"
+        assert self._nodes, "self._nodes is None"
         indexes = [
             self._nodes.index(row, 0)
             for row in range(first, last+1)
@@ -233,7 +226,7 @@ class GraphEditorView(QGraphicsView):
         self._addNodes(indexes)
 
     def _onNodesAboutToBeRemoved(self, parent:QModelIndex, first:int, last:int):
-        assert self._edges, "self._edges is None"
+        assert self._nodes, "self._nodes is None"
         indexes = (
             self._nodes.index(row, 0)
             for row in range(first, last+1)
@@ -244,7 +237,7 @@ class GraphEditorView(QGraphicsView):
         """
         The optional roles argument can be used to specify which data roles have actually been modified.
         An empty vector in the roles argument means that all roles should be considered modified"""
-        assert self._edges, "self._edges is None"
+        assert self._nodes, "self._nodes is None"
 
         indexes = [
             self._nodes.index(row, 0)
@@ -490,7 +483,7 @@ class GraphEditorView(QGraphicsView):
     def _syncNodeSelectionModel(self):
         """called when the graphicsscene selection has changed"""
         assert self._node_selection, "_node_selection is None"
-        assert self._edges, "_edges is None"
+        assert self._nodes, "_nodes is None"
   
         selected_items = list(self.scene().selectedItems())
         selected_node_widgets = list(filter(lambda item: item in self._node_widgets.inverse, selected_items))
@@ -554,7 +547,7 @@ class GraphEditorView(QGraphicsView):
 
     def nodeIndexAt(self, pos: QPoint) -> QModelIndex|None:
         """Returns the topmost node at position pos, which is in viewport coordinates."""
-        assert self._edges, "self._edges was not defined"
+        assert self._nodes, "self._nodes was not defined"
         for item in self.items(pos.x()-4,pos.y()-4,8,8):
             if item in self._node_widgets.values():
                 node_id =  self._node_widgets.inverse[item]
@@ -562,7 +555,7 @@ class GraphEditorView(QGraphicsView):
 
     def inletIndexAt(self, pos: QPoint)->tuple[QModelIndex, str]|None:
         """Returns the topmost inlet at position pos, which is in viewport coordinates."""
-        assert self._edges, "self._edges was not defined"
+        assert self._nodes, "self._nodes was not defined"
         for item in self.items(pos.x()-4,pos.y()-4,8,8):
             if item in self._inlet_widgets.values():
                 inlet_id = self._inlet_widgets.inverse[item]
@@ -571,7 +564,7 @@ class GraphEditorView(QGraphicsView):
 
     def outletIndexAt(self, pos: QPoint)->tuple[QModelIndex, str]|None:
         """Returns the topmost outlet at position pos, which is in viewport coordinates."""
-        assert self._edges, "self._edges was not defined"
+        assert self._nodes, "self._nodes was not defined"
         for item in self.items(pos.x()-4,pos.y()-4,8,8):
             if item in self._outlet_widgets.values():
                 outlet_it = self._outlet_widgets.inverse[item]
@@ -599,7 +592,7 @@ class GraphEditorView(QGraphicsView):
         for row in range(self._edges.rowCount()):
             edge_index = self._edges.index(row, 0)
             source_node_index, _ = self._edges.data(edge_index, GraphDataRole.LinkSourceRole)
-            target_node_index, _ = self._edges.data(edge_index, GraphDataRole.LinkSourceRole)
+            target_node_index, _ = self._edges.data(edge_index, GraphDataRole.LinkTargetRole)
 
             G.add_edge(source_node_index, target_node_index)
         pos:dict[QModelIndex, tuple[float, float]] = hiearchical_layout_with_nx(G, scale=scale)
@@ -776,7 +769,7 @@ class GraphEditorView(QGraphicsView):
                 self.dragMoveEdgeTargetEvent(event)
 
     def dragMoveOutletEvent(self, event:QDragMoveEvent):
-        assert self._edges, "_edges was not defined"
+        assert self._nodes, "_edges was not defined"
         assert self._draft_link, "self._draft_link was not defined"
         source = event.mimeData().data('application/outlet').toStdString().split("/")
         source_row, source_outlet = int(source[0]), source[1]
@@ -797,7 +790,7 @@ class GraphEditorView(QGraphicsView):
             self._delegate.updateEdgePosition(self._draft_link, source_outlet_widget, scene_pos)
 
     def dragMoveInletEvent(self, event:QDragMoveEvent):
-        assert self._edges
+        assert self._nodes
         assert self._draft_link
         source = event.mimeData().data('application/inlet').toStdString().split("/")
         source_row, source_outlet = int(source[0]), source[1]
@@ -848,7 +841,7 @@ class GraphEditorView(QGraphicsView):
 
         edge_row = int(event.mimeData().data('application/edge/source').toStdString())
 
-        target_node_index, inlet = self._edges.target(int(edge_row))
+        target_node_index, inlet = self._edges.data(self._edges.index(edge_row, 0), GraphDataRole.LinkTargetRole)
 
         target_inlet_widget = self.inletWidget(target_node_index, inlet)
 
@@ -894,6 +887,7 @@ class GraphEditorView(QGraphicsView):
     def dropOutletEvent(self, event:QDropEvent):
         if event.proposedAction() == Qt.DropAction.LinkAction:
             assert self._edges, f"bad self._edges, got{self._edges}"
+            assert self._nodes, f"bad self._nodes, got{self._nodes}"
             source = event.mimeData().data('application/outlet').toStdString().split("/")
             source_row, source_outlet = int(source[0]), source[1]
             source_node_index = self._nodes.index(source_row, 0)
@@ -904,17 +898,18 @@ class GraphEditorView(QGraphicsView):
             if source_node_index and target_inlet_id:
                 assert self._edges, "self._edges is None"
                 target_node_index, inlet_name = target_inlet_id
-                self._edges.appendEdgeItem(StandardEdgeItem(
-                    QPersistentModelIndex(source_node_index), 
-                    QPersistentModelIndex(target_node_index),
+                self.nodesLinked.emit(
+                    source_node_index, 
+                    target_node_index,
                     "out",
                     inlet_name
-                ))
+                )
                 event.acceptProposedAction()
 
     def dropInletEvent(self, event:QDropEvent):
         if event.proposedAction() == Qt.DropAction.LinkAction:
             assert self._edges, f"bad self._edges, got{self._edges}"
+            assert self._nodes, f"bad self._nodes, got{self._nodes}"
             # parse mime data
             source_data = event.mimeData().data('application/inlet').toStdString().split("/")
             source_row, source_inlet_name = int(source_data[0]), source_data[1]
@@ -926,12 +921,12 @@ class GraphEditorView(QGraphicsView):
             if source_inlet_id and target_outlet_id:
                 # new edge
                 target_node_index, outlet_name = target_outlet_id
-                self._edges.appendEdgeItem(StandardEdgeItem(
-                    QPersistentModelIndex(target_node_index),
-                    QPersistentModelIndex(source_node_index), 
+                self.nodesLinked.emit(
+                    target_node_index,
+                    source_node_index, 
                     outlet_name,
                     source_inlet_name
-                ))
+                )
                 event.acceptProposedAction()
             else:
                 # cancel
@@ -943,22 +938,22 @@ class GraphEditorView(QGraphicsView):
         edge_source_node_index, outlet = self._edges.data(self._edges.index(edge_row, 0), GraphDataRole.LinkSourceRole)
         edge_target_node_index, inlet = self._edges.data(self._edges.index(edge_row, 0), GraphDataRole.LinkTargetRole)
 
-        inlet_at_mouse = self.inletIndexAt(event.position().toPoint()) or None
+        inlet_id_at_mouse = self.inletIndexAt(event.position().toPoint()) or None
 
-        if inlet_at_mouse:
-            if inlet_at_mouse == (edge_target_node_index, inlet):
+        if inlet_id_at_mouse:
+            if inlet_id_at_mouse == (edge_target_node_index, inlet):
                 # do nothing
                 pass
             else:
                 #remove
                 self._edges.removeRow(edge_row)
                 # create
-                self._edges.appendEdgeItem(StandardEdgeItem(
-                    source = QPersistentModelIndex(edge_source_node_index),
-                    target= QPersistentModelIndex(inlet_at_mouse[0]),
-                    outlet=outlet,
-                    inlet=inlet_at_mouse[1]
-                ))
+                self.nodesLinked.emit(
+                    edge_source_node_index,
+                    inlet_id_at_mouse[0],
+                    outlet,
+                    inlet_id_at_mouse[1]
+                )
         else:
             # remove
             self._edges.removeRow(edge_row)
@@ -978,12 +973,12 @@ class GraphEditorView(QGraphicsView):
                 #remove
                 self._edges.removeRow(edge_row)
                 # create
-                self._edges.appendEdgeItem(StandardEdgeItem(
-                    source = QPersistentModelIndex(outlet_at_mouse[0]),
-                    target= QPersistentModelIndex(edge_target_node_index),
-                    outlet=outlet,
-                    inlet=inlet
-                ))
+                self.nodesLinked.emit(
+                    outlet_at_mouse[0],
+                    edge_target_node_index,
+                    outlet,
+                    inlet
+                )
         else:
             # remove
             self._edges.removeRow(edge_row)
@@ -1055,12 +1050,10 @@ class GraphEditorView(QGraphicsView):
     def edgePressEvent(self, index:QModelIndex|QPersistentModelIndex, event: QMouseEvent) -> bool:
         assert self._edges
 
-
         # source_node_index = index.data(self.SourceRole)
         # target_node_index = index.data(self.TargetRole)
         outlet_id = self._edges.data(self._edges.index(index.row(), 0), GraphDataRole.LinkSourceRole)
         inlet_id =  self._edges.data(self._edges.index(index.row(), 0), GraphDataRole.LinkTargetRole)
-
 
         outlet_widget = self.outletWidget(*outlet_id)
         inlet_widget = self.inletWidget(*inlet_id)
@@ -1150,7 +1143,7 @@ def main():
         nonlocal row
         row+=1
         item = QStandardItem()
-        item.setData(f"node{row}")
+        item.setData(f"node{row}", Qt.ItemDataRole.DisplayRole)
         item.setData(["in1", "in2"], GraphDataRole.NodeInletsRole)
         item.setData(["out"], GraphDataRole.NodeOutletsRole)
         nodes.insertRow(nodes.rowCount(), item)
@@ -1161,6 +1154,15 @@ def main():
         for index in reversed(indexes):
             nodes.removeRows(index.row(), 1)
 
+    def create_link(source_node_index:QModelIndex, target_node_index:QModelIndex, outlet:str, inlet:str):
+        edge_item = QStandardItem()
+        outlet_id = QPersistentModelIndex(source_node_index), outlet
+        inlet_id = QPersistentModelIndex(target_node_index), inlet
+        edge_item.setData("edge", Qt.ItemDataRole.DisplayRole)
+        edge_item.setData(inlet_id, GraphDataRole.LinkTargetRole)
+        edge_item.setData(outlet_id, GraphDataRole.LinkSourceRole)
+        edges.insertRow(edges.rowCount(), edge_item)
+
     def connect_selected_nodes():
         selected_rows = set([index.row() for index in node_selection.selectedIndexes()])
         if len(selected_rows)<2:
@@ -1168,7 +1170,7 @@ def main():
 
         target_node_index = node_selection.currentIndex().siblingAtColumn(0)
         assert target_node_index.isValid(), "invalid target node"
-        inlets = edges.inlets(target_node_index)
+        inlets = nodes.data(target_node_index, GraphDataRole.NodeInletsRole)
         assert len(inlets)>0
         for source_node_row in selected_rows:
             if target_node_index.row() == source_node_row:
@@ -1176,13 +1178,8 @@ def main():
 
             source_node_index = nodes.index(source_node_row, 0)
             assert source_node_index.isValid(), "invalid source node"
+            create_link(source_node_index, target_node_index, "out", inlets[0])
 
-            edges.appendEdgeItem(StandardEdgeItem(
-                source=QPersistentModelIndex(source_node_index),
-                target=QPersistentModelIndex(target_node_index),
-                outlet="out",
-                inlet=inlets[0]
-            ))
 
     def delete_selected_edges():
         indexes:list[QModelIndex] = edge_selection.selectedRows(column=0)
@@ -1207,6 +1204,8 @@ def main():
     graph_view.setModel(nodes, edges)
     graph_view.setSelectionModel(node_selection)
     graph_view.centerNodes()
+
+    graph_view.nodesLinked.connect(lambda source, target, outlet, inlet: create_link(source, target, outlet, inlet))
 
 
     ### ACTIONS

@@ -422,7 +422,7 @@ class Window(QWidget):
         ### MODEL
         self.graph_model = PyDataModel()
         self.link_proxy_model = PyLinkProxyModel(self.graph_model)
-        self.node_proxy_model = self.link_proxy_model.nodesModel()
+        self.node_proxy_model = self.link_proxy_model.itemsModel()
 
 
         self.setupUI()
