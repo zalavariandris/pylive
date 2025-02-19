@@ -181,7 +181,7 @@ class PyLinkProxyModel(QAbstractItemModel):
 
         self.setSourceModel(source_model)
 
-    def itemsModel(self)->QAbstractItemModel|None:
+    def itemsModel(self)->PyNodeProxyModel|None:
         return self._items_model
 
     def setSourceModel(self, source_model:PyDataModel|None):

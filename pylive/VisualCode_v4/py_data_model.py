@@ -53,15 +53,16 @@ class PyDataModel(QObject):
     def nodeCount(self)->int:
         return len(self._nodes)
 
-    def nodes(self)->Iterable[str]:
-        for name in self._nodes:
-            yield name
+    def nodes(self)->Collection[str]:
+        return [_ for _ in self._nodes.keys()]
 
     def nodeAt(self, index:int)->str:
         node = list(self._nodes.keys())[index]
         return node
 
     def addNode(self, name:str, node_item:PyNodeItem):
+        if name in self._nodes:
+            raise ValueError("nodes must have a unique name")
         self.nodesAboutToBeAdded.emit([name])
         self._nodes[name] = node_item
         self.nodesAdded.emit([name])
@@ -91,22 +92,28 @@ class PyDataModel(QObject):
     def nodeSource(self, name:str)->str:
         return self._nodes[name].source
 
-    def nodeFields(self, name)->Sequence[str]:
-        return [_ for _ in self._nodes[name].fields.keys()]
+    def setNodeName(self, node:str, new_name:str):
+        raise NotImplementedError
 
-    def nodeStatus(self, name)->Literal['initalized', 'compiled', 'evaluated', 'error']:
-        return self._nodes[name].status
+    def setNodeSource(self, node:str, value:str):
+        self._nodes[node].source = value
 
-    def nodeError(self, name)->Exception|None:
-        return self._nodes[name].error
+    def nodeFields(self, node)->Sequence[str]:
+        return [_ for _ in self._nodes[node].fields.keys()]
 
-    def nodeResult(self, name)->Any:
-        return self._nodes[name].error
+    def nodeStatus(self, node)->Literal['initalized', 'compiled', 'evaluated', 'error']:
+        return self._nodes[node].status
 
-    def compileNode(self, name):
+    def nodeError(self, node)->Exception|None:
+        return self._nodes[node].error
+
+    def nodeResult(self, node)->Any:
+        return self._nodes[node].error
+
+    def compileNode(self, node):
         ...
 
-    def evaluateNode(self, name):
+    def evaluateNode(self, node):
         ...
 
     def load(self, path:Path|str):

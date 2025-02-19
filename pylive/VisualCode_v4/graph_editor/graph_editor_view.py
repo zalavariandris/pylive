@@ -591,8 +591,8 @@ class GraphEditorView(QGraphicsView):
 
         for row in range(self._edges.rowCount()):
             edge_index = self._edges.index(row, 0)
-            source_node_index, _ = self._edges.data(edge_index, GraphDataRole.LinkSourceRole)
-            target_node_index, _ = self._edges.data(edge_index, GraphDataRole.LinkTargetRole)
+            source_node_index, outlet = self._edges.data(edge_index, GraphDataRole.LinkSourceRole)
+            target_node_index, inlet = self._edges.data(edge_index, GraphDataRole.LinkTargetRole)
 
             G.add_edge(source_node_index, target_node_index)
         pos:dict[QModelIndex, tuple[float, float]] = hiearchical_layout_with_nx(G, scale=scale)
