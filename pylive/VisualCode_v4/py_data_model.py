@@ -1,4 +1,5 @@
 
+from sys import exec_prefix
 from typing import *
 from PySide6.QtCore import *
 from PySide6.QtGui import *
@@ -8,19 +9,34 @@ from PySide6.QtWidgets import *
 from pathlib import Path
 
 from dataclasses import dataclass, field
+import inspect
 
+import inspect
 
+Empty = inspect.Parameter.empty
+
+from yaml import resolver
+@dataclass
+class PyParameterItem:
+    name: str
+    default: Any=Empty #TODO: object|None|inspect.Parameter.empty
+    annotation: str|Any='' # TODO str|inspect.Parameter.empty
+    kind:inspect._ParameterKind = inspect.Parameter.POSITIONAL_OR_KEYWORD
+    value: Any=Empty #TODO: object|None|inspect.Parameter.empty
 
 
 @dataclass
 class PyNodeItem:
     source:str="def func():    ..."
-    fields: dict[str, str] = field(default_factory=dict)
+    parameters: list[PyParameterItem] = field(default_factory=list)
     status:Literal['initalized', 'compiled', 'evaluated', 'error']='initalized'
     error:Exception|None=None
     result:object|None=None
+    _func:Callable|None=None # cache compiled function
 
-from collections import OrderedDict
+
+
+from collections import OrderedDict, defaultdict
 
 
 class PyDataModel(QObject):
@@ -32,18 +48,26 @@ class PyDataModel(QObject):
     nodesAboutToBeRemoved = Signal(list) # list of node names
     nodesRemoved = Signal(list) # list of node names
 
-    nameChanged = Signal()
-    sourceChanged = Signal()
-    fieldsChanged = Signal()
+    nameChanged = Signal(str)
+    sourceChanged = Signal(str)
+    fieldsChanged = Signal(str)
 
-    statusChanged = Signal()
-    errorChanged = Signal()
-    resultChanged = Signal()
+    statusChanged = Signal(str)
+    errorChanged = Signal(str)
+    resultChanged = Signal(str)
 
     nodesAboutToBeLinked = Signal(list) # list of edges: tuple[source, target, inlet]
     nodesLinked = Signal(list)
     nodesAboutToBeUnlinked = Signal(list)
     nodesUnlinked = Signal(list)
+
+    parametersAboutToBeReset = Signal(str)
+    parametersReset = Signal(str)
+    parametersAboutToBeInserted = Signal(str, int, int) # node, start, end
+    parametersInserted = Signal(str, int, int) # node, start, end
+    patametersChanged = Signal(str, int, int) # node, first, last
+    parametersAboutToBeRemoved = Signal(str, int, int) # node, start, end
+    parametersRemoved = Signal(str, int, int) # node, start, end
 
     def __init__(self, parent:QObject|None=None):
         super().__init__(parent=parent)
@@ -98,23 +122,100 @@ class PyDataModel(QObject):
     def setNodeSource(self, node:str, value:str):
         self._nodes[node].source = value
 
-    def nodeFields(self, node)->Sequence[str]:
-        return [_ for _ in self._nodes[node].fields.keys()]
+    def compileNode(self, node:str)->bool:
+        node_item = self._nodes[node]
+        new_parameters:list[PyParameterItem]|None = None
+        try:
+            from pylive.utils.evaluate_python import parse_python_function
+            func = parse_python_function(node_item.source)
+        except SyntaxError as err:
+            new_status = 'error'
+            new_error = err
+            new__func = None
+            new_result = None
+        except Exception as err:
+            new_status = 'error'
+            new_error = err
+            new__func = None
+            new_result = None
+        else:
+            new_status = 'compiled'
+            new__func = func
+            sig = inspect.signature(func)
+
+            new_parameters = []
+            for name, param in sig.parameters.items():
+                param_item = PyParameterItem(
+                    name=name, 
+                    default=param.default,
+                    annotation=param.annotation, 
+                    kind=param.kind,
+                    value=Empty
+                )
+                new_parameters.append(param_item)
+            new_error = None
+            new_result = None
+
+        if node_item.status != new_status:
+            node_item.status = new_status
+            self.statusChanged.emit(node)
+        if node_item.error != new_error:
+            node_item.error = new_error
+            self.errorChanged.emit(node)
+        if node_item.result != new_result:
+            node_item.result = new_result
+            self.resultChanged.emit(node)
+        if new_parameters is not None:
+            node_item.parameters = new_parameters
+            self.parametersReset.emit(node)
+
+        if new_error is None:
+            return True
+        else:
+            return False
+
+    def parameterCount(self, node)->int:
+        if not self._nodes:
+            return 0
+        return len(self._nodes[node].parameters)
+
+    def setParameters(self, node:str, parameters:list[PyParameterItem]):
+        self.parametersAboutToBeReset.emit(node)
+        self._nodes[node].parameters = parameters
+        self.parametersReset.emit(node)
+
+    def insertParameter(self, node:str, index:int, parameter:PyParameterItem)->bool:
+        self.parametersAboutToBeInserted.emit(node, index, index)
+        self._nodes[node].parameters.insert(index, parameter)
+        self.parametersInserted.emit(node, index, index)
+        return True
+
+    def removeParameter(self, node:str, index:int):
+        self.parametersAboutToBeRemoved.emit(node, index, index)
+        del self._nodes[node].parameters[index]
+        self.parametersRemoved.emit(node, index, index)
+
+    def setParameterValue(self, node:str, index:int, value:object|None|Empty):
+        self._nodes[node].parameters[index].value = value
+        self.patametersChanged.emit(node, index, index)
+
+    def parameterItem(self, node:str, index:int)->PyParameterItem:
+        return self._nodes[node].parameters[index]
+
+    def parameterValue(self, node:str, index:int, value:object|None|Empty)->object|None|Empty:
+        return self._nodes[node].parameters[index].value
 
     def nodeStatus(self, node)->Literal['initalized', 'compiled', 'evaluated', 'error']:
         return self._nodes[node].status
+
+    def evaluateNode(self, node):
+        ...
 
     def nodeError(self, node)->Exception|None:
         return self._nodes[node].error
 
     def nodeResult(self, node)->Any:
         return self._nodes[node].error
-
-    def compileNode(self, node):
-        ...
-
-    def evaluateNode(self, node):
-        ...
 
     def load(self, path:Path|str):
         text = Path(path).read_text()
@@ -137,9 +238,21 @@ class PyDataModel(QObject):
                 raise NotImplementedError("for now, only 'UniqueFunction's are supported!")
 
             fields:dict = node_data.get('fields') or dict()
+            parameters = []
+            for name, value in fields.items():
+                parameter_item = PyParameterItem(
+                    name=name, 
+                    default=Empty,
+                    annotation=Empty,
+                    kind='POSITIONAL_OR_KEYWORD',
+                    value=value
+                )
+                parameters.append(parameter_item)
+
+            fields:dict = node_data.get('fields') or dict()
             node_item = PyNodeItem(
                 source=node_data['source'],
-                fields=fields
+                parameters=parameters
             )
             self._nodes[node_data['name']] = node_item
 

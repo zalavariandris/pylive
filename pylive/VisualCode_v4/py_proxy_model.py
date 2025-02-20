@@ -6,7 +6,7 @@ from PySide6.QtWidgets import *
 from bidict import bidict
 from pylive.utils import group_consecutive_numbers
 
-from pylive.VisualCode_v4.py_data_model import PyDataModel
+from pylive.VisualCode_v4.py_data_model import Empty, PyDataModel
 
 class PyNodeProxyModel(QAbstractItemModel):
     def __init__(self, source_model:PyDataModel, parent:QObject|None=None):
@@ -334,3 +334,104 @@ class PyLinkProxyModel(QAbstractItemModel):
                     return inlet
 
         return None
+
+
+class PyParameterProxyModel(QAbstractItemModel):
+    def __init__(self, source_model:PyDataModel, parent:QObject|None=None):
+        super().__init__(parent=parent)
+        self._source_model:PyDataModel|None=None
+        self._node:str|None = None
+
+        self.setSourceModel(source_model)
+
+    def setSourceModel(self, source_model:PyDataModel):
+        if self._source_model:
+            self._source_model.modelAboutToBeReset.disconnect(self.modelAboutToBeReset.emit)
+            self._source_model.modelReset.disconnect(self._resetModel)
+
+            self._source_model.parametersAboutToBeReset.disconnect(self.modelAboutToBeReset.emit)
+            self._source_model.parametersReset.disconnect(self._resetModel)
+            self._source_model.parametersAboutToBeInserted.disconnect(self._on_parameters_about_to_be_inserted)
+            self._source_model.parametersInserted.disconnect(self._on_parameters_inserted)
+            self._source_model.parametersAboutToBeRemoved.disconnect(self._on_parameters_about_to_be_removed)
+            self._source_model.parametersRemoved.disconnect(self._on_parameters_removed)
+            self._source_model.patametersChanged.disconnect(self._on_parameters_changed)
+
+        if source_model:
+            source_model.parametersAboutToBeReset.connect(self.modelAboutToBeReset.emit)
+            source_model.parametersReset.connect(self._resetModel)
+            source_model.parametersAboutToBeInserted.connect(self._on_parameters_about_to_be_inserted)
+            source_model.parametersInserted.connect(self._on_parameters_inserted)
+            source_model.parametersAboutToBeRemoved.connect(self._on_parameters_about_to_be_removed)
+            source_model.parametersRemoved.connect(self._on_parameters_removed)
+            source_model.patametersChanged.connect(self._on_parameters_changed)
+            
+        self._source_model = source_model
+        self._resetModel()
+
+    def _resetModel(self):
+        self.modelReset.emit()
+
+    def setNode(self, node:str):
+        self.modelAboutToBeReset.emit()
+        self._node = node
+        self.modelReset.emit()
+
+    def _on_parameters_about_to_be_inserted(self, node:str, start:int, end:int):
+        if self._node and self._node==node:
+            self.rowsAboutToBeInserted.emit(QModelIndex(), start, end)
+
+    def _on_parameters_inserted(self, node:str, first:int, last:int):
+        if self._node and self._node==node:
+            self.rowsInserted.emit(QModelIndex(), first, last)
+
+    def _on_parameters_about_to_be_removed(self, node:str, first:int, last:int):
+        if self._node and self._node==node:
+            self.rowsAboutToBeRemoved.emit(QModelIndex(), first, last)
+
+    def _on_parameters_removed(self, node:str, first:int, last:int):
+        if self._node and self._node==node:
+            self.rowsRemoved.emit(QModelIndex(), first, last)
+
+    def _on_parameters_changed(self, node:str, first:int, last:int):
+        if self._node and self._node==node:
+            self.dataChanged.emit(QModelIndex(), self.index(first, 0), self.index(last, 1))
+
+    def rowCount(self, parent:QModelIndex|QPersistentModelIndex=QModelIndex())->int:
+        if not self._source_model or not self._node:
+            return 0
+        return self._source_model.parameterCount(self._node)
+
+    def columnCount(self, parent:QModelIndex|QPersistentModelIndex=QModelIndex())->int:
+        return 2
+
+    def headerData(self, section: int, orientation: Qt.Orientation, role:int=Qt.ItemDataRole.DisplayRole) -> Any:
+        if orientation == Qt.Orientation.Horizontal:
+            return ["name", "value"][section]
+        return super().headerData(section, orientation, role)
+
+    def data(self, index:QModelIndex|QPersistentModelIndex, role:int=Qt.ItemDataRole.DisplayRole):
+        if not self._source_model or not self._node:
+            return None
+
+        parameter = self._source_model.parameterItem(self._node, index.row())
+        match index.column():
+            case 0:
+                if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
+                    return parameter.name
+
+            case 1:
+                if role in (Qt.ItemDataRole.DisplayRole, ):
+                    if parameter.value is Empty:
+                        return "-Empty-"
+                    else:
+                        return f"{parameter.value}"
+
+                if role == Qt.ItemDataRole.EditRole:
+                    return parameter.value
+
+    def index(self, row:int, column:int, parent:QModelIndex|QPersistentModelIndex=QModelIndex()):
+        if not self._source_model or not self._node:
+            return QModelIndex()
+        parameter_item = self._source_model.parameterItem(self._node, row)
+        return self.createIndex(row, column, parameter_item)

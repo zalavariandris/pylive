@@ -8,8 +8,18 @@ import sys
 app= QApplication( sys.argv )
 
 from pylive.VisualCode_v4.graph_editor.graph_data_roles import GraphDataRole
-from pylive.VisualCode_v4.py_data_model import PyDataModel, PyNodeItem
-from pylive.VisualCode_v4.py_proxy_model import PyNodeProxyModel, PyLinkProxyModel
+from pylive.VisualCode_v4.py_data_model import (
+	PyDataModel, 
+	PyNodeItem, 
+	PyParameterItem,
+	Empty
+)
+
+from pylive.VisualCode_v4.py_proxy_model import (
+	PyNodeProxyModel, 
+	PyLinkProxyModel, 
+	PyParameterProxyModel,
+)
 
 class TestNodesCRUD(unittest.TestCase):
 	def test_init_with_nodes(self) -> None:
@@ -64,6 +74,7 @@ class TestNodesCRUD(unittest.TestCase):
 
 		self.assertNotIn("node1", proxy_names)
 
+
 class TestLinksCRUD(unittest.TestCase):
 	def test_read_links(self) -> None:
 		data_model = PyDataModel()
@@ -94,8 +105,41 @@ class TestLinksCRUD(unittest.TestCase):
 		self.assertEqual(proxy_model.data(proxy_model.index(0,1)), "node2")
 		self.assertEqual(proxy_model.data(proxy_model.index(0,2)), "in")
 
-	
-			
+import inspect
+class TestParametersCRUD(unittest.TestCase):
+	def test_init_with_empty_parameters(self):
+		data_model = PyDataModel()
+		data_model.addNode("node1", PyNodeItem(parameters=[
+			PyParameterItem("input1"),
+			PyParameterItem("input2")
+		]))
+
+		self.assertEqual(data_model.parameterCount("node1"), 2)
+
+		param1 = data_model.parameterItem("node1", 0)
+		param2 = data_model.parameterItem("node1", 1)
+		self.assertEqual(param1.name, "input1")
+		self.assertEqual(param2.name, "input2")
+
+	def test_compile_parameters(self):
+		from textwrap import dedent
+		data_model = PyDataModel()
+		data_model.addNode("hello", PyNodeItem(source=dedent("""\
+		def hello(name:str="you"):
+			return f"Hello {name}"
+		""")))
+
+		proxy = PyParameterProxyModel(data_model)
+		proxy.setNode("hello")
+
+		data_model.compileNode("hello")
+		self.assertEqual(proxy.rowCount(), 1)
+
+		self.assertEqual(proxy.data(proxy.index(0,0), Qt.ItemDataRole.DisplayRole), "name")
+		self.assertEqual(proxy.data(proxy.index(0,0), Qt.ItemDataRole.EditRole), "name")
+		self.assertEqual(proxy.data(proxy.index(0,1), Qt.ItemDataRole.DisplayRole), '-Empty-')
+		self.assertEqual(proxy.data(proxy.index(0,1), Qt.ItemDataRole.EditRole), Empty)
+		
 
 if __name__ == "__main__":
 	unittest.main()
