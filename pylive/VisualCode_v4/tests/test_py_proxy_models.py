@@ -245,9 +245,11 @@ class TestProxyLinkSignals(unittest.TestCase):
 
 		proxy_model = PyProxyLinkModel(data_model)
 
-		spy = QSignalSpy(proxy_model.rowsRemoved)
+		spy_about_to_be_removed = QSignalSpy(proxy_model.rowsAboutToBeRemoved)
+		spy_removed = QSignalSpy(proxy_model.rowsRemoved)
 		data_model.unlinkNodes("node1", "node2", "in")
-		self.assertEqual(spy.count(), 1, "'rowsRemoved' Signal was not emitted exactly once.")
+		self.assertEqual(spy_about_to_be_removed.count(), 1, "'rowsAboutToBeRemoved' Signal was not emitted exactly once.")
+		self.assertEqual(spy_removed.count(), 1, "'rowsRemoved' Signal was not emitted exactly once.")
 
 
 import inspect

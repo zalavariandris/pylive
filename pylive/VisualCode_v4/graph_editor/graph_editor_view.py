@@ -196,9 +196,21 @@ class GraphEditorView(QGraphicsView):
         assert self._nodes, "self._nodes is None"
         ### clear graph
 
+        for inlet_id in self._inlet_widgets.keys():
+            inlet_widget = self._inlet_widgets[inlet_id]
+            self.scene().removeItem(inlet_widget)
+
+        for outlet_id in self._outlet_widgets.keys():
+            outlet_widget = self._outlet_widgets[outlet_id]
+            self.scene().removeItem(outlet_widget)
+
         for node_index in self._node_widgets.keys():
             node_widget = self._node_widgets[node_index]
             self.scene().removeItem(node_widget)
+
+        for edge_index in self._edge_widgets.keys():
+            edge_widget = self._edge_widgets[edge_index]
+            self.scene().removeItem(edge_widget)
 
         self._node_widgets.clear()
         self._node_in_links.clear()
@@ -250,11 +262,7 @@ class GraphEditorView(QGraphicsView):
         The optional roles argument can be used to specify which data roles have actually been modified.
         An empty vector in the roles argument means that all roles should be considered modified"""
         assert self._edges, "self._edges is None"
-        indexes = (
-            self._edges.index(row, 0)
-            for row in range(top_left.row(), bottom_right.row()+1)
-        )
-        self._updateEdges(indexes)
+        self._updateEdges(range(top_left.row(), bottom_right.row()+1))
 
     def _addNodes(self, rows:Iterable[int]):
         assert self._edges, "no self._edges"
@@ -268,6 +276,8 @@ class GraphEditorView(QGraphicsView):
             self._node_widgets[node_id] = node_widget
             self._node_out_links[node_widget] = []
             self._node_in_links[node_widget] = []
+            self._node_inlets[node_id] = list()
+            self._node_outlets[node_id] = list()
 
             if inlets := self._nodes.data(node_index, GraphDataRole.NodeInletsRole):
                 self._insertInlets(node_index, 0, inlets)
@@ -368,6 +378,8 @@ class GraphEditorView(QGraphicsView):
 
             node_widget = self.nodeWidget(node_id)
             self._delegate.updateNodeWidget(node_index, node_widget)
+            self._resetInlets(node_index)
+            self._resetOutlets(node_index)
 
     def _resetInlets(self, node_index:QModelIndex):
         assert self._nodes, "self._edges cant be None"
@@ -379,9 +391,10 @@ class GraphEditorView(QGraphicsView):
     def _resetOutlets(self, node_index:QModelIndex):
         assert self._nodes, "self._edges cant be None"
         node_id = QPersistentModelIndex(node_index)
+        self._removeOutlets(node_index, self._node_outlets[node_id])
         outlets = self._nodes.data(node_index, GraphDataRole.NodeInletsRole)
         self._insertOutlets(node_index, 0, outlets)
-        self._removeOutlets(node_index, self._node_outlets[node_id])
+        
 
     def _addEdges(self, rows:Iterable[int]):
         assert self._edges, f"bad self._edges, got{self._edges}"
@@ -421,7 +434,6 @@ class GraphEditorView(QGraphicsView):
     def _removeEdges(self, rows:Iterable[int]):
         assert self._edges
         rows = set(_ for _ in rows)
-        print("remove edges:", rows)
         for row in sorted(rows, reverse=True):
             edge_index = self._edges.index(row, 0)
             edge_id = QPersistentModelIndex(edge_index)
@@ -436,8 +448,9 @@ class GraphEditorView(QGraphicsView):
             self.scene().removeItem(edge_widget)
             del self._edge_widgets[edge_id]
         
-    def _updateEdges(self, indexes:Iterable[QModelIndex]):
-        for edge_index in indexes:
+    def _updateEdges(self, rows:Iterable[int]):
+        for row in rows:
+            edge_index = self._edges.index(row, 0)
             editor = self.linkWidget(edge_index)
             self._delegate.updateEdgeWidget(edge_index, editor)
 
