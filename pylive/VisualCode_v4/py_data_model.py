@@ -100,8 +100,6 @@ class PyDataModel(QObject):
     def linkCount(self):
         return len(self._links)
 
-    
-
     def linkNodes(self, source:str, target:str, inlet:str):
         self.nodesAboutToBeLinked.emit( [(source, target, inlet)] )
         self._links.add( (source, target, inlet) )
