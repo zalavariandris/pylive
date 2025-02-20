@@ -144,8 +144,7 @@ class TestCompilation(unittest.TestCase):
 		""")))
 
 		self.assertEqual(data_model.nodeStatus("hello"), 'initalized')
-		success = data_model.compileNode("hello")
-		self.assertTrue(success)
+		success = data_model.compileNodes(["hello"])
 		self.assertEqual(data_model.nodeStatus("hello"), 'compiled')
 
 	def test_compile_bad_syntax_function(self):
@@ -154,7 +153,7 @@ class TestCompilation(unittest.TestCase):
 		data_model.addNode("bad", PyNodeItem(source="clas bum"))
 
 
-		success = data_model.compileNode("bad")
+		success = data_model.compileNodes(["bad"])
 		self.assertFalse(success)
 		self.assertEqual(data_model.nodeStatus("bad"), 'error')
 		self.assertIsInstance(data_model.nodeError("bad"), SyntaxError)
@@ -170,7 +169,7 @@ class TestCompilation(unittest.TestCase):
 		""")))
 
 
-		success = data_model.compileNode("class_definition")
+		success = data_model.compileNodes(["class_definition"])
 		self.assertFalse(success)
 		self.assertEqual(data_model.nodeStatus("class_definition"), 'error')
 		self.assertIsInstance(data_model.nodeError("class_definition"), ValueError)
@@ -202,7 +201,7 @@ class TestParametersCRUD(unittest.TestCase):
 		# de
 		# """)))
 
-		data_model.compileNode("hello")
+		data_model.compileNodes(["hello"])
 		self.assertEqual(data_model.parameterCount("hello"), 1)
 		param_item = data_model.parameterItem("hello", 0)
 		self.assertEqual(param_item.name, "name")
@@ -222,7 +221,7 @@ class TestParametersCRUD(unittest.TestCase):
 			parameters=[PyParameterItem(name="name", value="Mása")]
 		))
 
-		data_model.compileNode("hello")
+		data_model.compileNodes(["hello"])
 		self.assertEqual(data_model.parameterCount("hello"), 1)
 		param_item = data_model.parameterItem("hello", 0)
 		self.assertEqual(param_item.default, "you")

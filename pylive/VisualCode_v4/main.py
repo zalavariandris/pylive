@@ -41,8 +41,24 @@ class PyInspectorView(QFrame):
         self._model:PyDataModel|None=None
         self._current_node:str|None=None
         self._parameter_model: PyProxyParameterModel|None=None
-        self._selection:QItemSelectionModel|None=None
+        self._model_connections = []
+        self._view_connections = []
         self.setupUI()
+
+    def showEvent(self, event: QShowEvent, /) -> None:
+        for signal, slot in self._model_connections:
+            signal.connect(slot)
+        for signal, slot in self._view_connections:
+            signal.connect(slot)
+
+        return super().showEvent(event)
+
+    def hideEvent(self, event: QHideEvent, /) -> None:
+        print("hideEvent")
+        for signal, slot in self._model_connections:
+            signal.disconnect(slot)
+        for signal, slot in self._view_connections:
+            signal.disconnect(slot)
 
     def setupUI(self):
         self.setFrameShape(QFrame.Shape.StyledPanel)  # Styled panel for the frame
@@ -70,25 +86,27 @@ class PyInspectorView(QFrame):
 
         self.setLayout(main_layout)
 
-        # map editors to data
-        def setNodeSource():
-            assert self._model
-            if not self._current_node:
-                return
-            self._model.setNodeSource(self._current_node, self.source_editor.toPlainText())
-
-        self.source_editor.textChanged.connect(setNodeSource)
-
+        # bind view to model
+        self._view_connections = [
+            (self.source_editor.textChanged, lambda: self._syncModelData('source'))
+        ]
+        for signal, slot in self._view_connections:
+            signal.connect(slot)
+        
     def setModel(self, model: PyDataModel|None):
         if self._model:
-            self._model.sourceChanged.disconnect(self._on_node_source_changed)
+            for signal, slot in self._model_connections:
+                signal.disconnect(slot)
 
-            # self._model.fieldsChanged.disconnect(self._onNodeChange)
             self._parameter_model = None
 
         if model:
-            model.sourceChanged.connect(self._on_node_source_changed)
-            # model.fieldsChanged.connect(self._onNodeChange)
+            self._model_connections = [
+                (model.sourceChanged, lambda: self._syncEditorData(attr='source'))
+            ]
+            for signal, slot in self._model_connections:
+                signal.connect(slot)
+
             self._parameter_model = PyProxyParameterModel(model)
 
 
@@ -97,29 +115,37 @@ class PyInspectorView(QFrame):
         if self._parameter_model:
             self._parameter_model.setNode(self._current_node)
 
-    def _on_node_name_changed(self):
-        pretty_name = self._current_node or '- no selection -'
-        pretty_name = pretty_name.replace("_", " ").title()
-        self.name_label.setText(f"<h1>{pretty_name}<h1>")
-
-    def _on_node_source_changed(self):
+    def _syncEditorData(self, attr:Literal['name', 'source']):
         if not self._model or not self._current_node:
+            self.name_label.setText("<h1>- no selection -</h1>")
             self.source_editor.setPlainText('')
             return
-        self.source_editor.setPlainText(self._model.nodeSource(self._current_node))
+
+        match attr:
+            case 'name':
+                pretty_name = self._current_node or '- no selection -'
+                pretty_name = pretty_name.replace("_", " ").title()
+                self.name_label.setText(f"<h1>{pretty_name}<h1>")
+            case 'source':
+                value = self._model.nodeSource(self._current_node)
+                if value != self.source_editor.toPlainText():
+                    self.source_editor.setPlainText(value)
+
+    def _syncModelData(self, attr='source'):
+        if not self._model or not self._current_node:
+            return
+
+        match attr:
+            case 'source':
+                self._model.setNodeSource(self._current_node, self.source_editor.toPlainText())
 
     def setCurrent(self, node:str|None):
         self._current_node = node
-        self._on_node_name_changed()
-        self._on_node_source_changed()
+
+        self._syncEditorData('name')
+        self._syncEditorData('source')
         if self._parameter_model:
             self._parameter_model.setNode(node)
-        # self._update_editors()
-
-    def currentRow(self)->int:
-        if not self._selection:
-            return -1
-        return self._selection.currentIndex().row()
 
 
 
@@ -214,7 +240,6 @@ class PyInspectorView(QFrame):
 
 
 class Window(QWidget):
-
     def __init__(self, parent:QWidget|None=None):
         super().__init__(parent=parent)
         ### document state
@@ -229,22 +254,20 @@ class Window(QWidget):
         assert self.node_proxy_model
         self.node_selection_model = QItemSelectionModel(self.node_proxy_model)
 
-
         self.setupUI()
-        self.setAutoCompile(True)
-        self.setAutoEvaluate(True)
+        self.setAutoCompile(False)
+        self.setAutoEvaluate(False)
 
+    def setAutoCompile(self, auto: bool):
+        if auto:
+            # compile all nodes
+            self.graph_model.compileNodes(self.graph_model.nodes())
 
-    def setAutoCompile(self, autocompile: bool):
-        if autocompile:
-            print("Compile all nodes:")
-            for node in self.graph_model.nodes():
-                print(f"  {node}")
-                self.graph_model.compileNode(node)
-
+            # compile nodes on changes
             self._autocompile_connections = [
-                (self.graph_model.modelReset, lambda: [self.graph_model.compileNode(node) for node in self.graph_model.nodes()]),
-                (self.graph_model.nodesAdded, lambda nodes: [self.graph_model.compileNode(node) for node in nodes])
+                (self.graph_model.modelReset, lambda:         self.graph_model.compileNodes(self.graph_model.nodes())),
+                (self.graph_model.nodesAdded, lambda nodes:   self.graph_model.compileNodes(nodes)),
+                (self.graph_model.sourceChanged, lambda node: self.graph_model.compileNodes([node]))
             ]
             for signal, slot in self._autocompile_connections:
                 signal.connect(slot)
@@ -252,19 +275,24 @@ class Window(QWidget):
         else:
             for signal, slot in self._autocompile_connections:
                 signal.disconnect(slot)
+            self._autocompile_connections = []
 
-    def setAutoEvaluate(self, autoevaluate:bool):
-        ...
-        # if autoevaluate:
-        #     self._autoevaluate_connections = [
-        #         (self.graph_model.statusChanged, lambda nodes: [self.graph_model.evaluateNode(node) for node in nodes])
-        #     ]
-        #     for signal, slot in self._autoevaluate_connections:
-        #         signal.connect(slot)
-
-        # else:
-        #     for signal, slot in self._autoevaluate_connections:
-        #         signal.disconnect(slot)
+    def setAutoEvaluate(self, auto:bool):
+        if auto:
+            self._autoevaluate_connections = [
+                (
+                    self.node_selection_model.currentChanged, 
+                    self.graph_model.evaluateNode(
+                        self.node_proxy_model.mapToSource(
+                            self.node_selection_model.currentIndex()))
+                )
+            ]
+            for signal, slot in self._autoevaluate_connections:
+                signal.connect(slot)
+        else:
+            for signal, slot in self._autoevaluate_connections:
+                signal.disconnect(slot)
+            self._autoevaluate_connections = []
 
 
     def setupUI(self):        
@@ -460,9 +488,9 @@ class Window(QWidget):
     def compile_selected_node(self):
         if not self.node_selection_model:
             return
-        for index in self.node_selection_model.selectedIndexes():
-            node = self.node_proxy_model.mapToSource(index)
-            self.graph_model.compileNode(node)
+
+        nodes = map(self.node_proxy_model.mapToSource, self.node_selection_model.selectedIndexes())
+        self.graph_model.compileNodes(nodes)
 
     @Slot()
     def delete_selected_nodes(self):
@@ -474,6 +502,7 @@ class Window(QWidget):
     @Slot()
     def delete_selected_edges(self):
         indexes:list[QModelIndex] = self.links_table_view.selectedIndexes()
+
         rows = set(index.row() for index in indexes)
         for row in sorted(rows, reverse=True):
             source, target, inlet = self.link_proxy_model.mapToSource(self.link_proxy_model.index(row, 0))

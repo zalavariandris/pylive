@@ -45,7 +45,6 @@ class TextEditCompleter(QCompleter):
 			self.timer.start(0)
 		))
 
-
 	def closeEvent(self):
 		print("CloseEvent")
 

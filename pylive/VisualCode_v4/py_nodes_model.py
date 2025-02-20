@@ -36,6 +36,7 @@ class PyNodesModel(QAbstractItemModel):
     def __init__(self, parent: QObject|None=None) -> None:
         super().__init__(parent)
         self._node_items:list[PyNodeItem] = []
+        self._headers = ["name", "code", "fields", "dirty", "status", "func", "inlets", "result", "error"]
 
     def inlets(self, row)->Sequence[str]:
         node_item = self._node_items[row]
@@ -49,11 +50,11 @@ class PyNodesModel(QAbstractItemModel):
         return len(self._node_items)
 
     def columnCount(self, parent: QModelIndex|QPersistentModelIndex = QModelIndex()) -> int:
-        return 9
+        return len(self._headers)
 
     def headerData(self, section: int, orientation: Qt.Orientation, role: int = Qt.ItemDataRole.DisplayRole) -> Any:
         if orientation == Qt.Orientation.Horizontal and role==Qt.ItemDataRole.DisplayRole:
-            return ["name", "code", "fields", "dirty", "status", "func", "inlets", "result", "error"][section]
+            return self._headers[section]
         else:
             return super().headerData(section, orientation, role)
 
@@ -80,29 +81,15 @@ class PyNodesModel(QAbstractItemModel):
         return flags
 
     def dataByColumnName(self, row, column_name:str, role:int=Qt.ItemDataRole.DisplayRole):
-        headers = [
-            self.headerData(col, Qt.Orientation.Horizontal) 
-            for col in range(self.columnCount())
-        ]
-        assert column_name in headers, f"{column_name} must be in headers: {headers}"
-        column = headers.index(column_name)
+        assert column_name in self._headers, f"{column_name} must be in headers: {self._headers}"
+        column = self._headers.index(column_name)
         node_item = self._node_items[row]
         return getattr(node_item, column_name)
 
-
     def setDataByColumnName(self, row:int, column_name:str, value:Any, role:int=Qt.ItemDataRole.DisplayRole):
-        headers = [
-            self.headerData(col, Qt.Orientation.Horizontal) 
-            for col in range(self.columnCount())
-        ]
-        assert column_name in headers, f"{column_name} must be in headers: {headers}"
-        column = headers.index(column_name)
-        node_item = self._node_items[row]
-        setattr(node_item, column_name, value)
-        self.dataChanged.emit(
-            self.index(row, column), 
-            self.index(row, column)
-        )
+        assert column_name in self._headers, f"{column_name} must be in headers: {self._headers}"
+        column = self._headers.index(column_name)
+        self.setData(self.index(row, column), value)
 
     def setData(self, index: QModelIndex|QPersistentModelIndex, value:Any, role: int = Qt.ItemDataRole.DisplayRole) -> bool:
         if not index.isValid() or not 0 <= index.row() < len(self._node_items):
