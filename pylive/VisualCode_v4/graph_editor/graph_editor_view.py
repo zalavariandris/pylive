@@ -57,18 +57,30 @@ from pylive.VisualCode_v4.graph_editor.standard_graph_delegate import StandardGr
 
 
 class NodeItem:
+    def widget(self):
+        ...
+
     def ptr(self)->QPersistentModelIndex:
         ...
 
 class LinkItem:
+    def widget(self):
+        ...
+
     def ptr(self)->QPersistentModelIndex:
         ...
 
 class InletItem:
+    def widget(self):
+        ...
+
     def ptr(self)->QPersistentModelIndex:
         ...
 
 class OutletItem:
+    def widget(self):
+        ...
+        
     def ptr(self)->QPersistentModelIndex:
         ...
 
