@@ -1,0 +1,19 @@
+nodes:
+- name: person
+  source: |
+    def identity(data:Any):
+      return data
+  fields:
+    data: "TheName"
+
+- name: say_hello
+  source: |
+    def say_hello(name:str):
+      return f"Hello {name}!"
+  fields:
+    name: "you"
+
+edges:
+  - source: person
+    target: say_hello
+    inlet: name

@@ -16,7 +16,7 @@ from pylive.qt_components.qt_options_dialog import QOptionDialog
 
 # from pylive.QtGraphEditor.py_functions_model import PyFunctionsModel
 from pylive.VisualCode_v4.py_data_model import PyDataModel, PyNodeItem
-from pylive.VisualCode_v4.py_proxy_model import PyNodeProxyModel, PyLinkProxyModel
+from pylive.VisualCode_v4.py_proxy_model import PyProxyNodeModel, PyProxyLinkModel, PyProxyParameterModel
 from pylive.VisualCode_v4.graph_editor.standard_edges_model import StandardEdgeItem, StandardEdgesModel
 
 
@@ -39,6 +39,8 @@ class PyInspectorView(QFrame):
     def __init__(self, parent:QWidget|None=None):
         super().__init__(parent=parent)
         self._model:PyDataModel|None=None
+        self._current_node:str|None=None
+        self._parameter_model: PyProxyParameterModel|None=None
         self._selection:QItemSelectionModel|None=None
         self.setupUI()
 
@@ -46,10 +48,9 @@ class PyInspectorView(QFrame):
         self.setFrameShape(QFrame.Shape.StyledPanel)  # Styled panel for the frame
         self.setFrameShadow(QFrame.Shadow.Raised)
 
-        self.name_edit = QLineEdit()
-        self.name_edit.setPlaceholderText("name...")
+        self.name_label = QLabel()
 
-        self.parameter_editor = QTableWidget()
+        self.parameter_editor = QTableView()
         self.parameter_editor.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.parameter_editor.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.parameter_editor.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
@@ -60,8 +61,7 @@ class PyInspectorView(QFrame):
         self.source_editor.setPlaceholderText("source...")
 
         main_layout = qf.vboxlayout([
-            QLabel("<h2>Name</h2>"),
-            self.name_edit,
+            self.name_label,
             QLabel("<h2>Parameters</h2>"),
             self.parameter_editor,
             QLabel("<h2>Source</h2>"),
@@ -71,15 +71,6 @@ class PyInspectorView(QFrame):
         self.setLayout(main_layout)
 
         # map editors to data
-        def setNodeName():
-            assert self._model
-            if not self._current_node:
-                return
-            ...
-            # self._model.setNodeName(self._current_node, self.source_editor.toPlainText())
-
-        self.name_edit.textChanged.connect(setNodeName)
-
         def setNodeSource():
             assert self._model
             if not self._current_node:
@@ -90,29 +81,39 @@ class PyInspectorView(QFrame):
 
     def setModel(self, model: PyDataModel|None):
         if self._model:
-            self._model.nameChanged.disconnect(self._on_node_name_changed)
             self._model.sourceChanged.disconnect(self._on_node_source_changed)
+
             # self._model.fieldsChanged.disconnect(self._onNodeChange)
+            self._parameter_model = None
 
         if model:
-            model.nameChanged.connect(self._on_node_name_changed)
             model.sourceChanged.connect(self._on_node_source_changed)
             # model.fieldsChanged.connect(self._onNodeChange)
+            self._parameter_model = PyProxyParameterModel(model)
+
 
         self._model = model
+        self.parameter_editor.setModel(self._parameter_model)
+        if self._parameter_model:
+            self._parameter_model.setNode(self._current_node)
 
     def _on_node_name_changed(self):
-        self.name_edit.setText(self._current_node or '')
+        pretty_name = self._current_node or '- no selection -'
+        pretty_name = pretty_name.replace("_", " ").title()
+        self.name_label.setText(f"<h1>{pretty_name}<h1>")
 
     def _on_node_source_changed(self):
-        if not self._current_node:
+        if not self._model or not self._current_node:
             self.source_editor.setPlainText('')
+            return
         self.source_editor.setPlainText(self._model.nodeSource(self._current_node))
 
     def setCurrent(self, node:str|None):
         self._current_node = node
         self._on_node_name_changed()
         self._on_node_source_changed()
+        if self._parameter_model:
+            self._parameter_model.setNode(node)
         # self._update_editors()
 
     def currentRow(self)->int:
@@ -121,145 +122,94 @@ class PyInspectorView(QFrame):
         return self._selection.currentIndex().row()
 
 
-    # def update_node_inspector(self):
-    #     assert self._selection
-    #     assert self._nodes
-    #     assert self._edges
 
-    #     current_node_index = self._selection.currentIndex().siblingAtColumn(0)
-    #     if current_node_index.isValid():
-    #         self.show()
-    #         node_item = self._nodes.nodeItemFromIndex(current_node_index)
-    #         assert node_item is not None, f"cant be None, got: {node_item}"
+# class PyPreviewView(QWidget):
+#     def __init__(self, parent:QWidget|None=None):
+#         super().__init__(parent=parent)
+#         self._nodes: PyNodesModel|None=None
+#         self._selection:QItemSelectionModel|None=None
 
-    #         # update name editor
-    #         name = node_item.name
-    #         if name!=self.name_edit.text():
-    #             self.name_edit.setText(name)
+#         self.setupUI()
 
-    #         # update heading
-    #         self.inspector_header_tile.setHeading(self._nodes.data(current_node_index, Qt.ItemDataRole.DisplayRole))
-    #         self.inspector_header_tile.setSubHeading(f"(inline function)")
+#     def setupUI(self):
+#         self._status_label = QLabel("Status")
+#         self._status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)        
+#         self._result_label = QLabel("Results")
+#         self._result_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+#         self._error_label = QLabel("Errors")
+#         self._error_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-    #         # update property editor
-    #         inlets = self._nodes.inlets(current_node_index.row())
-    #         fields = self._nodes.dataByColumnName(current_node_index.row(), 'fields')
-    #         in_edges = self._edges.inEdges(current_node_index.row())
+#         main_layout = QVBoxLayout()
+#         main_layout.addWidget(self._status_label)
+#         main_layout.addWidget(self._result_label)
+#         main_layout.addWidget(self._error_label)
+#         self.setLayout(main_layout)
 
-    #         self.property_editor.setVerticalHeaderLabels([_ for _ in inlets])
-    #         self.property_editor.setRowCount(len(inlets))
-    #         self.property_editor.setColumnCount(1)
-    #         self.property_editor.setHorizontalHeaderLabels(["value"])
+#     def setModel(self, model:PyDataModel):
+#         if self._nodes:
+#             nodes.dataChanged.disconnect(self._onDataChanged)
 
+#         if nodes:
+#             nodes.dataChanged.connect(self._onDataChanged)
+
+#         self._nodes = nodes
+
+#     def setCurrent(self, node:str):
+#         ...
+
+#     def _onDataChanged(self, tl, br, roles):
+#         assert self._selection
+#         assert self._nodes
+#         if not self._selection.currentIndex().isValid():
+#             return
+
+#         current_index = self._selection.currentIndex()
+#         headers = [self._nodes.headerData(col, Qt.Orientation.Horizontal) for col in range(self._nodes.columnCount())]
+
+#         status_column = headers.index("status")
+#         result_column = headers.index("result")
+#         error_column = headers.index("error")
+
+#         CurrentRowChanged = tl.row() <= current_index.row() <= br.row()
+#         StatusColumChanged = tl.column() <= status_column <= br.column()
+#         ResultColumChanged = tl.column() <= result_column <= br.column()
+#         ErrorColumChanged = tl.column() <= error_column <= br.column()
+
+#         CurrentStatusChaned = CurrentRowChanged and StatusColumChanged
+#         CurrentResultChaned = CurrentRowChanged and ResultColumChanged
+#         CurrentErrorChaned = CurrentRowChanged and ErrorColumChanged
+
+#         if CurrentStatusChaned:
+#             status_data = current_index.siblingAtColumn(status_column).data()
+#             self._status_label.setText( f"{status_data}" )
+
+#         if CurrentResultChaned:
+#             result_data = current_index.siblingAtColumn(result_column).data()
+#             self._result_label.setText( f"{result_data}" )
+
+#         if CurrentErrorChaned:
+#             error_data = current_index.siblingAtColumn(error_column).data()
+#             self._error_label.setText( f"{error_data}" )
+
+#     def _onCurrentChanged(self, current, previous):
+#         if current.isValid():
+#             assert self._nodes
+#             headers = [self._nodes.headerData(col, Qt.Orientation.Horizontal) for col in range(self._nodes.columnCount())]
+#             status_column = headers.index("status")
+#             result_column = headers.index("result")
+#             error_column = headers.index("error")
             
-    #         for inlet_row, inlet in enumerate(inlets):
-    #             if inlet in [edge_item.inlet for edge_item in in_edges]:
-    #                 sources = [f"{self._nodes.data(edge_item.source)}.{edge_item.outlet}" for edge_item in in_edges]
-    #                 self.property_editor.setItem(inlet_row, 0, QTableWidgetItem(f"linked to: {",".join(sources)}"))
-    #             elif inlet in fields:
-    #                 self.property_editor.setItem(inlet_row, 0, QTableWidgetItem(fields[inlet]))
-    #             else:
-    #                 self.property_editor.setItem(inlet_row, 0, QTableWidgetItem('-no value set-'))
+#             status_data = current.siblingAtColumn(status_column).data()
+#             result_data = current.siblingAtColumn(result_column).data()
+#             error_data = current.siblingAtColumn(error_column).data()
 
-    #         # update code editor
-    #         code = node_item.code
-    #         if code!= self.node_function_source_editor.toPlainText():
-    #             self.node_function_source_editor.setPlainText(code)
-
-    #     else:
-    #         self.hide()
-    #         self.inspector_header_tile.setHeading("")
-    #         self.inspector_header_tile.setSubHeading("")
-    #         self.node_function_source_editor.setPlainText("")
-
-
-class PyPreviewView(QWidget):
-    def __init__(self, parent:QWidget|None=None):
-        super().__init__(parent=parent)
-        self._nodes: PyNodesModel|None=None
-        self._selection:QItemSelectionModel|None=None
-
-        self.setupUI()
-
-    def setupUI(self):
-        self._status_label = QLabel("Status")
-        self._status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)        
-        self._result_label = QLabel("Results")
-        self._result_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._error_label = QLabel("Errors")
-        self._error_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        main_layout = QVBoxLayout()
-        main_layout.addWidget(self._status_label)
-        main_layout.addWidget(self._result_label)
-        main_layout.addWidget(self._error_label)
-        self.setLayout(main_layout)
-
-    def setModel(self, model:PyDataModel):
-        if self._nodes:
-            nodes.dataChanged.disconnect(self._onDataChanged)
-
-        if nodes:
-            nodes.dataChanged.connect(self._onDataChanged)
-
-        self._nodes = nodes
-
-    def setCurrent(self, node:str):
-        ...
-
-    def _onDataChanged(self, tl, br, roles):
-        assert self._selection
-        assert self._nodes
-        if not self._selection.currentIndex().isValid():
-            return
-
-        current_index = self._selection.currentIndex()
-        headers = [self._nodes.headerData(col, Qt.Orientation.Horizontal) for col in range(self._nodes.columnCount())]
-
-        status_column = headers.index("status")
-        result_column = headers.index("result")
-        error_column = headers.index("error")
-
-        CurrentRowChanged = tl.row() <= current_index.row() <= br.row()
-        StatusColumChanged = tl.column() <= status_column <= br.column()
-        ResultColumChanged = tl.column() <= result_column <= br.column()
-        ErrorColumChanged = tl.column() <= error_column <= br.column()
-
-        CurrentStatusChaned = CurrentRowChanged and StatusColumChanged
-        CurrentResultChaned = CurrentRowChanged and ResultColumChanged
-        CurrentErrorChaned = CurrentRowChanged and ErrorColumChanged
-
-        if CurrentStatusChaned:
-            status_data = current_index.siblingAtColumn(status_column).data()
-            self._status_label.setText( f"{status_data}" )
-
-        if CurrentResultChaned:
-            result_data = current_index.siblingAtColumn(result_column).data()
-            self._result_label.setText( f"{result_data}" )
-
-        if CurrentErrorChaned:
-            error_data = current_index.siblingAtColumn(error_column).data()
-            self._error_label.setText( f"{error_data}" )
-
-    def _onCurrentChanged(self, current, previous):
-        if current.isValid():
-            assert self._nodes
-            headers = [self._nodes.headerData(col, Qt.Orientation.Horizontal) for col in range(self._nodes.columnCount())]
-            status_column = headers.index("status")
-            result_column = headers.index("result")
-            error_column = headers.index("error")
-            
-            status_data = current.siblingAtColumn(status_column).data()
-            result_data = current.siblingAtColumn(result_column).data()
-            error_data = current.siblingAtColumn(error_column).data()
-
-            self._status_label.setText( f"{status_data}" )
-            self._result_label.setText( f"{result_data}" )
-            self._error_label.setText( f"{error_data}" )
-        else:
-            self._status_label.setText( f"- no selection -" )
-            self._result_label.setText( f"- no result -" )
-            self._error_label.setText( f"- no error -" )
+#             self._status_label.setText( f"{status_data}" )
+#             self._result_label.setText( f"{result_data}" )
+#             self._error_label.setText( f"{error_data}" )
+#         else:
+#             self._status_label.setText( f"- no selection -" )
+#             self._result_label.setText( f"- no result -" )
+#             self._error_label.setText( f"- no error -" )
 
 
 
@@ -271,83 +221,103 @@ class Window(QWidget):
         self._is_modified = False
         self._filepath = "None"
 
-        ### MODEL
+        self._autocompile_connections = []
+        self._autoevaluate_connections = []
         self.graph_model = PyDataModel()
-        self.link_proxy_model = PyLinkProxyModel(self.graph_model)
-        self.node_proxy_model:PyNodeProxyModel = self.link_proxy_model.itemsModel()
+        self.link_proxy_model = PyProxyLinkModel(self.graph_model)
+        self.node_proxy_model:PyProxyNodeModel = self.link_proxy_model.itemsModel()
         assert self.node_proxy_model
         self.node_selection_model = QItemSelectionModel(self.node_proxy_model)
 
 
         self.setupUI()
+        self.setAutoCompile(True)
+        self.setAutoEvaluate(True)
 
-    def setupUI(self):
+
+    def setAutoCompile(self, autocompile: bool):
+        if autocompile:
+            print("Compile all nodes:")
+            for node in self.graph_model.nodes():
+                print(f"  {node}")
+                self.graph_model.compileNode(node)
+
+            self._autocompile_connections = [
+                (self.graph_model.modelReset, lambda: [self.graph_model.compileNode(node) for node in self.graph_model.nodes()]),
+                (self.graph_model.nodesAdded, lambda nodes: [self.graph_model.compileNode(node) for node in nodes])
+            ]
+            for signal, slot in self._autocompile_connections:
+                signal.connect(slot)
+
+        else:
+            for signal, slot in self._autocompile_connections:
+                signal.disconnect(slot)
+
+    def setAutoEvaluate(self, autoevaluate:bool):
         ...
-        # self.nodes_model = self.graph_model.nodes()
+        # if autoevaluate:
+        #     self._autoevaluate_connections = [
+        #         (self.graph_model.statusChanged, lambda nodes: [self.graph_model.evaluateNode(node) for node in nodes])
+        #     ]
+        #     for signal, slot in self._autoevaluate_connections:
+        #         signal.connect(slot)
 
-        # self.edges_model = self.graph_model.edges()
-        
-        
-        # self.edge_selection = QItemSelectionModel(self.edges_model)
-
-        # logModelSignals(self.graph_model._nodes_model)
-
-        # # compile nodes when inserted
-        # @self.graph_model.nodesReset.connect
-        # def _():
-        #     for row in range(self.graph_model.nodeCount()):
-        #         self.graph_model.compileNode(row) 
-        
-        # @self.graph_model.nodesInserted.connect
-        # def _(parent, first, last): 
-        #     for row in range(first, last+1):
-        #         self.graph_model.compileNode(row) 
-
-        # # on source change, compile node
-        # @self.graph_model.nodeChanged.connect
-        # def _(tl:QModelIndex, br:QModelIndex, roles:list=[]):
-        #     headers = [self.graph_model._nodes_model.headerData(col, Qt.Orientation.Horizontal) for col in range(self.graph_item._nodes_model.columnCount())]
-        #     source_column = headers.index("code")
-        #     if source_column in range(tl.column(), br.column()+1):
-        #         for row in range(tl.row(), br.row()+1):
-        #             self.graph_model.compileNode(row)
-        #             self.graph_model.evaluateNode(row)
+        # else:
+        #     for signal, slot in self._autoevaluate_connections:
+        #         signal.disconnect(slot)
 
 
-        # @self.node_selection.currentChanged.connect
-        # def _(current:QModelIndex, previous:QModelIndex):
-        #     if current.isValid():
-        #         self.graph_model.evaluateNode(current.row())
-        #     else:
-        #         pass
-        #     # for row in range(first, last+1):
-        #     #     self.graph_model.evaluateNode(row) 
-        
+    def setupUI(self):        
         ### SheetsView
         self.nodes_table_view = QTableView()
         self.nodes_table_view.setModel(self.node_proxy_model)
         self.nodes_table_view.setSelectionModel(self.node_selection_model)
+        # self.nodes_table_view.horizontalHeader().setVisible(True)
+        # self.nodes_table_view.verticalHeader().setVisible(False)
+
         self.links_table_view = QTableView()
         self.links_table_view.setModel(self.link_proxy_model)
+        # self.links_table_view.horizontalHeader().setVisible(True)
+        # self.links_table_view.verticalHeader().setVisible(False)
 
         ### GRAPH View
         self.graph_view = GraphEditorView()
         self.graph_view.setModel(self.node_proxy_model, self.link_proxy_model)
         self.graph_view.installEventFilter(self)
         self.graph_view.setSelectionModel(self.node_selection_model)
+
+        graph_view_connections = [
+            (
+                self.graph_view.nodesLinked, 
+                lambda source, target, inlet, outlet: 
+                    self.graph_model.linkNodes(
+                        self.node_proxy_model.mapToSource(source), 
+                        self.node_proxy_model.mapToSource(target), 
+                        inlet)
+                )
+        ]
+        for signal, slot in graph_view_connections:
+            signal.connect(slot)
+
+
         # self.graph_view.setSelectionModel(self.node_selection_model)
         # self.graph_view.setSelectionModel(self.selection_model)
 
         # ### NODEINSPECTOR
         self.inspector_view = PyInspectorView()
         self.inspector_view.setModel(self.graph_model)
-        self.node_selection_model.currentChanged.connect(lambda current, prev: 
-            self.inspector_view.setCurrent(self.node_proxy_model.mapToSource(current)))
-        # self.inspector_view.setModel(self.graph_model)
-        # self.inspector_view.setNodeSelectionModel(self.node_selection_model)
+        def set_inspector_node(current:QModelIndex, previous:QModelIndex):
+            if current.isValid():
+                node = self.node_proxy_model.mapToSource(current)
+                self.inspector_view.setCurrent(node)
+            else:
+                self.inspector_view.setCurrent(None)
+
+        self.node_selection_model.currentChanged.connect(set_inspector_node)
+
 
         # ### PREVIEW WIDGET
-        self.preview = PyPreviewView()
+        # self.preview = PyPreviewView()
         # self.preview.setModel(self.graph_model)
         # self.preview.setSelectionModel(self.node_selection_model)
 
@@ -372,9 +342,9 @@ class Window(QWidget):
         remove_edge_action = QAction("remove edge", self)
         remove_edge_action.triggered.connect(lambda: self.delete_selected_edges())
         compile_node_action = QAction("compile selected node", self)
-        compile_node_action.triggered.connect(lambda: self.graph_model.compileNode(self.selection_model.currentIndex().row()))
+        compile_node_action.triggered.connect(lambda: self.compile_selected_node())
         evaluate_node_action = QAction("evaluate selected node", self)
-        evaluate_node_action.triggered.connect(lambda: self.graph_model.evaluateNode(self.selection_model.currentIndex().row()))
+        evaluate_node_action.triggered.connect(lambda: self.graph_model.evaluateNode(self.node_selection_model.currentIndex().row()))
 
         self.addActions([
             save_action,
@@ -390,28 +360,16 @@ class Window(QWidget):
         menubar.addActions(self.actions())
 
         ### Layout
-        def create_graph_panel():
-            panel = QWidget()
-            grid_layout = QGridLayout()
-            panel.setLayout(grid_layout)
-
-            grid_layout.addWidget(self.graph_view, 0, 0)
-            grid_layout.addWidget(self.inspector_view, 0, 0, Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignRight)
-            # self.node_inspector.hide()
-            panel.setLayout(grid_layout)
-            return panel
 
         main_layout = qf.vboxlayout([
             qf.splitter(Qt.Orientation.Horizontal, [
-                # qf.tabwidget({
-                #     'graph': create_graph_panel(),
-                #     'sheets': create_graph_sheets()
-                # }),
-                self.nodes_table_view,
-                self.links_table_view,
+                qf.widget(qf.vboxlayout([
+                    self.nodes_table_view,
+                    self.links_table_view,
+                ])),
                 self.graph_view,
-                self.inspector_view,
-                self.preview
+                self.inspector_view
+                # self.preview
             ]),
             self.statusbar
         ])
@@ -497,46 +455,58 @@ class Window(QWidget):
         if node_graphics_item := self.graph_view.nodeWidget(node_index):
             node_graphics_item.setPos(scenepos-node_graphics_item.boundingRect().center())
 
+
+    @Slot()
+    def compile_selected_node(self):
+        if not self.node_selection_model:
+            return
+        for index in self.node_selection_model.selectedIndexes():
+            node = self.node_proxy_model.mapToSource(index)
+            self.graph_model.compileNode(node)
+
     @Slot()
     def delete_selected_nodes(self):
-        indexes:list[QModelIndex] = self.node_selection.selectedRows(column=0)
+        indexes:list[QModelIndex] = self.node_selection_model.selectedRows(column=0)
         for index in sorted(indexes, key=lambda idx:idx.row(), reverse=True):
-            self.graph_model.removeNodes(index.row(), 1)
+            node = self.node_proxy_model.mapToSource(index)
+            self.graph_model.removeNode(node)
 
     @Slot()
     def delete_selected_edges(self):
-        indexes:list[QModelIndex] = self.edge_selection.selectedRows(column=0)
-        for index in sorted(indexes, key=lambda idx:idx.row(), reverse=True):
-            self.graph_model.edges().removeRows(index.row(), 1)
+        indexes:list[QModelIndex] = self.links_table_view.selectedIndexes()
+        rows = set(index.row() for index in indexes)
+        for row in sorted(rows, reverse=True):
+            source, target, inlet = self.link_proxy_model.mapToSource(self.link_proxy_model.index(row, 0))
+            self.graph_model.unlinkNodes(source, target, inlet)
 
     def eventFilter(self, watched, event):
         if watched == self.graph_view:
             if event.type() == QEvent.Type.MouseButtonDblClick:
+                event = cast(QMouseEvent, event)
                 self.create_new_node(self.graph_view.mapToScene(event.position().toPoint()))
+                return True
+
+        return super().eventFilter(watched, event)
 
 
 if __name__ == "__main__":
+    from pathlib import Path
+    import pathlib
+    parent_folder = pathlib.Path(__file__).parent.resolve()
+    print("Python Visual Editor starting...\n  working directory:", Path.cwd())
     app = QApplication()
     screen_size = app.primaryScreen().size()
     window = Window()
+    
+    window.openFile(parent_folder/"tests/website_builder.yaml")
     rect = QRect(QPoint(), screen_size).adjusted(40,80,-30,-100)
     print(rect)
     window.setGeometry(rect)
     # window.resize(screen_size)
     window.show()
-    from pathlib import Path
-    import pathlib
-    parent_folder = pathlib.Path(__file__).parent.resolve()
-    print("working directory:", Path.cwd())
-    window.openFile(parent_folder/"tests/website_builder.yaml")
+
+    
     app.exec()
-
-
-
-
-
-
-
 
 
 # class PyGraphView(QWidget):

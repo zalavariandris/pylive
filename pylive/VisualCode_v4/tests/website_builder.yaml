@@ -1,6 +1,5 @@
 nodes:
 - name: "read_abstract"
-  kind: UniqueFunction
   source: |
     def read_text(path:str)->str:
       from pathlib import Path
@@ -9,7 +8,6 @@ nodes:
     path: "./tests/website_builder.yaml"
 
 - name: "parse_abstract" 
-  kind: UniqueFunction
   source: |
     def markdown_to_html(md:str)->str:
       return "HTML" + md

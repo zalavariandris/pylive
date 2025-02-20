@@ -93,7 +93,6 @@ class PyFunctionsModel(QAbstractItemModel):
                         return func
 
             case 1: #source
-                print("!!!!!!!!!!!!!!!!!")
                 print(self._functions)
                 if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
                     return self.functionSource(index.row())

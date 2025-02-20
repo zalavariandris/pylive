@@ -13,6 +13,127 @@ from pylive.VisualCode_v4.py_data_model import PyDataModel, PyNodeItem, PyParame
 import inspect
 
 from textwrap import dedent
+
+say_hello_script = dedent("""\
+nodes:
+- name: person
+  source: |
+    def identity(data:Any):
+    	return data
+  fields:
+    data: "TheName"
+
+- name: say_hello
+  source: |
+    def say_hello(name:str):
+    	return f"Hello {name}!"
+  fields:
+    name: "you"
+
+edges:
+  - source: person
+    target: say_hello
+    inlet: name
+""")
+
+math_script = dedent("""\
+nodes:
+- name: two
+  source: |
+    def two():
+    	return 2
+
+- name: three
+  source: |
+    def two():
+    	return 3
+
+- name: mult
+  source: |
+    def mult(x, y):
+    	return 3
+
+edges:
+  - source: two
+    target: mult
+    inlet: x
+  - source: three
+    target: mult
+    inlet: y
+""")
+
+class TestModelCRUD(unittest.TestCase):
+	def test_read(self):
+		...
+
+	def test_create_node(self):
+		...
+
+	def test_delete_node(self):
+		...
+
+	def test_create_link(self):
+		...
+
+	def test_delete_link(self):
+		...
+
+	def test_create_parameter(self):
+		...
+
+	def test_delete_parameter(self):
+		...
+
+	def test_deserialize(self):
+		data_model = PyDataModel()
+		data_model.deserialize(dedent("""\
+			nodes:
+			- name: person
+			  source: |
+			    def identity(data:Any):
+			    	return data
+			  fields:
+			    data: "TheName"
+
+			- name: say_hello
+			  source: |
+			    def say_hello(name:str):
+			    	return f"Hello {name}!"
+			  fields:
+			    name: "you"
+
+			edges:
+			  - source: person
+			    target: say_hello
+			    inlet: name
+		"""))
+
+		self.assertEqual(data_model.nodeCount(), 2)
+		self.assertEqual(data_model.linkCount(), 1)
+		nodes = set(_ for _ in data_model.nodes())
+		self.assertEqual(nodes, {'person', 'say_hello'})
+		links = {_ for _ in data_model.links()}
+		self.assertEqual(links, {('person', 'say_hello', 'name')})
+
+	def test_reset(self):
+		data_model = PyDataModel()
+		data_model.deserialize(say_hello_script)
+
+		data_model.deserialize(math_script)
+		self.assertEqual(data_model.nodeCount(), 3)
+		self.assertEqual(data_model.linkCount(), 2)
+		nodes = set(_ for _ in data_model.nodes())
+		self.assertEqual(nodes, {'two', 'three', 'mult'})
+		links = {_ for _ in data_model.links()}
+		self.assertEqual(links, {
+			('two', 'mult', 'x'),
+			('three', 'mult', 'y'),
+		})
+
+	def test_serialize(self):
+		...
+
+
 class TestCompilation(unittest.TestCase):
 	def test_compile_hello_function(self):
 		
@@ -89,6 +210,24 @@ class TestParametersCRUD(unittest.TestCase):
 		self.assertEqual(param_item.default, "you")
 		self.assertEqual(param_item.value, inspect.Parameter.empty)
 		self.assertEqual(param_item.kind, inspect.Parameter.POSITIONAL_OR_KEYWORD)
+
+	def test_compile_parameters_with_stored_values(self):
+		from textwrap import dedent
+		data_model = PyDataModel()
+		data_model.addNode("hello", PyNodeItem(
+			source=dedent("""\
+				def hello(name:str="you"):
+					return f"Hello {name}"
+				"""),
+			parameters=[PyParameterItem(name="name", value="Mása")]
+		))
+
+		data_model.compileNode("hello")
+		self.assertEqual(data_model.parameterCount("hello"), 1)
+		param_item = data_model.parameterItem("hello", 0)
+		self.assertEqual(param_item.default, "you")
+		self.assertEqual(param_item.value, "Mása")
+
 
 
 if __name__ == "__main__":

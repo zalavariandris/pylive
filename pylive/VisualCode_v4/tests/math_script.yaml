@@ -1,0 +1,23 @@
+nodes:
+- name: two
+  source: |
+    def two():
+      return 2
+
+- name: three
+  source: |
+    def two():
+      return 3
+
+- name: mult
+  source: |
+    def mult(x, y):
+      return 3
+
+edges:
+  - source: two
+    target: mult
+    inlet: x
+  - source: three
+    target: mult
+    inlet: y

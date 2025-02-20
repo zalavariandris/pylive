@@ -8,11 +8,13 @@ from pylive.utils import group_consecutive_numbers
 
 from pylive.VisualCode_v4.py_data_model import Empty, PyDataModel
 
-class PyNodeProxyModel(QAbstractItemModel):
+class PyProxyNodeModel(QAbstractItemModel):
     def __init__(self, source_model:PyDataModel, parent:QObject|None=None):
         super().__init__(parent=parent)
         self._nodes:list[str] = list()
         self._source_model:PyDataModel|None=None
+
+        self._headers = ['name', 'source', 'parameters', 'status', 'error', 'result']
 
         self.setSourceModel(source_model)
 
@@ -32,16 +34,47 @@ class PyNodeProxyModel(QAbstractItemModel):
             source_model.nodesAdded.connect(self._on_source_nodes_added)
             source_model.nodesAboutToBeRemoved.connect(self._on_source_nodes_about_to_be_removed)
             source_model.nodesRemoved.connect(self._on_source_nodes_removed)
+
+            source_model.sourceChanged.connect(self._on_source_changed)
+            source_model.parametersReset.connect(self._on_parameters_reset)
+            source_model.statusChanged.connect(self._on_status_changed)
+            source_model.errorChanged.connect(self._on_error_changed)
+            source_model.resultChanged.connect(self._on_result_changed)
+
             
         self._source_model = source_model
         self._resetModel()
 
+
+    def _on_source_changed(self, node:str):
+        index = self.mapFromSource(node).siblingAtColumn(self._headers.index('source'))
+        self.dataChanged.emit(index, index, [])
+
+    def _on_parameters_reset(self, node:str):
+        index = self.mapFromSource(node).siblingAtColumn(self._headers.index('parameters'))
+        self.dataChanged.emit(index, index, [])
+
+    def _on_status_changed(self, node:str):
+        index = self.mapFromSource(node).siblingAtColumn(self._headers.index('status'))
+        self.dataChanged.emit(index, index, [])
+
+    def _on_error_changed(self, node:str):
+        index = self.mapFromSource(node).siblingAtColumn(self._headers.index('error'))
+        self.dataChanged.emit(index, index, [])
+
+    def _on_result_changed(self, node:str):
+        index = self.mapFromSource(node).siblingAtColumn(self._headers.index('result'))
+        self.dataChanged.emit(index, index, [])
+
     def _resetModel(self):
         assert self._source_model
+        self.beginResetModel()
         self._nodes.clear()
         for row, node in enumerate(self._source_model.nodes()):
             self._nodes.insert(row, node)
+
         self.modelReset.emit()
+        self.endResetModel()
 
     def _on_source_nodes_about_to_be_added(self, nodes:list[str]):
         first = len(self._nodes)
@@ -60,7 +93,7 @@ class PyNodeProxyModel(QAbstractItemModel):
         rows = set([idx.row() for idx in indexes])
         ranges = list(group_consecutive_numbers(sorted(rows)))
         for r in reversed(ranges):
-            self.rowsAboutToBeRemoved.emit(QModelIndex(), r.start, r.stop)
+            self.rowsAboutToBeRemoved.emit(QModelIndex(), r.start, r.stop-1)
 
     def _on_source_nodes_removed(self, nodes:list[str]):
         indexes = [self.mapFromSource(node) for node in nodes]
@@ -69,7 +102,7 @@ class PyNodeProxyModel(QAbstractItemModel):
         for range_group in reversed(ranges):
             for row in reversed(range_group):
                 del self._nodes[row]
-            self.rowsRemoved.emit(QModelIndex(), range_group.start, range_group.stop)
+            self.rowsRemoved.emit(QModelIndex(), range_group.start, range_group.stop-1)
 
     # Proxy functions
     def mapFromSource(self, node:str)->QModelIndex:
@@ -77,6 +110,8 @@ class PyNodeProxyModel(QAbstractItemModel):
         return self.index(row, 0)
 
     def mapToSource(self, proxy:QModelIndex|QPersistentModelIndex)->str:
+        if not proxy.isValid():
+            raise ValueError("proxy index is invalid: ", proxy)
         node = self._nodes[proxy.row()]
         return node
 
@@ -128,7 +163,8 @@ class PyNodeProxyModel(QAbstractItemModel):
 
     def headerData(self, section: int, orientation: Qt.Orientation, role:int=Qt.ItemDataRole.DisplayRole) -> Any:
         if orientation == Qt.Orientation.Horizontal:
-            return ['name', 'source', 'fields', 'status', 'error', 'result'][section]
+            if role == Qt.ItemDataRole.DisplayRole:
+                return self._headers[section]
         return super().headerData(section, orientation, role)
 
     def data(self, index:QModelIndex|QPersistentModelIndex, role:int=Qt.ItemDataRole.DisplayRole)->Any:
@@ -138,84 +174,96 @@ class PyNodeProxyModel(QAbstractItemModel):
         node_name = self.mapToSource(index)
 
         if role == GraphDataRole.NodeInletsRole:
-            return ['in']
+            parameter_names = []
+            for i in range(self._source_model.parameterCount(node_name)):
+                param_name = self._source_model.parameterName(node_name, i)
+                parameter_names.append(param_name)
+            return parameter_names
 
         if role == GraphDataRole.NodeOutletsRole:
             return ['out']
 
         match index.column():
-            case 0:
-                if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
+            case 0: # name
+                if role == Qt.ItemDataRole.DisplayRole:
+                    return node_name.replace("_", " ").title()
+
+                elif role == Qt.ItemDataRole.EditRole:
                     return node_name
 
-            case 1:
+            case 1: # source
                 if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
                     return self._source_model.nodeSource(node_name)
 
-            case 2:
+            case 2: # parameters
                 if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
-                    return ",".join( self._source_model.nodeFields(node_name) )
+                    parameter_names = []
+                    for i in range(self._source_model.parameterCount(node_name)):
+                        name = self._source_model.parameterName(node_name, i)
+                        parameter_names.append(name)
+                    return ",".join( parameter_names )
 
-            case 3:
+            case 3: # status
                 if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
                     return self._source_model.nodeStatus(node_name)
 
-            case 4:
+            case 4: # error
                 if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
                     return f"{self._source_model.nodeError(node_name)}"
 
-            case 5:
+            case 5: # result
                 if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
                     return f"{self._source_model.nodeResult(node_name)}"
 
         return None
 
 from pylive.VisualCode_v4.graph_editor.graph_data_roles import GraphDataRole
-class PyLinkProxyModel(QAbstractItemModel):
+class PyProxyLinkModel(QAbstractItemModel):
     def __init__(self, source_model:PyDataModel, parent:QObject|None=None):
         super().__init__(parent=parent)
         self._links:list[tuple[str, str, str]] = list()
 
-        self._items_model:PyNodeProxyModel|None=None
+        self._items_model:PyProxyNodeModel|None=None
         self._source_model:PyDataModel|None=None
 
+        self._model_connections = []
         self.setSourceModel(source_model)
 
-    def itemsModel(self)->PyNodeProxyModel|None:
+    def itemsModel(self)->PyProxyNodeModel|None:
         return self._items_model
 
     def setSourceModel(self, source_model:PyDataModel|None):
         if self._source_model:
-            self._source_model.modelAboutToBeReset.disconnect(self.modelAboutToBeReset.emit)
-            self._source_model.modelReset.disconnect(self._resetModel)
-
-            self._source_model.nodesAboutToBeLinked.disconnect(self._on_source_nodes_about_to_be_linked)
-            self._source_model.nodesLinked.disconnect(self._on_source_nodes_linked)
-            self._source_model.nodesAboutToBeUnlinked.disconnect(self._on_source_nodes_about_to_be_unlinked)
-            self._source_model.nodesUnlinked.disconnect(self._on_source_nodes_unlinked)
-
+            for signal, slot in self._model_connections:
+                signal.disconnect(slot)
+            self._model_connections = []
+            assert self._items_model
+            self._items_model.modelReset.disconnect(self._resetModel)
             self._items_model = None
 
         if source_model:
-            self._items_model = PyNodeProxyModel(source_model)
-
-            source_model.modelAboutToBeReset.connect(self.modelAboutToBeReset.emit)
-            source_model.modelReset.connect(self._resetModel)
-
-            source_model.nodesAboutToBeLinked.connect(self._on_source_nodes_about_to_be_linked)
-            source_model.nodesLinked.connect(self._on_source_nodes_linked)
-            source_model.nodesAboutToBeUnlinked.connect(self._on_source_nodes_about_to_be_unlinked)
-            source_model.nodesUnlinked.connect(self._on_source_nodes_unlinked)
+            self._items_model = PyProxyNodeModel(source_model)
+            self._items_model.modelReset.connect(self._resetModel)
+            self._model_connections = [
+                (source_model.modelReset, self._resetModel),
+                (source_model.nodesAboutToBeLinked, self._on_source_nodes_about_to_be_linked),
+                (source_model.nodesLinked, self._on_source_nodes_linked),
+                (source_model.nodesAboutToBeUnlinked, self._on_source_nodes_about_to_be_unlinked),
+                (source_model.nodesUnlinked, self._on_source_nodes_unlinked)
+            ]
+            for signal, slot in self._model_connections:
+                signal.connect(slot)
 
         self._source_model = source_model
         self._resetModel()
 
     def _resetModel(self):
         assert self._source_model
+        self.beginResetModel()
         self._links.clear()
         for row, link in enumerate(self._source_model.links()):
             self._links.insert(row, link)
-        self.modelReset.emit()
+        self.endResetModel()
 
     def _on_source_nodes_about_to_be_linked(self, links:list[tuple[str,str,str]]):
         first = len(self._links)
@@ -234,7 +282,7 @@ class PyLinkProxyModel(QAbstractItemModel):
         rows = set([idx.row() for idx in indexes])
         ranges = list(group_consecutive_numbers(sorted(rows)))
         for r in reversed(ranges):
-            self.rowsAboutToBeRemoved.emit(QModelIndex(), r.start, r.stop)
+            self.rowsAboutToBeRemoved.emit(QModelIndex(), r.start, r.stop-1)
 
     def _on_source_nodes_unlinked(self, links:list[tuple[str,str,str]]):
         indexes = [self.mapFromSource(link) for link in links]
@@ -243,7 +291,7 @@ class PyLinkProxyModel(QAbstractItemModel):
         for range_group in reversed(ranges):
             for row in reversed(range_group):
                 del self._links[row]
-            self.rowsRemoved.emit(QModelIndex(), range_group.start, range_group.stop)
+            self.rowsRemoved.emit(QModelIndex(), range_group.start, range_group.stop-1)
 
     # Proxy functions
     def mapFromSource(self, link:tuple[str,str,str])->QModelIndex:
@@ -302,7 +350,8 @@ class PyLinkProxyModel(QAbstractItemModel):
 
     def headerData(self, section: int, orientation: Qt.Orientation, role:int=Qt.ItemDataRole.DisplayRole) -> Any:
         if orientation == Qt.Orientation.Horizontal:
-            return ['source', 'target', 'inlet'][section]
+            if role == Qt.ItemDataRole.DisplayRole:
+                return ['source', 'target', 'inlet'][section]
         return super().headerData(section, orientation, role)
 
     def data(self, index:QModelIndex|QPersistentModelIndex, role:int=Qt.ItemDataRole.DisplayRole)->Any:
@@ -336,7 +385,7 @@ class PyLinkProxyModel(QAbstractItemModel):
         return None
 
 
-class PyParameterProxyModel(QAbstractItemModel):
+class PyProxyParameterModel(QAbstractItemModel):
     def __init__(self, source_model:PyDataModel, parent:QObject|None=None):
         super().__init__(parent=parent)
         self._source_model:PyDataModel|None=None
@@ -370,9 +419,10 @@ class PyParameterProxyModel(QAbstractItemModel):
         self._resetModel()
 
     def _resetModel(self):
+        self.modelAboutToBeReset.emit()
         self.modelReset.emit()
 
-    def setNode(self, node:str):
+    def setNode(self, node:str|None):
         self.modelAboutToBeReset.emit()
         self._node = node
         self.modelReset.emit()
@@ -407,7 +457,8 @@ class PyParameterProxyModel(QAbstractItemModel):
 
     def headerData(self, section: int, orientation: Qt.Orientation, role:int=Qt.ItemDataRole.DisplayRole) -> Any:
         if orientation == Qt.Orientation.Horizontal:
-            return ["name", "value"][section]
+            if role == Qt.ItemDataRole.DisplayRole:
+                return ["name", "value"][section]
         return super().headerData(section, orientation, role)
 
     def data(self, index:QModelIndex|QPersistentModelIndex, role:int=Qt.ItemDataRole.DisplayRole):
@@ -435,3 +486,6 @@ class PyParameterProxyModel(QAbstractItemModel):
             return QModelIndex()
         parameter_item = self._source_model.parameterItem(self._node, row)
         return self.createIndex(row, column, parameter_item)
+
+    def parent(self, index:QModelIndex)->QModelIndex:
+        return QModelIndex()

@@ -54,7 +54,7 @@ class TestNodeCRUD(unittest.TestCase):
         self.assertNotIn(node_widget, self.view.nodeWidgets())
 
 
-class TestNodeCRUD(unittest.TestCase):
+class TestEdgeCRUD(unittest.TestCase):
     def setUp(self) -> None:
         self.nodes = MyNodesModel()
         self.edges = StandardEdgesModel(nodes=self.nodes)

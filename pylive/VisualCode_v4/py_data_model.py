@@ -48,9 +48,7 @@ class PyDataModel(QObject):
     nodesAboutToBeRemoved = Signal(list) # list of node names
     nodesRemoved = Signal(list) # list of node names
 
-    nameChanged = Signal(str)
     sourceChanged = Signal(str)
-    fieldsChanged = Signal(str)
 
     statusChanged = Signal(str)
     errorChanged = Signal(str)
@@ -125,6 +123,7 @@ class PyDataModel(QObject):
     def compileNode(self, node:str)->bool:
         node_item = self._nodes[node]
         new_parameters:list[PyParameterItem]|None = None
+
         try:
             from pylive.utils.evaluate_python import parse_python_function
             func = parse_python_function(node_item.source)
@@ -144,15 +143,22 @@ class PyDataModel(QObject):
             sig = inspect.signature(func)
 
             new_parameters = []
-            for name, param in sig.parameters.items():
+            for idx, param in enumerate(sig.parameters.values()):
+                # find stored field value
+                value = Empty # default parameter value
+                for parameter in node_item.parameters:
+                    if parameter.name==param.name:
+                        value = parameter.value
+                
                 param_item = PyParameterItem(
-                    name=name, 
+                    name=param.name, 
                     default=param.default,
                     annotation=param.annotation, 
                     kind=param.kind,
-                    value=Empty
+                    value=value
                 )
                 new_parameters.append(param_item)
+
             new_error = None
             new_result = None
 
@@ -202,7 +208,10 @@ class PyDataModel(QObject):
     def parameterItem(self, node:str, index:int)->PyParameterItem:
         return self._nodes[node].parameters[index]
 
-    def parameterValue(self, node:str, index:int, value:object|None|Empty)->object|None|Empty:
+    def parameterName(self, node:str, index:int)->object|None|Empty:
+        return self._nodes[node].parameters[index].name
+
+    def parameterValue(self, node:str, index:int)->object|None|Empty:
         return self._nodes[node].parameters[index].value
 
     def nodeStatus(self, node)->Literal['initalized', 'compiled', 'evaluated', 'error']:
@@ -230,13 +239,14 @@ class PyDataModel(QObject):
         data = yaml.load(text, Loader=yaml.SafeLoader)
 
         self.modelAboutToBeReset.emit()
+        ### reset underlzing data
+        self._nodes = OrderedDict()
+        self._links = set()
+
         ### create node items
         self.blockSignals(True)
-        self._node_index_by_name = dict() # keep node name as references for the edge relations
+        # self._node_index_by_name = dict() # keep node name as references for the edge relations
         for node_data in data['nodes']:
-            if node_data['kind']!='UniqueFunction':
-                raise NotImplementedError("for now, only 'UniqueFunction's are supported!")
-
             fields:dict = node_data.get('fields') or dict()
             parameters = []
             for name, value in fields.items():
@@ -244,7 +254,7 @@ class PyDataModel(QObject):
                     name=name, 
                     default=Empty,
                     annotation=Empty,
-                    kind='POSITIONAL_OR_KEYWORD',
+                    kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
                     value=value
                 )
                 parameters.append(parameter_item)
