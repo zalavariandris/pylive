@@ -3,6 +3,10 @@ from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
+import logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
 from bidict import bidict
 from pylive.utils import group_consecutive_numbers
 
@@ -19,6 +23,7 @@ class PyProxyNodeModel(QAbstractItemModel):
         self.setSourceModel(source_model)
 
     def setSourceModel(self, source_model:PyDataModel):
+        logger.debug(f"PyProxyNodeModel->setSourceModel {source_model}")
         if self._source_model:
             self._source_model.modelAboutToBeReset.disconnect(self.modelAboutToBeReset.emit)
             self._source_model.modelReset.disconnect(self._resetModel)
@@ -41,28 +46,32 @@ class PyProxyNodeModel(QAbstractItemModel):
             source_model.errorChanged.connect(self._on_error_changed)
             source_model.resultChanged.connect(self._on_result_changed)
 
-            
         self._source_model = source_model
         self._resetModel()
 
 
     def _on_source_changed(self, node:str):
+        logger.debug(f"PyProxyNodeModel->_on_source_changed {node}")
         index = self.mapFromSource(node).siblingAtColumn(self._headers.index('source'))
         self.dataChanged.emit(index, index, [])
 
     def _on_parameters_reset(self, node:str):
+        logger.debug(f"PyProxyNodeModel->_on_parameters_reset {node}")
         index = self.mapFromSource(node).siblingAtColumn(self._headers.index('parameters'))
         self.dataChanged.emit(index, index, [])
 
     def _on_status_changed(self, node:str):
+        logger.debug(f"PyProxyNodeModel->_on_status_changed {node}")
         index = self.mapFromSource(node).siblingAtColumn(self._headers.index('status'))
         self.dataChanged.emit(index, index, [])
 
     def _on_error_changed(self, node:str):
+        logger.debug(f"PyProxyNodeModel->_on_error_changed {node}")
         index = self.mapFromSource(node).siblingAtColumn(self._headers.index('error'))
         self.dataChanged.emit(index, index, [])
 
     def _on_result_changed(self, node:str):
+        logger.debug(f"PyProxyNodeModel->_on_result_changed {node}")
         index = self.mapFromSource(node).siblingAtColumn(self._headers.index('result'))
         self.dataChanged.emit(index, index, [])
 
@@ -77,11 +86,13 @@ class PyProxyNodeModel(QAbstractItemModel):
         self.endResetModel()
 
     def _on_source_nodes_about_to_be_added(self, nodes:list[str]):
+        logger.debug(f"PyProxyNodeModel->_on_source_nodes_about_to_be_added {nodes}")
         first = len(self._nodes)
         last = first+len(nodes)-1
         self.rowsAboutToBeInserted.emit(QModelIndex(), first, last)
 
     def _on_source_nodes_added(self, nodes:list[str]):
+        logger.debug(f"PyProxyNodeModel->_on_source_nodes_added {nodes}")
         first = len(self._nodes)
         last = first+len(nodes)-1
         for row, node in enumerate(nodes, start=first):
@@ -89,6 +100,7 @@ class PyProxyNodeModel(QAbstractItemModel):
         self.rowsInserted.emit(QModelIndex(), first, last)
 
     def _on_source_nodes_about_to_be_removed(self, nodes:list[str]):
+        logger.debug(f"PyProxyNodeModel->_on_source_nodes_about_to_be_removed {nodes}")
         indexes = [self.mapFromSource(node) for node in nodes]
         rows = set([idx.row() for idx in indexes])
         ranges = list(group_consecutive_numbers(sorted(rows)))
@@ -96,6 +108,7 @@ class PyProxyNodeModel(QAbstractItemModel):
             self.rowsAboutToBeRemoved.emit(QModelIndex(), r.start, r.stop-1)
 
     def _on_source_nodes_removed(self, nodes:list[str]):
+        logger.debug(f"PyProxyNodeModel->_on_source_nodes_removed {nodes}")
         indexes = [self.mapFromSource(node) for node in nodes]
         rows = set([idx.row() for idx in indexes])
         ranges = list(group_consecutive_numbers(sorted(rows)))
@@ -107,7 +120,9 @@ class PyProxyNodeModel(QAbstractItemModel):
     # Proxy functions
     def mapFromSource(self, node:str)->QModelIndex:
         row = self._nodes.index(node)
-        return self.index(row, 0)
+        index = self.index(row, 0)
+        assert index.isValid()
+        return index
 
     def mapToSource(self, proxy:QModelIndex|QPersistentModelIndex)->str:
         if not proxy.isValid():
@@ -148,7 +163,9 @@ class PyProxyNodeModel(QAbstractItemModel):
         if not self._source_model:
             return QModelIndex()
         node = self._nodes[row]
-        return self.createIndex(row, column, node) # consider storing the index of the node
+        index = self.createIndex(row, column, node) # consider storing the index of the node
+        assert index.isValid()
+        return index
 
     def parent(self, index:QModelIndex)->QModelIndex:
         return QModelIndex()
@@ -172,8 +189,8 @@ class PyProxyNodeModel(QAbstractItemModel):
             return None
 
         node_name = self.mapToSource(index)
-
         if role == GraphDataRole.NodeInletsRole:
+            # Todo: consider using map or comprehension
             parameter_names = []
             for i in range(self._source_model.parameterCount(node_name)):
                 param_name = self._source_model.parameterName(node_name, i)
@@ -183,19 +200,21 @@ class PyProxyNodeModel(QAbstractItemModel):
         if role == GraphDataRole.NodeOutletsRole:
             return ['out']
 
-        match index.column():
-            case 0: # name
+        column_name = self._headers[index.column()]
+
+        match column_name:
+            case 'name':
                 if role == Qt.ItemDataRole.DisplayRole:
                     return node_name.replace("_", " ").title()
 
                 elif role == Qt.ItemDataRole.EditRole:
                     return node_name
 
-            case 1: # source
+            case 'source':
                 if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
                     return self._source_model.nodeSource(node_name)
 
-            case 2: # parameters
+            case 'parameters':
                 if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
                     parameter_names = []
                     for i in range(self._source_model.parameterCount(node_name)):
@@ -203,17 +222,19 @@ class PyProxyNodeModel(QAbstractItemModel):
                         parameter_names.append(name)
                     return ",".join( parameter_names )
 
-            case 3: # status
+            case 'status':
                 if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
                     return self._source_model.nodeStatus(node_name)
 
-            case 4: # error
+            case 'error':
                 if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
                     return f"{self._source_model.nodeError(node_name)}"
 
-            case 5: # result
+            case 'result':
                 if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
                     return f"{self._source_model.nodeResult(node_name)}"
+            case _:
+                raise ValueError(f"column {index.column()} is not in headers: {self._headers}")
 
         return None
 
@@ -229,10 +250,13 @@ class PyProxyLinkModel(QAbstractItemModel):
         self._model_connections = []
         self.setSourceModel(source_model)
 
+        self._headers = ['source', 'target', 'inlet']
+
     def itemsModel(self)->PyProxyNodeModel|None:
         return self._items_model
 
     def setSourceModel(self, source_model:PyDataModel|None):
+        logger.debug(f"PyProxyLinkModel->setSourceModel {source_model}")
         if self._source_model:
             for signal, slot in self._model_connections:
                 signal.disconnect(slot)
@@ -258,6 +282,7 @@ class PyProxyLinkModel(QAbstractItemModel):
         self._resetModel()
 
     def _resetModel(self):
+        logger.debug(f"PyProxyLinkModel->resetModel")
         assert self._source_model
         self.beginResetModel()
         self._links.clear()
@@ -266,11 +291,13 @@ class PyProxyLinkModel(QAbstractItemModel):
         self.endResetModel()
 
     def _on_source_nodes_about_to_be_linked(self, links:list[tuple[str,str,str]]):
+        logger.debug(f"PyProxyLinkModel->_on_source_nodes_about_to_be_linked: {links}")
         first = len(self._links)
         last = first+len(links)-1
         self.rowsAboutToBeInserted.emit(QModelIndex(), first, last)
 
     def _on_source_nodes_linked(self, links:list[tuple[str,str,str]]):
+        logger.debug(f"PyProxyLinkModel->_on_source_nodes_linked: {links}")
         first = len(self._links)
         last = first+len(links)-1
         for row, link in enumerate(links, start=first):
@@ -278,6 +305,7 @@ class PyProxyLinkModel(QAbstractItemModel):
         self.rowsInserted.emit(QModelIndex(), first, last)
 
     def _on_source_nodes_about_to_be_unlinked(self, links:list[tuple[str,str,str]]):
+        logger.debug(f"PyProxyLinkModel->_on_source_nodes_about_to_be_unlinked: {links}")
         indexes = [self.mapFromSource(link) for link in links]
         rows = set([idx.row() for idx in indexes])
         ranges = list(group_consecutive_numbers(sorted(rows)))
@@ -285,6 +313,7 @@ class PyProxyLinkModel(QAbstractItemModel):
             self.rowsAboutToBeRemoved.emit(QModelIndex(), r.start, r.stop-1)
 
     def _on_source_nodes_unlinked(self, links:list[tuple[str,str,str]]):
+        logger.debug(f"PyProxyLinkModel->_on_source_nodes_unlinked: {links}")
         indexes = [self.mapFromSource(link) for link in links]
         rows = set([idx.row() for idx in indexes])
         ranges = list(group_consecutive_numbers(sorted(rows)))
@@ -335,7 +364,9 @@ class PyProxyLinkModel(QAbstractItemModel):
         if not self._source_model:
             return QModelIndex()
         link = self._links[row]
-        return self.createIndex(row, column, link) # consider storing the index of the node
+        index = self.createIndex(row, column, link) # consider storing the index of the node
+        assert index.isValid()
+        return index
 
     def parent(self, index:QModelIndex)->QModelIndex:
         return QModelIndex()
@@ -346,12 +377,12 @@ class PyProxyLinkModel(QAbstractItemModel):
         return len(self._links)
 
     def columnCount(self, parent:QModelIndex|QPersistentModelIndex=QModelIndex())->int:
-        return 3
+        return len(self._headers)
 
     def headerData(self, section: int, orientation: Qt.Orientation, role:int=Qt.ItemDataRole.DisplayRole) -> Any:
         if orientation == Qt.Orientation.Horizontal:
             if role == Qt.ItemDataRole.DisplayRole:
-                return ['source', 'target', 'inlet'][section]
+                return self._headers[section]
         return super().headerData(section, orientation, role)
 
     def data(self, index:QModelIndex|QPersistentModelIndex, role:int=Qt.ItemDataRole.DisplayRole)->Any:
@@ -369,18 +400,22 @@ class PyProxyLinkModel(QAbstractItemModel):
         if role == GraphDataRole.LinkTargetRole:
             return self._items_model.mapFromSource(target), inlet
 
-        match index.column():
-            case 0:
+        column_name = self._headers[index.column()]
+        match column_name:
+            case 'source':
                 if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
                     return source
 
-            case 1:
+            case 'target':
                 if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
                     return target
 
-            case 2:
+            case 'inlet':
                 if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
                     return inlet
+
+            case _:
+                raise ValueError("bad column name")
 
         return None
 
@@ -390,10 +425,12 @@ class PyProxyParameterModel(QAbstractItemModel):
         super().__init__(parent=parent)
         self._source_model:PyDataModel|None=None
         self._node:str|None = None
+        self._headers = ["name", "value"]
 
         self.setSourceModel(source_model)
 
     def setSourceModel(self, source_model:PyDataModel):
+        logger.debug(f'PyProxyParameterModel->setSourceModel {source_model}')
         if self._source_model:
             self._source_model.modelAboutToBeReset.disconnect(self.modelAboutToBeReset.emit)
             self._source_model.modelReset.disconnect(self._resetModel)
@@ -419,31 +456,38 @@ class PyProxyParameterModel(QAbstractItemModel):
         self._resetModel()
 
     def _resetModel(self):
+        logger.debug("PyProxyParameterModel->resetModel")
         self.modelAboutToBeReset.emit()
         self.modelReset.emit()
 
     def setNode(self, node:str|None):
+        logger.debug(f"setNode {node}")
         self.modelAboutToBeReset.emit()
         self._node = node
         self.modelReset.emit()
 
     def _on_parameters_about_to_be_inserted(self, node:str, start:int, end:int):
+        logger.debug(f"PyProxyParameterModel->_on_parameters_about_to_be_inserted {node}, {start}-{end}")
         if self._node and self._node==node:
             self.rowsAboutToBeInserted.emit(QModelIndex(), start, end)
 
     def _on_parameters_inserted(self, node:str, first:int, last:int):
+        logger.debug(f"PyProxyParameterModel->_on_parameters_inserted {node}, {first}-{last}")
         if self._node and self._node==node:
             self.rowsInserted.emit(QModelIndex(), first, last)
 
     def _on_parameters_about_to_be_removed(self, node:str, first:int, last:int):
+        logger.debug(f"PyProxyParameterModel->_on_parameters_about_to_be_removed {node}, {first}-{last}")
         if self._node and self._node==node:
             self.rowsAboutToBeRemoved.emit(QModelIndex(), first, last)
 
     def _on_parameters_removed(self, node:str, first:int, last:int):
+        logger.debug(f"PyProxyParameterModel->_on_parameters_removed {node}, {first}-{last}")
         if self._node and self._node==node:
             self.rowsRemoved.emit(QModelIndex(), first, last)
 
     def _on_parameters_changed(self, node:str, first:int, last:int):
+        logger.debug(f"PyProxyParameterModel->_on_parameters_changed {node}, {first}-{last}")
         if self._node and self._node==node:
             self.dataChanged.emit(QModelIndex(), self.index(first, 0), self.index(last, 1))
 
@@ -453,12 +497,12 @@ class PyProxyParameterModel(QAbstractItemModel):
         return self._source_model.parameterCount(self._node)
 
     def columnCount(self, parent:QModelIndex|QPersistentModelIndex=QModelIndex())->int:
-        return 2
+        return len(self._headers)
 
     def headerData(self, section: int, orientation: Qt.Orientation, role:int=Qt.ItemDataRole.DisplayRole) -> Any:
         if orientation == Qt.Orientation.Horizontal:
             if role == Qt.ItemDataRole.DisplayRole:
-                return ["name", "value"][section]
+                return self._headers[section]
         return super().headerData(section, orientation, role)
 
     def data(self, index:QModelIndex|QPersistentModelIndex, role:int=Qt.ItemDataRole.DisplayRole):
@@ -466,12 +510,13 @@ class PyProxyParameterModel(QAbstractItemModel):
             return None
 
         parameter = self._source_model.parameterItem(self._node, index.row())
-        match index.column():
-            case 0:
+        column_name = self._headers[index.column()]
+        match column_name:
+            case 'name':
                 if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
                     return parameter.name
 
-            case 1:
+            case 'value':
                 if role in (Qt.ItemDataRole.DisplayRole, ):
                     if parameter.value is Empty:
                         return "-Empty-"

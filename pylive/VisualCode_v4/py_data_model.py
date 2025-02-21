@@ -5,6 +5,9 @@ from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
+import logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 from pathlib import Path
 
@@ -27,17 +30,14 @@ class PyParameterItem:
 
 @dataclass
 class PyNodeItem:
-    source:str="def func():\n    ..."
+    source:str="def func(x:int):\n    ..."
     parameters: list[PyParameterItem] = field(default_factory=list)
     status:Literal['initalized', 'compiled', 'evaluated', 'error']='initalized'
     error:Exception|None=None
     result:object|None=None
     _func:Callable|None=None # cache compiled function
 
-
-
 from collections import OrderedDict, defaultdict
-
 
 class PyDataModel(QObject):
     modelAboutToBeReset = Signal()
@@ -86,6 +86,7 @@ class PyDataModel(QObject):
         return node
 
     def addNode(self, name:str, node_item:PyNodeItem):
+
         if name in self._nodes:
             raise ValueError("nodes must have a unique name")
         self.nodesAboutToBeAdded.emit([name])
@@ -93,6 +94,7 @@ class PyDataModel(QObject):
         self.nodesAdded.emit([name])
 
     def removeNode(self, name:str):
+        logger.debug(f"removeNode: {name}")
         self.nodesAboutToBeRemoved.emit([name])
         del self._nodes[name]
         self.nodesRemoved.emit([name])
@@ -101,6 +103,13 @@ class PyDataModel(QObject):
         return len(self._links)
 
     def linkNodes(self, source:str, target:str, inlet:str):
+        logger.debug(f"PyDataModel->linkNodes {source}, {target}, {inlet}")
+        if source not in self._nodes.keys():
+            raise ValueError(f"graph has no node named: '{source}'")
+        if target not in self._nodes.keys():
+            raise ValueError(f"graph has no node named: '{target}'")
+        if inlet not in map(lambda item:item.name, self._nodes[target].parameters):
+            raise ValueError(f"node '{target}' has no parameter named: {inlet}!")
         self.nodesAboutToBeLinked.emit( [(source, target, inlet)] )
         self._links.add( (source, target, inlet) )
         self.nodesLinked.emit([(source, target, inlet)])
@@ -114,12 +123,15 @@ class PyDataModel(QObject):
         return self._nodes[name].source
 
     def setNodeSource(self, node:str, value:str):
+
         if self._nodes[node].source != value:
+            logger.debug(f"setNodeSource: {node}, {value}")
             self._nodes[node].source = value
             self.sourceChanged.emit(node)
 
     def compileNodes(self, nodes:Iterable[str]):
         def _compile_node(node):
+            logger.debug(f"_compile_node: {node}")
             node_item = self._nodes[node]
             new_parameters:list[PyParameterItem]|None = None
 
@@ -182,36 +194,40 @@ class PyDataModel(QObject):
         for node in nodes:
             _compile_node(node)
 
-
     def parameterCount(self, node)->int:
         if not self._nodes:
             return 0
         return len(self._nodes[node].parameters)
 
     def setParameters(self, node:str, parameters:list[PyParameterItem]):
+        logger.debug(f"setParameters: {node}, {parameters}")
         self.parametersAboutToBeReset.emit(node)
         self._nodes[node].parameters = parameters
         self.parametersReset.emit(node)
 
     def insertParameter(self, node:str, index:int, parameter:PyParameterItem)->bool:
+        logger.debug(f"insertParameter: {node}, {index}, {parameter}")
         self.parametersAboutToBeInserted.emit(node, index, index)
         self._nodes[node].parameters.insert(index, parameter)
         self.parametersInserted.emit(node, index, index)
         return True
 
     def removeParameter(self, node:str, index:int):
+        logger.debug(f"removeParameter: {node}, {index}")
         self.parametersAboutToBeRemoved.emit(node, index, index)
         del self._nodes[node].parameters[index]
         self.parametersRemoved.emit(node, index, index)
 
     def setParameterValue(self, node:str, index:int, value:object|None|Empty):
-        self._nodes[node].parameters[index].value = value
-        self.patametersChanged.emit(node, index, index)
+        logger.debug(f"setParameterValue: {node}, {index}, {value}")
+        if self._nodes[node].parameters[index].value != value:
+            self._nodes[node].parameters[index].value = value
+            self.patametersChanged.emit(node, index, index)
 
     def parameterItem(self, node:str, index:int)->PyParameterItem:
         return self._nodes[node].parameters[index]
 
-    def parameterName(self, node:str, index:int)->object|None|Empty:
+    def parameterName(self, node:str, index:int)->str:
         return self._nodes[node].parameters[index].name
 
     def parameterValue(self, node:str, index:int)->object|None|Empty:

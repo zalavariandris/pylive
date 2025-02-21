@@ -1,14 +1,3 @@
-from PySide6.QtWidgets import QApplication
-def getWidgetByName(name:str):
-    app = QApplication.instance()
-    if not app:
-        raise Exception("No QApplication instance!")
-
-    # find widget
-    for widget in QApplication.allWidgets():
-        if widget.objectName() == name:
-            return widget
-    return None
 
 
 
@@ -21,9 +10,6 @@ def prettify_json(json_file:Path|str):
         indent=4
     )
     json_file.write_text(pretty)
-
-
-
 
 
 from typing import *
@@ -56,3 +42,4 @@ def _group_consecutive_numbers_readable(numbers:list[int])->Iterable[range]:
 
 
 group_consecutive_numbers = _group_consecutive_numbers_readable
+

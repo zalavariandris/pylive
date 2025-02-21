@@ -59,7 +59,7 @@ from PySide6.QtGui import *
 from PySide6.QtCore import *
 from OpenGL.GL import *  # PyOpenGL bindings
 from PySide6.QtOpenGL import *
-def draw_triangle_with_qopengl(parent, size=1.0):
+def draw_triangle_with_opengl(parent, size=1.0):
     ### init ###
 
     # Initialize shader program

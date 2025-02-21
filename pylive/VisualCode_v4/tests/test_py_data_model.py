@@ -69,8 +69,19 @@ class TestModelCRUD(unittest.TestCase):
 	def test_create_node(self):
 		...
 
-	def test_delete_node(self):
-		...
+	def test_attempt_linking_to_unexisting_nodes_and_inlets(self):
+		data_model = PyDataModel()
+		data_model.deserialize(math_script)
+
+		with self.assertRaises(ValueError):
+			data_model.linkNodes("NOTHING", "mult", "x")
+
+		with self.assertRaises(ValueError):
+			data_model.linkNodes("two", "NOTHING", "x")
+
+		with self.assertRaises(ValueError):
+			data_model.linkNodes("two", "mult", "NOTHING")
+
 
 	def test_create_link(self):
 		...

@@ -53,3 +53,14 @@ def logModelSignals(model:QAbstractItemModel, prefix:str=""):
     model.rowsInserted.connect(lambda *args: print(f"{prefix}, rowsInserted {args}"))
     model.rowsMoved.connect(lambda *args: print(f"{prefix}, rowsMoved {args}"))
     model.rowsRemoved.connect(lambda *args: print(f"{prefix}, rowsRemoved {args}"))
+
+def getWidgetByName(name:str):
+    app = QApplication.instance()
+    if not app:
+        raise Exception("No QApplication instance!")
+
+    # find widget
+    for widget in QApplication.allWidgets():
+        if widget.objectName() == name:
+            return widget
+    return None
