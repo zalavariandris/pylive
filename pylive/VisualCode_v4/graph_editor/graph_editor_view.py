@@ -419,17 +419,17 @@ class _GraphEditorView(QGraphicsView):
             self._node_in_links[target_node_widget].append(edge_widget)
 
 
-            # try:
-            source_widget = self.outletWidget(source_node_index, outlet)
-            # except KeyError:
-            #     logger.debug(f"no outlet widget for {source_node_index}.{outlet}, link to node")
-            #     source_widget = target_node_widget
+            try:
+                source_widget = self.outletWidget(source_node_index, outlet)
+            except KeyError:
+                logger.debug(f"no outlet widget for {source_node_index}.{outlet}, link to node")
+                source_widget = target_node_widget
 
-            # try:
-            target_widget = self.inletWidget(target_node_index, inlet)
-            # except KeyError:
-            #     logger.debug(f"no inlet widget for  {target_node_index}.{inlet}, link to node")
-            #     target_widget = target_node_widget
+            try:
+                target_widget = self.inletWidget(target_node_index, inlet)
+            except KeyError:
+                logger.debug(f"no inlet widget for  {target_node_index}.{inlet}, link to node")
+                target_widget = target_node_widget
 
 
             self._delegate.updateEdgePosition(edge_widget, source_widget, target_widget)
