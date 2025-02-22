@@ -59,6 +59,8 @@ import logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
+from textwrap import dedent
+
 class NodeItem:
     def widget(self):
         ...
@@ -395,6 +397,8 @@ class _GraphEditorView(QGraphicsView):
         logger.debug(f"_addEdges {rows}")
         assert self._edges, f"bad self._edges, got{self._edges}"
         assert self._delegate
+        rows = list(rows)
+        assert all(row>=0 for row in rows)
         for row in sorted(rows):
             edge_index = self._edges.index(row, 0)
             assert edge_index.isValid()
@@ -407,8 +411,8 @@ class _GraphEditorView(QGraphicsView):
             #UPDATE LINKS POSITION
             source_node_index, outlet = self._edges.data(edge_index, GraphDataRole.LinkSourceRole)
             target_node_index, inlet = self._edges.data(edge_index, GraphDataRole.LinkTargetRole)
-            assert source_node_index.isValid()
-            assert target_node_index.isValid()
+            assert source_node_index.isValid(), f"got: {source_node_index}"
+            assert target_node_index.isValid(), f"got: {target_node_index}"
 
             source_node_widget = self.nodeWidget(source_node_index)
             target_node_widget = self.nodeWidget(target_node_index)
@@ -1186,8 +1190,93 @@ class _GraphDragAndDropMixin(_GraphEditorView):
         event.accept()
 
 
+class _InternalDragMixin(_GraphEditorView):
+    def __init__(self, parent: QWidget | None = None):
+        super().__init__(parent)
+        self._drag_mode:Literal[None, 'inlet', 'outlet'] = None
+        self._drag_source:tuple[QPersistentModelIndex, str]|None = None
+        self._draft_link:QGraphicsItem|None = None
+
+    def mousePressEvent(self, event: QMouseEvent) -> None:
+        for item in self.items(event.position().toPoint()):
+            if item in self._outlet_widgets.values():
+                assert self._delegate
+                self._drag_mode = 'outlet'
+                self._drag_source = self._outlet_widgets.inverse[item]
+                print(f"outlet press: {self._drag_source}")
+                self._draft_link = self._delegate.createEdgeWidget(QModelIndex())
+                self.scene().addItem(self._draft_link)
+                return
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:
+        if self._drag_mode == 'outlet':
+            assert self._draft_link
+            assert self._drag_source
+            assert self._delegate
+            drag_source_outlet = self.outletWidget(self._drag_source[0], self._drag_source[1])
+            scene_pos = self.mapToScene(event.position().toPoint())
+
+
+            inlet_id = self.inletIndexAt(event.position().toPoint())
+            if inlet_id:
+                node_index, inlet = inlet_id
+                inlet_widget = self.inletWidget(node_index, inlet)
+                
+                self._delegate.updateEdgePosition(self._draft_link, drag_source_outlet, inlet_widget)
+                return
+
+            self._delegate.updateEdgePosition(self._draft_link, drag_source_outlet, scene_pos)
+            return
+
+        super().mouseMoveEvent(event)
+        return
+
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
+        if self._drag_mode == 'outlet':
+            assert self._draft_link
+            assert self._drag_source
+            drop_target = self.inletIndexAt(event.position().toPoint())
+            if drop_target:
+                
+                
+                # source_inlet = self._drag_source
+                self._drag_source
+                
+                print(dedent(f"""
+                    drag source: {self._drag_source[0].row()}, {self._drag_source[1]}, 
+                    drop target:, {drop_target[0].row()}, {drop_target[1]}"""
+                ))
+                link_data = (
+                    self._drag_source[0].row(), 
+                    drop_target[0].row(),
+                    self._drag_source[1], 
+                    drop_target[1]
+                )
+                self.nodesLinked.emit(
+                    self._drag_source[0].row(), 
+                    drop_target[0].row(), 
+                    self._drag_source[1], 
+                    drop_target[1]
+                    )
+                print("link data:", link_data)
+                
+
+            
+            self.scene().removeItem(self._draft_link)
+            self._drag_mode = None
+            self._drag_source = None
+            self._draft_link = None
+
+            return
+
+        super().mouseReleaseEvent(event)
+
+
+
 class GraphEditorView(
-    _GraphDragAndDropMixin,
+    # _GraphDragAndDropMixin,
+    _InternalDragMixin,
     _GraphSelectionMixin, 
     _GraphLayoutMixin,
      _GraphEditorView
@@ -1267,17 +1356,20 @@ def main():
             nodes.removeRows(index.row(), 1)
 
     def create_link(source_node_row:int, target_node_row:int, outlet:str, inlet:str):
+        # source_node_index = edges.index(source_node_row, 0)
+        # target_node_index = edges.index(target_node_row, 0)
 
-        source_node_index = edges.index(source_node_row, 0)
-        target_node_index = edges.index(target_node_row, 0)
+        print(f"""create_link: {source_node_row} {target_node_row} {outlet} {inlet}
 
-
+            """)
+        source_node_index = nodes.index(source_node_row, 0)
+        target_node_index = nodes.index(target_node_row, 0)
         edge_item = QStandardItem()
         outlet_id = QPersistentModelIndex(source_node_index), outlet
         inlet_id = QPersistentModelIndex(target_node_index), inlet
         edge_item.setData("edge", Qt.ItemDataRole.DisplayRole)
-        edge_item.setData(inlet_id, GraphDataRole.LinkTargetRole)
         edge_item.setData(outlet_id, GraphDataRole.LinkSourceRole)
+        edge_item.setData(inlet_id, GraphDataRole.LinkTargetRole)
         edges.insertRow(edges.rowCount(), edge_item)
 
     def connect_selected_nodes():
