@@ -717,7 +717,7 @@ class _GraphDragAndDropMixin(_GraphEditorView):
 
     def outletPressEvent(self, outlet_id: tuple[QPersistentModelIndex, str], event: QMouseEvent) -> bool:
         node_index, outlet_name = outlet_id
-        # self.startDragOutlet(node_index.row(), outlet_name)
+        self.startDragOutlet(node_index.row(), outlet_name)
         return True
 
     def inletPressEvent(self, inlet_id: tuple[QPersistentModelIndex, str], event: QMouseEvent) -> bool:
@@ -1190,85 +1190,85 @@ class _GraphDragAndDropMixin(_GraphEditorView):
         event.accept()
 
 
+from dataclasses import dataclass
+
+@dataclass
+class InternalDragController:
+    mode: Literal['inlet', 'outlet', 'edge_source', 'edge_target']
+    source_widget: QGraphicsItem
+    draft: QGraphicsItem
+
+
 class _InternalDragMixin(_GraphEditorView):
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
-        self._drag_mode:Literal[None, 'inlet', 'outlet'] = None
-        self._drag_source:tuple[QPersistentModelIndex, str]|None = None
-        self._draft_link:QGraphicsItem|None = None
+        self._drag_controller:InternalDragController|None = None
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
+        assert self._delegate
         for item in self.items(event.position().toPoint()):
             if item in self._outlet_widgets.values():
-                assert self._delegate
-                self._drag_mode = 'outlet'
-                self._drag_source = self._outlet_widgets.inverse[item]
-                print(f"outlet press: {self._drag_source}")
-                self._draft_link = self._delegate.createEdgeWidget(QModelIndex())
-                self.scene().addItem(self._draft_link)
+                
+                self._drag_controller = InternalDragController(
+                    mode='outlet',
+                    source_widget= item,
+                    draft= self._delegate.createEdgeWidget(QModelIndex())
+                )
+                self.scene().addItem(self._drag_controller.draft)
                 return
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
-        if self._drag_mode == 'outlet':
-            assert self._draft_link
-            assert self._drag_source
-            assert self._delegate
-            drag_source_outlet = self.outletWidget(self._drag_source[0], self._drag_source[1])
-            scene_pos = self.mapToScene(event.position().toPoint())
+        assert self._delegate
+        if self._drag_controller:
+            match self._drag_controller.mode:
+                case 'outlet':
+                    if inlet_id := self.inletIndexAt(event.position().toPoint()):
+                        node_index, inlet = inlet_id
+                        drop_widget = self.inletWidget(node_index, inlet)
+                        self._delegate.updateEdgePosition(
+                            self._drag_controller.draft,
+                            self._drag_controller.source_widget, 
+                            drop_widget
+                        )
+                        return
+                    else:
+                        self._delegate.updateEdgePosition(
+                            self._drag_controller.draft,
+                            self._drag_controller.source_widget, 
+                            self.mapToScene(event.position().toPoint())
+                        )
+                        return
+                case  _:
+                     ...
 
-
-            inlet_id = self.inletIndexAt(event.position().toPoint())
-            if inlet_id:
-                node_index, inlet = inlet_id
-                inlet_widget = self.inletWidget(node_index, inlet)
-                
-                self._delegate.updateEdgePosition(self._draft_link, drag_source_outlet, inlet_widget)
-                return
-
-            self._delegate.updateEdgePosition(self._draft_link, drag_source_outlet, scene_pos)
-            return
 
         super().mouseMoveEvent(event)
         return
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
-        if self._drag_mode == 'outlet':
-            assert self._draft_link
-            assert self._drag_source
-            drop_target = self.inletIndexAt(event.position().toPoint())
-            if drop_target:
-                
-                
-                # source_inlet = self._drag_source
-                self._drag_source
-                
-                print(dedent(f"""
-                    drag source: {self._drag_source[0].row()}, {self._drag_source[1]}, 
-                    drop target:, {drop_target[0].row()}, {drop_target[1]}"""
-                ))
-                link_data = (
-                    self._drag_source[0].row(), 
-                    drop_target[0].row(),
-                    self._drag_source[1], 
-                    drop_target[1]
-                )
-                self.nodesLinked.emit(
-                    self._drag_source[0].row(), 
-                    drop_target[0].row(), 
-                    self._drag_source[1], 
-                    drop_target[1]
-                    )
-                print("link data:", link_data)
-                
+        assert self._delegate
+        if self._drag_controller:
+            match self._drag_controller.mode:
+                case 'outlet':
+                    if inlet_id := self.inletIndexAt(event.position().toPoint()):
+                        source_node_index, source_outlet = self._outlet_widgets.inverse[self._drag_controller.source_widget]
+                        drop_node_index, drop_inlet = inlet_id
+                        self.nodesLinked.emit(
+                            source_node_index.row(),
+                            drop_node_index.row(),
+                            source_outlet,
+                            drop_inlet
+                            )
 
-            
-            self.scene().removeItem(self._draft_link)
-            self._drag_mode = None
-            self._drag_source = None
-            self._draft_link = None
+                    else:
+                        #cancel connection
+                        ...
+                case _:
+                    ...
 
-            return
+            self.scene().removeItem(self._drag_controller.draft)
+            self._drag_controller = None
 
         super().mouseReleaseEvent(event)
 
@@ -1387,7 +1387,7 @@ def main():
 
             source_node_index = nodes.index(source_node_row, 0)
             assert source_node_index.isValid(), "invalid source node"
-            create_link(source_node_index, target_node_index, "out", inlets[0])
+            create_link(source_node_index.row(), target_node_index.row(), "out", inlets[0])
 
     def delete_selected_edges():
         indexes:list[QModelIndex] = edge_selection.selectedRows(column=0)
