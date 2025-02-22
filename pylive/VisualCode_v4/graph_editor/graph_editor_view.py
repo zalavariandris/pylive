@@ -39,6 +39,7 @@
 # - consider adding editors for column cell inside the node,
 #   as if a node would be a row in a table, but in a different _view_
 
+import traceback
 from pylive.utils.debug import log_caller
 from typing import *
 from PySide6.QtGui import *
@@ -90,13 +91,12 @@ class _GraphEditorView(QGraphicsView):
     InletsRole = Qt.ItemDataRole.UserRole+3
     OutletsRole = Qt.ItemDataRole.UserRole+4
 
-    nodesLinked = Signal(QModelIndex, QModelIndex, str, str)
+    nodesLinked = Signal(int, int, str, str)
 
     def __init__(self, parent:QWidget|None=None):
         super().__init__(parent=parent)
         self._nodes: QAbstractItemModel | None = None
         self._edges: QAbstractItemModel | None = None
-        self._node_selection:QItemSelectionModel|None = None
         self._delegate: StandardGraphDelegate|None=None
         self._node_model_connections = []
         self._edge_model_connections = []
@@ -111,8 +111,6 @@ class _GraphEditorView(QGraphicsView):
 
         self._node_in_links:defaultdict[QGraphicsItem, list[QGraphicsItem]] = defaultdict(list) # Notes: store attached links, because the underlzing model has to find the relevant edges  and thats is O(n)
         self._node_out_links:defaultdict[QGraphicsItem, list[QGraphicsItem]] = defaultdict(list) # Notes: store attached links, because the underlzing model has to find the relevant edges  and thats is O(n)
-
-        self._draft_link: QGraphicsItem | None = None
 
         self.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
         self.setCacheMode(QGraphicsView.CacheModeFlag.CacheNone)
@@ -559,7 +557,11 @@ class _GraphEditorView(QGraphicsView):
 
 
 class _GraphSelectionMixin(_GraphEditorView):
-        ### Node SELECTION
+    ### Node SELECTION
+    def __init__(self, parent: QWidget | None = None):
+        super().__init__(parent)
+        self._node_selection:QItemSelectionModel|None = None
+        
     def setSelectionModel(self, node_selection:QItemSelectionModel):
         # assert id(node_selection.model()) != id(self._nodes), f"trying to set selection model, that works on a different model\n  {node_selection.model()}\n  !=\n  {self._nodes}"
 
@@ -634,6 +636,7 @@ class _GraphSelectionMixin(_GraphEditorView):
 class _GraphLayoutMixin(_GraphEditorView):
     ### Layout
     def layoutNodes(self, orientation=Qt.Orientation.Vertical, scale=100):
+        logger.debug('layoutNodes')
         assert self._edges, f"bad _edges, got: {self._edges}"
         assert self._nodes
         from pylive.utils.graph import hiearchical_layout_with_nx
@@ -662,6 +665,7 @@ class _GraphLayoutMixin(_GraphEditorView):
 class _GraphDragAndDropMixin(_GraphEditorView):
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
+        self._draft_link: QGraphicsItem | None = None
         self._drag_started = True
         self._drag_valid = False
         self._current_drag_type = None
@@ -796,7 +800,7 @@ class _GraphDragAndDropMixin(_GraphEditorView):
 
         # cleanup
         self._cleanupDraftLink()
-        logger.debug(f"end startDragOutlet")
+        logger.debug(f"startDragOutlet ended: {action}")
 
     def startDragInlet(self, node_row:int, inlet_name:str):
         logger.debug(f"startDragInlet")
@@ -824,7 +828,7 @@ class _GraphDragAndDropMixin(_GraphEditorView):
         # finally:
         # Always cleanup
         self._cleanupDraftLink()
-        logger.debug(f"end startDragInlet")
+        logger.debug(f"startDragInlet ended: {action}")
 
     def startDragEdgeSource(self, edge_index:QModelIndex|QPersistentModelIndex):
         logger.debug(f"startDragEdgeSource")
@@ -920,13 +924,18 @@ class _GraphDragAndDropMixin(_GraphEditorView):
         match self._current_drag_type:
             case 'outlet':
                 self.dragMoveOutletEvent(event)
+                event.accept()
             case 'inlet':
                 self.dragMoveInletEvent(event)
+                event.accept()
             case 'edge_source':
                 self.dragMoveEdgeSourceEvent(event)
+                event.accept()
             case 'edge_target':
                 self.dragMoveEdgeTargetEvent(event)
+                event.accept()
             case _:
+                print(f"bad current_drag_type, {self._current_drag_type}")
                 raise ValueError(f"bad drag type: {self._current_drag_type}")
 
     def dragMoveOutletEvent(self, event:QDragMoveEvent):
@@ -954,26 +963,31 @@ class _GraphDragAndDropMixin(_GraphEditorView):
 
     def dragMoveInletEvent(self, event:QDragMoveEvent):
         logger.debug(f"dragMoveInletEvent")
-        assert self._nodes
-        assert self._draft_link
-        assert self._delegate
-        source = event.mimeData().data('application/inlet').toStdString().split("/")
-        source_row, source_outlet = int(source[0]), source[1]
-        source_node_index = self._nodes.index(source_row, 0)
-        source_inlet_widget = self.inletWidget(source_node_index, source_outlet)
+        try:
+            assert self._nodes, "self._nodes does not exist"
+            assert self._draft_link, "self._draft_link does not exist"
+            assert self._delegate, "self._delegate does not exist"
+            source = event.mimeData().data('application/inlet').toStdString().split("/")
+            print(source)
+            source_row, source_outlet = int(source[0]), source[1]
+            source_node_index = self._nodes.index(source_row, 0)
+            source_inlet_widget = self.inletWidget(source_node_index, source_outlet)
 
-        assert isinstance(source_row, int)
-        assert source_node_index.isValid()
-        assert source_inlet_widget
+            assert isinstance(source_row, int), "source_row must be an int"
+            assert source_node_index.isValid(), "source_node_index is not valid"
+            assert source_inlet_widget, "source_inlet_widget is None"
 
-        target_node_index, outlet = self.outletIndexAt(event.position().toPoint()) or (None, None)
-        target_outlet_widget = self.outletWidget(target_node_index, outlet) if (target_node_index and outlet) else None
+            target_node_index, outlet = self.outletIndexAt(event.position().toPoint()) or (None, None)
+            target_outlet_widget = self.outletWidget(target_node_index, outlet) if (target_node_index and outlet) else None
 
-        if source_inlet_widget and target_outlet_widget:
-            self._delegate.updateEdgePosition(self._draft_link, target_outlet_widget, source_inlet_widget)
-        elif source_inlet_widget:
-            scene_pos = self.mapToScene(event.position().toPoint())
-            self._delegate.updateEdgePosition(self._draft_link, scene_pos, source_inlet_widget)
+            if source_inlet_widget and target_outlet_widget:
+                self._delegate.updateEdgePosition(self._draft_link, target_outlet_widget, source_inlet_widget)
+
+            if source_inlet_widget:
+                scene_pos = self.mapToScene(event.position().toPoint())
+                self._delegate.updateEdgePosition(self._draft_link, scene_pos, source_inlet_widget)
+        except Exception as err:
+            traceback.print_exc()
 
     def dragMoveEdgeTargetEvent(self, event:QDragMoveEvent):
         logger.debug(f"dragMoveEdgeTargetEvent")
@@ -1070,8 +1084,8 @@ class _GraphDragAndDropMixin(_GraphEditorView):
                 assert self._edges, "self._edges is None"
                 target_node_index, inlet_name = target_inlet_id
                 self.nodesLinked.emit(
-                    source_node_index, 
-                    target_node_index,
+                    source_node_index.row(), 
+                    target_node_index.row(),
                     "out",
                     inlet_name
                 )
@@ -1084,20 +1098,20 @@ class _GraphDragAndDropMixin(_GraphEditorView):
             assert self._nodes, f"bad self._nodes, got{self._nodes}"
             # parse mime data
             source_data = event.mimeData().data('application/inlet').toStdString().split("/")
-            source_row, source_inlet_name = int(source_data[0]), source_data[1]
-            source_node_index = self._nodes.index(source_row, 0)
+            source_row, new_source_inlet_name = int(source_data[0]), source_data[1]
+            new_source_node_index = self._nodes.index(source_row, 0)
 
-            source_inlet_id = source_node_index, source_inlet_name
+            new_source_inlet_id = new_source_node_index, new_source_inlet_name
             target_outlet_id = self.outletIndexAt(event.position().toPoint())
 
-            if source_inlet_id and target_outlet_id:
+            if new_source_inlet_id and target_outlet_id:
                 # new edge
                 target_node_index, outlet_name = target_outlet_id
                 self.nodesLinked.emit(
-                    target_node_index,
-                    source_node_index, 
+                    target_node_index.row(),
+                    new_source_node_index.row(), 
                     outlet_name,
-                    source_inlet_name
+                    new_source_inlet_name
                 )
                 event.acceptProposedAction()
             else:
@@ -1122,8 +1136,8 @@ class _GraphDragAndDropMixin(_GraphEditorView):
                 self._edges.removeRow(edge_row)
                 # create
                 self.nodesLinked.emit(
-                    edge_source_node_index,
-                    inlet_id_at_mouse[0],
+                    edge_source_node_index.row(),
+                    inlet_id_at_mouse[0].row(),
                     outlet,
                     inlet_id_at_mouse[1]
                 )
@@ -1149,8 +1163,8 @@ class _GraphDragAndDropMixin(_GraphEditorView):
                 self._edges.removeRow(edge_row)
                 # create
                 self.nodesLinked.emit(
-                    new_source_node_index,
-                    edge_target_node_index,
+                    new_source_node_index.row(),
+                    edge_target_node_index.row(),
                     new_outlet,
                     inlet
                 )
@@ -1175,7 +1189,7 @@ class _GraphDragAndDropMixin(_GraphEditorView):
 class GraphEditorView(
     _GraphDragAndDropMixin,
     _GraphSelectionMixin, 
-    # _GraphLayoutMixin,
+    _GraphLayoutMixin,
      _GraphEditorView
     ):
     ...
@@ -1206,7 +1220,7 @@ def main():
     graph_view = GraphEditorView()
     graph_view.setWindowTitle("NXNetworkScene")
     graph_view.setModel(nodes, edges)
-    # graph_view.setSelectionModel(node_selection)
+    graph_view.setSelectionModel(node_selection)
     graph_view.centerNodes()
 
     ### ACTIONS
@@ -1252,7 +1266,12 @@ def main():
         for index in reversed(indexes):
             nodes.removeRows(index.row(), 1)
 
-    def create_link(source_node_index:QModelIndex, target_node_index:QModelIndex, outlet:str, inlet:str):
+    def create_link(source_node_row:int, target_node_row:int, outlet:str, inlet:str):
+
+        source_node_index = edges.index(source_node_row, 0)
+        target_node_index = edges.index(target_node_row, 0)
+
+
         edge_item = QStandardItem()
         outlet_id = QPersistentModelIndex(source_node_index), outlet
         inlet_id = QPersistentModelIndex(target_node_index), inlet
@@ -1289,7 +1308,7 @@ def main():
         (delete_node_action.pressed, delete_selected_nodes),
         (connect_selected_nodes_action.pressed, connect_selected_nodes),
         (remove_edge_action.pressed, delete_selected_edges),
-        # (layout_action.pressed, graph_view.layoutNodes),
+        (layout_action.pressed, graph_view.layoutNodes),
         (graph_view.nodesLinked, create_link)
     ]
     for signal, slot in view_connections:

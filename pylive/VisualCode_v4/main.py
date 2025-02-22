@@ -194,12 +194,12 @@ class Window(QWidget):
         self.graph_view_connections = [
             (
                 self.graph_view.nodesLinked, 
-                lambda source, target, outlet, inlet: 
+                lambda source_row, target_row, outlet, inlet: 
                     self.graph_model.linkNodes(
-                        self.node_proxy_model.mapToSource(source), 
-                        self.node_proxy_model.mapToSource(target), 
+                        self.node_proxy_model.mapToSource(self.node_proxy_model.index(source_row, 0)), 
+                        self.node_proxy_model.mapToSource(self.node_proxy_model.index(target_row, 0)), 
                         inlet)
-                )
+            )
         ]
         for signal, slot in self.graph_view_connections:
             signal.connect(slot)
@@ -339,7 +339,6 @@ class Window(QWidget):
     def setIsModified(self, m:bool):
         self._is_modified = m
 
-    @Slot(str)
     def openFile(self, filepath:str|None=None)->bool:
         ### close current file
         if not self.closeFile():
@@ -371,7 +370,6 @@ class Window(QWidget):
             traceback.print_exc()
             return False
 
-    @Slot()
     def closeFile(self)->bool:
         """return False, if the user cancelled, otherwise true"""
         if self._is_modified:
@@ -385,11 +383,9 @@ class Window(QWidget):
                     return False
         return True
 
-    @Slot()
     def saveFile(self):
         ...
 
-    @Slot()
     def create_new_node(self, scenepos:QPointF=QPointF()):
         from pylive.utils.unique import make_unique_name
         existing_names = list(self.graph_model.nodes())
@@ -402,7 +398,6 @@ class Window(QWidget):
         if node_graphics_item := self.graph_view.nodeWidget(node_index):
             node_graphics_item.setPos(scenepos-node_graphics_item.boundingRect().center())
 
-    @Slot()
     def compile_selected_node(self):
         if not self.node_selection_model:
             return
@@ -410,14 +405,12 @@ class Window(QWidget):
         nodes = map(self.node_proxy_model.mapToSource, self.node_selection_model.selectedIndexes())
         self.graph_model.compileNodes(nodes)
 
-    @Slot()
     def delete_selected_nodes(self):
         indexes:list[QModelIndex] = self.node_selection_model.selectedRows(column=0)
         for index in sorted(indexes, key=lambda idx:idx.row(), reverse=True):
             node = self.node_proxy_model.mapToSource(index)
             self.graph_model.removeNode(node)
 
-    @Slot()
     def delete_selected_edges(self):
         indexes:list[QModelIndex] = self.links_table_view.selectedIndexes()
 
@@ -426,8 +419,24 @@ class Window(QWidget):
             source, target, inlet = self.link_proxy_model.mapToSource(self.link_proxy_model.index(row, 0))
             self.graph_model.unlinkNodes(source, target, inlet)
 
-    @Slot()
     def connect_selected_nodes(self):
+        selected_nodes = set(map(self.node_proxy_model.mapToSource, self.node_selection_model.selectedIndexes()))
+        print(selected_nodes)
+        if len(selected_nodes)<2:
+            return
+
+        target_node_index = self.node_selection_model.currentIndex().siblingAtColumn(0)
+        assert target_node_index.isValid(), "invalid target node"
+        target_node = self.node_proxy_model.mapToSource(target_node_index)
+        
+        for source_node in selected_nodes:
+            if source_node != target_node:
+                print("connect", source_node, target_node)
+                if self.graph_model.parameterCount(target_node)>0:
+                    inlet = self.graph_model.parameterName(target_node, 0)
+                    self.graph_model.linkNodes(source_node, target_node, inlet)
+
+    def connect_nodes(self, source:str, target:str, inlet:str):
         selected_nodes = set(map(self.node_proxy_model.mapToSource, self.node_selection_model.selectedIndexes()))
         print(selected_nodes)
         if len(selected_nodes)<2:
@@ -467,3 +476,4 @@ if __name__ == "__main__":
     window.setGeometry(QRect(QPoint(), app.primaryScreen().size()).adjusted(40,80,-30,-100))
     window.show()
     sys.exit(app.exec())
+# 

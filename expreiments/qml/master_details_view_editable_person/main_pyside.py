@@ -73,7 +73,6 @@ class PersonModel(QAbstractListModel):
 
         return None
 
-    @Slot(str, int, str, str)
     def add_person(self, name, age, occupation, description):
         self.beginInsertRows(QModelIndex(), self.rowCount(), self.rowCount())
         self._persons.append(Person(name, age, occupation, description))

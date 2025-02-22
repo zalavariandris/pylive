@@ -58,6 +58,8 @@ class StandardGraphDelegate(QObject):
         source:QGraphicsItem|QPointF, 
         target:QGraphicsItem|QPointF
     ):
+        print("update edge position")
+        assert isinstance(edge_editor, RoundedLinkShape)
         edge_widget = cast(RoundedLinkShape, edge_editor)
         edge_widget.move(source, target)
 

@@ -247,24 +247,20 @@ class PythonGraphWindow(QWidget):
         dagscene.connected.connect(self.onConnect)
         dagscene.disconnected.connect(self.onDisconnect)
 
-    @Slot()
     def parseGraphToScript(self):
         script = parse_graph_to_script(self._graphmodel.G)
         self.result_script_edit.setPlainText(script)
 
-    @Slot()
     def evaluateGraph(self):
         result = self._graphmodel()
         print("graphEvaluated:", result)
 
-    @Slot(object)
     def createOperator(self, fn: Callable):
         unique_node_id = make_unique_name(
             f"{fn.__name__ }1", self._graphmodel.nodes()
         )
         self._graphmodel.addNode(unique_node_id, fn)
 
-    @Slot(EdgeWidget)
     def onConnect(self, edge: EdgeWidget):
         assert isinstance(edge, EdgeWidget)
         print("onConnect", edge)
@@ -279,7 +275,6 @@ class PythonGraphWindow(QWidget):
         print(f"connected: {source_operator} -> {target_operator}.{paramname}")
         self._graphmodel.addEdge(source_operator, target_operator, paramname)
 
-    @Slot(EdgeWidget)
     def onDisconnect(self, edge: EdgeWidget):
         """called when pins are disconnected by the widget,
         right before the edge is destroyed"""
@@ -296,7 +291,6 @@ class PythonGraphWindow(QWidget):
             source_operator, target_operator, paramname
         )
 
-    @Slot(list)
     def handleNodesAdded(self, nodes: List[Hashable]):
         print("nodes added")
         for n in nodes:
@@ -305,7 +299,6 @@ class PythonGraphWindow(QWidget):
             self._operator_to_widget[n] = widget
             self._widget_to_operator[widget] = n
 
-    @Slot(list)
     def handleNodesRemoved(self, nodes: List[Hashable]):
         for n in nodes:
             widget = self._operator_to_widget[n]
@@ -313,7 +306,6 @@ class PythonGraphWindow(QWidget):
             del self._operator_to_widget[n]
             del self._widget_to_operator[widget]
 
-    @Slot(dict)
     def handleNodesPropertiesChanged(
         self, change: dict[Hashable, dict[str, object | None]]
     ):
@@ -344,7 +336,6 @@ class PythonGraphWindow(QWidget):
                     case "_exception":
                         node_widget.addBadge(value)
 
-    @Slot(list)
     def handleEdgesAdded(self, edges: List[Tuple[Hashable, Hashable, str]]):
         print("edges added", edges)
         for u, v, k in edges:
@@ -357,7 +348,6 @@ class PythonGraphWindow(QWidget):
             self._edge_to_widget[(u, v, k)] = edge_widget
             self._widget_to_edge[edge_widget] = (u, v, k)
 
-    @Slot(list)
     def handleEdgesRemoved(self, edges: List[Tuple[Hashable, Hashable, str]]):
         print("edges removed", edges)
         for u, v, k in edges:
@@ -367,13 +357,11 @@ class PythonGraphWindow(QWidget):
             del self._edge_to_widget[(u, v, k)]
             del self._widget_to_edge[edge_widget]
 
-    @Slot(dict)
     def handleEdgesPropertiesChanged(
         self, change: dict[Hashable, dict[str, object | None]]
     ):
         print("edges changed:", change)
 
-    @Slot(set, set)
     def handleSelectionChanged(
         self, selected: set[Hashable], deselected: set[Hashable]
     ):

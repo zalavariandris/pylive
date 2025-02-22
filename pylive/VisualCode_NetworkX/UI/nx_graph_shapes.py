@@ -439,6 +439,7 @@ class RoundedLinkShape(InteractiveShape, BaseLinkItem):
                         line.setP2(target)
 
                 self.setPath(makeVerticalRoundedPath(line))
+                
             case Qt.Orientation.Horizontal:
                 match source:
                     case QGraphicsItem():

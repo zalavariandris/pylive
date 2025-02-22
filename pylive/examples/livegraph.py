@@ -126,7 +126,6 @@ class LiveGraph(QWidget):
 			joined += f"\n#%% {node_name}\n" + str(node_script) + "\n"
 		self.composed_script_widget.setPlainText(joined)
 
-	@Slot()
 	def createNode(self):
 		node = self.scriptgraph.addNode("<new node>", 0,0, "#the script")
 		self.scriptgraph.addInlet(node, "prev")
