@@ -427,6 +427,8 @@ class RoundedLinkShape(InteractiveShape, BaseLinkItem):
                         ))
                     case QPointF():
                         line.setP1(source)
+                    case _:
+                        raise ValueError()
 
                 match target:
                     case QGraphicsItem():
@@ -437,6 +439,8 @@ class RoundedLinkShape(InteractiveShape, BaseLinkItem):
                         ))
                     case QPointF():
                         line.setP2(target)
+                    case _:
+                        raise ValueError()
 
                 self.setPath(makeVerticalRoundedPath(line))
                 
@@ -450,6 +454,8 @@ class RoundedLinkShape(InteractiveShape, BaseLinkItem):
                         ))
                     case QPointF():
                         line.setP1(source)
+                    case _:
+                        raise ValueError()
 
                 match target:
                     case QGraphicsItem():
@@ -460,6 +466,8 @@ class RoundedLinkShape(InteractiveShape, BaseLinkItem):
                         ))
                     case QPointF():
                         line.setP2(target)
+                    case _:
+                        raise ValueError()
 
                 self.setPath(makeHorizontalRoundedPath(line))
 

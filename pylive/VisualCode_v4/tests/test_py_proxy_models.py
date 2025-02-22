@@ -131,7 +131,7 @@ class TestNodesCRUD(unittest.TestCase):
 			def hello(name:str='You'):
 				...
 		""")))
-		data_model.compileNode('hello1')
+		data_model.compileNodes(['hello1'])
 
 		proxy_model = PyProxyNodeModel(data_model)
 		node_status_index = proxy_model.index(0,3)
@@ -177,7 +177,7 @@ class TestLinksCRUD(unittest.TestCase):
 	def test_read_links(self) -> None:
 		data_model = PyDataModel()
 		data_model.addNode("node1", PyNodeItem())
-		data_model.addNode("node2", PyNodeItem())
+		data_model.addNode("node2", PyNodeItem(parameters=[PyParameterItem('in')]))
 		data_model.linkNodes("node1", "node2", "in")
 
 		edges = PyProxyLinkModel(data_model)
@@ -195,7 +195,7 @@ class TestLinksCRUD(unittest.TestCase):
 		proxy_model = PyProxyLinkModel(data_model)
 		
 		data_model.addNode("node1", PyNodeItem())
-		data_model.addNode("node2", PyNodeItem())
+		data_model.addNode("node2", PyNodeItem(parameters=[PyParameterItem('in')]))
 		data_model.linkNodes("node1", "node2", "in")
 
 		self.assertEqual(proxy_model.rowCount(), 1)
@@ -206,7 +206,7 @@ class TestLinksCRUD(unittest.TestCase):
 	def test_delete_link(self) -> None:
 		data_model = PyDataModel()
 		data_model.addNode("node1", PyNodeItem())
-		data_model.addNode("node2", PyNodeItem())
+		data_model.addNode("node2", PyNodeItem(parameters=[PyParameterItem('in')]))
 		data_model.linkNodes("node1", "node2", "in")
 
 		proxy_model = PyProxyLinkModel(data_model)
@@ -240,7 +240,7 @@ class TestProxyLinkSignals(unittest.TestCase):
 	def test_delete_link(self) -> None:
 		data_model = PyDataModel()
 		data_model.addNode("node1", PyNodeItem())
-		data_model.addNode("node2", PyNodeItem())
+		data_model.addNode("node2", PyNodeItem(parameters=[PyParameterItem('in')]))
 		data_model.linkNodes("node1", "node2", "in")
 
 		proxy_model = PyProxyLinkModel(data_model)
@@ -279,7 +279,7 @@ class TestParametersCRUD(unittest.TestCase):
 		proxy = PyProxyParameterModel(data_model)
 		proxy.setNode("hello")
 
-		data_model.compileNode("hello")
+		data_model.compileNodes(["hello"])
 		self.assertEqual(proxy.rowCount(), 1)
 
 		self.assertEqual(proxy.data(proxy.index(0,0), Qt.ItemDataRole.DisplayRole), "name")

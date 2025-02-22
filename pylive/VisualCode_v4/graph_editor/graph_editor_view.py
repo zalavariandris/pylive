@@ -93,7 +93,7 @@ class _GraphEditorView(QGraphicsView):
     InletsRole = Qt.ItemDataRole.UserRole+3
     OutletsRole = Qt.ItemDataRole.UserRole+4
 
-    nodesLinked = Signal(int, int, str, str)
+    nodesLinked = Signal(QModelIndex, QModelIndex, str, str)
 
     def __init__(self, parent:QWidget|None=None):
         super().__init__(parent=parent)
@@ -201,7 +201,7 @@ class _GraphEditorView(QGraphicsView):
     def _onEdgesInserted(self, parent:QModelIndex, first:int, last:int):
         assert self._edges, "self._edges is None"
         logger.debug(f"_onEdgesInserted {first}-{last}")
-        self._addEdges(range(first, last+1))
+        self._addEdges(  [_ for _ in range(first, last+1)]  )
 
     def _onEdgesAboutToBeRemoved(self, parent:QModelIndex, first:int, last:int):
         logger.debug(f"_onEdgesAboutToBeRemoved {first}-{last}")
@@ -1088,8 +1088,8 @@ class _GraphDragAndDropMixin(_GraphEditorView):
                 assert self._edges, "self._edges is None"
                 target_node_index, inlet_name = target_inlet_id
                 self.nodesLinked.emit(
-                    source_node_index.row(), 
-                    target_node_index.row(),
+                    source_node_index, 
+                    target_node_index,
                     "out",
                     inlet_name
                 )
@@ -1112,8 +1112,8 @@ class _GraphDragAndDropMixin(_GraphEditorView):
                 # new edge
                 target_node_index, outlet_name = target_outlet_id
                 self.nodesLinked.emit(
-                    target_node_index.row(),
-                    new_source_node_index.row(), 
+                    target_node_index,
+                    new_source_node_index,
                     outlet_name,
                     new_source_inlet_name
                 )
@@ -1140,8 +1140,8 @@ class _GraphDragAndDropMixin(_GraphEditorView):
                 self._edges.removeRow(edge_row)
                 # create
                 self.nodesLinked.emit(
-                    edge_source_node_index.row(),
-                    inlet_id_at_mouse[0].row(),
+                    edge_source_node_index,
+                    inlet_id_at_mouse[0],
                     outlet,
                     inlet_id_at_mouse[1]
                 )
@@ -1167,8 +1167,8 @@ class _GraphDragAndDropMixin(_GraphEditorView):
                 self._edges.removeRow(edge_row)
                 # create
                 self.nodesLinked.emit(
-                    new_source_node_index.row(),
-                    edge_target_node_index.row(),
+                    new_source_node_index,
+                    edge_target_node_index,
                     new_outlet,
                     inlet
                 )
@@ -1208,11 +1208,11 @@ class _InternalDragMixin(_GraphEditorView):
         assert self._delegate
         for item in self.items(event.position().toPoint()):
             if item in self._outlet_widgets.values():
-                
+                draft_link_item = self._delegate.createEdgeWidget(QModelIndex())
                 self._drag_controller = InternalDragController(
                     mode='outlet',
                     source_widget= item,
-                    draft= self._delegate.createEdgeWidget(QModelIndex())
+                    draft=draft_link_item
                 )
                 self.scene().addItem(self._drag_controller.draft)
                 return
@@ -1226,6 +1226,11 @@ class _InternalDragMixin(_GraphEditorView):
                     if inlet_id := self.inletIndexAt(event.position().toPoint()):
                         node_index, inlet = inlet_id
                         drop_widget = self.inletWidget(node_index, inlet)
+
+                        # self._drag_controller.draft.move(
+                        #     self._drag_controller.source_widget, 
+                        #     drop_widget
+                        # )
                         self._delegate.updateEdgePosition(
                             self._drag_controller.draft,
                             self._drag_controller.source_widget, 
@@ -1233,6 +1238,10 @@ class _InternalDragMixin(_GraphEditorView):
                         )
                         return
                     else:
+                        # self._drag_controller.draft.move(
+                        #     self._drag_controller.source_widget, 
+                        #     self.mapToScene(event.position().toPoint())
+                        # )
                         self._delegate.updateEdgePosition(
                             self._drag_controller.draft,
                             self._drag_controller.source_widget, 
@@ -1242,9 +1251,8 @@ class _InternalDragMixin(_GraphEditorView):
                 case  _:
                      ...
 
-
-        super().mouseMoveEvent(event)
-        return
+        else:
+            super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
         assert self._delegate
@@ -1255,11 +1263,11 @@ class _InternalDragMixin(_GraphEditorView):
                         source_node_index, source_outlet = self._outlet_widgets.inverse[self._drag_controller.source_widget]
                         drop_node_index, drop_inlet = inlet_id
                         self.nodesLinked.emit(
-                            source_node_index.row(),
-                            drop_node_index.row(),
+                            source_node_index,
+                            drop_node_index,
                             source_outlet,
                             drop_inlet
-                            )
+                        )
 
                     else:
                         #cancel connection
@@ -1269,8 +1277,8 @@ class _InternalDragMixin(_GraphEditorView):
 
             self.scene().removeItem(self._drag_controller.draft)
             self._drag_controller = None
-
-        super().mouseReleaseEvent(event)
+        else:
+            super().mouseReleaseEvent(event)
 
 
 
@@ -1355,15 +1363,13 @@ def main():
         for index in reversed(indexes):
             nodes.removeRows(index.row(), 1)
 
-    def create_link(source_node_row:int, target_node_row:int, outlet:str, inlet:str):
+    def create_link(source_node_index:QModelIndex, target_node_index:QModelIndex, outlet:str, inlet:str):
         # source_node_index = edges.index(source_node_row, 0)
         # target_node_index = edges.index(target_node_row, 0)
 
-        print(f"""create_link: {source_node_row} {target_node_row} {outlet} {inlet}
+        print(f"""create_link: {source_node_index} {target_node_index} {outlet} {inlet}
 
             """)
-        source_node_index = nodes.index(source_node_row, 0)
-        target_node_index = nodes.index(target_node_row, 0)
         edge_item = QStandardItem()
         outlet_id = QPersistentModelIndex(source_node_index), outlet
         inlet_id = QPersistentModelIndex(target_node_index), inlet

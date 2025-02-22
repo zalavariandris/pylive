@@ -49,7 +49,6 @@ class PyProxyNodeModel(QAbstractItemModel):
         self._source_model = source_model
         self._resetModel()
 
-
     def _on_source_changed(self, node:str):
         logger.debug(f"PyProxyNodeModel->_on_source_changed {node}")
         index = self.mapFromSource(node).siblingAtColumn(self._headers.index('source'))
@@ -457,8 +456,10 @@ class PyProxyParameterModel(QAbstractItemModel):
 
     def _resetModel(self):
         logger.debug("PyProxyParameterModel->resetModel")
-        self.modelAboutToBeReset.emit()
-        self.modelReset.emit()
+        self.beginResetModel()
+        self.endResetModel()
+        # self.modelAboutToBeReset.emit()
+        # self.modelReset.emit()
 
     def setNode(self, node:str|None):
         logger.debug(f"setNode {node}")

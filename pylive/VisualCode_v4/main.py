@@ -181,7 +181,7 @@ class Window(QWidget):
         
         self.links_table_view = QTableView()
         # self.links_table_view.horizontalHeader().setVisible(True)
-        # self.links_table_view.verticalHeader().setVisible(False)
+        # self.links_table_view.verticalHeader().setVisible(False)s
         self.links_table_view.setModel(self.link_proxy_model)
         
 
@@ -193,12 +193,8 @@ class Window(QWidget):
 
         self.graph_view_connections = [
             (
-                self.graph_view.nodesLinked, 
-                lambda source_row, target_row, outlet, inlet: 
-                    self.graph_model.linkNodes(
-                        self.node_proxy_model.mapToSource(self.node_proxy_model.index(source_row, 0)), 
-                        self.node_proxy_model.mapToSource(self.node_proxy_model.index(target_row, 0)), 
-                        inlet)
+                self.graph_view.nodesLinked, lambda source, target, outlet, inlet: 
+                self.connect_nodes(self.node_proxy_model.mapToSource(source), self.node_proxy_model.mapToSource(target), inlet)
             )
         ]
         for signal, slot in self.graph_view_connections:
@@ -437,21 +433,7 @@ class Window(QWidget):
                     self.graph_model.linkNodes(source_node, target_node, inlet)
 
     def connect_nodes(self, source:str, target:str, inlet:str):
-        selected_nodes = set(map(self.node_proxy_model.mapToSource, self.node_selection_model.selectedIndexes()))
-        print(selected_nodes)
-        if len(selected_nodes)<2:
-            return
-
-        target_node_index = self.node_selection_model.currentIndex().siblingAtColumn(0)
-        assert target_node_index.isValid(), "invalid target node"
-        target_node = self.node_proxy_model.mapToSource(target_node_index)
-        
-        for source_node in selected_nodes:
-            if source_node != target_node:
-                print("connect", source_node, target_node)
-                if self.graph_model.parameterCount(target_node)>0:
-                    inlet = self.graph_model.parameterName(target_node, 0)
-                    self.graph_model.linkNodes(source_node, target_node, inlet)
+        self.graph_model.linkNodes(source, target, inlet)
 
     def eventFilter(self, watched, event):
         if watched == self.graph_view:
