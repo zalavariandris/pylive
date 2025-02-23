@@ -20,6 +20,11 @@ requires-python = ">=3.8"
 dependencies = [
     "watchfiles ~= 0.24.0",
     "PySide6",
+    "qtconsole == 5.6.1",
+    "qt-parameters",
+    "qt-material-icons",
+    
+
     "rope ~= 1.13.0",
     "pygments ~= 2.18.0",
     "IPython ~= 8.29.0",
@@ -30,7 +35,7 @@ dependencies = [
     "moderngl == 5.12.0",
     "pyglm == 2.7.3",
     "trimesh == 4.5.2",
-    "qtconsole == 5.6.1",
+    
     "Panda3D == 1.10.15",
     "networkx == 3.4.2",
     "colour-science",

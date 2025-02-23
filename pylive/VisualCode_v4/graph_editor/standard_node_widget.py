@@ -15,6 +15,9 @@ class StandardNodeWidget(QGraphicsWidget):
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges)
 
+        ### style
+        self._pen = None
+
         ### ports
         self._inlets:list[QGraphicsItem] = []
         self._outlets:list[QGraphicsItem] = []
@@ -26,6 +29,11 @@ class StandardNodeWidget(QGraphicsWidget):
         self._heading_label.setParentItem(self)
         self._heading_label.adjustSize()
         self.setGeometry(QRectF(0, 0, self._heading_label.textWidth(), 150))
+
+    def pen(self):
+        if self._pen:
+            return self._pen
+        return 
 
     def itemChange(self, change: QGraphicsItem.GraphicsItemChange, value: Any) -> Any:
         if change == QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:

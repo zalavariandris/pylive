@@ -95,7 +95,7 @@ class _GraphEditorView(QGraphicsView):
 
     nodesLinked = Signal(QModelIndex, QModelIndex, str, str)
 
-    def __init__(self, parent:QWidget|None=None):
+    def __init__(self, delegate=None, parent:QWidget|None=None):
         super().__init__(parent=parent)
         self._nodes: QAbstractItemModel | None = None
         self._edges: QAbstractItemModel | None = None
@@ -124,7 +124,7 @@ class _GraphEditorView(QGraphicsView):
         scene.setSceneRect(QRectF(-9999,-9999,9999*2, 9999*2))
         self.setScene(scene)
 
-        self.setDelegate(StandardGraphDelegate())
+        self.setDelegate(delegate or StandardGraphDelegate())
 
     def centerNodes(self):
         logger.debug("centerNodes")
@@ -564,8 +564,8 @@ class _GraphEditorView(QGraphicsView):
 
 class _GraphSelectionMixin(_GraphEditorView):
     ### Node SELECTION
-    def __init__(self, parent: QWidget | None = None):
-        super().__init__(parent)
+    def __init__(self, delegate=None, parent: QWidget | None = None):
+        super().__init__(delegate, parent)
         self._node_selection:QItemSelectionModel|None = None
         
     def setSelectionModel(self, node_selection:QItemSelectionModel):
@@ -673,8 +673,8 @@ class _GraphLayoutMixin(_GraphEditorView):
 
 
 class _GraphDragAndDropMixin(_GraphEditorView):
-    def __init__(self, parent: QWidget | None = None):
-        super().__init__(parent)
+    def __init__(self, delegate=None, parent: QWidget | None = None):
+        super().__init__(delegate, parent)
         self._draft_link: QGraphicsItem | None = None
         self._drag_started = True
         self._drag_valid = False
@@ -1206,8 +1206,8 @@ class InternalDragController:
 
 
 class _InternalDragMixin(_GraphEditorView):
-    def __init__(self, parent: QWidget | None = None):
-        super().__init__(parent)
+    def __init__(self, delegate=None, parent: QWidget | None = None):
+        super().__init__(delegate, parent)
         self._drag_controller:InternalDragController|None = None
 
     def mousePressEvent(self, event: QMouseEvent) -> None:

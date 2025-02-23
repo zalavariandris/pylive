@@ -18,14 +18,20 @@ class StandardGraphDelegate(QObject):
     the delegate must emit a nodePositionchanged Signal, when a node position changed
     updateLinkPosition will be called when a linked node position changed"""
 
-    ### NODE DELEGATE
     nodePositionChanged = Signal(QGraphicsItem)
+    ### NODE DELEGATE
     def createNodeWidget(self, parent:QGraphicsScene, index:QModelIndex)->QGraphicsItem:
         node_widget = StandardNodeWidget()
         node_widget.setHeading(f"{index.data(Qt.ItemDataRole.DisplayRole)}")
         node_widget.scenePositionChanged.connect(lambda node=node_widget: self.nodePositionChanged.emit(node))
         parent.addItem(node_widget)
         return node_widget
+
+    def updateNodeWidget(self, index:QModelIndex, node_widget:QGraphicsItem)->None:
+        node_widget = cast(StandardNodeWidget, node_widget)
+        node_widget.setHeading( index.data(Qt.ItemDataRole.DisplayRole) )
+        
+        index.data(Qt.ItemDataRole.ForegroundRole)
 
     def createInletWidget(self, parent:QGraphicsItem, node_index:QModelIndex, inlet:str, idx:int=-1)->QGraphicsItem:
         port_editor = StandardPortWidget(f"{inlet}")
@@ -36,14 +42,10 @@ class StandardGraphDelegate(QObject):
         port_editor = StandardPortWidget(f"{outlet}", parent)
         port_editor._nameitem.setPos(-24,0)
         # parent = cast(StandardNodeWidget, parent)
-        # if idx<0:
+        # if idx<0:`
         #     idx = len(parent._outlets)
         # parent.insertOutlet(idx, port_editor)
         return port_editor
-
-    def updateNodeWidget(self, index:QModelIndex, node_widget:QGraphicsItem)->None:
-        node_widget = cast(StandardNodeWidget, node_widget)
-        node_widget.setHeading( index.data(Qt.ItemDataRole.DisplayRole) )
 
     ### EDGE DELEGATE
     def createEdgeWidget(self, edge_idx:QModelIndex)->QGraphicsLineItem:

@@ -527,15 +527,37 @@ class PyProxyParameterModel(QAbstractItemModel):
                     return parameter.name
 
             case 'value':
-                if role in (Qt.ItemDataRole.DisplayRole, ):
-                    if parameter.value is Empty:
-                        return "-Empty-"
-                    else:
-                        return f"{parameter.value}"
+                match role:
+                    case Qt.ItemDataRole.DisplayRole:
+                        if parameter.value is Empty:
+                            return "-Empty-"
+                        else:
+                            return f"{parameter.value}"
 
+                    case Qt.ItemDataRole.EditRole:
+                        return parameter.value
+
+    def flags(self, index: QModelIndex | QPersistentModelIndex, /) -> Qt.ItemFlag:
+        flags = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
+        column_name = self._headers[index.column()]
+        match column_name:
+            case 'value':
+                flags |= Qt.ItemFlag.ItemIsEditable
+        return flags
+
+    def setData(self, index:QModelIndex|QPersistentModelIndex, value:Any, role:int=Qt.ItemDataRole.DisplayRole)->bool:
+        if not self._source_model or not self._node:
+            return False
+
+        parameter = self._source_model.parameterItem(self._node, index.row())
+        column_name = self._headers[index.column()]
+        match column_name:
+            case 'value':
                 if role == Qt.ItemDataRole.EditRole:
-                    return parameter.value
-
+                    self._source_model.setParameterValue(self._node, index.row(), value)
+                    return True
+        return False
+                    
     def index(self, row:int, column:int, parent:QModelIndex|QPersistentModelIndex=QModelIndex()):
         if not self._source_model or not self._node:
             return QModelIndex()

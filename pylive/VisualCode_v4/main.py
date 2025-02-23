@@ -22,6 +22,7 @@ from pylive.VisualCode_v4.py_proxy_model import PyProxyNodeModel, PyProxyLinkMod
 
 
 from pylive.VisualCode_v4.graph_editor.graph_editor_view import GraphEditorView
+from pylive.VisualCode_v4.py_graph_view_delegate import PyGraphViewDelegate
 from pylive.QtScriptEditor.script_edit import ScriptEdit
 import pylive.utils.qtfactory as qf
 
@@ -33,7 +34,7 @@ def log_call(fn, *args, **kwargs):
     return fn(*args, **kwargs)
 
 import pylive.utils.qtfactory as qf
-
+import qt_parameters
 
 class PyInspectorView(QFrame):
     def __init__(self, parent:QWidget|None=None):
@@ -66,12 +67,12 @@ class PyInspectorView(QFrame):
 
         self.name_label = QLabel()
 
-        self.parameter_editor = QTableView()
-        self.parameter_editor.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
-        self.parameter_editor.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        self.parameter_editor.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        self.parameter_editor.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-        self.parameter_editor.setSizeAdjustPolicy(QTableWidget.SizeAdjustPolicy.AdjustToContents)
+        self.parameter_table_editor = QTableView()  
+        self.parameter_table_editor.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        self.parameter_table_editor.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.parameter_table_editor.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.parameter_table_editor.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        self.parameter_table_editor.setSizeAdjustPolicy(QTableWidget.SizeAdjustPolicy.AdjustToContents)
 
         self.source_editor = ScriptEdit()
         self.source_editor.setPlaceholderText("source...")
@@ -79,7 +80,7 @@ class PyInspectorView(QFrame):
         main_layout = qf.vboxlayout([
             self.name_label,
             QLabel("<h2>Parameters</h2>"),
-            self.parameter_editor,
+            self.parameter_table_editor,
             QLabel("<h2>Source</h2>"),
             self.source_editor
         ])
@@ -111,7 +112,7 @@ class PyInspectorView(QFrame):
 
 
         self._model = model
-        self.parameter_editor.setModel(self._parameter_model)
+        self.parameter_table_editor.setModel(self._parameter_model)
         if self._parameter_model:
             self._parameter_model.setNode(self._current_node)
 
@@ -173,22 +174,29 @@ class PyPreviewView(QFrame):
 
         if model:
             self._model_connections = [
-                (model.resultChanged, lambda node: self._syncEditorData(attr='result') if node == self._current_node else None)
+                (model.resultChanged, lambda node: self._syncEditorData() if node == self._current_node else None)
             ]
             for signal, slot in self._model_connections:
                 signal.connect(slot)
 
         self._model = model
 
-    def _syncEditorData(self, attr='result'):
+    def _syncEditorData(self, attributes:list[str]=[]):
         if not self._model:
             return
 
         if self._current_node:
-            result = self._model.nodeResult(self._current_node)
-            text = f"{result}"
-            if text!=self._label.text():
-                self._label.setText(text)
+            info = []
+            if 'result' in attributes or not attributes:
+                result = self._model.nodeResult(self._current_node)
+                info.append(f"{result}")
+
+            if 'error' in attributes or not attributes:
+                error = self._model.nodeError(self._current_node)
+                info.append(f"<p style:'color: red'>{error}<p>")
+
+            print("sync editor data:", info)
+            self._label.setText("\n".join(info))
         else:
             self._label.setText("- no selection -")
 
@@ -196,7 +204,7 @@ class PyPreviewView(QFrame):
         print("Preview setCurrent", node)
         if node != self._current_node:
             self._current_node = node
-            self._syncEditorData('result')
+            self._syncEditorData()
 
 
 class Window(QWidget):
@@ -239,7 +247,7 @@ class Window(QWidget):
         
 
         ### GRAPH View
-        self.graph_view = GraphEditorView()
+        self.graph_view = GraphEditorView(delegate=PyGraphViewDelegate())
         self.graph_view.installEventFilter(self)
         self.graph_view.setModel(self.node_proxy_model, self.link_proxy_model)
         self.graph_view.setSelectionModel(self.node_selection_model)
