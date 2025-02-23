@@ -134,9 +134,10 @@ class TestNodesCRUD(unittest.TestCase):
 		data_model.compileNodes(['hello1'])
 
 		proxy_model = PyProxyNodeModel(data_model)
-		node_status_index = proxy_model.index(0,3)
+		column = proxy_model._headers.index('compiled')
+		node_status_index = proxy_model.index(0, column)
 
-		self.assertEqual(proxy_model.data(node_status_index, Qt.ItemDataRole.DisplayRole), 'compiled')
+		self.assertEqual(proxy_model.data(node_status_index, Qt.ItemDataRole.DisplayRole), True)
 
 	def test_source_model_reset(self):
 		data_model = PyDataModel()

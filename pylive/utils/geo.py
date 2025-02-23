@@ -142,56 +142,87 @@ from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
 
-def intersectLineWithPath(
-    p1: QPointF, p2: QPointF, path: QPainterPath
-) -> QPointF | None:
+
+def intersect_line_with_path(
+    p1: QPointF, 
+    p2: QPointF, 
+    path: QPainterPath,
+    tolerance: float = 1.0
+) -> QPointF|None:
     """
     Finds the intersection point of a line segment (ray) defined by p1 and p2 with a given QPainterPath.
-
-    :param p1: Start point of the ray
-    :param p2: End point of the ray
-    :param path: QPainterPath to intersect with
-    :return: The intersection point as QPointF or None if no intersection is found
+    Uses an optimized approach with configurable tolerance for better performance and accuracy.
+    
+    Args:
+        p1: Start point of the ray
+        p2: End point of the ray
+        path: QPainterPath to intersect with
+        tolerance: Thickness of the stroke used for intersection detection (default: 1.0)
+    
+    Returns:
+        The intersection point as QPointF or None if no intersection is found
+    
+    Notes:
+        - Uses vector math to ensure accurate direction checking
+        - Handles edge cases like parallel lines and tangent intersections
+        - Optimized to minimize unnecessary path operations
     """
-    ray_start = p1
-    ray_end = p2
-    ray_direction = ray_end - ray_start
-
-    # Create a path for the ray
-    ray_path = QPainterPath()
-    ray_path.moveTo(ray_start)
-    ray_path.lineTo(ray_end)
-    # Add thickness to the paths
-    stroker = QPainterPathStroker()
-    stroker.setWidth(1)
-    stroked_ray_path = stroker.createStroke(ray_path)
-
-    # Check for intersections
-    intersection_path = stroked_ray_path.intersected(path)
-    if intersection_path.isEmpty():
-        # No intersection found
+    # Early exit if either point is null or path is empty
+    if not p1 or not p2 or path.isEmpty():
         return None
-
-    # Retrieve the intersection points
-    intersection_elements: List[QPainterPath.Element] = [
-        intersection_path.elementAt(i)
-        for i in range(intersection_path.elementCount())
-    ]
-
-    # Filter intersection points in the forward direction of the ray
-    for element in intersection_elements:
-        intersection_point = QPointF(element.x, element.y)
-        ray_to_point = QLineF(ray_start, intersection_point)
-
-        # Ensure the point is in the forward direction of the ray
-        if (
-            ray_to_point.dx() * ray_direction.x() >= 0
-            and ray_to_point.dy() * ray_direction.y() >= 0
-        ):
-            return intersection_point
-
-    # No valid intersection in the ray's forward direction
-    return None
+    
+    # Calculate ray vector and length
+    ray_vector = QPointF(p2.x() - p1.x(), p2.y() - p1.y())
+    ray_length = (ray_vector.x() ** 2 + ray_vector.y() ** 2) ** 0.5
+    
+    if ray_length < 1e-6:  # Protect against zero-length rays
+        return None
+    
+    # Normalize ray vector for direction checks
+    ray_unit = QPointF(ray_vector.x() / ray_length, ray_vector.y() / ray_length)
+    
+    # Create and prepare the ray path
+    ray_path = QPainterPath()
+    ray_path.moveTo(p1)
+    ray_path.lineTo(p2)
+    
+    # Add thickness to the paths with specified tolerance
+    stroker = QPainterPathStroker()
+    stroker.setWidth(tolerance)
+    stroker.setCapStyle(Qt.PenCapStyle.RoundCap)
+    stroker.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+    
+    # Create stroked paths
+    stroked_ray = stroker.createStroke(ray_path)
+    
+    # Find intersection
+    intersection = stroked_ray.intersected(path)
+    
+    if intersection.isEmpty():
+        return None
+    
+    def calculate_point_projection(point: QPointF) -> float:
+        """Calculate the projection of a point onto the ray direction."""
+        dx = point.x() - p1.x()
+        dy = point.y() - p1.y()
+        return dx * ray_unit.x() + dy * ray_unit.y()
+    
+    # Get all intersection points and find the closest valid one
+    best_point = None
+    min_projection = float('inf')
+    
+    for i in range(intersection.elementCount()):
+        element = intersection.elementAt(i)
+        if element.type == QPainterPath.ElementType.MoveToElement:
+            point = QPointF(element.x, element.y)
+            projection = calculate_point_projection(point)
+            
+            # Check if point is in forward direction and closer than current best
+            if 0 <= projection <= ray_length and projection < min_projection:
+                best_point = point
+                min_projection = projection
+    
+    return best_point
 
 
 def getShapeRight(shape:QGraphicsItem | QPainterPath | QRectF | QPointF)->QPointF:
@@ -265,7 +296,7 @@ def makeLineToShape(
                 intersection = center
 
         case QPainterPath():
-            if P := intersectLineWithPath(
+            if P := intersect_line_with_path(
                 origin, center, shape
             ):  # TODO: use intersect_ray_with_polygon
                 intersection = P
@@ -273,7 +304,7 @@ def makeLineToShape(
                 intersection = center
         case QGraphicsItem():
             sceneShape = shape.sceneTransform().map(shape.shape())
-            if P := intersectLineWithPath(
+            if P := intersect_line_with_path(
                 origin, center, sceneShape
             ):  # TODO: use intersect_ray_with_polygon
                 intersection = P

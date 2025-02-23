@@ -73,7 +73,7 @@ class PyInspectorView(QFrame):
         self.parameter_editor.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         self.parameter_editor.setSizeAdjustPolicy(QTableWidget.SizeAdjustPolicy.AdjustToContents)
 
-        self.source_editor = QTextEdit()
+        self.source_editor = ScriptEdit()
         self.source_editor.setPlaceholderText("source...")
 
         main_layout = qf.vboxlayout([
@@ -144,8 +144,8 @@ class PyInspectorView(QFrame):
 
         self._syncEditorData('name')
         self._syncEditorData('source')
-        # if self._parameter_model:
-        #     self._parameter_model.setNode(node)
+        if self._parameter_model:
+            self._parameter_model.setNode(node)
 
 
 class PyPreviewView(QFrame):
@@ -191,13 +191,12 @@ class PyPreviewView(QFrame):
                 self._label.setText(text)
         else:
             self._label.setText("- no selection -")
-            
+
     def setCurrent(self, node:str|None):
         print("Preview setCurrent", node)
         if node != self._current_node:
             self._current_node = node
             self._syncEditorData('result')
-
 
 
 class Window(QWidget):
@@ -221,6 +220,9 @@ class Window(QWidget):
         self.setAutoCompile(True)
         self.setAutoEvaluate(True)
 
+    def showEvent(self, event: QShowEvent, /) -> None:
+        self.graph_view.centerNodes()
+
     def setupUI(self):        
         ### SheetsView
         self.nodes_table_view = QTableView()
@@ -241,6 +243,7 @@ class Window(QWidget):
         self.graph_view.installEventFilter(self)
         self.graph_view.setModel(self.node_proxy_model, self.link_proxy_model)
         self.graph_view.setSelectionModel(self.node_selection_model)
+
 
         self.graph_view_connections = [
             (
@@ -297,6 +300,7 @@ class Window(QWidget):
         compile_node_action = QAction("compile selected node", self)
         evaluate_node_action = QAction("evaluate selected node", self)
         layout_nodes_action = QAction("layout nodes", self)
+        center_nodes_action = QAction("center nodes", self)
 
         self.addActions([
             save_action,
@@ -307,11 +311,28 @@ class Window(QWidget):
             remove_edge_action,
             compile_node_action,
             evaluate_node_action,
-            layout_nodes_action
+            layout_nodes_action,
+            center_nodes_action
         ])
 
         menubar = QMenuBar(parent=self)
-        menubar.addActions(self.actions())
+
+        filemenu = menubar.addMenu("File")
+        filemenu.addActions([
+            open_action, 
+            save_action])
+        editmenu = menubar.addMenu("Edit")
+        editmenu.addActions([
+            add_node_action, 
+            delete_node_action, 
+            create_edge_action, 
+            remove_edge_action, 
+            compile_node_action, 
+            evaluate_node_action])
+        viewmenu = menubar.addMenu("View")
+        viewmenu.addActions([layout_nodes_action, center_nodes_action])
+
+        # menubar.addActions(self.actions())
 
         menubar_connections = [
             (open_action.triggered, lambda: self.openFile()),
@@ -322,7 +343,8 @@ class Window(QWidget):
             (remove_edge_action.triggered, lambda: self.delete_selected_edges()),
             (compile_node_action.triggered, lambda: self.compile_selected_nodes()),
             (evaluate_node_action.triggered, lambda: self.evaluate_selected_nodes()),
-            (layout_nodes_action.triggered, lambda: self.graph_view.layoutNodes())
+            (layout_nodes_action.triggered, lambda: self.graph_view.layoutNodes()),
+            (center_nodes_action.triggered, lambda: self.graph_view.centerNodes())
         ]
         for signal, slot in menubar_connections:
             signal.connect(slot)
@@ -330,12 +352,14 @@ class Window(QWidget):
         ### Layout
         main_layout = qf.vboxlayout([
             qf.splitter(Qt.Orientation.Horizontal, [
-                qf.widget(qf.vboxlayout([
-                    self.nodes_table_view,
-                    self.links_table_view,
-                ])),
-                self.graph_view,
                 self.inspector_view,
+                qf.tabwidget({
+                    'graph':self.graph_view,
+                    'sheets':qf.widget(qf.vboxlayout([
+                        self.nodes_table_view,
+                        self.links_table_view,
+                    ])),
+                }), 
                 self.result_view
             ]),
             self.statusbar
@@ -344,7 +368,6 @@ class Window(QWidget):
 
         main_layout.setMenuBar(menubar)
         self.setLayout(main_layout)
-
 
     def setAutoCompile(self, auto: bool):
         if auto:

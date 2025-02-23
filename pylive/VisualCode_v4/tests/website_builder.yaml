@@ -16,4 +16,3 @@ edges:
   - source: "read_abstract"
     target: "parse_abstract"
     inlet: md
-

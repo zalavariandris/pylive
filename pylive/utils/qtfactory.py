@@ -71,8 +71,6 @@ def hboxlayout(children:Sequence[QWidget|QLayout|QLayoutItem], stretch:Sequence[
     for i, value in enumerate(stretch):
         layout.setStretch(i, value)
 
-
-
     return layout
 
 def splitter(orientation:Qt.Orientation, children:Sequence[QWidget])->QSplitter:

@@ -389,22 +389,35 @@ class PyDataModel(QObject):
         data = yaml.load(text, Loader=yaml.SafeLoader)
         self.modelAboutToBeReset.emit()
 
-        ### create node items
+        ### iterate nodes (with potential links using @ syntax)
+        self._links = set()
         self._nodes = OrderedDict()
 
+        links_from_parameters:set[tuple[str,str,str]] = set()
         for node_data in data['nodes']:
+            parameters = []
+            
             if fields:=node_data.get('fields'):
-                parameters = list(map(lambda name: PyParameterItem(name=name, value=fields[name]), fields))
-            else:
-                parameters = []
+                for name, value in fields.items():
+                    if isinstance(value, str) and value.startswith("->"):
+                        source = value[2:].strip()
+                        target = node_data['name'].strip()
+                        inlet = name
+                        assert isinstance(source, str)
+                        assert isinstance(target, str)
+                        assert isinstance(inlet, str)
+                        self._links.add( (source, target, inlet) )
+                    else:
+                        item = PyParameterItem(name=name, value=value)
+                        parameters.append(item)
         
             node_item = PyNodeItem(
                 source=node_data['source'],
-                parameters=parameters
+                parameters = parameters
             )
-            self._nodes[node_data['name']] = node_item
+            self._nodes[node_data['name'].strip()] = node_item
 
-        ### create edge items
+        ### iterate explicit edges
         def linkFromData(data:dict)->tuple[str,str,str]:
             return (
                 data['source'],
@@ -413,9 +426,8 @@ class PyDataModel(QObject):
             )
 
         if data.get('edges', None):
-            self._links = set( map(linkFromData, data.get('edges')) )
-        else:
-            self._links = set()
+            self._links |= set( map(linkFromData, data.get('edges')) )
+
 
         self.modelReset.emit()
 

@@ -1,11 +1,6 @@
-# TODO
+# TODOs
 
-
-##
-- handle properties added, removed and changed in a seperate signals!
-  - currently its useing the _Change_ object to notify about the property
-    changes. While I think the _Change_ object is nice, its not consistent with
-    other parts of the code.
+## GaraphEditor
 
 ## script editors
 - JediCompleter: FIX not compatible with QLineEdit

@@ -21,28 +21,6 @@ tests_folder = Path(__file__).parent.resolve()
 math_script = (tests_folder/"math_script.yaml").read_text()
 say_hello_script = (tests_folder/"say_hello_script.yaml").read_text()
 
-person_class_script = """\
-nodes:
-- name: person
-  source: |
-    def identity(data:Any):
-      return data
-  fields:
-    data: "TheName"
-
-- name: say_hello
-  source: |
-    def say_hello(name:str):
-      return f"Hello {name}!"
-  fields:
-    name: "you"
-
-edges:
-  - source: person
-    target: say_hello
-    inlet: name
-"""
-
 
 class TestModelCRUD(unittest.TestCase):
     def test_read(self):
@@ -76,16 +54,7 @@ class TestModelCRUD(unittest.TestCase):
     def test_delete_parameter(self):
         ...
 
-    def test_deserialize(self):
-        data_model = PyDataModel()
-        data_model.deserialize(say_hello_script)
 
-        self.assertEqual(data_model.nodeCount(), 2)
-        self.assertEqual(data_model.linkCount(), 1)
-        nodes = set(_ for _ in data_model.nodes())
-        self.assertEqual(nodes, {'person', 'say_hello'})
-        links = {_ for _ in data_model.links()}
-        self.assertEqual(links, {('person', 'say_hello', 'name')})
 
     def test_reset(self):
         data_model = PyDataModel()
@@ -102,8 +71,42 @@ class TestModelCRUD(unittest.TestCase):
             ('three', 'mult', 'y'),
         })
 
-    def test_serialize(self):
-        ...
+class TestSerialization(unittest.TestCase):
+    def test_deserialize(self):
+        data_model = PyDataModel()
+        data_model.deserialize(say_hello_script)
+
+        self.assertEqual(data_model.nodeCount(), 2)
+        self.assertEqual(data_model.linkCount(), 1)
+        nodes = set(_ for _ in data_model.nodes())
+        self.assertEqual(nodes, {'person', 'say_hello'})
+        links = {_ for _ in data_model.links()}
+        self.assertEqual(links, {('person', 'say_hello', 'name')})
+
+    def test_explicit_edges(self):
+        """test support edges defined under 'edges'"""
+        data_model = PyDataModel()
+        data_model.deserialize("""\
+        nodes:
+        - name: Judit
+          source: |
+            def Judit():
+              return 'Judit'
+
+        - name: say_hello
+          source: |
+            def say_hello(name:str):
+              return f"Hello {name}!"
+          fields:
+            name: -> Judit
+        """)
+
+        self.assertEqual(data_model.linkCount(), 1)
+        self.assertIn( ("Judit", "say_hello", "name"),  data_model.links())
+        
+
+    def test_parameter_link_syntax(self):
+        """test support ing parameters with link using @"""
 
 
 class TestCompilation(unittest.TestCase):

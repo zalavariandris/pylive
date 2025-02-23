@@ -28,6 +28,10 @@ class RoundedLinkPath(QGraphicsLineItem):
     def __init__(self, parent:QGraphicsItem|None=None):
         super().__init__(parent=parent)
 
+    def boundingRect(self):
+        margin = 50
+        return self.shape().boundingRect().adjusted(-margin, -margin, margin, margin)
+
     def paint(self, painter:QPainter, option:QStyleOption, widget:QWidget|None=None):
         path = makeVerticalRoundedPath(self.line())
         # path = makeArrowShape(self.line(), 2)
