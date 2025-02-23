@@ -138,7 +138,7 @@ class PyGraphModel(QObject):
 
     def evaluateNode(self, row:int):
         """recursively evaluate nodes, from top to bottom"""
-        from pylive.utils.evaluate_python import parse_python_function, call_function_with_stored_args
+        from pylive.utils.evaluate_python import parse_python_function, call_function_with_named_args
         node_item = self._nodes_model.nodeItem(row)
 
         ### load arguments from achestors
@@ -161,7 +161,7 @@ class PyGraphModel(QObject):
         node_item = self._nodes_model.nodeItem(row)
         assert node_item.func
         try:
-            result = call_function_with_stored_args(node_item.func, kwargs)
+            result = call_function_with_named_args(node_item.func, kwargs)
         except SyntaxError as err:
             self._nodes_model.setDataByColumnName(row, "status", 'error')
             self._nodes_model.setDataByColumnName(row, "result", None)

@@ -23,7 +23,7 @@ def store_function_args(func: Callable, **kwargs) -> dict[str, Any]:
     bound_args.apply_defaults()
     return dict(bound_args.arguments)
 
-def call_function_with_stored_args(func: Callable, stored_args: Dict[str, Any]) -> Any:
+def call_function_with_named_args(func: Callable, named_args: Dict[str, Any]) -> Any:
     """
     Call a function using stored arguments, respecting positional-only parameters.
     
@@ -37,12 +37,14 @@ def call_function_with_stored_args(func: Callable, stored_args: Dict[str, Any]) 
     
     for param_name, param in sig.parameters.items():
         if param.kind == inspect.Parameter.POSITIONAL_ONLY:
-            pos_args.append(stored_args[param_name])
+            pos_args.append(named_args[param_name])
         else:
-            if param_name in stored_args:
-                kw_args[param_name] = stored_args[param_name]
+            if param_name in named_args:
+                kw_args[param_name] = named_args[param_name]
     
-    return func(*pos_args, **kw_args)
+    result = func(*pos_args, **kw_args)
+    print("!!!!!!!!!!!!!!!!", result)
+    return result
 
 
 def parse_python_function(code:str)->Callable:

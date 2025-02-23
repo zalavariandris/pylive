@@ -8,7 +8,8 @@ from pylive.VisualCode_NetworkX.UI.nx_graph_shapes import RoundedLinkShape
 
 from pylive.VisualCode_v4.graph_editor.standard_node_widget import StandardNodeWidget
 from pylive.VisualCode_v4.graph_editor.standard_port_widget import StandardPortWidget
-from pylive.VisualCode_v4.graph_editor.standard_link_widget import RoundedLinkWidget
+from pylive.VisualCode_v4.graph_editor.standard_link_widget import StandardLinkPath, RoundedLinkPath
+from pylive.utils.geo import makeLineBetweenShapes
 
 
 
@@ -45,12 +46,12 @@ class StandardGraphDelegate(QObject):
         node_widget.setHeading( index.data(Qt.ItemDataRole.DisplayRole) )
 
     ### EDGE DELEGATE
-    def createEdgeWidget(self, edge_idx:QModelIndex)->QGraphicsItem:
+    def createEdgeWidget(self, edge_idx:QModelIndex)->QGraphicsLineItem:
         # app = QApplication.instance()
         # assert isinstance(app, QGuiApplication)
         # link = QGraphicsPathItem()
         # link.setPen(QPen(app.palette().text(), 1))
-        link = RoundedLinkWidget()
+        link = StandardLinkPath()
         link.setZValue(-1)
         return link
         # label = edge_idx.data(Qt.ItemDataRole.DisplayRole)
@@ -62,36 +63,12 @@ class StandardGraphDelegate(QObject):
         ...
 
     def updateEdgePosition(self, 
-        edge_editor: QGraphicsItem, 
+        edge_widget: QGraphicsLineItem, 
         source:QGraphicsItem|QPointF, 
         target:QGraphicsItem|QPointF
     ):
         # assert isinstance(edge_editor, QGraphicsLineItem)
-        line = QLineF()
-
-        match source:
-            case QGraphicsItem():
-                line.setP1(source.scenePos())
-            case QPointF():
-                line.setP1(source)
-            case _:
-                raise ValueError()
-
-        match target:
-            case QGraphicsItem():
-                line.setP2(target.scenePos())
-            case QPointF():
-                line.setP2(target)
-            case _:
-                raise ValueError(f"target is not a widget or a point, got{target}")
-
-        # edge_editor = cast(QGraphicsPathItem, edge_editor)
-        # from pylive.utils.geo import makeHorizontalRoundedPath, makeVerticalRoundedPath
-        # edge_editor.setPath( makeVerticalRoundedPath(line) )
-
-        # edge_editor = cast(QGraphicsLineItem, edge_editor)
-        # edge_editor.setLine(line)
-        edge_widget = cast(RoundedLinkWidget, edge_editor)
-        edge_widget.move(source, target)
+        line = makeLineBetweenShapes(source, target)
+        edge_widget.setLine(line)
 
 

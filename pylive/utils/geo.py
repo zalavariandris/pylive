@@ -321,10 +321,7 @@ def makeArrowShape(line:QLineF, width=1.0):
     path = QPainterPath()
     path.addPolygon(transform.map(arrow_polygon))
 
-
     return path
-
-
 
 from typing import Tuple
 import math

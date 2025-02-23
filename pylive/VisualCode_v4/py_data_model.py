@@ -1,4 +1,5 @@
 
+import functools
 from sys import exec_prefix
 from typing import *
 from PySide6.QtCore import *
@@ -18,6 +19,8 @@ import inspect
 
 Empty = inspect.Parameter.empty
 
+import networkx as nx
+
 from yaml import resolver
 @dataclass
 class PyParameterItem:
@@ -32,12 +35,14 @@ class PyParameterItem:
 class PyNodeItem:
     source:str="def func(x:int):\n    ..."
     parameters: list[PyParameterItem] = field(default_factory=list)
-    status:Literal['initalized', 'compiled', 'evaluated', 'error']='initalized'
+    is_compiled:bool=False
+    is_evaluated:bool=False
     error:Exception|None=None
     result:object|None=None
     _func:Callable|None=None # cache compiled function
 
 from collections import OrderedDict, defaultdict
+
 
 class PyDataModel(QObject):
     modelAboutToBeReset = Signal()
@@ -50,7 +55,8 @@ class PyDataModel(QObject):
 
     sourceChanged = Signal(str)
 
-    statusChanged = Signal(str)
+    compiledChanged = Signal(str)
+    evaluatedChanged = Signal(str)
     errorChanged = Signal(str)
     resultChanged = Signal(str)
 
@@ -69,6 +75,17 @@ class PyDataModel(QObject):
 
     def __init__(self, parent:QObject|None=None):
         super().__init__(parent=parent)
+        """
+        PyDataModel is model for a python computation graph.
+        Each node has a unique name. Nodes has unique inlets.
+        Source nodes and inlets are connected by links.
+        To evaluate a node in the gaph, cal _evaluateNodes_ with the specific nodes.
+        All dependencies are automatically evaluated, unless specified otherwise.
+        """
+
+        """TODO: store nodes and edges with networkx, 
+        # but keep an eye on the proxy model implementation, which refers to nodes by index
+        """
         self._nodes:OrderedDict[str, PyNodeItem] = OrderedDict()
         self._links:set[tuple[str,str,str]] = set()
 
@@ -81,12 +98,19 @@ class PyDataModel(QObject):
     def links(self)->Collection[tuple[str,str,str]]:
         return [_ for _ in self._links]
 
+    def inLinks(self, node:str)->Sequence[tuple[str,str,str]]:
+        #TODO: optimize, by using networkx graph to store nodes and edges
+        return list(filter(lambda link: link[1]==node, self._links))
+
+    def outLinks(self, node:str)->Sequence[tuple[str,str,str]]:
+        #TODO: optimize, by using networkx graph to store nodes and edges
+        return list(filter(lambda link: link[0]==node, self._links))
+
     def nodeAt(self, index:int)->str:
         node = list(self._nodes.keys())[index]
         return node
 
     def addNode(self, name:str, node_item:PyNodeItem):
-
         if name in self._nodes:
             raise ValueError("nodes must have a unique name")
         self.nodesAboutToBeAdded.emit([name])
@@ -123,13 +147,18 @@ class PyDataModel(QObject):
         return self._nodes[name].source
 
     def setNodeSource(self, node:str, value:str):
-
         if self._nodes[node].source != value:
             logger.debug(f"setNodeSource: {node}, {value}")
             self._nodes[node].source = value
             self.sourceChanged.emit(node)
 
-    def compileNodes(self, nodes:Iterable[str]):
+    def compileNodes(self, nodes:Iterable[str])->bool:
+        """compile all nodes
+        if all nodes were compiled succeslfully return 'True'!
+        if any node gails to compile will return 'False'!
+
+        TODO: test compilation succes with multiple nodes, and each scenario: all compiles, a few fail, all fails...
+        """
         def _compile_node(node):
             logger.debug(f"_compile_node: {node}")
             node_item = self._nodes[node]
@@ -139,18 +168,21 @@ class PyDataModel(QObject):
                 from pylive.utils.evaluate_python import parse_python_function
                 func = parse_python_function(node_item.source)
             except SyntaxError as err:
-                new_status = 'error'
+                new_compiled = False
+                new_evaluated = False
                 new_error = err
-                new__func = None
+                new_func = None
                 new_result = None
             except Exception as err:
-                new_status = 'error'
+                new_compiled = False
+                new_evaluated = False
                 new_error = err
-                new__func = None
+                new_func = None
                 new_result = None
             else:
-                new_status = 'compiled'
-                new__func = func
+                new_compiled = True
+                new_evaluated = False
+                new_func = func
                 sig = inspect.signature(func)
 
                 new_parameters = []
@@ -173,9 +205,15 @@ class PyDataModel(QObject):
                 new_error = None
                 new_result = None
 
-            if node_item.status != new_status:
-                node_item.status = new_status
-                self.statusChanged.emit(node)
+            if node_item.is_compiled != new_compiled:
+                node_item.is_compiled = new_compiled
+                self.compiledChanged.emit(node)
+
+            if node_item._func != new_func:
+                node_item._func = new_func
+            if node_item.is_evaluated != new_evaluated:
+                node_item.is_evaluated = new_evaluated
+                self.evaluatedChanged.emit(node)
             if node_item.error != new_error:
                 node_item.error = new_error
                 self.errorChanged.emit(node)
@@ -191,8 +229,101 @@ class PyDataModel(QObject):
             else:
                 return False
 
+        # if all nodes compiled succesfully return True, otherwise return False
+        success_by_node = dict()
         for node in nodes:
-            _compile_node(node)
+            success = _compile_node(node)
+            success_by_node[node]=success
+        success = all(success_by_node.values())
+        return success
+
+    def evaluateNodes(self, nodes:Sequence[str], ancestors=True, autocompile=True):
+        ### build temporary nx graph (TODO: store nodes and edges in a graph!)
+        G = nx.MultiDiGraph()
+        for node, item in self._nodes.items():
+            G.add_node(node, item=item)
+        for source, target, inlet in self._links:
+            G.add_edge(source, target, inlet)
+
+        ### append ancestors
+        nodes = list(_ for _ in nodes)
+        if ancestors:
+            dependency_nodes = []
+            for node in nodes:
+                dependency_nodes+= nx.ancestors(G, node)
+            nodes+=dependency_nodes
+
+        ### create subgraph
+        subgraph = cast(nx.MultiDiGraph, G.subgraph(nodes))
+        
+        ### sort nodes in topological order
+        ordered_nodes = list(nx.topological_sort(subgraph))
+
+        # compile nodes if necessary
+        nodes_need_compilation = filter(lambda node: self.isCompiled(node) not in ('compiled', 'evaluated', 'error'), ordered_nodes)
+        self.compileNodes(nodes_need_compilation)
+
+        ### evaluate nodes in reverse topological order
+        from pylive.utils.evaluate_python import call_function_with_named_args
+        def _evaluate_node(node:str)->bool:
+            """evaluate nodes in topological order
+            Stop and return _False_ when evaluation Fails.
+            """
+
+            ### Get functions
+            node_item = self._nodes[node]
+            func = node_item._func
+            assert func is not None, "if compilation as succesfull, func cant be None"
+
+            ### Get parameters
+            ### load arguments from sources
+            named_args = dict()
+            for source, target, inlet in self.inLinks(node):
+                assert self.isEvaluated(source) and self.nodeError(source) is None, "at this point dependencies must have been evaluated without errors!"
+                named_args[inlet] = self.nodeResult(source)
+
+            ### load arguments from parameters
+            for param_item in node_item.parameters:
+                if param_item.name in named_args:
+                    continue # skip connected fields
+                named_args[param_item.name] = param_item.value
+            try:
+                result = call_function_with_named_args(func, named_args)
+            except SyntaxError as err:
+                new_evaluated = True
+                new_error = err
+                new_result = None
+            except Exception as err:
+                new_evaluated = True
+                new_error = err
+                new_result = None
+            else:
+                new_evaluated = True
+                new_error = None
+                new_result = result
+
+            if node_item.is_evaluated != new_evaluated:
+                node_item.is_evaluated = new_evaluated
+                self.evaluatedChanged.emit(node)
+            if node_item.error != new_error:
+                node_item.error = new_error
+                self.errorChanged.emit(node)
+            if node_item.result != new_result:
+                node_item.result = new_result
+                self.resultChanged.emit(node)
+
+            if new_error is not None:
+                return False
+            else:
+                return True
+
+        logger.debug("Evaluate nodes")
+        for node in ordered_nodes:
+            logger.debug(f"- {node}") 
+            success = _evaluate_node(node)
+            if not success:
+                return False
+        return True
 
     def parameterCount(self, node)->int:
         if not self._nodes:
@@ -233,17 +364,17 @@ class PyDataModel(QObject):
     def parameterValue(self, node:str, index:int)->object|None|Empty:
         return self._nodes[node].parameters[index].value
 
-    def nodeStatus(self, node)->Literal['initalized', 'compiled', 'evaluated', 'error']:
-        return self._nodes[node].status
+    def isCompiled(self, node)->bool:
+        return self._nodes[node].is_compiled
 
-    def evaluateNode(self, node):
-        ...
+    def isEvaluated(self, node:str)->bool:
+        return self._nodes[node].is_evaluated
 
     def nodeError(self, node)->Exception|None:
         return self._nodes[node].error
 
     def nodeResult(self, node)->Any:
-        return self._nodes[node].error
+        return self._nodes[node].result
 
     def load(self, path:Path|str):
         text = Path(path).read_text()

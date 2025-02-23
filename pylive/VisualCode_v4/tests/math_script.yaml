@@ -12,7 +12,7 @@ nodes:
 - name: mult
   source: |
     def mult(x, y):
-      return 3
+      return x*y
 
 edges:
   - source: two

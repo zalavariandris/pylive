@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 import pdb
 
 ### DATA ###
-
+# 
 # from pylive.QtGraphEditor.py_functions_model import PyFunctionsModel
 from pylive.VisualCode_v4.py_data_model import PyDataModel, PyNodeItem
 from pylive.VisualCode_v4.py_proxy_model import PyProxyNodeModel, PyProxyLinkModel, PyProxyParameterModel
@@ -59,7 +59,6 @@ class PyInspectorView(QFrame):
             signal.disconnect(slot)
         for signal, slot in self._view_connections:
             signal.disconnect(slot)
-
 
     def setupUI(self):
         self.setFrameShape(QFrame.Shape.StyledPanel)  # Styled panel for the frame
@@ -149,6 +148,58 @@ class PyInspectorView(QFrame):
         #     self._parameter_model.setNode(node)
 
 
+class PyPreviewView(QFrame):
+    def __init__(self, parent:QWidget|None=None):
+        super().__init__(parent=parent)
+        self._model:PyDataModel|None=None
+        self._current_node:str|None = None
+
+        self._model_connections = []
+        self._view_connections = []
+        self.setupUI()
+
+    def setupUI(self):
+        self._label = QLabel()
+        main_layout = QVBoxLayout()
+        main_layout.addWidget(self._label)
+        self.setLayout(main_layout)
+
+    def setModel(self, model: PyDataModel|None):
+        if self._model:
+            for signal, slot in self._model_connections:
+                signal.disconnect(slot)
+
+            self._parameter_model = None
+
+        if model:
+            self._model_connections = [
+                (model.resultChanged, lambda node: self._syncEditorData(attr='result') if node == self._current_node else None)
+            ]
+            for signal, slot in self._model_connections:
+                signal.connect(slot)
+
+        self._model = model
+
+    def _syncEditorData(self, attr='result'):
+        if not self._model:
+            return
+
+        if self._current_node:
+            result = self._model.nodeResult(self._current_node)
+            text = f"{result}"
+            if text!=self._label.text():
+                self._label.setText(text)
+        else:
+            self._label.setText("- no selection -")
+            
+    def setCurrent(self, node:str|None):
+        print("Preview setCurrent", node)
+        if node != self._current_node:
+            self._current_node = node
+            self._syncEditorData('result')
+
+
+
 class Window(QWidget):
     def __init__(self, parent:QWidget|None=None):
         super().__init__(parent=parent)
@@ -168,7 +219,7 @@ class Window(QWidget):
 
         self.setupUI()
         self.setAutoCompile(True)
-        self.setAutoEvaluate(False)
+        self.setAutoEvaluate(True)
 
     def setupUI(self):        
         ### SheetsView
@@ -207,6 +258,7 @@ class Window(QWidget):
         # ### NODEINSPECTOR
         self.inspector_view = PyInspectorView()
         self.inspector_view.setModel(self.graph_model)
+
         def set_inspector_node(current:QModelIndex, previous:QModelIndex):
             if current.isValid():
                 node = self.node_proxy_model.mapToSource(current)
@@ -214,17 +266,20 @@ class Window(QWidget):
             else:
                 self.inspector_view.setCurrent(None)
 
-
         self.node_selection_model.currentChanged.connect(set_inspector_node)
 
 
         # ### PREVIEW WIDGET
-        # self.preview = PyPreviewView()
-        # self.preview.setModel(self.graph_model)
-        # self.preview.setSelectionModel(self.node_selection_model)
-
-
-        # self.preview.setWordWrapMode(QTextOption.WrapMode.WrapAtWordBoundaryOrAnywhere)
+        self.result_view = PyPreviewView()
+        self.result_view.setModel(self.graph_model)
+        self.result_view.setCurrent(None)
+        def set_preview_node(current:QModelIndex, previous:QModelIndex):
+            if current.isValid():
+                node = self.node_proxy_model.mapToSource(current)
+                self.result_view.setCurrent(node)
+            else:
+                self.result_view.setCurrent(None)
+        self.node_selection_model.currentChanged.connect(set_preview_node)
 
         ### STATUS BAR WIDGET
         self.statusbar = QStatusBar()
@@ -241,6 +296,7 @@ class Window(QWidget):
         remove_edge_action = QAction("remove edge", self)
         compile_node_action = QAction("compile selected node", self)
         evaluate_node_action = QAction("evaluate selected node", self)
+        layout_nodes_action = QAction("layout nodes", self)
 
         self.addActions([
             save_action,
@@ -250,7 +306,8 @@ class Window(QWidget):
             delete_node_action,
             remove_edge_action,
             compile_node_action,
-            evaluate_node_action
+            evaluate_node_action,
+            layout_nodes_action
         ])
 
         menubar = QMenuBar(parent=self)
@@ -263,8 +320,9 @@ class Window(QWidget):
             (delete_node_action.triggered, lambda: self.delete_selected_nodes()),
             (create_edge_action.triggered, lambda: self.connect_selected_nodes()),
             (remove_edge_action.triggered, lambda: self.delete_selected_edges()),
-            (compile_node_action.triggered, lambda: self.compile_selected_node()),
-            (evaluate_node_action.triggered, lambda: self.graph_model.evaluateNode(self.node_selection_model.currentIndex().row()))
+            (compile_node_action.triggered, lambda: self.compile_selected_nodes()),
+            (evaluate_node_action.triggered, lambda: self.evaluate_selected_nodes()),
+            (layout_nodes_action.triggered, lambda: self.graph_view.layoutNodes())
         ]
         for signal, slot in menubar_connections:
             signal.connect(slot)
@@ -277,8 +335,8 @@ class Window(QWidget):
                     self.links_table_view,
                 ])),
                 self.graph_view,
-                self.inspector_view
-                # self.preview
+                self.inspector_view,
+                self.result_view
             ]),
             self.statusbar
         ])
@@ -312,8 +370,8 @@ class Window(QWidget):
             self._autoevaluate_connections = [
                 (
                     self.node_selection_model.currentChanged, 
-                    lambda current, previous: self.graph_model.evaluateNode(
-                        self.node_proxy_model.mapToSource(current))
+                    lambda current, previous: self.graph_model.evaluateNodes(
+                        [self.node_proxy_model.mapToSource(current)]) if current.isValid() else None
                 )
             ]
             for signal, slot in self._autoevaluate_connections:
@@ -394,12 +452,19 @@ class Window(QWidget):
         if node_graphics_item := self.graph_view.nodeWidget(node_index):
             node_graphics_item.setPos(scenepos-node_graphics_item.boundingRect().center())
 
-    def compile_selected_node(self):
+    def compile_selected_nodes(self):
         if not self.node_selection_model:
             return
 
         nodes = map(self.node_proxy_model.mapToSource, self.node_selection_model.selectedIndexes())
         self.graph_model.compileNodes(nodes)
+
+    def evaluate_selected_nodes(self):
+        if not self.node_selection_model:
+            return
+
+        nodes = map(self.node_proxy_model.mapToSource, self.node_selection_model.selectedIndexes())
+        self.graph_model.evaluateNodes(nodes)
 
     def delete_selected_nodes(self):
         indexes:list[QModelIndex] = self.node_selection_model.selectedRows(column=0)
@@ -455,7 +520,7 @@ if __name__ == "__main__":
     app = QApplication()
     window = Window()
     window.openFile(parent_folder/"tests/website_builder.yaml")
-    window.setGeometry(QRect(QPoint(), app.primaryScreen().size()).adjusted(40,80,-30,-100))
+    window.setGeometry(QRect(QPoint(), app.primaryScreen().size()).adjusted(40,80,-30,-300))
     window.show()
     sys.exit(app.exec())
 # 

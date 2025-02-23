@@ -7,7 +7,6 @@ import logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-from bidict import bidict
 from pylive.utils import group_consecutive_numbers
 
 from pylive.VisualCode_v4.py_data_model import Empty, PyDataModel
@@ -18,7 +17,7 @@ class PyProxyNodeModel(QAbstractItemModel):
         self._nodes:list[str] = list()
         self._source_model:PyDataModel|None=None
 
-        self._headers = ['name', 'source', 'parameters', 'status', 'error', 'result']
+        self._headers = ['name', 'source', 'parameters', 'compiled', 'evaluated', 'error', 'result']
 
         self.setSourceModel(source_model)
 
@@ -42,7 +41,8 @@ class PyProxyNodeModel(QAbstractItemModel):
 
             source_model.sourceChanged.connect(self._on_source_changed)
             source_model.parametersReset.connect(self._on_parameters_reset)
-            source_model.statusChanged.connect(self._on_status_changed)
+            source_model.compiledChanged.connect(self._on_compiled_changed)
+            source_model.evaluatedChanged.connect(self._on_evaluated_changed)
             source_model.errorChanged.connect(self._on_error_changed)
             source_model.resultChanged.connect(self._on_result_changed)
 
@@ -59,9 +59,14 @@ class PyProxyNodeModel(QAbstractItemModel):
         index = self.mapFromSource(node).siblingAtColumn(self._headers.index('parameters'))
         self.dataChanged.emit(index, index, [])
 
-    def _on_status_changed(self, node:str):
-        logger.debug(f"PyProxyNodeModel->_on_status_changed {node}")
-        index = self.mapFromSource(node).siblingAtColumn(self._headers.index('status'))
+    def _on_compiled_changed(self, node:str):
+        logger.debug(f"PyProxyNodeModel->_on_compiled_changed {node}")
+        index = self.mapFromSource(node).siblingAtColumn(self._headers.index('compiled'))
+        self.dataChanged.emit(index, index, [])
+
+    def _on_evaluated_changed(self, node:str):
+        logger.debug(f"PyProxyNodeModel->_on_evaluated_changed {node}")
+        index = self.mapFromSource(node).siblingAtColumn(self._headers.index('evaluated'))
         self.dataChanged.emit(index, index, [])
 
     def _on_error_changed(self, node:str):
@@ -221,9 +226,13 @@ class PyProxyNodeModel(QAbstractItemModel):
                         parameter_names.append(name)
                     return ",".join( parameter_names )
 
-            case 'status':
+            case 'compiled':
                 if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
-                    return self._source_model.nodeStatus(node_name)
+                    return self._source_model.isCompiled(node_name)
+
+            case 'evaluated':
+                if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
+                    return self._source_model.isEvaluated(node_name)
 
             case 'error':
                 if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):

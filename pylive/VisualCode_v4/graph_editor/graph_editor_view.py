@@ -1393,7 +1393,7 @@ def main():
 
             source_node_index = nodes.index(source_node_row, 0)
             assert source_node_index.isValid(), "invalid source node"
-            create_link(source_node_index.row(), target_node_index.row(), "out", inlets[0])
+            create_link(source_node_index, target_node_index, "out", inlets[0])
 
     def delete_selected_edges():
         indexes:list[QModelIndex] = edge_selection.selectedRows(column=0)
