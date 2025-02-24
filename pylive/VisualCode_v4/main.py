@@ -89,7 +89,6 @@ class Window(QWidget):
         for signal, slot in self.graph_view_connections:
             signal.connect(slot)
 
-
         # self.graph_view.setSelectionModel(self.node_selection_model)
         # self.graph_view.setSelectionModel(self.selection_model)
 

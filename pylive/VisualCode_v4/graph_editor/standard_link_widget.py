@@ -24,7 +24,6 @@ class StandardLinkPath(QGraphicsLineItem):
         pen = painter.pen()
         painter.setBrush(palette.text())
         if self.isSelected() and widget:
-            print("paint selected link")
             painter.setBrush(widget.palette().accent())
 
         painter.setPen(Qt.PenStyle.NoPen)
