@@ -15,9 +15,9 @@ nodes:
       return x*y
 
 edges:
-  - source: two
-    target: mult
-    inlet: x
-  - source: three
-    target: mult
-    inlet: y
+- source: two
+  target: mult
+  inlet: x
+- source: three
+  target: mult
+  inlet: y

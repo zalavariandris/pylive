@@ -28,8 +28,6 @@ from pylive.VisualCode_v4.py_inspector_view import PyInspectorView
 from pylive.VisualCode_v4.py_preview_view import PyPreviewView
 
 
-
-
 class Window(QWidget):
     def __init__(self, parent:QWidget|None=None):
         super().__init__(parent=parent)

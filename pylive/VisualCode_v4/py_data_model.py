@@ -119,6 +119,13 @@ class PyDataModel(QObject):
 
     def removeNode(self, name:str):
         logger.debug(f"removeNode: {name}")
+        ### remove links
+        for source, target, inlet in self.inLinks(name):
+            self.unlinkNodes(source, target, inlet)
+        for source, target, inlet in self.outLinks(name):
+            self.unlinkNodes(source, target, inlet)
+        ### remove parameters
+
         self.nodesAboutToBeRemoved.emit([name])
         del self._nodes[name]
         self.nodesRemoved.emit([name])
@@ -385,9 +392,7 @@ class PyDataModel(QObject):
         text = self.serialize()
         Path(path).write_text(text)
 
-    def deserialize(self, text:str)->bool:
-        import yaml
-        data = yaml.load(text, Loader=yaml.SafeLoader)
+    def fromData(self, data:dict)->bool:
         self.modelAboutToBeReset.emit()
 
         ### iterate nodes (with potential links using @ syntax)
@@ -427,12 +432,20 @@ class PyDataModel(QObject):
             )
 
         if data.get('edges', None):
-            self._links |= set( map(linkFromData, data.get('edges')) )
+            edges_data:Sequence[dict[str, str]] = data.get('edges', [])
+            self._links |= set( map(linkFromData, edges_data ) )
 
 
         self.modelReset.emit()
 
         return True
+
+    def deserialize(self, text:str)->bool:
+        import yaml
+        data = yaml.load(text, Loader=yaml.SafeLoader)
+
+
+        return self.fromData(data)
 
     def serialize(self)->str:
         import yaml

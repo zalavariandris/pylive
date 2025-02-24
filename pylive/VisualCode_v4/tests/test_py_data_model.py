@@ -2,6 +2,7 @@ from typing import *
 from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
+from PySide6.QtTest import QSignalSpy
 
 import unittest
 import sys
@@ -68,6 +69,31 @@ class TestModelCRUD(unittest.TestCase):
             ('two', 'mult', 'x'),
             ('three', 'mult', 'y'),
         })
+
+    def test_remove_node_with_links(self):
+        # removing nodes should remove its links too
+        data_model = PyDataModel()
+        data_model.fromData({
+            'nodes':[
+                {'name': "A", 'source':"""func(in):    ..."""},
+                {'name': "B", 'source':"""func(in):    ..."""},
+                {'name': "C", 'source':"""func(in):    ..."""}
+            ],
+
+            'edges':[
+                {'source': "A", "target": "B", 'inlet':"in"},
+                {'source': "B", "target": "C", 'inlet':"in"}
+            ]
+        })
+
+        nodes_unlinked_spy = QSignalSpy(data_model.nodesUnlinked)
+        self.assertEqual(data_model.linkCount(), 2)
+        data_model.removeNode("B")
+        self.assertEqual(data_model.linkCount(), 0)
+
+        # test signals
+        self.assertEqual(nodes_unlinked_spy.count(), 2, "'nodesUnlinked' Signal was not emitted exactly twice.")
+
 
 class TestSerialization(unittest.TestCase):
     def test_deserialize(self):
@@ -234,8 +260,6 @@ class TestEvaluation(unittest.TestCase):
         data_model.evaluateNodes(['mult'])
 
         self.assertEqual(data_model.nodeResult("mult"), 6)
-        
-    
 
     def test_evaluate_node_with_missing_parameters(self):
         data_model = PyDataModel()
