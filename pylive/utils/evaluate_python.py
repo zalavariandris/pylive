@@ -61,11 +61,13 @@ def compile_python_function(code:str)->Callable:
         raise err
 
     for name, attribute in capture.items():
-        if callable(attribute) and not inspect.isclass(attribute):
+
+        if callable(attribute) and not inspect.isclass(attribute) and attribute.__module__ is None:
             return attribute
     raise ValueError("no functions found in script")
 
 import re
+
 
 def get_function_name(code_string:str)->str:
     match = re.search(r'def\s+(\w+)\s*\(', code_string)

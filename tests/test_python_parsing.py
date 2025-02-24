@@ -6,7 +6,6 @@ from textwrap import dedent
 
 
 class TestParseFunctions(unittest.TestCase):
-
     def test_parse_single_function(self):
         script = dedent("""\
         def hello(name:str)->str:
@@ -36,6 +35,27 @@ class TestParseFunctions(unittest.TestCase):
         func = compile_python_function(script)
         print(func)
         self.assertEqual(func.__name__, "hello1")
+
+    def test_python_script_with_typing_imports(self):
+        script = dedent("""\
+        from typing import *
+        from PySide6.QtCore import *
+        from PySide6.QtGui import *
+        from PySide6.QtWidgets import *
+
+        def create_widget():
+            return QLabel("hello")
+        """)
+
+        func = compile_python_function(script)
+        self.assertIsNotNone(func)
+        self.assertEqual(func.__name__, 'create_widget')
+
+    def test_python_script_without_function(self):
+        with self.assertRaises(ValueError):
+            func = compile_python_function("")
+
+
 
 
 
