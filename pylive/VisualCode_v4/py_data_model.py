@@ -28,7 +28,7 @@ class PyParameterItem:
     default: Any=Empty #TODO: object|None|inspect.Parameter.empty
     annotation: str|Any='' # TODO str|inspect.Parameter.empty
     kind:inspect._ParameterKind = inspect.Parameter.POSITIONAL_OR_KEYWORD
-    value: Any=Empty #TODO: object|None|inspect.Parameter.empty
+    value: object|None|Any=Empty #TODO: object|None|inspect.Parameter.empty
 
 
 @dataclass
@@ -267,7 +267,7 @@ class PyDataModel(QObject):
         ordered_nodes = list(nx.topological_sort(subgraph))
 
         # compile nodes if necessary
-        nodes_need_compilation = filter(lambda node: self.isCompiled(node) not in ('compiled', 'evaluated', 'error'), ordered_nodes)
+        nodes_need_compilation = filter(lambda node: not self.isCompiled(node), ordered_nodes)
         compile_success = self.compileNodes(nodes_need_compilation)
         if not compile_success:
             return False
@@ -405,10 +405,10 @@ class PyDataModel(QObject):
             
             if fields:=node_data.get('fields'):
                 for name, value in fields.items():
-                    if isinstance(value, str) and value.startswith("->"):
-                        source = value[2:].strip()
+                    if isinstance(value, str) and value.strip().startswith("->"):
+                        source = value.strip()[2:].strip()
                         target = node_data['name'].strip()
-                        inlet = name
+                        inlet = name.strip()
                         assert isinstance(source, str)
                         assert isinstance(target, str)
                         assert isinstance(inlet, str)
@@ -440,18 +440,41 @@ class PyDataModel(QObject):
 
         return True
 
+    def toData(self)->dict:
+        data = dict({
+            'nodes': []
+        })
+
+        for node_name, node_item in self._nodes.items():
+            node_data:dict[Literal['name', 'source', 'fields'], Any] = {
+                'name': node_name,
+                'source':node_item.source
+            }
+
+            fields_data = dict()
+            for item in node_item.parameters:
+                if item.value != Empty:
+                    fields_data[item.name] = item.value
+
+            
+            for source, target, inlet in self.inLinks(node_name):
+                assert target == node_name
+                fields_data[inlet] = f" -> {source}"
+
+            if len(fields_data)>0:
+                node_data['fields'] = fields_data
+
+            data['nodes'].append(node_data)
+
+        return data
+
     def deserialize(self, text:str)->bool:
         import yaml
         data = yaml.load(text, Loader=yaml.SafeLoader)
-
-
         return self.fromData(data)
 
     def serialize(self)->str:
         import yaml
-        return yaml.dump({
-            'nodes': [],
-            'edges': []
-        })
+        return yaml.dump(self.toData(), sort_keys=False)
 
 

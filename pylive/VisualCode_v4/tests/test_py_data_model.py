@@ -131,6 +131,35 @@ class TestSerialization(unittest.TestCase):
     def test_parameter_link_syntax(self):
         """test support ing parameters with link using @"""
 
+    def test_graph_to_data(self):
+        data_model = PyDataModel()
+        data_model.addNode("A", PyNodeItem(
+            source="def read_abstract():  return 'text'", 
+        ))
+        data_model.addNode("B", PyNodeItem(
+            source="""def to_html(html:str):  return f'HTML({html})'""", 
+        ))
+        data_model.addNode("C", PyNodeItem(
+            source="""def create_label(text:str):  return QLabel(text)""", 
+        ))
+        data_model.compileNodes(["A", "B", "C"])
+        data_model.linkNodes("A", "B", 'html')
+        data_model.linkNodes("B", "C", 'text')
+
+        file_data = data_model.toData()
+        import yaml
+
+        self.maxDiff = None
+        print(file_data)
+        expected_data = {
+            'nodes': [
+                {'name': 'A', 'source': "def read_abstract():  return 'text'"}, 
+                {'name': 'B', 'source': "def to_html(html:str):  return f'HTML({html})'",   'fields': {'html': ' -> A'}}, 
+                {'name': 'C', 'source': "def create_label(text:str):  return QLabel(text)", 'fields': {'text': ' -> B'}}
+            ]
+        }
+        self.assertEqual(file_data, expected_data)
+
 
 class TestCompilation(unittest.TestCase):
     def test_compile_hello_function(self):
@@ -238,6 +267,7 @@ class TestParametersCRUD(unittest.TestCase):
         data_model.addNode("node_with_error", PyNodeItem(source=script))
         data_model.compileNodes(['node_with_error'])
         self.assertEqual(data_model.parameterValue('node_with_error', 0), Empty)
+
 
 class TestEvaluation(unittest.TestCase):
     def test_evaluate_single_node(self):

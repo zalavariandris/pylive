@@ -54,11 +54,12 @@ from pylive.utils.qt import distribute_items_horizontal, signalsBlocked
 
 from pylive.VisualCode_v4.graph_editor.standard_graph_delegate import StandardGraphDelegate
 from pylive.utils.unique import make_unique_name
+from pylive.utils.diff import diff_set
 
 import logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
-
+from pylive.utils import group_consecutive_numbers
 from textwrap import dedent
 
 class NodeItem:
@@ -562,30 +563,31 @@ class _GraphEditorView(QGraphicsView):
 
 
 class _GraphSelectionMixin(_GraphEditorView):
-    ### Node SELECTION
     def __init__(self, delegate=None, parent: QWidget | None = None):
         super().__init__(delegate, parent)
         self._node_selection:QItemSelectionModel|None = None
-        
-    def setSelectionModel(self, node_selection:QItemSelectionModel):
+        self._link_selection:QItemSelectionModel|None = None
+
+    def setSelectionModel(self, node_selection:QItemSelectionModel|None, link_selection:QItemSelectionModel|None):
         # assert id(node_selection.model()) != id(self._nodes), f"trying to set selection model, that works on a different model\n  {node_selection.model()}\n  !=\n  {self._nodes}"
-
-        if self._node_selection:
-            self._node_selection.selectionChanged.disconnect(self._onNodeSelectionChanged)
-            self.scene().selectionChanged.disconnect(self._syncNodeSelectionModel)
-
         if node_selection:
-            node_selection.selectionChanged.connect(self._onNodeSelectionChanged)
-            self.scene().selectionChanged.connect(self._syncNodeSelectionModel)
+            node_selection.selectionChanged.connect(self._onSelectionChanged)
+
+        if link_selection:
+            link_selection.selectionChanged.connect(self._onSelectionChanged)
+
+        self.scene().selectionChanged.connect(self._syncSelectionModel)
 
         # set selection model
         self._node_selection = node_selection
+        self._link_selection = link_selection
 
-    def _onNodeSelectionChanged(self, selected: QItemSelection, deselected: QItemSelection):
+    def _onSelectionChanged(self, selected: QItemSelection, deselected: QItemSelection):
         """on selection model changed"""
         assert self._node_selection, "_node_selection is None"
+        assert self._link_selection, "_node_selection is None"
 
-        ### update widgets selection
+        ### get NODE widget selection change
         selected_node_indexes = set([
             index.siblingAtColumn(0) 
             for index in self._node_selection.selectedIndexes()
@@ -598,18 +600,42 @@ class _GraphSelectionMixin(_GraphEditorView):
 
         current_node_widgets_selection = set([
             item for item in self.scene().selectedItems() 
-            if item in self._node_widgets.inverse
+            if item in self._node_widgets.values()
         ])
 
-        from pylive.utils.diff import diff_set
+        
         node_widget_selection_change = diff_set(current_node_widgets_selection, new_node_widgets_selection)
 
-        with signalsBlocked(self.scene()):
-            for node_widget in node_widget_selection_change.added:
-                node_widget.setSelected(True)
+        ### get LINK widget selection change
+        # def selection_diff(selection_model:QItemSelectionModel, widget_mapping:dict[QPersistentModelIndex, QGraphicsItem]):
+        #     ...
+        selected_link_indexes = set([
+            index.siblingAtColumn(0) 
+            for index in self._link_selection.selectedIndexes()
+        ])
 
-            for node_widget in node_widget_selection_change.removed:
-                node_widget.setSelected(False)
+        new_link_widgets_selection = set([
+            self.linkWidget(index) 
+            for index in selected_link_indexes
+        ])
+
+        current_link_widgets_selection = set([
+            item for item in self.scene().selectedItems() 
+            if item in self._edge_widgets.values()
+        ])
+
+        link_widget_selection_change = diff_set(current_link_widgets_selection, new_link_widgets_selection)
+
+        with signalsBlocked(self.scene()):
+            for widget in node_widget_selection_change.added | link_widget_selection_change.added:
+                widget.setSelected(True)
+
+            for widget in node_widget_selection_change.removed | link_widget_selection_change.removed:
+                widget.setSelected(False)
+
+    def _syncSelectionModel(self):
+        self._syncNodeSelectionModel()
+        self._syncLinkSelectionModel()
 
     def _syncNodeSelectionModel(self):
         """called when the graphicsScene selection has changed"""
@@ -617,25 +643,48 @@ class _GraphSelectionMixin(_GraphEditorView):
         assert self._nodes, "_nodes is None"
   
         selected_items = list(self.scene().selectedItems())
+
+        ### sync selected NODEs
         selected_node_widgets = list(filter(lambda item: item in self._node_widgets.inverse, selected_items))
         selected_node_indexes = [self._node_widgets.inverse[node_widget] for node_widget in selected_node_widgets]
         selected_node_rows = sorted(node_index.row() for node_index in selected_node_indexes)
-
-        from pylive.utils import group_consecutive_numbers
         selected_row_ranges = list( group_consecutive_numbers(selected_node_rows) )
-
-        new_selection = QItemSelection()
+        new_node_selection = QItemSelection()
         for row_range in selected_row_ranges:
             top_left = self._nodes.index(row_range.start, 0)
             bottom_right = self._nodes.index(row_range.stop-1, self._nodes.columnCount()-1)
             selection_range = QItemSelectionRange(top_left, bottom_right)
-            new_selection.append(selection_range)
+            new_node_selection.append(selection_range)
 
-        if new_selection.count()>0:
-            self._node_selection.setCurrentIndex(new_selection.at(0).topLeft(), QItemSelectionModel.SelectionFlag.Current)
+        if new_node_selection.count()>0:
+            self._node_selection.setCurrentIndex(new_node_selection.at(0).topLeft(), QItemSelectionModel.SelectionFlag.Current)
         else:
             self._node_selection.setCurrentIndex(QModelIndex(), QItemSelectionModel.SelectionFlag.Clear)
-        self._node_selection.select(new_selection, QItemSelectionModel.SelectionFlag.ClearAndSelect)
+        self._node_selection.select(new_node_selection, QItemSelectionModel.SelectionFlag.ClearAndSelect)
+
+    def _syncLinkSelectionModel(self):
+        """called when the graphicsScene selection has changed"""
+        assert self._link_selection, "_node_selection is None"
+        assert self._edges, "_nodes is None"
+  
+        selected_items = list(self.scene().selectedItems())
+        ### sync selected LINKs
+        selected_link_widgets = list(filter(lambda item: item in self._edge_widgets.inverse, selected_items))
+        selected_link_indexes = [self._edge_widgets.inverse[widget] for widget in selected_link_widgets]
+        selected_link_rows = sorted(index.row() for index in selected_link_indexes)
+        selected_link_row_ranges = list( group_consecutive_numbers(selected_link_rows) )
+        new_link_selection = QItemSelection()
+        for row_range in selected_link_row_ranges:
+            top_left = self._edges.index(row_range.start, 0)
+            bottom_right = self._edges.index(row_range.stop-1, self._edges.columnCount()-1)
+            selection_range = QItemSelectionRange(top_left, bottom_right)
+            new_link_selection.append(selection_range)
+
+        if new_link_selection.count()>0:
+            self._link_selection.setCurrentIndex(new_link_selection.at(0).topLeft(), QItemSelectionModel.SelectionFlag.Current)
+        else:
+            self._link_selection.setCurrentIndex(QModelIndex(), QItemSelectionModel.SelectionFlag.Clear)
+        self._link_selection.select(new_link_selection, QItemSelectionModel.SelectionFlag.ClearAndSelect)
 
 
 class _GraphLayoutMixin(_GraphEditorView):
@@ -1322,7 +1371,7 @@ def main():
     graph_view = GraphEditorView()
     graph_view.setWindowTitle("NXNetworkScene")
     graph_view.setModel(nodes, edges)
-    graph_view.setSelectionModel(node_selection)
+    graph_view.setNodeSelectionModel(node_selection)
     graph_view.centerNodes()
 
     ### ACTIONS

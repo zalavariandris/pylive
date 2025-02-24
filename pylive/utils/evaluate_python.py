@@ -73,7 +73,6 @@ def get_function_name(code_string:str)->str:
     match = re.search(r'def\s+(\w+)\s*\(', code_string)
     return match.group(1) if match else None
 
-
 import traceback
 def format_exception(err:Exception)->str:
     formatted_traceback = ''.join(traceback.TracebackException.from_exception(err).format())

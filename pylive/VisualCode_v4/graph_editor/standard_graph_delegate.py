@@ -22,6 +22,7 @@ class StandardGraphDelegate(QObject):
     ### NODE DELEGATE
     def createNodeWidget(self, parent:QGraphicsScene, index:QModelIndex)->QGraphicsItem:
         node_widget = StandardNodeWidget()
+        node_widget.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
         node_widget.setHeading(f"{index.data(Qt.ItemDataRole.DisplayRole)}")
         node_widget.scenePositionChanged.connect(lambda node=node_widget: self.nodePositionChanged.emit(node))
         parent.addItem(node_widget)
@@ -53,6 +54,7 @@ class StandardGraphDelegate(QObject):
         # link.setPen(QPen(app.palette().text(), 1))
         link = StandardLinkPath()
         link.setZValue(-1)
+        link.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
         return link
         # label = edge_idx.data(Qt.ItemDataRole.DisplayRole)
         # link = RoundedLinkShape(label if label else "", orientation=Qt.Orientation.Vertical)

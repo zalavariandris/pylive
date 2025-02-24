@@ -1,0 +1,9 @@
+nodes:
+- name: read_abstract
+  source: "def read_text(path:str)->str:\n  from pathlib import Path\n  return Path(path).read_text()\n"
+  fields:
+    path: ./tests/website_builder.yaml
+- name: parse_abstract
+  source: "def markdown_to_html(md:str)->str:\n  return \"HTML\" + md\n"
+  fields:
+    md: ' -> read_abstract'

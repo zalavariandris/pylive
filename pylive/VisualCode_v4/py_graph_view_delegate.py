@@ -15,6 +15,7 @@ from pylive.utils.evaluate_python import get_function_name
 class PyGraphViewDelegate(StandardGraphDelegate):
     def createNodeWidget(self, parent:QGraphicsScene, index:QModelIndex)->QGraphicsItem:
         node_widget = PyNodeWidget()
+        node_widget.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
         node_widget.setHeading(f"{index.data(Qt.ItemDataRole.DisplayRole)}")
         node_widget.scenePositionChanged.connect(lambda node=node_widget: self.nodePositionChanged.emit(node))
         parent.addItem(node_widget)

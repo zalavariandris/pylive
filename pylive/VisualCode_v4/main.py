@@ -3,6 +3,7 @@ from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
+from pathlib import Path
 
 import logging
 logging.basicConfig(level=logging.DEBUG)
@@ -34,7 +35,10 @@ class Window(QWidget):
         ### document state
 
         self._is_modified = False
-        self._filepath = "None"
+        self._filepath = None
+        self._watcher = QFileSystemWatcher()
+        self._watcher.fileChanged.connect(lambda:
+            self._onFileChanged(self._filepath))
 
         self._autocompile_connections = []
         self._autoevaluate_connections = []
@@ -44,6 +48,7 @@ class Window(QWidget):
         self.node_proxy_model:PyProxyNodeModel = self.link_proxy_model.itemsModel()
         assert self.node_proxy_model
         self.node_selection_model = QItemSelectionModel(self.node_proxy_model)
+        self.link_selection_model = QItemSelectionModel(self.link_proxy_model)
 
         self.setupUI()
         self.setAutoCompile(True)
@@ -65,13 +70,14 @@ class Window(QWidget):
         # self.links_table_view.horizontalHeader().setVisible(True)
         # self.links_table_view.verticalHeader().setVisible(False)s
         self.links_table_view.setModel(self.link_proxy_model)
+        self.links_table_view.setSelectionModel(self.link_selection_model)
         
 
         ### GRAPH View
         self.graph_view = GraphEditorView(delegate=PyGraphViewDelegate())
         self.graph_view.installEventFilter(self)
         self.graph_view.setModel(self.node_proxy_model, self.link_proxy_model)
-        self.graph_view.setSelectionModel(self.node_selection_model)
+        self.graph_view.setSelectionModel(self.node_selection_model, self.link_selection_model)
 
 
         self.graph_view_connections = [
@@ -123,9 +129,9 @@ class Window(QWidget):
         open_action = QAction("open", self)
         save_action = QAction("save", self)
         add_node_action = QAction("add new node", self)
-        delete_node_action = QAction("delete node", self)
+        delete_selected_action = QAction("delete selected", self)
+        delete_selected_action.setShortcut("Del")
         create_edge_action = QAction("connect selected nodes", self)
-        remove_edge_action = QAction("remove edge", self)
         compile_node_action = QAction("compile selected node", self)
         evaluate_node_action = QAction("evaluate selected node", self)
         layout_nodes_action = QAction("layout nodes", self)
@@ -136,8 +142,7 @@ class Window(QWidget):
             open_action,
             add_node_action,
             create_edge_action,
-            delete_node_action,
-            remove_edge_action,
+            delete_selected_action,
             compile_node_action,
             evaluate_node_action,
             layout_nodes_action,
@@ -149,15 +154,16 @@ class Window(QWidget):
         filemenu = menubar.addMenu("File")
         filemenu.addActions([
             open_action, 
-            save_action])
+            save_action
+        ])
         editmenu = menubar.addMenu("Edit")
         editmenu.addActions([
             add_node_action, 
-            delete_node_action, 
+            delete_selected_action, 
             create_edge_action, 
-            remove_edge_action, 
             compile_node_action, 
-            evaluate_node_action])
+            evaluate_node_action
+        ])
         viewmenu = menubar.addMenu("View")
         viewmenu.addActions([layout_nodes_action, center_nodes_action])
 
@@ -167,9 +173,8 @@ class Window(QWidget):
             (open_action.triggered, lambda: self.openFile()),
             (save_action.triggered, lambda: self.saveFile()),
             (add_node_action.triggered, lambda: self.create_new_node()),
-            (delete_node_action.triggered, lambda: self.delete_selected_nodes()),
+            (delete_selected_action.triggered, lambda: self.delete_selected()),
             (create_edge_action.triggered, lambda: self.connect_selected_nodes()),
-            (remove_edge_action.triggered, lambda: self.delete_selected_edges()),
             (compile_node_action.triggered, lambda: self.compile_selected_nodes()),
             (evaluate_node_action.triggered, lambda: self.evaluate_selected_nodes()),
             (layout_nodes_action.triggered, lambda: self.graph_view.layoutNodes()),
@@ -182,12 +187,13 @@ class Window(QWidget):
         main_layout = qf.vboxlayout([
             qf.splitter(Qt.Orientation.Horizontal, [
                 self.inspector_view,
-                qf.tabwidget({
-                    'graph':self.graph_view,
-                    'sheets':qf.widget(qf.vboxlayout([
+                qf.widget(qf.vboxlayout([
                         self.nodes_table_view,
                         self.links_table_view,
                     ])),
+                qf.tabwidget({
+                    'graph':self.graph_view,
+                    # 'sheets':
                 }), 
                 self.result_view
             ]),
@@ -242,10 +248,13 @@ class Window(QWidget):
     def fileSelectFilter(self):
         return "YAML (*.yaml);;Any File (*)"
 
-    def setIsModified(self, m:bool):
+    def isModified(self):
+        return self._is_modified
+
+    def setModified(self, m:bool):
         self._is_modified = m
 
-    def openFile(self, filepath:str|None=None)->bool:
+    def openFile(self, filepath:Path|str|None=None)->bool:
         ### close current file
         if not self.closeFile():
             print("Current file was not closed. Cancel opening file!")
@@ -276,6 +285,41 @@ class Window(QWidget):
             traceback.print_exc()
             return False
 
+    def saveFile(self, filepath:str|None=None):
+        assert filepath is None or isinstance(filepath, str), f"got:, {filepath}"
+        DoSaveAs = self._filepath!=filepath
+
+        if DoSaveAs:
+            ...
+        if not self._filepath or not filepath:
+            choosen_filepath, filter_used = QFileDialog.getSaveFileName(self, 
+                "Save", self.fileFilter(), self.fileSelectFilter())
+            if not choosen_filepath:
+                return # if no filepath was choosen cancel saving
+            filepath = choosen_filepath
+
+        elif self._filepath:
+            filepath = self._filepath
+
+        if not filepath:
+            return
+
+        """ note
+        We must stop watching this file, otherwise it will silently reload the
+        script. It reloads silently, because if the document is not modified,
+        and the file has been changed, it will silently reload the script.
+        """
+        self._watcher.removePath(filepath) 
+        try:
+            with open(filepath, 'w') as file:
+                file_contents = self.graph_model.serialize()
+                file.write(file_contents)
+                self.setModified(False)
+        except FileNotFoundError:
+            pass
+        self._watcher.addPath(filepath)
+        self._filepath = filepath
+
     def closeFile(self)->bool:
         """return False, if the user cancelled, otherwise true"""
         if self._is_modified:
@@ -289,8 +333,28 @@ class Window(QWidget):
                     return False
         return True
 
-    def saveFile(self):
-        ...
+    def filepath(self):
+        return self._filepath
+
+    def _onFileChanged(self, path):
+        assert path == self._filepath
+
+        def reload_script():
+            # reload the file changed on disk
+            assert self._filepath
+            with open(self._filepath, 'r') as file:
+                self.graph_model.deserialize(file.read())
+                self.setModified(False)
+
+        # ignore file changes, while prompt is open
+        from pylive.utils.qt import signalsBlocked
+        with signalsBlocked(self._watcher):
+            if not self.isModified() or QMessageBox.StandardButton.Yes==QMessageBox.information(window, 
+                "File has changed on disk!", 
+                f"Do you want to reaload '{self.filepath()}'?", 
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel):
+
+                reload_script() 
 
     def create_new_node(self, scenepos:QPointF=QPointF()):
         from pylive.utils.unique import make_unique_name
@@ -315,22 +379,22 @@ class Window(QWidget):
         if not self.node_selection_model:
             return
 
-        nodes = map(self.node_proxy_model.mapToSource, self.node_selection_model.selectedIndexes())
+        nodes = list(map(self.node_proxy_model.mapToSource, self.node_selection_model.selectedIndexes()))
         self.graph_model.evaluateNodes(nodes)
 
-    def delete_selected_nodes(self):
-        indexes:list[QModelIndex] = self.node_selection_model.selectedRows(column=0)
-        for index in sorted(indexes, key=lambda idx:idx.row(), reverse=True):
-            node = self.node_proxy_model.mapToSource(index)
-            self.graph_model.removeNode(node)
-
-    def delete_selected_edges(self):
-        indexes:list[QModelIndex] = self.links_table_view.selectedIndexes()
-
-        rows = set(index.row() for index in indexes)
-        for row in sorted(rows, reverse=True):
-            source, target, inlet = self.link_proxy_model.mapToSource(self.link_proxy_model.index(row, 0))
+    def delete_selected(self):
+        # delete selected links
+        link_indexes:list[QModelIndex] = self.link_selection_model.selectedIndexes()
+        link_rows = set(index.row() for index in link_indexes)
+        for link_row in sorted(link_rows, reverse=True):
+            source, target, inlet = self.link_proxy_model.mapToSource(self.link_proxy_model.index(link_row, 0))
             self.graph_model.unlinkNodes(source, target, inlet)
+
+        # delete selected nodes
+        node_indexes:list[QModelIndex] = self.node_selection_model.selectedRows(column=0)
+        for node_index in sorted(node_indexes, key=lambda idx:idx.row(), reverse=True):
+            node = self.node_proxy_model.mapToSource(node_index)
+            self.graph_model.removeNode(node)
 
     def connect_selected_nodes(self):
         selected_nodes = set(map(self.node_proxy_model.mapToSource, self.node_selection_model.selectedIndexes()))

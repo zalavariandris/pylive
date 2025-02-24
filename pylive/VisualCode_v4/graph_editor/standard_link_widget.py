@@ -20,7 +20,13 @@ class StandardLinkPath(QGraphicsLineItem):
     def paint(self, painter:QPainter, option:QStyleOption, widget:QWidget|None=None):
         path = makeArrowShape(self.line(), 2)
         palette = widget.palette() if widget else QPalette()
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        pen = painter.pen()
         painter.setBrush(palette.text())
+        if self.isSelected() and widget:
+            print("paint selected link")
+            painter.setBrush(widget.palette().accent())
+
         painter.setPen(Qt.PenStyle.NoPen)
         painter.drawPath(path)
 
@@ -38,7 +44,11 @@ class RoundedLinkPath(QGraphicsLineItem):
 
         palette = widget.palette() if widget else QPalette()
         painter.setBrush(Qt.BrushStyle.NoBrush)
-        painter.setPen(QPen(palette.text(), 1))
+        pen = painter.pen()
+
+        if self.isSelected() and widget:
+            pen.setBrush(widget.palette().accent())
+        painter.setPen(pen)
         painter.drawPath(path)
 
 
