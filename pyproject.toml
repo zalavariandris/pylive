@@ -21,6 +21,7 @@ dependencies = [
     "watchfiles ~= 0.24.0",
     "PySide6",
     "qtconsole == 5.6.1",
+    "qtawesome", # Spyder bindings for FontAwesome
     "qt-parameters",
     "qt-material-icons",
     

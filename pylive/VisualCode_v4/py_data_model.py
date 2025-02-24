@@ -165,8 +165,8 @@ class PyDataModel(QObject):
             new_parameters:list[PyParameterItem]|None = None
 
             try:
-                from pylive.utils.evaluate_python import parse_python_function
-                func = parse_python_function(node_item.source)
+                from pylive.utils.evaluate_python import compile_python_function
+                func = compile_python_function(node_item.source)
             except SyntaxError as err:
                 new_compiled = False
                 new_evaluated = False
@@ -261,8 +261,9 @@ class PyDataModel(QObject):
 
         # compile nodes if necessary
         nodes_need_compilation = filter(lambda node: self.isCompiled(node) not in ('compiled', 'evaluated', 'error'), ordered_nodes)
-        self.compileNodes(nodes_need_compilation)
-
+        compile_success = self.compileNodes(nodes_need_compilation)
+        if not compile_success:
+            return False
         ### evaluate nodes in reverse topological order
         from pylive.utils.evaluate_python import call_function_with_named_args
         def _evaluate_node(node:str)->bool:
@@ -286,7 +287,8 @@ class PyDataModel(QObject):
             for param_item in node_item.parameters:
                 if param_item.name in named_args:
                     continue # skip connected fields
-                named_args[param_item.name] = param_item.value
+                if param_item.value != Empty:
+                    named_args[param_item.name] = param_item.value
             try:
                 result = call_function_with_named_args(func, named_args)
             except SyntaxError as err:
@@ -317,7 +319,6 @@ class PyDataModel(QObject):
             else:
                 return True
 
-        logger.debug("Evaluate nodes")
         for node in ordered_nodes:
             logger.debug(f"- {node}") 
             success = _evaluate_node(node)

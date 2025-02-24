@@ -4,7 +4,87 @@ from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
 # from pylive.QtGraphEditor.widgets.graph_shapes import BaseNodeItem
-from pylive.utils.qt import distribute_items_horizontal
+import qtawesome as qta
+
+class IconFA(QGraphicsItem):
+    def __init__(self, name:str, parent:QGraphicsItem|None=None):
+        super().__init__(parent=parent)
+        self._name = name
+
+    def boundingRect(self) -> QRectF:
+        return QRectF(0.0, 0.0, 16.0, 16.0)
+
+    def paint(self, painter:QPainter, option:QStyleOption, widget:QWidget|None=None):
+        icon = qta.icon(self._name)
+        icon.paint(painter, QRect(0,0,16,16))
+        # icon = MaterialIcon(name=self._name)
+        # pixmap = icon.pixmap(QSize(16,16))
+        # painter.drawPixmap(pixmap)
+
+
+class PyDebugWidget(QGraphicsItem):
+    def __init__(self, parent:QGraphicsItem|None=None):
+        super().__init__(parent=parent)
+        self._compiled: bool=True
+        self._evaluated: bool=True
+        self._error:Exception|None=None
+
+        self._message_label = QGraphicsTextItem()
+        self._message_label.setParentItem(self)
+        self._message_label.setPos(16,28)
+
+
+        ### compiled icon
+        # ei.bulb, ei.idea-alt, ei.fire, ei.hourglass, ei.ok, ei.repeat, ei.refresh, ei.wrench, fa.gear, fa.warning
+
+    def boundingRect(self)->QRectF:
+        return QRectF(0,0,100, 56)
+
+    def compiled(self):
+        return self._compiled
+
+    def setCompiled(self, compiled:bool):
+        self._compiled = compiled
+        self.update()
+
+    def evaluated(self):
+        return self._evaluated
+
+    def setEvaluated(self, evaluated:bool):
+        self._evaluated = evaluated
+        self.update()
+
+    def showError(self, error:Exception|None):
+        self._error = error
+        self.update()
+        self._message_label.setHtml(f"<p style='color: red'>{error}</p>")
+
+    def clearError(self):
+        self._error = None
+        self.update()
+        self._message_label.setHtml("")
+        
+    def paint(self, painter:QPainter, option:QStyleOption, widget:QWidget|None=None):
+        # painter.drawRoundedRect(self.boundingRect(), 5, 5)
+        if self._compiled:
+            color = QColor("lightgreen")
+            painter.setPen(QPen(color, 1))
+            painter.drawText(16,12, "compiled")
+            icon = qta.icon('ph.flag-fill', color=color)
+            icon.paint(painter, QRect(0,0,16,16))
+
+        if self._evaluated:
+            color = QColor("orange")
+            painter.setPen(QPen(color, 1))
+            painter.drawText(16,26, "evaluated")
+            icon = qta.icon('mdi.lightbulb', color=color)
+            icon.paint(painter, QRect(0,14,16,16))
+
+        if self._error:
+            icon = qta.icon('fa5s.exclamation-circle', color='red')
+            icon.paint(painter, QRect(0,28,16,16))
+
+
 class PyNodeWidget(QGraphicsWidget):
     pressed = Signal()
     scenePositionChanged = Signal()
@@ -24,50 +104,13 @@ class PyNodeWidget(QGraphicsWidget):
         self._heading_label.adjustSize()
         self.setGeometry(QRectF(0, 0, self._heading_label.textWidth(), 150))
 
-
-        ### error label
-        self._messages_label = QGraphicsTextItem(f"no errors")
-        # self._messages_label.setDefaultTextColor("red")
-        self._messages_label.setParentItem(self)
-        self._messages_label.setParentItem(self)
-        self._messages_label.adjustSize()
-        self._messages_label.setPos(self.boundingRect().center().x(), self.boundingRect().bottom())
-        self.message_timer:QTimer|None = None
+        ###
+        self.debug_widget = PyDebugWidget()
+        self.debug_widget.setParentItem(self)
+        self.debug_widget.setPos(self.boundingRect().right(), 0)
 
         ###
         self.setHeading("Heading")
-        self._color:None|Literal['primary', 'warning', 'error']|QColor = None
-
-    def setColor(self, color:None|Literal['primary', 'warning', 'error']|QColor):
-        self._color = color
-
-    def showMessage(self, message:str, level:None|Literal['primary', 'warning', 'error']=None, timeout:float=0.0):
-        match level:
-            case None:
-                self._messages_label.setHtml(f"<p>{message}</p>")
-            case 'primary':
-                self._messages_label.setHtml(f"<p style='color: palette(accent)'>{message}</p>")
-            case 'warning':
-                self._messages_label.setHtml(f"<p style='color: orange'>{message}</p>")
-            case 'error':
-                self._messages_label.setHtml(f"<p style='color: red'>{message}</p>")
-
-        self._messages_label.adjustSize()
-
-        if timeout>0.0:
-            if self.message_timer:
-                self.message_timer.stop()
-
-            self.message_timer = QTimer()
-            self.message_timer.setSingleShot(True)
-            self.message_timer.timeout.connect(lambda: self.clearMessages())
-            self.message_timer.start(int(timeout*1000))
-
-    def clearMessages(self):
-        self._messages_label.setHtml("")
-        if self.message_timer:
-            self.message_timer.stop()
-            self.message_timer = None
 
     def itemChange(self, change: QGraphicsItem.GraphicsItemChange, value: Any) -> Any:
         if change == QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
@@ -79,24 +122,9 @@ class PyNodeWidget(QGraphicsWidget):
 
         pen = painter.pen()
 
-
         pen.setBrush(self.palette().text())
         if self.isSelected():
             pen.setBrush(self.palette().accent())
-
-        if self._color:
-            match self._color:
-                case QColor():
-                    pen.setColor(self._color)
-                case 'primary':
-                    pen.setColor(self.palette().accent())
-                case 'warning':
-                    pen.setColor(QColor('orange'))
-                case 'error':
-                    pen.setColor(QColor('red'))
-
-            if self.isSelected():
-                pen.setWidth(2)
 
         painter.setPen(pen)
 
@@ -108,7 +136,7 @@ class PyNodeWidget(QGraphicsWidget):
         self._heading_label.adjustSize()
         self.setPreferredSize(self._heading_label.textWidth(), 20)
         self.adjustSize()
-        self._messages_label.setPos(self.boundingRect().center().x(), self.boundingRect().bottom())
+        self.debug_widget.setPos(self.boundingRect().right(), 0)
         
     def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         self.pressed.emit()
@@ -132,18 +160,12 @@ if __name__ == "__main__":
 
     ### NODES
     node_item = PyNodeWidget()
-    node_item.showMessage("info", level=None, timeout=1.0)
 
-    node_item2 = PyNodeWidget()
-    node_item2.showMessage("error", level='error')
-    node_item2.setColor('error')
-    node_item2.setPos(0,100)
 
     # node_item.clearMessages()
 
     scene = QGraphicsScene()
     scene.addItem(node_item)
-    scene.addItem(node_item2)
 
     node_item.pressed.connect(lambda: print("node pressed"))
 

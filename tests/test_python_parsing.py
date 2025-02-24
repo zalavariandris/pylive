@@ -1,7 +1,7 @@
 from typing import *
 import unittest
 
-from pylive.utils.evaluate_python import parse_python_function
+from pylive.utils.evaluate_python import compile_python_function
 from textwrap import dedent
 
 
@@ -12,7 +12,7 @@ class TestParseFunctions(unittest.TestCase):
         def hello(name:str)->str:
             return f"Hello {name}!"
         """)
-        func = parse_python_function(script)
+        func = compile_python_function(script)
         self.assertEqual(func.__name__, "hello")
 
     def test_multiple_functions(self):
@@ -23,7 +23,7 @@ class TestParseFunctions(unittest.TestCase):
         def hello2(name:str)->str:
             return f"Hello {name}!"
         """)
-        func = parse_python_function(script)
+        func = compile_python_function(script)
         self.assertEqual(func.__name__, "hello1")
 
     def test_python_script_with_imports(self):
@@ -33,7 +33,7 @@ class TestParseFunctions(unittest.TestCase):
         def hello1(name:str)->str:
             return f"Hello {name}!"
         """)
-        func = parse_python_function(script)
+        func = compile_python_function(script)
         print(func)
         self.assertEqual(func.__name__, "hello1")
 

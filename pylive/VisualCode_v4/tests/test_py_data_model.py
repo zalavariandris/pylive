@@ -10,7 +10,7 @@ from yaml import safe_dump
 app= QApplication( sys.argv )
 
 from pylive.VisualCode_v4.graph_editor.graph_data_roles import GraphDataRole
-from pylive.VisualCode_v4.py_data_model import PyDataModel, PyNodeItem, PyParameterItem
+from pylive.VisualCode_v4.py_data_model import Empty, PyDataModel, PyNodeItem, PyParameterItem
 
 import inspect
 
@@ -53,8 +53,6 @@ class TestModelCRUD(unittest.TestCase):
 
     def test_delete_parameter(self):
         ...
-
-
 
     def test_reset(self):
         data_model = PyDataModel()
@@ -104,7 +102,6 @@ class TestSerialization(unittest.TestCase):
         self.assertEqual(data_model.linkCount(), 1)
         self.assertIn( ("Judit", "say_hello", "name"),  data_model.links())
         
-
     def test_parameter_link_syntax(self):
         """test support ing parameters with link using @"""
 
@@ -206,6 +203,16 @@ class TestParametersCRUD(unittest.TestCase):
             PyParameterItem("input2")
         ]))
 
+    def test_empty_parameters(self):
+        data_model = PyDataModel()
+        script = dedent("""\
+        def say_hello(name:str):
+            return "Hello " + name + "!"
+        """)
+        data_model.addNode("node_with_error", PyNodeItem(source=script))
+        data_model.compileNodes(['node_with_error'])
+        self.assertEqual(data_model.parameterValue('node_with_error', 0), Empty)
+
 class TestEvaluation(unittest.TestCase):
     def test_evaluate_single_node(self):
         data_model = PyDataModel()
@@ -228,6 +235,24 @@ class TestEvaluation(unittest.TestCase):
 
         self.assertEqual(data_model.nodeResult("mult"), 6)
         
+    
 
+    def test_evaluate_node_with_missing_parameters(self):
+        data_model = PyDataModel()
+        script = dedent("""\
+        def say_hello(name:str):
+            return "Hello " + name + "!"
+        """)
+        data_model.addNode("node_with_error", PyNodeItem(source=script))
+        data_model.evaluateNodes(["node_with_error"])
+        node_error:Exception|None = data_model.nodeError('node_with_error')
+        self.assertIsInstance(node_error, TypeError)
+        assert isinstance(node_error, TypeError)
+        self.assertEqual(node_error.args[0], "say_hello() missing 1 required positional argument: 'name'")
+        # print("!!ARGS!!!!!!!!!!!", node_error.args[0])
+        
+        # exec(script+"\nsay_hello()")
+
+        
 if __name__ == "__main__":
     unittest.main()

@@ -30,8 +30,6 @@ class StandardGraphDelegate(QObject):
     def updateNodeWidget(self, index:QModelIndex, node_widget:QGraphicsItem)->None:
         node_widget = cast(StandardNodeWidget, node_widget)
         node_widget.setHeading( index.data(Qt.ItemDataRole.DisplayRole) )
-        
-        index.data(Qt.ItemDataRole.ForegroundRole)
 
     def createInletWidget(self, parent:QGraphicsItem, node_index:QModelIndex, inlet:str, idx:int=-1)->QGraphicsItem:
         port_editor = StandardPortWidget(f"{inlet}")

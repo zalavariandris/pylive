@@ -6,7 +6,7 @@ from PySide6.QtWidgets import *
 
 
 from pathlib import Path
-from pylive.utils.evaluate_python import parse_python_function
+from pylive.utils.evaluate_python import compile_python_function
 
 
 class PyGraphModel(QObject):
@@ -112,7 +112,7 @@ class PyGraphModel(QObject):
         node_item = self._nodes_model.nodeItem(row)
 
         try:
-            func = parse_python_function(node_item.code)
+            func = compile_python_function(node_item.code)
         except SyntaxError as err:
             self._nodes_model.setDataByColumnName(row, "status", 'error')
             self._nodes_model.setDataByColumnName(row, 'func', None)
@@ -138,7 +138,7 @@ class PyGraphModel(QObject):
 
     def evaluateNode(self, row:int):
         """recursively evaluate nodes, from top to bottom"""
-        from pylive.utils.evaluate_python import parse_python_function, call_function_with_named_args
+        from pylive.utils.evaluate_python import compile_python_function, call_function_with_named_args
         node_item = self._nodes_model.nodeItem(row)
 
         ### load arguments from achestors

@@ -12,12 +12,11 @@ from pylive.utils import group_consecutive_numbers
 from pylive.VisualCode_v4.py_data_model import Empty, PyDataModel
 
 class PyProxyNodeModel(QAbstractItemModel):
+    _headers = ['name', 'source', 'parameters', 'compiled', 'evaluated', 'error', 'result']
     def __init__(self, source_model:PyDataModel, parent:QObject|None=None):
         super().__init__(parent=parent)
         self._nodes:list[str] = list()
         self._source_model:PyDataModel|None=None
-
-        self._headers = ['name', 'source', 'parameters', 'compiled', 'evaluated', 'error', 'result']
 
         self.setSourceModel(source_model)
 
@@ -235,8 +234,10 @@ class PyProxyNodeModel(QAbstractItemModel):
                     return self._source_model.isEvaluated(node_name)
 
             case 'error':
-                if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
+                if role == Qt.ItemDataRole.DisplayRole:
                     return f"{self._source_model.nodeError(node_name)}"
+                elif role ==  Qt.ItemDataRole.EditRole:
+                    return self._source_model.nodeError(node_name)
 
             case 'result':
                 if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):

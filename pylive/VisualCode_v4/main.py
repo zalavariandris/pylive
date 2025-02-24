@@ -1,6 +1,4 @@
-
 from typing import *
-
 from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
@@ -23,188 +21,13 @@ from pylive.VisualCode_v4.py_proxy_model import PyProxyNodeModel, PyProxyLinkMod
 
 from pylive.VisualCode_v4.graph_editor.graph_editor_view import GraphEditorView
 from pylive.VisualCode_v4.py_graph_view_delegate import PyGraphViewDelegate
-from pylive.QtScriptEditor.script_edit import ScriptEdit
-import pylive.utils.qtfactory as qf
-
-
-from pylive.utils.debug import log_function_call
-
-def log_call(fn, *args, **kwargs):
-    print(f"{fn.__name__} was called")
-    return fn(*args, **kwargs)
 
 import pylive.utils.qtfactory as qf
-import qt_parameters
 
-class PyInspectorView(QFrame):
-    def __init__(self, parent:QWidget|None=None):
-        super().__init__(parent=parent)
-        self._model:PyDataModel|None=None
-        self._current_node:str|None=None
-        self._parameter_model: PyProxyParameterModel|None=None
-        self._model_connections = []
-        self._view_connections = []
-        self.setupUI()
-
-    def showEvent(self, event: QShowEvent, /) -> None:
-        for signal, slot in self._model_connections:
-            signal.connect(slot)
-        for signal, slot in self._view_connections:
-            signal.connect(slot)
-
-        return super().showEvent(event)
-
-    def hideEvent(self, event: QHideEvent, /) -> None:
-        print("hideEvent")
-        for signal, slot in self._model_connections:
-            signal.disconnect(slot)
-        for signal, slot in self._view_connections:
-            signal.disconnect(slot)
-
-    def setupUI(self):
-        self.setFrameShape(QFrame.Shape.StyledPanel)  # Styled panel for the frame
-        self.setFrameShadow(QFrame.Shadow.Raised)
-
-        self.name_label = QLabel()
-
-        self.parameter_table_editor = QTableView()  
-        self.parameter_table_editor.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
-        self.parameter_table_editor.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        self.parameter_table_editor.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        self.parameter_table_editor.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-        self.parameter_table_editor.setSizeAdjustPolicy(QTableWidget.SizeAdjustPolicy.AdjustToContents)
-
-        self.source_editor = ScriptEdit()
-        self.source_editor.setPlaceholderText("source...")
-
-        main_layout = qf.vboxlayout([
-            self.name_label,
-            QLabel("<h2>Parameters</h2>"),
-            self.parameter_table_editor,
-            QLabel("<h2>Source</h2>"),
-            self.source_editor
-        ])
-
-        self.setLayout(main_layout)
-
-        # bind view to model
-        self._view_connections = [
-            (self.source_editor.textChanged, lambda: self._syncModelData('source'))
-        ]
-        for signal, slot in self._view_connections:
-            signal.connect(slot)
-        
-    def setModel(self, model: PyDataModel|None):
-        if self._model:
-            for signal, slot in self._model_connections:
-                signal.disconnect(slot)
-
-            self._parameter_model = None
-
-        if model:
-            self._model_connections = [
-                (model.sourceChanged, lambda: self._syncEditorData(attr='source'))
-            ]
-            for signal, slot in self._model_connections:
-                signal.connect(slot)
-
-            self._parameter_model = PyProxyParameterModel(model)
+from pylive.VisualCode_v4.py_inspector_view import PyInspectorView
+from pylive.VisualCode_v4.py_preview_view import PyPreviewView
 
 
-        self._model = model
-        self.parameter_table_editor.setModel(self._parameter_model)
-        if self._parameter_model:
-            self._parameter_model.setNode(self._current_node)
-
-    def _syncEditorData(self, attr:Literal['name', 'source']):
-        if not self._model or not self._current_node:
-            self.name_label.setText("<h1>- no selection -</h1>")
-            self.source_editor.setPlainText('')
-            return
-
-        match attr:
-            case 'name':
-                pretty_name = self._current_node or '- no selection -'
-                pretty_name = pretty_name.replace("_", " ").title()
-                self.name_label.setText(f"<h1>{pretty_name}<h1>")
-            case 'source':
-                value = self._model.nodeSource(self._current_node)
-                if value != self.source_editor.toPlainText():
-                    self.source_editor.setPlainText(value)
-
-    def _syncModelData(self, attr='source'):
-        if not self._model or not self._current_node:
-            return
-
-        match attr:
-            case 'source':
-                self._model.setNodeSource(self._current_node, self.source_editor.toPlainText())
-
-    def setCurrent(self, node:str|None):
-        self._current_node = node
-
-        self._syncEditorData('name')
-        self._syncEditorData('source')
-        if self._parameter_model:
-            self._parameter_model.setNode(node)
-
-
-class PyPreviewView(QFrame):
-    def __init__(self, parent:QWidget|None=None):
-        super().__init__(parent=parent)
-        self._model:PyDataModel|None=None
-        self._current_node:str|None = None
-
-        self._model_connections = []
-        self._view_connections = []
-        self.setupUI()
-
-    def setupUI(self):
-        self._label = QLabel()
-        main_layout = QVBoxLayout()
-        main_layout.addWidget(self._label)
-        self.setLayout(main_layout)
-
-    def setModel(self, model: PyDataModel|None):
-        if self._model:
-            for signal, slot in self._model_connections:
-                signal.disconnect(slot)
-
-            self._parameter_model = None
-
-        if model:
-            self._model_connections = [
-                (model.resultChanged, lambda node: self._syncEditorData() if node == self._current_node else None)
-            ]
-            for signal, slot in self._model_connections:
-                signal.connect(slot)
-
-        self._model = model
-
-    def _syncEditorData(self, attributes:list[str]=[]):
-        if not self._model:
-            return
-
-        if self._current_node:
-            info = []
-            if 'result' in attributes or not attributes:
-                result = self._model.nodeResult(self._current_node)
-                info.append(f"{result}")
-
-            if 'error' in attributes or not attributes:
-                error = self._model.nodeError(self._current_node)
-                info.append(f"<p style:'color: red'>{error}<p>")
-
-            print("sync editor data:", info)
-            self._label.setText("\n".join(info))
-        else:
-            self._label.setText("- no selection -")
-
-    def setCurrent(self, node:str|None):
-        print("Preview setCurrent", node)
-        if node != self._current_node:
-            self._current_node = node
-            self._syncEditorData()
 
 
 class Window(QWidget):
@@ -228,7 +51,7 @@ class Window(QWidget):
         self.setAutoCompile(True)
         self.setAutoEvaluate(True)
 
-    def showEvent(self, event: QShowEvent, /) -> None:
+    def showEvent(self, event: QShowEvent) -> None:
         self.graph_view.centerNodes()
 
     def setupUI(self):        

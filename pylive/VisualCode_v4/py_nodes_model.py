@@ -8,7 +8,7 @@ from PySide6.QtWidgets import *
 
 
 from pylive.VisualCode_v4.py_fields_model import PyFieldsModel
-from pylive.utils.evaluate_python import parse_python_function
+from pylive.utils.evaluate_python import compile_python_function
 
 
 from dataclasses import dataclass, field
@@ -66,7 +66,14 @@ class PyNodesModel(QAbstractItemModel):
         if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
             attr = self.headerData(index.column(), Qt.Orientation.Horizontal)
             value = getattr(node_item, attr)
-            return f"{value}"
+            match role:
+                case Qt.ItemDataRole.DisplayRole:
+                    if isinstance(value, (bool, str, int, float)):
+                        return value
+                    else:
+                        return f"{value}"
+                case Qt.ItemDataRole.EditRole:
+                    return value
            
         return None
 

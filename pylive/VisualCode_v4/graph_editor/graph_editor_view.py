@@ -254,8 +254,6 @@ class _GraphEditorView(QGraphicsView):
         if self._edges.rowCount()>0:
             self._onEdgesInserted(QModelIndex(), 0, self._edges.rowCount()-1)
 
-
-
     def _addNodes(self, rows:Iterable[int]):
         logger.debug(f"_addNodes {rows}")
         assert self._nodes
@@ -280,6 +278,7 @@ class _GraphEditorView(QGraphicsView):
     def _updateNodes(self, rows:Iterable[int], roles:list[int]):
         logger.debug(f"_updateNodes rows:{rows}, roles: {roles}")
         assert self._nodes, "self._edges cant be None"
+        assert self._delegate
         for row in rows:
             node_index = self._nodes.index(row, 0)
             node_id = QPersistentModelIndex(node_index)

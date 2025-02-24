@@ -23,6 +23,7 @@ def store_function_args(func: Callable, **kwargs) -> dict[str, Any]:
     bound_args.apply_defaults()
     return dict(bound_args.arguments)
 
+
 def call_function_with_named_args(func: Callable, named_args: Dict[str, Any]) -> Any:
     """
     Call a function using stored arguments, respecting positional-only parameters.
@@ -47,7 +48,7 @@ def call_function_with_named_args(func: Callable, named_args: Dict[str, Any]) ->
     return result
 
 
-def parse_python_function(code:str)->Callable:
+def compile_python_function(code:str)->Callable:
     """takes a python script and return the first function defined in the 
     script. raises Exceptions"""
     import inspect
@@ -64,3 +65,25 @@ def parse_python_function(code:str)->Callable:
             return attribute
     raise ValueError("no functions found in script")
 
+import re
+
+def get_function_name(code_string:str)->str:
+    match = re.search(r'def\s+(\w+)\s*\(', code_string)
+    return match.group(1) if match else None
+
+
+import traceback
+def format_exception(err:Exception)->str:
+    formatted_traceback = ''.join(traceback.TracebackException.from_exception(err).format())
+    return formatted_traceback
+
+    # print(f"{e}:")
+    # tb = traceback.TracebackException.from_exception(e)
+    
+    # # Loop through the stack to print the filename, line number, function name, and code
+    # for frame in tb.stack:
+    #     print(f"  File: {frame.filename}, Line: {frame.lineno}, Function: {frame.name}, Code: {frame.line}")
+
+    # # Alternatively, get just the line number from the last frame (where the exception was raised)
+    # last_frame = tb.stack[-1]  # The last frame is where the exception occurred
+    # print(f"  Line number of the exception: {last_frame.lineno}")
