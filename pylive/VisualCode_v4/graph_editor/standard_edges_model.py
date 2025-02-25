@@ -20,6 +20,7 @@ class StandardEdgeItem:
 
 import networkx as nx
 
+
 class StandardEdgesModel(QAbstractItemModel):
     inletsReset = Signal(QModelIndex)
     outletsReset = Signal(QModelIndex)
