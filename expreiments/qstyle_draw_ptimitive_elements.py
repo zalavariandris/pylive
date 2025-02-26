@@ -227,11 +227,11 @@ class ComplexControlWidget(QWidget):
 if __name__ == "__main__":
     app = QApplication([])
 
-    pe_widget = PrimitiveElementWidget()
-    pe_widget.show()
+    # pe_widget = PrimitiveElementWidget()
+    # pe_widget.show()
     ce_widget = ControlElementWidget()
     ce_widget.show()
-    cc_widget = ComplexControlWidget()
-    cc_widget.show()
+    # cc_widget = ComplexControlWidget()
+    # cc_widget.show()
 
     app.exec()

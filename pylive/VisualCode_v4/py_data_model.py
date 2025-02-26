@@ -35,6 +35,7 @@ class PyParameterItem:
 class PyNodeItem:
     source:str="def func(x:int):\n    ..."
     parameters: list[PyParameterItem] = field(default_factory=list)
+    position:QPointF=field(default_factory=QPointF)
     is_compiled:bool=False
     is_evaluated:bool=False
     error:Exception|None=None
@@ -48,23 +49,27 @@ class PyDataModel(QObject):
     modelAboutToBeReset = Signal()
     modelReset = Signal()
 
+    # Node Collection
     nodesAboutToBeAdded = Signal(list) # list of node names
     nodesAdded = Signal(list) # list of node names
     nodesAboutToBeRemoved = Signal(list) # list of node names
     nodesRemoved = Signal(list) # list of node names
 
+    # Node data
+    positionChanged = Signal(str)
     sourceChanged = Signal(str)
-
     compiledChanged = Signal(str)
     evaluatedChanged = Signal(str)
     errorChanged = Signal(str)
     resultChanged = Signal(str)
 
+    # Node Links
     nodesAboutToBeLinked = Signal(list) # list of edges: tuple[source, target, inlet]
-    nodesLinked = Signal(list)
-    nodesAboutToBeUnlinked = Signal(list)
-    nodesUnlinked = Signal(list)
+    nodesLinked = Signal(list) # list[str,str,str]
+    nodesAboutToBeUnlinked = Signal(list) # list[str,str,str]
+    nodesUnlinked = Signal(list) # list[str,str,str]
 
+    # Node Parameters
     parametersAboutToBeReset = Signal(str)
     parametersReset = Signal(str)
     parametersAboutToBeInserted = Signal(str, int, int) # node, start, end
@@ -72,6 +77,7 @@ class PyDataModel(QObject):
     patametersChanged = Signal(str, int, int) # node, first, last
     parametersAboutToBeRemoved = Signal(str, int, int) # node, start, end
     parametersRemoved = Signal(str, int, int) # node, start, end
+
 
     def __init__(self, parent:QObject|None=None):
         super().__init__(parent=parent)
@@ -149,6 +155,9 @@ class PyDataModel(QObject):
         self.nodesAboutToBeUnlinked.emit([(source, target, inlet)])
         self._links.remove( (source, target, inlet) )
         self.nodesUnlinked.emit([(source, target, inlet)])
+
+    def nodePosition(self, name:str)->QPointF:
+        return self._nodes[name].position
 
     def nodeSource(self, name:str)->str:
         return self._nodes[name].source
