@@ -64,10 +64,66 @@ from textwrap import dedent
 
 from itertools import chain
 
+from typing import *
+
+# class bilist:
+#     def __init__(self, iterable:Iterable[Hashable]=()):
+#         self.data = list(iterable)
+#         self.index_map = {v: i for i, v in enumerate(self.data)}
+
+#     def remove(self, index:int, count:int):
+#         idx = self.index_map.pop(item)
+#         self.data.pop(idx)
+#         # Update indices
+#         for i in range(idx, len(self.data)):
+#             self.index_map[self.data[i]] = i
+
+#     def insert(self, index:int, *items:Hashable):
+#         self.data[index:index] = list(items)
+#         self.index_map = {v: i for i, v in enumerate(self.data)}
+
+#     def remove(self, index:int, count:int):
+#         ...
+
+#     def move(self, )
+
+#     def pop(self, index=-1):
+#         item = self.data.pop(index)
+#         del self.index_map[item]
+#         for i in range(index, len(self.data)):
+#             self.index_map[self.data[i]] = i
+#         return item
+
+#     def index(self, item:Hashable):
+#         return self.index_map[item]  # O(1) index lookup
+
+#     def at(self, index:int)
+
+#     def __getitem__(self, index):
+#         return self.data[index]
+
+#     def __len__(self):
+#         return len(self.data)
+
+#     def __repr__(self):
+#         return repr(self.data)
+
+# class Widgets(QStandardItemModel):
+#     def __init__(self, source:QAbstractItemModel, parent:QObject|None=None):
+#         super().__init__(parent=parent)
+#         source.rowsInserted.connect(self.insertItems)
+#         source.rowsMoved.connect(self.moveRows)
+#         source.rowsRemoved.connect(self.removeRows)
+
+#     def insertItems(self, parent:QModelIndex , first: int, last:int):
+#         item = QStandardItem()
+#         super().insertRows(first, last-first+1, parent=parent)
+
+
 class NodeItem(QGraphicsItem):
-    def __init__(self, index:QPersistentModelIndex, parent:QGraphicsItem|None=None):
+    def __init__(self, row:int, parent:QGraphicsItem|None=None):
         super().__init__(parent=parent)
-        self.index:QPersistentModelIndex = index
+        self.row:int = row
         self.in_links:set[LinkItem] = set()
         self.out_links:set[LinkItem] = set()
 
@@ -77,9 +133,9 @@ class NodeItem(QGraphicsItem):
     def boundingRect(self) -> QRectF:
         return QRectF(0,0,120,32)
 
-    def paint(self, painter:QPainter, option:QStyleOption, widget:QWidget|None=Nonce):
+    def paint(self, painter:QPainter, option:QStyleOption, widget:QWidget|None=None):
         painter.drawRoundedRect(self.boundingRect(), 5, 5)
-        painter.drawText(QPointF(0, 20), f"{self.index.data()}")
+        painter.drawText(QPointF(0, 20), f"Node #{self.row}")
 
 
 class PortItem(QGraphicsItem):
@@ -88,6 +144,16 @@ class PortItem(QGraphicsItem):
         self.index:QPersistentModelIndex = index
         self.in_links:set[LinkItem] = set()
         self.out_links:set[LinkItem] = set()
+
+    def boundingRect(self) -> QRectF:
+        r = 6
+        return QRectF(-r,-r,r*2+100,r*2+20)
+
+    def paint(self, painter:QPainter, option:QStyleOption, widget:QWidget|None=None):
+        assert self.index.isValid()
+        r = 6
+        painter.drawEllipse(QRectF(-r,-r,r*2,r*2))
+        painter.drawText(QPointF(0, 0), f"{self.index.data(Qt.ItemDataRole.DisplayRole)}")
 
 
 class LinkItem(QGraphicsItem):
@@ -117,7 +183,8 @@ class _GraphEditorView(QGraphicsView):
 
         # store model widget relations
         # map item index to widgets
-        self._item_widgets:dict[QPersistentModelIndex, NodeItem|PortItem] = dict()
+        self._item_widgets = []
+        # self._item_widgets:dict[QPersistentModelIndex, NodeItem|PortItem] = dict()
         # map (source, target) index to widgets
         self._link_widgets:dict[tuple[QPersistentModelIndex, QPersistentModelIndex], LinkItem] = dict()
         # self._port_widgets:dict[QPersistentModelIndex, QGraphicsItem] = dict()
@@ -157,7 +224,6 @@ class _GraphEditorView(QGraphicsView):
             for signal, slot in self._tree_model_connections:
                 signal.connect(slot)
             
-            
         self._tree:QAbstractItemModel|None = tree
 
         # populate initial scene
@@ -182,22 +248,32 @@ class _GraphEditorView(QGraphicsView):
             child_count = len(self._tree.children())
             self._onRowsInserted(parent=node_index, first=0, last=child_count-1)
 
-
     def _onRowsInserted(self, parent:QModelIndex, first:int, last:int):
         logger.debug(f"_onRowsInserted {parent}, {first}-{last}")
         assert self._tree, "self._nodes is None"
         assert self._delegate
         if not parent.isValid():
-            ### create nodes from root indexes
+            ### insert new nodes
+            new_items = []
             for row in range(first, last+1):
-                node_id = QPersistentModelIndex(self._tree.index(row, 0, QModelIndex()))
-                node_widget = NodeItem(node_id)
-                self._item_widgets[node_id] = node_widget
+                node_widget = NodeItem(row=row)
+                new_items.append(node_widget)
                 self.scene().addItem(node_widget)
+
+            self._item_widgets[first:first] = new_items
+
+            # adjust rows referenced by   
+            for row, item in enumerate(new_items, start=first):
+                item.row = row
+
         else:
             ### create ports from children
             for row in range(first, last+1):
+                assert parent.isValid()
+                port_idx = self._tree.index(row, 0, parent)
+                assert port_idx.isValid(), f"got: {port_idx}"
                 port_id = QPersistentModelIndex(self._tree.index(row, 0, parent))
+                assert port_id.isValid()
                 port_widget = PortItem(port_id)
                 self._item_widgets[port_id] = port_widget
                 node_widget = self._item_widgets[QPersistentModelIndex(parent)]
@@ -481,6 +557,7 @@ def main():
         def __init__(self, parent: QWidget | None = None) -> None:
             super().__init__(parent=parent)
             self._model:QStandardItemModel|None=QStandardItemModel()
+            self._selection = QItemSelectionModel(self._model)
 
             self.setupUI()
             self.action_connections = []
@@ -496,17 +573,19 @@ def main():
             self.graphview = _GraphEditorView()
             self.graphview.setWindowTitle("NXNetworkScene")
 
-            self.create_action = QPushButton("create node", self)
+            self.create_node_action = QPushButton("create node", self)
+            self.create_inlet_action = QPushButton("create inlet", self)
             self.delete_action = QPushButton("delete", self)
             self.link_selected_action = QPushButton("connect selected", self)
             self.layout_action = QPushButton("layout nodes", self)
             self.layout_action.setDisabled(True)
 
-            buttons_layout = QGridLayout()
-            buttons_layout.addWidget(self.create_action, 0, 0)
-            buttons_layout.addWidget(self.delete_action, 0, 1)
-            buttons_layout.addWidget(self.link_selected_action, 1, 0, 1, 2)
-            buttons_layout.addWidget(self.layout_action, 3, 0, 1, 2)
+            buttons_layout = QVBoxLayout()
+            buttons_layout.addWidget(self.create_node_action)
+            buttons_layout.addWidget(self.create_inlet_action)
+            buttons_layout.addWidget(self.delete_action)
+            buttons_layout.addWidget(self.link_selected_action)
+            buttons_layout.addWidget(self.layout_action)
             grid_layout = QGridLayout()
             grid_layout.addLayout(buttons_layout, 0, 0)
             grid_layout.addWidget(self.nodelist, 1, 0)
@@ -519,9 +598,12 @@ def main():
             self.nodelist.setModel(self._model)
             self.nodetree.setModel(self._model)
             self.graphview.setModel(self._model)
+            self.nodelist.setSelectionModel(self._selection)
+            self.nodetree.setSelectionModel(self._selection)
 
             self.action_connections = [
-                (self.create_action.clicked, lambda: self.create_node()),
+                (self.create_node_action.clicked, lambda: self.create_node()),
+                (self.create_inlet_action.clicked, lambda: self.create_inlet()),
                 (self.delete_action.clicked, lambda: self.delete_selected()),
                 (self.link_selected_action.clicked, lambda: self.link_selected()),
                 # (self.layout_action.clicked, lambda: self.graphview.layoutNodes())
@@ -539,7 +621,7 @@ def main():
 
             node_count = self._model.rowCount()
             node_names = list(map(getItemName, range(node_count))) 
-            unique_name = make_unique_name("node1", node_names)
+            unique_name = make_unique_name("node0", node_names)
 
             item = QStandardItem()
             item.setData(unique_name, Qt.ItemDataRole.DisplayRole)
@@ -547,7 +629,19 @@ def main():
 
         @Slot()
         def create_inlet(self):
-            ...
+            assert self._model
+            node_rows = set(idx.row() for idx in self._selection.selectedIndexes() if not idx.parent().isValid())
+
+            for node_row in sorted(node_rows):
+                node_index = self._model.index(node_row, 0)
+                node_item = self._model.itemFromIndex(node_index)
+                inlet_count = node_item.rowCount()
+                inlet_item = QStandardItem()
+                inlet_item.setData(f"inlet{inlet_count}", Qt.ItemDataRole.DisplayRole)
+                self._model.insertRows(inlet_count, 1, node_index)
+                # node_item.insertRow(inlet_count, inlet_item)
+
+
 
         @Slot()
         def link_selected(self):
