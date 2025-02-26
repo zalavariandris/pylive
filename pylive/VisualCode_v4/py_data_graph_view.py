@@ -20,6 +20,7 @@ from itertools import chain
 from bidict import bidict
 
 
+from pylive.utils.qt import distribute_items_horizontal
 from pylive.utils.unique import make_unique_name
 from pylive.utils.diff import diff_set
 
@@ -30,7 +31,8 @@ logger = logging.getLogger(__name__)
 from pylive.VisualCode_v4.py_data_model import PyDataModel, PyNodeItem
 
 
-class PortItem(QGraphicsItem):
+class PortItem(QGraphicsWidget):
+    scenePositionChanged = Signal()
     def __init__(self, key:Hashable, parent:QGraphicsItem|None=None):
         super().__init__(parent=parent)
         self.key = key
@@ -41,10 +43,18 @@ class PortItem(QGraphicsItem):
         self.label.setPos(0,-20)
         self.label.hide()
         self.setAcceptHoverEvents(True)
+        r = 3
+        self.setGeometry(QRectF(-r,-r,r*2,r*2))
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges)
 
-    def boundingRect(self) -> QRectF:
-        r = 6
-        return QRectF(-r,-r,r*2,r*2)
+    # def boundingRect(self) -> QRectF:
+    #     r = 6
+    #     return QRectF(-r,-r,r*2,r*2)
+
+    def itemChange(self, change: QGraphicsItem.GraphicsItemChange, value: Any) -> Any:
+        if change == QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
+            self.scenePositionChanged.emit()
+        return super().itemChange(change, value)
 
     def update(self, rect:QRect|QRectF=QRectF()):
         self.label.setPlainText(f"{self.key}")
@@ -57,10 +67,9 @@ class PortItem(QGraphicsItem):
         return path
 
     def paint(self, painter:QPainter, option:QStyleOption, widget:QWidget|None=None):
-        r = 3
         palette = widget.palette() if widget else QApplication.palette()
         painter.setBrush(palette.text())
-        painter.drawEllipse(QRectF(-r,-r,r*2,r*2))
+        painter.drawEllipse(self.boundingRect())
 
     def hoverEnterEvent(self, event: QGraphicsSceneHoverEvent) -> None:
         self.label.show()
@@ -74,20 +83,15 @@ class NodeItem(QGraphicsWidget):
     def __init__(self, key:Hashable, parent:QGraphicsItem|None=None):
         super().__init__(parent=parent)
         self.key:Hashable = key
-        self.in_links:set[LinkItem] = set()
-        self.out_links:set[LinkItem] = set()
 
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges)
 
         self._inlet_widgets:bidict[Hashable, PortItem] = bidict()
-        self._outlet = PortItem("out")
-        self._outlet.label.setPos(-28,-5)
-        self._outlet.setParentItem(self)
-        
+        self._outlet_widgets:bidict[Hashable, PortItem] = bidict()
+
         self.setGeometry( QRectF(0,0,70,24) )
-        self._outlet.setPos(self.rect().width()/2, self.rect().height()+2)
 
     def paint(self, painter: QPainter, option, widget=None):
         button_option = QStyleOptionButton()
@@ -114,16 +118,12 @@ class NodeItem(QGraphicsWidget):
         style = widget.style() if widget else QApplication.style()
         style.drawControl(QStyle.CE_PushButton, button_option, painter, widget)
 
-    def itemChange(self, change: QGraphicsItem.GraphicsItemChange, value: Any) -> Any:
-        if change == QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
-            self.scenePositionChanged.emit()
-        return super().itemChange(change, value)
-
 
 class LinkItem(QGraphicsLineItem):
     def __init__(self, key:tuple[str,str,str,str], parent:QGraphicsItem|None=None):
         super().__init__(parent=parent)
         self.key:tuple[str,str,str,str] = key
+        self.setLine(0,0,10,10)
 
 
 class _GraphEditorView(QGraphicsView):
@@ -174,19 +174,19 @@ class _GraphEditorView(QGraphicsView):
                 (model.nodesAboutToBeRemoved, lambda nodes: self.removeNodeItems([node_key for node_key in nodes])),
 
                 # Node Data
-                (model.sourceChanged, lambda node: self.updateNodeItem(node, 'source')),
-                (model.positionChanged, lambda node: self.updateNodeItem(node, 'position')),
-                (model.compiledChanged, lambda node: self.updateNodeItem(node, 'compiled')),
-                (model.evaluatedChanged, lambda node: self.updateNodeItem(node, 'evaluated')),
-                (model.errorChanged, lambda node: self.updateNodeItem(node, 'error')),
-                (model.resultChanged, lambda node: self.updateNodeItem(node, 'result')),
+                (model.sourceChanged, lambda node:    self.updateNodeItems([node], 'source')),
+                (model.positionChanged, lambda node:  self.updateNodeItems([node], 'position')),
+                (model.compiledChanged, lambda node:  self.updateNodeItems([node], 'compiled')),
+                (model.evaluatedChanged, lambda node: self.updateNodeItems([node], 'evaluated')),
+                (model.errorChanged, lambda node:     self.updateNodeItems([node], 'error')),
+                (model.resultChanged, lambda node:    self.updateNodeItems([node], 'result')),
 
                 # Node Parameters
                 (model.parametersInserted, lambda node_key, first, last, model=model: 
                     self.insertInletItems(node_key, 0, [model.parameterName(node_key, i) for i in range(first, last)])
                 ),
                 (model.patametersChanged, lambda node_key, first, last, model=model: 
-                    self.updateParameterItems(node_key, [model.parameterName(node_key, i) for i in range(first, last)])
+                    self.updateInletItems(node_key, [model.parameterName(node_key, i) for i in range(first, last)])
                 ),
                 (model.parametersAboutToBeRemoved, lambda node_key, first, last, model=model:
                     self.removeInletItem(node_key, [model.parameterName(node_key, i) for i in range(first, last)])
@@ -210,7 +210,7 @@ class _GraphEditorView(QGraphicsView):
         self.resetItems()
 
     def model(self)->QAbstractItemModel|None:
-        return self._tree
+        return self._model
 
     ### Handle Model Signals
     def resetItems(self):
@@ -228,56 +228,133 @@ class _GraphEditorView(QGraphicsView):
     ### Node
     def addNodeItems(self, node_keys:Iterable[str]):
         for node_key in node_keys:
-            node_widget = NodeItem(key=node_key)
-            self._node_widgets[node_key] = node_widget
-            self.scene().addItem(node_widget)
+            if node_key not in self._node_widgets:
+                node_widget = NodeItem(key=node_key)
+                self._node_widgets[node_key] = node_widget
+                self.scene().addItem(node_widget)
+                self.insertOutletItems(node_key, 0, "out")
+            else:
+                self.updateNodeItems([node_key])
 
-    def updateNodeItem(self, node_key:str, hint:Literal['source', 'position', 'compiled', 'evaluated', 'error', 'result']):
-        node_widget = self._node_widgets[node_key]
-        node_widget.update()
+    def updateNodeItems(self, node_keys:Iterable[str], hint:Literal['source', 'position', 'compiled', 'evaluated', 'error', 'result', None]=None):
+        assert all(key in self._node_widgets for key in node_keys)
+        for node_key in node_keys:
+            node_widget = self._node_widgets[node_key]
+            node_widget.update()
 
     def removeNodeItems(self, node_keys:list[str]):
         for key in node_keys:
-            node_widget = self._node_widgets[key]
-            del self._node_widgets[key]
-            self.scene().removeItem(node_widget)
+            if key in self._node_widgets:
+                node_widget = self._node_widgets[key]
+                del self._node_widgets[key]
+                self.scene().removeItem(node_widget)
 
     ### Parameters
-    def insertInletItems(self, node_key:str, index:int, port_keys:Iterable[str]):
-        if index!=0:
-            raise NotImplementedError("not yet implemented")
+    def insertInletItems(self, node_key:str, index:int, inlet_keys:Iterable[str]):
+        """insert inlet item for keys.
+        if the item already exist, update it!"""
+        #TODO: index is not yet supported
         node_widget = self._node_widgets[node_key]
-        for port_key in port_keys:
-            port_widget = PortItem(port_key)
-            node_key = node_key
-            node_widget._inlet_widgets[port_key] = port_widget
-            port_widget.setParentItem(node_widget)
+        for key in inlet_keys:
+            if key not in node_widget._inlet_widgets:
+                widget = PortItem(key)
+                node_key = node_key
+                node_widget._inlet_widgets[key] = widget
+                widget.setParentItem(node_widget)
 
-    def updateParameterItems(self, node_key:str, port_keys:Iterable[str], hints=None):
+            else:
+                self.updateInletItems(node_key, [key])
+        distribute_items_horizontal([_ for _ in node_widget._inlet_widgets.values()], node_widget.boundingRect())
+
+    ### Parameters
+    def insertOutletItems(self, node_key:str, index:int, outlet_keys:Iterable[str]):
+        """insert inlet item for keys.
+        if the item already exist, update it!"""
+        #TODO: index is not yet supported
+        node_widget = self._node_widgets[node_key]
+        for key in outlet_keys:
+            if key not in node_widget._inlet_widgets:
+                widget = PortItem(key)
+                node_key = node_key
+                node_widget._outlet_widgets[key] = widget
+                widget.setParentItem(node_widget)
+
+            else:
+                self.updateInletItems(node_key, [key])
+        distribute_items_horizontal([_ for _ in node_widget._outlet_widgets.values()], node_widget.boundingRect())
+
+    def _moveInletLinks(self, node_key:str, port_key:str):
+        # move connected links
+        node_widget = self._node_widgets[node_key]
+        port_widget = node_widget._inlet_widgets[port_key]
+        link_keys = [link.key for link in port_widget.links]
+        port_widget.scenePositionChanged.connect(self.updateLinkItems(link_keys))
+
+    def updateInletItems(self, node_key:str, inlet_keys:Iterable[str], hints=None):
+        """update inlet item for keys.
+        raise an exception if the item does not exist"""
         assert self._model
         node_widget = self._node_widgets[node_key]
-        for port_key in port_keys:
-            port_widget = node_widget._inlet_widgets[port_key]
-            port_widget.update()
+        for key in inlet_keys:
+            widget = node_widget._inlet_widgets[key]
+            widget.update()
+            self._moveInletLinks(node_key, key)
 
-    def removeInletItem(self, node_key:str, port_keys:Iterable[str]):
+    def removeInletItem(self, node_key:str, inlet_keys:Iterable[str]):
+        """remove inlet item for keys.
+        raise an exception if the item does not exist"""
         assert self._model
         node_widget = self._node_widgets[node_key]
-        for poet_key in port_keys:
-            port_widget = node_widget._inlet_widgets[node_key]
-            del node_widget._inlet_widgets[node_key]
-            self.scene().removeItem(port_widget)
+        for key in inlet_keys:
+            widget = node_widget._inlet_widgets[key]
+            del node_widget._inlet_widgets[widget]
+            self.scene().removeItem(widget)
+            #TODO: remove connected links
 
     ### Links
     def addLinkItems(self, link_keys:Iterable[tuple[str,str,str,str]]):
+        """add link items connecting the ports.
+        if inlets, outlets or nodes does not exist, create them"""
+        logger.debug(f"addLinkItems {link_keys}")
+
         for link_key in link_keys:
-            source, target, outlet, inlet = link_key
+            source_key, target_key, outlet_key, inlet_key = link_key
+            if source_key not in self._node_widgets:
+                self.addNodeItems([source_key]) #TODO: consider createint missing nodes in one shot
+
+            if outlet_key not in self._node_widgets[source_key]._outlet_widgets:
+                count = len(self._node_widgets[source_key]._outlet_widgets)
+                self.insertOutletItems(source_key, count, [outlet_key])
+
+            if target_key not in self._node_widgets:
+                self.addNodeItems([target_key])
+
+            if inlet_key not in self._node_widgets[target_key]._inlet_widgets:
+                inlets_count = len(self._node_widgets[target_key]._inlet_widgets)
+                self.insertInletItems(target_key, inlets_count, [inlet_key])
+
 
             link_widget = LinkItem(link_key)
             self._link_widgets[link_key] = link_widget
             self.scene().addItem(link_widget)
+            self._node_widgets[target_key]._inlet_widgets[inlet_key].links.add(link_widget)
+            self._node_widgets[source_key]._outlet_widgets[outlet_key].links.add(link_widget)
+
+    def updateLinkItems(self, link_keys:Iterable[tuple[str,str,str,str]], hint=None):
+        """update link items.
+        raise an exception if linkitem does not exist """
+        assert all(key in self._link_widgets for key in link_keys), "link item does not exist"
+        for link_key in link_keys:
+            source_key, target_key, outlet_key, inlet_key = link_key
+            link_widget = self._link_widgets[link_key]
+            source_port_item = self._node_widgets[source_key]._inlet_widgets[inlet_key]
+            target_port_item = self._node_widgets[target_key]._outlet_widgets[outlet_key]
+            link_widget.setLine(QLine())
 
     def removeLinkItems(self, link_keys:Iterable[tuple[str,str,str,str]]):
+        """remove link items.
+        raise an exception if linkitem does not exist """
+        assert all(key in self._link_widgets for key in link_keys), "link item does not exist"
         for link_key in link_keys:
             source, target, outlet, inlet = link_key
             link_widget = self._link_widgets[link_key]
@@ -294,7 +371,7 @@ class _GraphEditorView(QGraphicsView):
                 link_item.update()
 
         # outgoing links
-        for link_item in node_widget._outlet.links:
+        for link_item in node_widget._outlet_widget.links:
             link_item.update()
 
     ### Map widgets to model
