@@ -20,6 +20,7 @@ from itertools import chain
 from bidict import bidict
 
 
+from pylive.utils.geo import makeLineBetweenShapes
 from pylive.utils.qt import distribute_items_horizontal
 from pylive.utils.unique import make_unique_name
 from pylive.utils.diff import diff_set
@@ -53,7 +54,9 @@ class PortItem(QGraphicsWidget):
 
     def itemChange(self, change: QGraphicsItem.GraphicsItemChange, value: Any) -> Any:
         if change == QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
-            self.scenePositionChanged.emit()
+            # self.scenePositionChanged.emit()
+            for link in self.links:
+                link.move()
         return super().itemChange(change, value)
 
     def update(self, rect:QRect|QRectF=QRectF()):
@@ -120,10 +123,16 @@ class NodeItem(QGraphicsWidget):
 
 
 class LinkItem(QGraphicsLineItem):
-    def __init__(self, key:tuple[str,str,str,str], parent:QGraphicsItem|None=None):
+    def __init__(self, key:tuple[str,str,str,str], source:PortItem, target:PortItem, parent:QGraphicsItem|None=None):
         super().__init__(parent=parent)
         self.key:tuple[str,str,str,str] = key
         self.setLine(0,0,10,10)
+        self.setPen(QPen(QApplication.instance().palette().text(), 1))
+        self.source = source
+        self.target = target
+
+    def move(self):
+        self.setLine( makeLineBetweenShapes(self.source, self.target) )
 
 
 class _GraphEditorView(QGraphicsView):
@@ -161,7 +170,7 @@ class _GraphEditorView(QGraphicsView):
         self.setScene(scene)
 
     def setModel(self, model:PyDataModel|None):
-        logger.debug(f"setModel {model}")
+        # logger.debug(f"setModel {model}")
         if self._model:
             for signal, slot in self._model_connections:
                 signal.disconnect(slot)
@@ -232,7 +241,7 @@ class _GraphEditorView(QGraphicsView):
                 node_widget = NodeItem(key=node_key)
                 self._node_widgets[node_key] = node_widget
                 self.scene().addItem(node_widget)
-                self.insertOutletItems(node_key, 0, "out")
+                self.insertOutletItems(node_key, 0, ["out"])
             else:
                 self.updateNodeItems([node_key])
 
@@ -253,6 +262,8 @@ class _GraphEditorView(QGraphicsView):
     def insertInletItems(self, node_key:str, index:int, inlet_keys:Iterable[str]):
         """insert inlet item for keys.
         if the item already exist, update it!"""
+        assert not isinstance(inlet_keys, str)
+        # logger.debug(f"insertInletItems {inlet_keys}")
         #TODO: index is not yet supported
         node_widget = self._node_widgets[node_key]
         for key in inlet_keys:
@@ -261,36 +272,48 @@ class _GraphEditorView(QGraphicsView):
                 node_key = node_key
                 node_widget._inlet_widgets[key] = widget
                 widget.setParentItem(node_widget)
+                # widget.scenePositionChanged.connect(lambda n=node_key, p=key: self.moveInletLinks(n, p))
+                # widget.scenePositionChanged.connect(lambda n=node_key, p=key: self.moveOutletLinks(n, p))
 
             else:
                 self.updateInletItems(node_key, [key])
         distribute_items_horizontal([_ for _ in node_widget._inlet_widgets.values()], node_widget.boundingRect())
 
+    # def moveInletLinks(self, node_key:str, inlet_key:str):
+    #     assert self._model
+    #     for source, target, inlet in self._model.inLinks(node_key):
+    #         link_key = (source, target, 'out', inlet)
+    #         link_item = self._link_widgets[link_key]
+    #         link_item.move()
+
+    # def moveOutletLinks(self, node_key:str, inlet_key:str):
+    #     assert self._model
+    #     for source, target, inlet in self._model.outLinks(node_key):
+    #         link_key = (source, target, 'out', inlet)
+    #         link_item = self._link_widgets[link_key]
+    #         link_item.move()
+
     ### Parameters
     def insertOutletItems(self, node_key:str, index:int, outlet_keys:Iterable[str]):
         """insert inlet item for keys.
         if the item already exist, update it!"""
+        assert not isinstance(outlet_keys, str)
+        # logger.debug(f"insertOutletItems {outlet_keys}")
         #TODO: index is not yet supported
         node_widget = self._node_widgets[node_key]
         for key in outlet_keys:
-            if key not in node_widget._inlet_widgets:
+            if key not in node_widget._inlet_widgets.keys():
                 widget = PortItem(key)
                 node_key = node_key
                 node_widget._outlet_widgets[key] = widget
+                widget.setY(24)
                 widget.setParentItem(node_widget)
 
             else:
                 self.updateInletItems(node_key, [key])
         distribute_items_horizontal([_ for _ in node_widget._outlet_widgets.values()], node_widget.boundingRect())
 
-    def _moveInletLinks(self, node_key:str, port_key:str):
-        # move connected links
-        node_widget = self._node_widgets[node_key]
-        port_widget = node_widget._inlet_widgets[port_key]
-        link_keys = [link.key for link in port_widget.links]
-        port_widget.scenePositionChanged.connect(self.updateLinkItems(link_keys))
-
-    def updateInletItems(self, node_key:str, inlet_keys:Iterable[str], hints=None):
+    def updateInletItems(self, node_key:str, inlet_keys:Iterable[str], hints=[]):
         """update inlet item for keys.
         raise an exception if the item does not exist"""
         assert self._model
@@ -298,7 +321,19 @@ class _GraphEditorView(QGraphicsView):
         for key in inlet_keys:
             widget = node_widget._inlet_widgets[key]
             widget.update()
-            self._moveInletLinks(node_key, key)
+
+    def updateOutletItems(self, node_key:str, outlet_keys:Iterable[str], hints=None):
+        """update inlet item for keys.
+        raise an exception if the item does not exist"""
+        assert self._model
+        node_widget = self._node_widgets[node_key]
+        for key in outlet_keys:
+            widget = node_widget._outlet_widgets[key]
+            widget.update()
+            
+            # move attached links
+            link_keys = [link.key for link in widget.links]
+            widget.scenePositionChanged.connect(self.updateLinkItems(link_keys))
 
     def removeInletItem(self, node_key:str, inlet_keys:Iterable[str]):
         """remove inlet item for keys.
@@ -315,30 +350,33 @@ class _GraphEditorView(QGraphicsView):
     def addLinkItems(self, link_keys:Iterable[tuple[str,str,str,str]]):
         """add link items connecting the ports.
         if inlets, outlets or nodes does not exist, create them"""
-        logger.debug(f"addLinkItems {link_keys}")
+        # logger.debug(f"addLinkItems {link_keys}")
 
         for link_key in link_keys:
             source_key, target_key, outlet_key, inlet_key = link_key
             if source_key not in self._node_widgets:
                 self.addNodeItems([source_key]) #TODO: consider createint missing nodes in one shot
 
-            if outlet_key not in self._node_widgets[source_key]._outlet_widgets:
+            if outlet_key not in self._node_widgets[source_key]._outlet_widgets.keys():
                 count = len(self._node_widgets[source_key]._outlet_widgets)
                 self.insertOutletItems(source_key, count, [outlet_key])
 
-            if target_key not in self._node_widgets:
+            if target_key not in self._node_widgets.keys():
                 self.addNodeItems([target_key])
 
-            if inlet_key not in self._node_widgets[target_key]._inlet_widgets:
+            if inlet_key not in self._node_widgets[target_key]._inlet_widgets.keys():
                 inlets_count = len(self._node_widgets[target_key]._inlet_widgets)
                 self.insertInletItems(target_key, inlets_count, [inlet_key])
 
 
-            link_widget = LinkItem(link_key)
+            inlet_item = self._node_widgets[target_key]._inlet_widgets[inlet_key]
+            outlet_item = self._node_widgets[source_key]._outlet_widgets[outlet_key]
+            link_widget = LinkItem(link_key, outlet_item, inlet_item)
             self._link_widgets[link_key] = link_widget
             self.scene().addItem(link_widget)
             self._node_widgets[target_key]._inlet_widgets[inlet_key].links.add(link_widget)
-            self._node_widgets[source_key]._outlet_widgets[outlet_key].links.add(link_widget)
+            inlet_item.links.add(link_widget)
+            outlet_item.links.add(link_widget)
 
     def updateLinkItems(self, link_keys:Iterable[tuple[str,str,str,str]], hint=None):
         """update link items.
@@ -347,9 +385,12 @@ class _GraphEditorView(QGraphicsView):
         for link_key in link_keys:
             source_key, target_key, outlet_key, inlet_key = link_key
             link_widget = self._link_widgets[link_key]
-            source_port_item = self._node_widgets[source_key]._inlet_widgets[inlet_key]
-            target_port_item = self._node_widgets[target_key]._outlet_widgets[outlet_key]
-            link_widget.setLine(QLine())
+            source_port_item = self._node_widgets[source_key]._outlet_widgets[outlet_key]
+            target_port_item = self._node_widgets[target_key]._inlet_widgets[inlet_key]
+
+            from pylive.utils.geo import makeLineBetweenShapes
+            line = makeLineBetweenShapes(source_port_item, target_port_item)
+            link_widget.setLine(line)
 
     def removeLinkItems(self, link_keys:Iterable[tuple[str,str,str,str]]):
         """remove link items.
@@ -360,19 +401,6 @@ class _GraphEditorView(QGraphicsView):
             link_widget = self._link_widgets[link_key]
             del self._link_widgets[link_key]
             self.scene().removeItem(link_widget)
-
-    ### CRUD WIDGETS
-    def _moveAttachedLinks(self, node_key:str):
-        node_widget = self._node_widgets[node_key]
-
-        # move incoming links
-        for inlet_item in node_widget._inlet_widgets.values():
-            for link_item in inlet_item.links:
-                link_item.update()
-
-        # outgoing links
-        for link_item in node_widget._outlet_widget.links:
-            link_item.update()
 
     ### Map widgets to model
     def itemWidgets(self)->Collection[NodeItem|PortItem]:
@@ -429,7 +457,7 @@ class _GraphEditorView(QGraphicsView):
                 return source_index, target_index
 
     def centerNodes(self):
-        logger.debug("centerNodes")
+        # logger.debug("centerNodes")
         self.centerOn(self.scene().itemsBoundingRect().center())
 
 from dataclasses import dataclass
