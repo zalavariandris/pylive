@@ -32,8 +32,7 @@ logger = logging.getLogger(__name__)
 from pylive.VisualCode_v4.py_data_model import PyDataModel, PyNodeItem
 
 
-class PortItem(QGraphicsWidget):
-    scenePositionChanged = Signal()
+class PortItem(QGraphicsItem):
     def __init__(self, key:Hashable, parent:QGraphicsItem|None=None):
         super().__init__(parent=parent)
         self.key = key
@@ -45,23 +44,23 @@ class PortItem(QGraphicsWidget):
         self.label.hide()
         self.setAcceptHoverEvents(True)
         r = 3
-        self.setGeometry(QRectF(-r,-r,r*2,r*2))
-        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges)
+        # self.setGeometry(QRectF(-r,-r,r*2,r*2))
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges, True)
 
-    # def boundingRect(self) -> QRectF:
-    #     r = 6
-    #     return QRectF(-r,-r,r*2,r*2)
 
     def itemChange(self, change: QGraphicsItem.GraphicsItemChange, value: Any) -> Any:
         if change == QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
-            # self.scenePositionChanged.emit()
             for link in self.links:
                 link.move()
         return super().itemChange(change, value)
 
-    def update(self, rect:QRect|QRectF=QRectF()):
-        self.label.setPlainText(f"{self.key}")
-        super().update()
+    # def update(self, rect:QRect|QRectF=QRectF()):
+    #     self.label.setPlainText(f"{self.key}")
+    #     super().update()
+
+    def boundingRect(self) -> QRectF:
+        r = 6
+        return QRectF(-r,-r,r*2,r*2)
 
     def shape(self):
         r = 3
@@ -72,54 +71,74 @@ class PortItem(QGraphicsWidget):
     def paint(self, painter:QPainter, option:QStyleOption, widget:QWidget|None=None):
         palette = widget.palette() if widget else QApplication.palette()
         painter.setBrush(palette.text())
-        painter.drawEllipse(self.boundingRect())
+        r = 3
+        painter.drawEllipse(QRectF(-r,-r,r*2,r*2))
 
-    def hoverEnterEvent(self, event: QGraphicsSceneHoverEvent) -> None:
-        self.label.show()
+    # def hoverEnterEvent(self, event: QGraphicsSceneHoverEvent) -> None:
+    #     self.label.show()
 
-    def hoverLeaveEvent(self, event: QGraphicsSceneHoverEvent) -> None:
-        self.label.hide()
+    # def hoverLeaveEvent(self, event: QGraphicsSceneHoverEvent) -> None:
+    #     self.label.hide()
 
 
-class NodeItem(QGraphicsWidget):
-    scenePositionChanged = Signal()
+class NodeItem(QGraphicsItem):
+    # scenePositionChanged = Signal()
     def __init__(self, key:Hashable, parent:QGraphicsItem|None=None):
         super().__init__(parent=parent)
         self.key:Hashable = key
 
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)
-        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges, True)
 
         self._inlet_widgets:bidict[Hashable, PortItem] = bidict()
         self._outlet_widgets:bidict[Hashable, PortItem] = bidict()
 
-        self.setGeometry( QRectF(0,0,70,24) )
+    def font(self):
+        if widget:=self.parentWidget():
+            return widget.font()
+
+        if scene :=self.scene():
+            return scene.font()
+
+        app = QApplication.instance()
+        if isinstance(app, QGuiApplication):
+            return app.font()
+        
+        raise NotImplementedError()
+
+    def palette(self)->QPalette:
+        if widget:=self.parentWidget():
+            return widget.palette()
+
+        if scene :=self.scene():
+            return scene.palette()
+
+        app = QApplication.instance()
+        if isinstance(app, QGuiApplication):
+            return app.palette()
+        
+        raise NotImplementedError()
+
+    def boundingRect(self) -> QRectF:
+        # return QRectF(0,0,19,16)
+        fm = QFontMetrics(self.font())
+        size = fm.boundingRect(f"{self.key}").size().toSizeF()
+        return QRectF(QPointF(), size+QSizeF(18,2))
 
     def paint(self, painter: QPainter, option, widget=None):
-        button_option = QStyleOptionButton()
-        button_option.rect = self.boundingRect().toRect()
-        button_option.text = f"{self.key}"
-        button_option.state = QStyle.State_Enabled
+        rect = self.boundingRect().normalized()
 
-        if False:#"PRESSED"
-            button_option.state |= QStyle.State_Sunken
-        else:
-            button_option.state |= QStyle.State_Raised
-
-        if QStyle.State_MouseOver in option.state:
-            button_option.state = QStyle.State_MouseOver
-
+        pen = painter.pen()
+        pen.setBrush(self.palette().text())
         if self.isSelected():
-            painter.drawRoundedRect(self.boundingRect(),5,5)
+            pen.setBrush(self.palette().accent())
+        painter.setPen(pen)
 
-
-        if option.state & QStyle.State_MouseOver:
-            button_option.state |= QStyle.State_MouseOver
-
-        # Use the widget's style if available, otherwise use QApplication's style
-        style = widget.style() if widget else QApplication.style()
-        style.drawControl(QStyle.CE_PushButton, button_option, painter, widget)
+        rect.moveTo(QPoint(0,0))
+        painter.drawRoundedRect(rect, 6,6)
+        painter.drawText(rect, f"{self.key}", QTextOption(Qt.AlignmentFlag.AlignCenter))
+        # painter.drawText(QPoint(0,0), )
 
 
 class LinkItem(QGraphicsLineItem):
@@ -224,6 +243,12 @@ class _GraphEditorView(QGraphicsView):
     ### Handle Model Signals
     def resetItems(self):
         assert self._model
+        ### clear
+        self.scene().clear()
+        self._node_widgets.clear()
+        self._link_widgets.clear()
+
+        ### populate
         self.addNodeItems(self._model.nodes())
         for node_key in self._model.nodes():
             port_keys = [self._model.parameterName(node_key, i) for i in range(self._model.parameterCount(node_key))]
@@ -271,6 +296,7 @@ class _GraphEditorView(QGraphicsView):
                 widget = PortItem(key)
                 node_key = node_key
                 node_widget._inlet_widgets[key] = widget
+                widget.setY(-5)
                 widget.setParentItem(node_widget)
                 # widget.scenePositionChanged.connect(lambda n=node_key, p=key: self.moveInletLinks(n, p))
                 # widget.scenePositionChanged.connect(lambda n=node_key, p=key: self.moveOutletLinks(n, p))
@@ -278,20 +304,6 @@ class _GraphEditorView(QGraphicsView):
             else:
                 self.updateInletItems(node_key, [key])
         distribute_items_horizontal([_ for _ in node_widget._inlet_widgets.values()], node_widget.boundingRect())
-
-    # def moveInletLinks(self, node_key:str, inlet_key:str):
-    #     assert self._model
-    #     for source, target, inlet in self._model.inLinks(node_key):
-    #         link_key = (source, target, 'out', inlet)
-    #         link_item = self._link_widgets[link_key]
-    #         link_item.move()
-
-    # def moveOutletLinks(self, node_key:str, inlet_key:str):
-    #     assert self._model
-    #     for source, target, inlet in self._model.outLinks(node_key):
-    #         link_key = (source, target, 'out', inlet)
-    #         link_item = self._link_widgets[link_key]
-    #         link_item.move()
 
     ### Parameters
     def insertOutletItems(self, node_key:str, index:int, outlet_keys:Iterable[str]):
@@ -403,62 +415,56 @@ class _GraphEditorView(QGraphicsView):
             self.scene().removeItem(link_widget)
 
     ### Map widgets to model
-    def itemWidgets(self)->Collection[NodeItem|PortItem]:
-        return [item for item in self._item_widgets.values()]
+    def nodeItem(self, key: str) -> NodeItem:
+        assert self._model, "self._edges was not defined"
+        return self._node_widgets[key]
 
-    def linkWidgets(self)->Collection[LinkItem]:
-        return [item for item in self._link_widgets.values()]
+    def inletItem(self, node:str, key: str) -> PortItem:
+        assert self._model, "self._edges was not defined"
+        return self._node_widgets[node]._inlet_widgets[key]
 
-    def itemWidget(self, index: QModelIndex) -> NodeItem|PortItem:
-        assert self._tree, "self._edges was not defined"
-        assert index.isValid() and index.model() == self._tree, f"bad index, got: {index}"
-        item_id = QPersistentModelIndex(index)
-        item_widget = self._item_widgets[item_id]
-        return item_widget
+    def outletItem(self, node:str, key: str) -> PortItem:
+        assert self._model, "self._edges was not defined"
+        return self._node_widgets[node]._outlet_widgets[key]
 
-    def linkWidget(self, source_index: QModelIndex, target_index:QModelIndex) -> LinkItem:
-        assert self._tree, "self._edges was not defined"
-        if not source_index.isValid():
-            raise ValueError(f"Source {source_index} is invalid!")
-        if source_index.model()!=self._tree:
-            raise ValueError(f"Source {source_index} is not in this model!")
-        if not target_index.isValid():
-            raise ValueError(f"Target {target_index} is invalid!")
-        if target_index.model()!=self._tree:
-            raise ValueError(f"Target {target_index} is not in this model!")
-
-        source_id = QPersistentModelIndex(source_index)
-        target_id = QPersistentModelIndex(target_index)
-        link_id = (source_id, target_id)
-        link_widget = self._link_widgets[link_id]
-        return link_widget
+    def linkItem(self, source:str, target:str, outlet:str, inlet:str) -> LinkItem:
+        assert self._model, "self._edges was not defined"
+        key = (source, target, outlet, inlet)
+        return self._link_widgets[key]
 
     ### Widgets At Position
-    def itemIndexAt(self, pos: QPoint) -> QModelIndex|None:
-        """Returns the topmost node at position pos, which is in viewport coordinates."""
-        assert self._tree, "self._nodes was not defined"
-        for item in self.items(pos.x()-4,pos.y()-4,8,8):
-            if item in self._item_widgets.values():
-                assert isinstance(item, (NodeItem, PortItem))
-                item_id:QPersistentModelIndex =  item.index
-                item_index = self._tree.index(item_id.row(), 0, item_id.parent())
-                return item_index
-
-    def linkIndexesAt(self, pos: QPoint) -> tuple[QModelIndex, QModelIndex]|None:
-        """Returns the topmost edge at position pos, which is in viewport coordinates."""
-        assert self._tree, "_edges was not defined"
-        for item in self.items(pos.x()-4,pos.y()-4,8,8):
-            if item in self._link_widgets.values():
-                assert isinstance(item, LinkItem)
-                link_id =  item.index
-                source_id, target_id = link_id
-                source_index = self._tree.index(source_id.row(), 0, source_id.parent())
-                target_index = self._tree.index(target_id.row(), 0, target_id.parent())
-                return source_index, target_index
-
     def centerNodes(self):
         # logger.debug("centerNodes")
         self.centerOn(self.scene().itemsBoundingRect().center())
+
+
+class _GraphLayoutMixin(_GraphEditorView):
+    ### Layout
+    def layoutNodes(self, orientation=Qt.Orientation.Vertical, scale=100):
+        logger.debug('layoutNodes')
+        assert self._model, f"bad _model, got: {self._model}"
+        from pylive.utils.graph import hiearchical_layout_with_nx
+        import networkx as nx
+        G = nx.MultiDiGraph()
+        for node_key in self._model.nodes():
+            G.add_node(node_key)
+
+        for source, target, inlet in self._model.links():
+            G.add_edge(source, target, key=inlet)
+
+        pos:dict[str, tuple[float, float]] = hiearchical_layout_with_nx(G, scale=scale)
+        for node_key, (x, y) in pos.items():
+            if node_widget := self._node_widgets[node_key]:
+                match orientation:
+                    case Qt.Orientation.Vertical:
+                        node_widget.setPos(x, y)
+                    case Qt.Orientation.Horizontal:
+                        node_widget.setPos(y, x)
+
+    def resetItems(self):
+        super().resetItems()
+        self.layoutNodes()
+
 
 from dataclasses import dataclass
 
@@ -551,11 +557,37 @@ class _InternalDragMixin(_GraphEditorView):
             super().mouseReleaseEvent(event)
 
 
+class _GraphSelectionMixin(_GraphEditorView):
+    def selectedNodes(self)->list[str]:
+        selected = []
+        for node_key, node_item in self._node_widgets.items():
+            if node_item.isSelected():
+                selected.append(node_key)
+
+        return selected
+
+    def selectNodes(self, node_selection:Iterable[str]):
+        next_node_selection = set(self._node_widgets[_] for _ in node_selection)
+        prev_node_selection = set(_ for _ in self.scene().selectedItems())
+
+        change = diff_set(prev_node_selection, next_node_selection)
+        self.blockSignals(True)
+        for item in change.removed:
+            assert isinstance(item, NodeItem)
+            item.setSelected(False)
+        for item in change.added:
+            assert isinstance(item, NodeItem)
+            item.setSelected(True)
+        self.blockSignals(False)
+
+
+        
+
 class GraphEditorView(
     # _GraphDragAndDropMixin,
     # _InternalDragMixin,
-    # _GraphSelectionMixin, 
-    # _GraphLayoutMixin,
+    _GraphSelectionMixin, 
+    _GraphLayoutMixin,
      _GraphEditorView
     ):
     ...
@@ -574,15 +606,17 @@ def main():
             self.action_connections = []
             self.bindView()
 
+            self.graphview.layoutNodes()
+
         def setupUI(self):
-            self.graphview = _GraphEditorView()
+            self.graphview = GraphEditorView()
             self.graphview.setWindowTitle("NXNetworkScene")
 
             self.create_node_action = QPushButton("create node", self)
             self.delete_action = QPushButton("delete", self)
             self.link_selected_action = QPushButton("connect selected", self)
             self.layout_action = QPushButton("layout nodes", self)
-            self.layout_action.setDisabled(True)
+            self.layout_action.setDisabled(False)
 
             buttons_layout = QVBoxLayout()
             buttons_layout.addWidget(self.create_node_action)
@@ -602,7 +636,7 @@ def main():
                 (self.create_node_action.clicked, lambda: self.create_node()),
                 (self.delete_action.clicked, lambda: self.delete_selected()),
                 (self.link_selected_action.clicked, lambda: self.link_selected()),
-                # (self.layout_action.clicked, lambda: self.graphview.layoutNodes())
+                (self.layout_action.clicked, lambda: self.graphview.layoutNodes())
             ]
             for signal, slot in self.action_connections:
                 signal.connect(slot)

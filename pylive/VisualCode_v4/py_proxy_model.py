@@ -144,7 +144,7 @@ class PyProxyNodeModel(QAbstractItemModel):
 
             selection_range = QItemSelectionRange(
                 self.index(r.start, 0), 
-                self.index(r.stop, self.columnCount()-1)
+                self.index(r.stop-1, self.columnCount()-1)
             )
 
             item_selection.append(selection_range)

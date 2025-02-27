@@ -20,8 +20,8 @@ from pylive.VisualCode_v4.py_data_model import PyDataModel, PyNodeItem
 from pylive.VisualCode_v4.py_proxy_model import PyProxyNodeModel, PyProxyLinkModel, PyProxyParameterModel
 
 
-from pylive.VisualCode_v4.graph_editor.graph_editor_view import GraphEditorView
-from pylive.VisualCode_v4.py_graph_view_delegate import PyGraphViewDelegate
+from pylive.VisualCode_v4.py_data_graph_view import GraphEditorView
+
 
 import pylive.utils.qtfactory as qf
 
@@ -57,7 +57,13 @@ class Window(QWidget):
     def showEvent(self, event: QShowEvent) -> None:
         self.graph_view.centerNodes()
 
-    def setupUI(self):        
+    def setupUI(self):
+        ### GRAPH View
+        self.graph_view = GraphEditorView()
+        self.graph_view.installEventFilter(self)
+        self.graph_view.setModel(self.graph_model)
+
+
         ### SheetsView
         self.nodes_table_view = QTableView()
         # self.nodes_table_view.horizontalHeader().setVisible(True)
@@ -71,20 +77,26 @@ class Window(QWidget):
         # self.links_table_view.verticalHeader().setVisible(False)s
         self.links_table_view.setModel(self.link_proxy_model)
         self.links_table_view.setSelectionModel(self.link_selection_model)
+
+        def update_model_selection():
+            selected_node_keys = self.graph_view.selectedNodes()
+            print("selected_node_keys", selected_node_keys)
+            selected_indexes = self.node_proxy_model.mapSelectionFromSource(selected_node_keys)
+            self.node_selection_model.select(selected_indexes, QItemSelectionModel.SelectionFlag.ClearAndSelect)
+
+        def update_graphview_selection():
+            model_selection = self.node_selection_model.selection()
+
+            selected_node_keys = self.node_proxy_model.mapSelectionToSource(model_selection)
+            self.graph_view.selectNodes(selected_node_keys)
+
         
-
-        ### GRAPH View
-        self.graph_view = GraphEditorView(delegate=PyGraphViewDelegate())
-        self.graph_view.installEventFilter(self)
-        self.graph_view.setModel(self.node_proxy_model, self.link_proxy_model)
-        self.graph_view.setSelectionModel(self.node_selection_model, self.link_selection_model)
-
-
         self.graph_view_connections = [
-            (
-                self.graph_view.nodesLinked, lambda source, target, outlet, inlet: 
+            (self.graph_view.nodesLinked, lambda source, target, outlet, inlet: 
                 self.connect_nodes(self.node_proxy_model.mapToSource(source), self.node_proxy_model.mapToSource(target), inlet)
-            )
+            ),
+            (self.graph_view.scene().selectionChanged, update_model_selection),
+            (self.node_selection_model.selectionChanged, update_graphview_selection)
         ]
         for signal, slot in self.graph_view_connections:
             signal.connect(slot)
