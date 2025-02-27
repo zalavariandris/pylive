@@ -81,8 +81,14 @@ class Window(QWidget):
         def update_model_selection():
             selected_node_keys = self.graph_view.selectedNodes()
             print("selected_node_keys", selected_node_keys)
-            selected_indexes = self.node_proxy_model.mapSelectionFromSource(selected_node_keys)
-            self.node_selection_model.select(selected_indexes, QItemSelectionModel.SelectionFlag.ClearAndSelect)
+            selection = self.node_proxy_model.mapSelectionFromSource(selected_node_keys)
+            
+            if selection.count()>0:
+                self.node_selection_model.select(selection, QItemSelectionModel.SelectionFlag.ClearAndSelect)
+                self.node_selection_model.setCurrentIndex(selection.indexes()[0], QItemSelectionModel.SelectionFlag.Current)
+            else:
+                self.node_selection_model.clearSelection()
+                self.node_selection_model.clearCurrentIndex()
 
         def update_graphview_selection():
             model_selection = self.node_selection_model.selection()
