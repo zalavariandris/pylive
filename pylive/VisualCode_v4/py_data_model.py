@@ -6,22 +6,19 @@ from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
+
+from pathlib import Path
+from dataclasses import dataclass, field
+import inspect
+from collections import OrderedDict, defaultdict
 import logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-from pathlib import Path
-
-from dataclasses import dataclass, field
-import inspect
-
-import inspect
+import networkx as nx
 
 Empty = inspect.Parameter.empty
 
-import networkx as nx
-
-from yaml import resolver
 @dataclass
 class PyParameterItem:
     name: str
@@ -33,16 +30,23 @@ class PyParameterItem:
 
 @dataclass
 class PyNodeItem:
-    source:str="def func(x:int):\n    ..."
+    source:str="def func(x:int):\n    ..." # emit changed
     parameters: list[PyParameterItem] = field(default_factory=list)
-    position:QPointF=field(default_factory=QPointF)
     is_compiled:bool=False
     is_evaluated:bool=False
+    #position:QPointF=field(default_factory=QPointF)
     error:Exception|None=None
     result:object|None=None
     _func:Callable|None=None # cache compiled function
 
-from collections import OrderedDict, defaultdict
+
+class AutoEvaluate(QObject):
+    def __init__(self, parent:QObject|None=None):
+        super().__init__(parent=parent)
+
+    def setWatchedNodes(self, nodes:Iterable[str]):
+        self._nodes = nodes
+
 
 
 class PyDataModel(QObject):
@@ -77,7 +81,6 @@ class PyDataModel(QObject):
     patametersChanged = Signal(str, int, int) # node, first, last
     parametersAboutToBeRemoved = Signal(str, int, int) # node, start, end
     parametersRemoved = Signal(str, int, int) # node, start, end
-
 
     def __init__(self, parent:QObject|None=None):
         super().__init__(parent=parent)
@@ -255,20 +258,33 @@ class PyDataModel(QObject):
         success = all(success_by_node.values())
         return success
 
-    def evaluateNodes(self, nodes:Sequence[str], ancestors=True, autocompile=True):
-        ### build temporary nx graph (TODO: store nodes and edges in a graph!)
+    def _toNetworkX(self)->nx.MultiDiGraph:
         G = nx.MultiDiGraph()
         for node, item in self._nodes.items():
             G.add_node(node, item=item)
         for source, target, inlet in self._links:
             G.add_edge(source, target, inlet)
+        return G
+
+    def ancestors(self, source:str)->set[str]:
+        G = self._toNetworkX()
+        return nx.ancestors(G, source) # | {node} # source 
+
+    def descendants(self, source:str)->set[str]:
+        G = self._toNetworkX()
+        return nx.descendants(G, source) # | {node} # source 
+
+    def evaluateNodes(self, nodes:Sequence[str], ancestors=True, autocompile=True):
+        ### build temporary nx graph (TODO: store nodes and edges in a graph!)
 
         ### append ancestors
+        G = self._toNetworkX()
         nodes = list(_ for _ in nodes)
+
         if ancestors:
             dependency_nodes = []
             for node in nodes:
-                dependency_nodes+= nx.ancestors(G, node)
+                dependency_nodes+= self.ancestors(node)
             nodes+=dependency_nodes
 
         ### create subgraph

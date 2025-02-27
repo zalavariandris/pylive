@@ -630,6 +630,7 @@ class InletItem(PortItem):
 
         return super().dragMoveEvent(event)
 
+
 class OutletItem(PortItem):
     def __init__(self, key: str, parent: QGraphicsItem | None = None):
         super().__init__(key, parent)
@@ -795,6 +796,7 @@ class NodeItem(QGraphicsItem):
         painter.drawText(rect, f"{self.key}", QTextOption(Qt.AlignmentFlag.AlignCenter))
         # painter.drawText(QPoint(0,0), )
 
+
 class LinkItem(QGraphicsLineItem):
     def __init__(self, key:tuple[str,str,str,str], source:OutletItem|None, target:InletItem|None, parent:QGraphicsItem|None=None):
         super().__init__(parent=parent)
@@ -881,6 +883,7 @@ class LinkItem(QGraphicsLineItem):
 def main():
     app = QApplication()
 
+
     class Window(QWidget):
         def __init__(self, parent: QWidget | None = None) -> None:
             super().__init__(parent=parent)
@@ -933,7 +936,6 @@ def main():
             assert self._model
             unique_name = make_unique_name("node0", self._model.nodes())
             self._model.addNode(unique_name, PyNodeItem())
-
 
         @Slot()
         def link_selected(self):

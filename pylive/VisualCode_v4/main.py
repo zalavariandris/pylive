@@ -240,11 +240,13 @@ class Window(QWidget):
             self._autocompile_connections = []
 
     def setAutoEvaluate(self, auto:bool):
+        self._current_ancestors = set()
         if auto:
             ### TODO: check what has changed, and only evaluate if the current ancestors changed
             ### basically make sure that only necessary evaluations are happening.
             ### by the way this could happen in the model itself.
             ### evaluate nodes only if necessary
+
             self._autoevaluate_connections = [
                 (self.node_selection_model.currentChanged, 
                     lambda current, previous: self.graph_model.evaluateNodes(
