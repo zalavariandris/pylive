@@ -20,7 +20,7 @@ from pylive.VisualCode_v4.py_data_model import PyDataModel, PyNodeItem
 from pylive.VisualCode_v4.py_proxy_model import PyProxyNodeModel, PyProxyLinkModel, PyProxyParameterModel
 
 
-from pylive.VisualCode_v4.py_data_graph_view import GraphEditorView
+from pylive.VisualCode_v4.py_data_graph_view import PyDataGraphEditorView
 
 
 import pylive.utils.qtfactory as qf
@@ -59,7 +59,7 @@ class Window(QWidget):
 
     def setupUI(self):
         ### GRAPH View
-        self.graph_view = GraphEditorView()
+        self.graph_view = PyDataGraphEditorView()
         self.graph_view.installEventFilter(self)
         self.graph_view.setModel(self.graph_model)
 

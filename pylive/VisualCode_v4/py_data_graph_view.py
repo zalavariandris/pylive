@@ -7,6 +7,7 @@
 #
 
 
+from enum import Enum
 from typing import *
 from PySide6.QtGui import *
 from PySide6.QtCore import *
@@ -32,129 +33,16 @@ logger = logging.getLogger(__name__)
 from pylive.VisualCode_v4.py_data_model import PyDataModel, PyNodeItem
 
 
-class PortItem(QGraphicsItem):
-    def __init__(self, key:Hashable, parent:QGraphicsItem|None=None):
-        super().__init__(parent=parent)
-        self.key = key
-        self.links:set[LinkItem] = set()
-        self.label = QGraphicsTextItem(f"{self.key}")
-        self.label.setPlainText
-        self.label.setParentItem(self)
-        self.label.setPos(0,-20)
-        self.label.hide()
-        self.setAcceptHoverEvents(True)
-        r = 3
-        # self.setGeometry(QRectF(-r,-r,r*2,r*2))
-        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges, True)
+from enum import StrEnum
+class GraphMimeData(StrEnum):
+    OutletData = 'application/outlet'
+    InletData = 'application/outlet'
+    LinkSourceData = 'application/link/source'
+    LinkTargetData = 'application/link/target'
 
 
-    def itemChange(self, change: QGraphicsItem.GraphicsItemChange, value: Any) -> Any:
-        if change == QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
-            for link in self.links:
-                link.move()
-        return super().itemChange(change, value)
 
-    # def update(self, rect:QRect|QRectF=QRectF()):
-    #     self.label.setPlainText(f"{self.key}")
-    #     super().update()
-
-    def boundingRect(self) -> QRectF:
-        r = 6
-        return QRectF(-r,-r,r*2,r*2)
-
-    def shape(self):
-        r = 3
-        path = QPainterPath()
-        path.addEllipse(QRectF(-r,-r,r*2,r*2))
-        return path
-
-    def paint(self, painter:QPainter, option:QStyleOption, widget:QWidget|None=None):
-        palette = widget.palette() if widget else QApplication.palette()
-        painter.setBrush(palette.text())
-        r = 3
-        painter.drawEllipse(QRectF(-r,-r,r*2,r*2))
-
-    # def hoverEnterEvent(self, event: QGraphicsSceneHoverEvent) -> None:
-    #     self.label.show()
-
-    # def hoverLeaveEvent(self, event: QGraphicsSceneHoverEvent) -> None:
-    #     self.label.hide()
-
-
-class NodeItem(QGraphicsItem):
-    # scenePositionChanged = Signal()
-    def __init__(self, key:Hashable, parent:QGraphicsItem|None=None):
-        super().__init__(parent=parent)
-        self.key:Hashable = key
-
-        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
-        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)
-        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges, True)
-
-        self._inlet_widgets:bidict[Hashable, PortItem] = bidict()
-        self._outlet_widgets:bidict[Hashable, PortItem] = bidict()
-
-    def font(self):
-        if widget:=self.parentWidget():
-            return widget.font()
-
-        if scene :=self.scene():
-            return scene.font()
-
-        app = QApplication.instance()
-        if isinstance(app, QGuiApplication):
-            return app.font()
-        
-        raise NotImplementedError()
-
-    def palette(self)->QPalette:
-        if widget:=self.parentWidget():
-            return widget.palette()
-
-        if scene :=self.scene():
-            return scene.palette()
-
-        app = QApplication.instance()
-        if isinstance(app, QGuiApplication):
-            return app.palette()
-        
-        raise NotImplementedError()
-
-    def boundingRect(self) -> QRectF:
-        # return QRectF(0,0,19,16)
-        fm = QFontMetrics(self.font())
-        size = fm.boundingRect(f"{self.key}").size().toSizeF()
-        return QRectF(QPointF(), size+QSizeF(18,2))
-
-    def paint(self, painter: QPainter, option, widget=None):
-        rect = self.boundingRect().normalized()
-
-        pen = painter.pen()
-        pen.setBrush(self.palette().text())
-        if self.isSelected():
-            pen.setBrush(self.palette().accent())
-        painter.setPen(pen)
-
-        rect.moveTo(QPoint(0,0))
-        painter.drawRoundedRect(rect, 6,6)
-        painter.drawText(rect, f"{self.key}", QTextOption(Qt.AlignmentFlag.AlignCenter))
-        # painter.drawText(QPoint(0,0), )
-
-
-class LinkItem(QGraphicsLineItem):
-    def __init__(self, key:tuple[str,str,str,str], source:PortItem, target:PortItem, parent:QGraphicsItem|None=None):
-        super().__init__(parent=parent)
-        self.key:tuple[str,str,str,str] = key
-        self.setLine(0,0,10,10)
-        self.setPen(QPen(QApplication.instance().palette().text(), 1))
-        self.source = source
-        self.target = target
-
-    def move(self):
-        self.setLine( makeLineBetweenShapes(self.source, self.target) )
-
-
-class _GraphEditorView(QGraphicsView):
+class PyDataGraphEditorView(QGraphicsView):
     SourceRole = Qt.ItemDataRole.UserRole+1
     TargetRole = Qt.ItemDataRole.UserRole+2
     InletsRole = Qt.ItemDataRole.UserRole+3
@@ -170,7 +58,8 @@ class _GraphEditorView(QGraphicsView):
         # store model widget relations
         # map item index to widgets
         self._node_widgets:bidict[str, NodeItem] = bidict()
-        self._link_widgets:bidict[Hashable, LinkItem] = bidict()
+        self._link_widgets:bidict[tuple[str,str,str,str], LinkItem] = bidict()
+        self._draft_link:QGraphicsLineItem|None=None
 
         # self._node_in_links:defaultdict[QPersistentModelIndex, list[QPersistentModelIndex]] = defaultdict(list) # Notes: store attached links, because the underlzing model has to find the relevant edges  and thats is O(n)
         # self._node_out_links:defaultdict[QPersistentModelIndex, list[QPersistentModelIndex]] = defaultdict(list) # Notes: store attached links, because the underlzing model has to find the relevant edges  and thats is O(n)
@@ -259,6 +148,8 @@ class _GraphEditorView(QGraphicsView):
             link_keys.add( (source, target, "out", inlet) )
         self.addLinkItems(link_keys)
 
+        self.layoutNodes()
+
     ### Node
     def addNodeItems(self, node_keys:Iterable[str]):
         for node_key in node_keys:
@@ -266,6 +157,7 @@ class _GraphEditorView(QGraphicsView):
                 node_widget = NodeItem(key=node_key)
                 self._node_widgets[node_key] = node_widget
                 self.scene().addItem(node_widget)
+                node_widget._view = self
                 self.insertOutletItems(node_key, 0, ["out"])
             else:
                 self.updateNodeItems([node_key])
@@ -283,7 +175,7 @@ class _GraphEditorView(QGraphicsView):
                 del self._node_widgets[key]
                 self.scene().removeItem(node_widget)
 
-    ### Parameters
+    ### Ports
     def insertInletItems(self, node_key:str, index:int, inlet_keys:Iterable[str]):
         """insert inlet item for keys.
         if the item already exist, update it!"""
@@ -293,11 +185,12 @@ class _GraphEditorView(QGraphicsView):
         node_widget = self._node_widgets[node_key]
         for key in inlet_keys:
             if key not in node_widget._inlet_widgets:
-                widget = PortItem(key)
+                widget = InletItem(key)
                 node_key = node_key
                 node_widget._inlet_widgets[key] = widget
                 widget.setY(-5)
                 widget.setParentItem(node_widget)
+                widget._view = self
                 # widget.scenePositionChanged.connect(lambda n=node_key, p=key: self.moveInletLinks(n, p))
                 # widget.scenePositionChanged.connect(lambda n=node_key, p=key: self.moveOutletLinks(n, p))
 
@@ -305,7 +198,6 @@ class _GraphEditorView(QGraphicsView):
                 self.updateInletItems(node_key, [key])
         distribute_items_horizontal([_ for _ in node_widget._inlet_widgets.values()], node_widget.boundingRect())
 
-    ### Parameters
     def insertOutletItems(self, node_key:str, index:int, outlet_keys:Iterable[str]):
         """insert inlet item for keys.
         if the item already exist, update it!"""
@@ -315,11 +207,12 @@ class _GraphEditorView(QGraphicsView):
         node_widget = self._node_widgets[node_key]
         for key in outlet_keys:
             if key not in node_widget._inlet_widgets.keys():
-                widget = PortItem(key)
+                widget = OutletItem(key)
                 node_key = node_key
                 node_widget._outlet_widgets[key] = widget
                 widget.setY(24)
                 widget.setParentItem(node_widget)
+                widget._view = self
 
             else:
                 self.updateInletItems(node_key, [key])
@@ -358,6 +251,17 @@ class _GraphEditorView(QGraphicsView):
             self.scene().removeItem(widget)
             #TODO: remove connected links
 
+    def removeOutletItem(self, node_key:str, outlet_keys:Iterable[str]):
+        """remove inlet item for keys.
+        raise an exception if the item does not exist"""
+        assert self._model
+        node_widget = self._node_widgets[node_key]
+        for key in outlet_keys:
+            widget = node_widget._outlet_widgets[key]
+            del node_widget._outlet_widgets[widget]
+            self.scene().removeItem(widget)
+            #TODO: remove connected links
+
     ### Links
     def addLinkItems(self, link_keys:Iterable[tuple[str,str,str,str]]):
         """add link items connecting the ports.
@@ -383,9 +287,11 @@ class _GraphEditorView(QGraphicsView):
 
             inlet_item = self._node_widgets[target_key]._inlet_widgets[inlet_key]
             outlet_item = self._node_widgets[source_key]._outlet_widgets[outlet_key]
+
             link_widget = LinkItem(link_key, outlet_item, inlet_item)
             self._link_widgets[link_key] = link_widget
             self.scene().addItem(link_widget)
+            link_widget._view = self
             self._node_widgets[target_key]._inlet_widgets[inlet_key].links.add(link_widget)
             inlet_item.links.add(link_widget)
             outlet_item.links.add(link_widget)
@@ -413,33 +319,27 @@ class _GraphEditorView(QGraphicsView):
             link_widget = self._link_widgets[link_key]
             del self._link_widgets[link_key]
             self.scene().removeItem(link_widget)
+    
+    ### DRAG links and ports
+    def _createDraftLink(self):
+        """Safely create draft link with state tracking"""
+        assert self._draft_link is None
+            
+        self._draft_link = QGraphicsLineItem()
+        self._draft_link.setPen(QPen(self.palette().text(), 1))
+        self.scene().addItem(self._draft_link)
 
-    ### Map widgets to model
-    def nodeItem(self, key: str) -> NodeItem:
-        assert self._model, "self._edges was not defined"
-        return self._node_widgets[key]
+    def _cleanupDraftLink(self):
+        """Safely cleanup draft link"""
+        assert self._draft_link
+        self.scene().removeItem(self._draft_link)
+        self._draft_link = None
 
-    def inletItem(self, node:str, key: str) -> PortItem:
-        assert self._model, "self._edges was not defined"
-        return self._node_widgets[node]._inlet_widgets[key]
-
-    def outletItem(self, node:str, key: str) -> PortItem:
-        assert self._model, "self._edges was not defined"
-        return self._node_widgets[node]._outlet_widgets[key]
-
-    def linkItem(self, source:str, target:str, outlet:str, inlet:str) -> LinkItem:
-        assert self._model, "self._edges was not defined"
-        key = (source, target, outlet, inlet)
-        return self._link_widgets[key]
-
-    ### Widgets At Position
+    ### Layout
     def centerNodes(self):
         # logger.debug("centerNodes")
         self.centerOn(self.scene().itemsBoundingRect().center())
 
-
-class _GraphLayoutMixin(_GraphEditorView):
-    ### Layout
     def layoutNodes(self, orientation=Qt.Orientation.Vertical, scale=100):
         logger.debug('layoutNodes')
         assert self._model, f"bad _model, got: {self._model}"
@@ -461,103 +361,7 @@ class _GraphLayoutMixin(_GraphEditorView):
                     case Qt.Orientation.Horizontal:
                         node_widget.setPos(y, x)
 
-    def resetItems(self):
-        super().resetItems()
-        self.layoutNodes()
-
-
-from dataclasses import dataclass
-
-@dataclass
-class InternalDragController:
-    mode: Literal['inlet', 'outlet', 'edge_source', 'edge_target']
-    source_widget: QGraphicsItem
-    draft: QGraphicsItem
-
-
-class _InternalDragMixin(_GraphEditorView):
-    def __init__(self, delegate=None, parent: QWidget | None = None):
-        super().__init__(delegate, parent)
-        self._drag_controller:InternalDragController|None = None
-
-    def mousePressEvent(self, event: QMouseEvent) -> None:
-        assert self._delegate
-        for item in self.items(event.position().toPoint()):
-            if item in self._outlet_widgets.values():
-                draft_link_item = self._delegate.createEdgeWidget(QModelIndex())
-                self._drag_controller = InternalDragController(
-                    mode='outlet',
-                    source_widget= item,
-                    draft=draft_link_item
-                )
-                self.scene().addItem(self._drag_controller.draft)
-                return
-        super().mousePressEvent(event)
-
-    def mouseMoveEvent(self, event: QMouseEvent) -> None:
-        assert self._delegate
-        if self._drag_controller:
-            match self._drag_controller.mode:
-                case 'outlet':
-                    if inlet_id := self.inletIndexAt(event.position().toPoint()):
-                        node_index, inlet = inlet_id
-                        drop_widget = self.inletWidget(node_index, inlet)
-
-                        # self._drag_controller.draft.move(
-                        #     self._drag_controller.source_widget, 
-                        #     drop_widget
-                        # )
-                        self._delegate.updateEdgePosition(
-                            self._drag_controller.draft,
-                            self._drag_controller.source_widget, 
-                            drop_widget
-                        )
-                        return
-                    else:
-                        # self._drag_controller.draft.move(
-                        #     self._drag_controller.source_widget, 
-                        #     self.mapToScene(event.position().toPoint())
-                        # )
-                        self._delegate.updateEdgePosition(
-                            self._drag_controller.draft,
-                            self._drag_controller.source_widget, 
-                            self.mapToScene(event.position().toPoint())
-                        )
-                        return
-                case  _:
-                     ...
-
-        else:
-            super().mouseMoveEvent(event)
-
-    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
-        assert self._delegate
-        if self._drag_controller:
-            match self._drag_controller.mode:
-                case 'outlet':
-                    if inlet_id := self.inletIndexAt(event.position().toPoint()):
-                        source_node_index, source_outlet = self._outlet_widgets.inverse[self._drag_controller.source_widget]
-                        drop_node_index, drop_inlet = inlet_id
-                        self.nodesLinked.emit(
-                            source_node_index,
-                            drop_node_index,
-                            source_outlet,
-                            drop_inlet
-                        )
-
-                    else:
-                        #cancel connection
-                        ...
-                case _:
-                    ...
-
-            self.scene().removeItem(self._drag_controller.draft)
-            self._drag_controller = None
-        else:
-            super().mouseReleaseEvent(event)
-
-
-class _GraphSelectionMixin(_GraphEditorView):
+    ### Selection
     def selectedNodes(self)->list[str]:
         selected = []
         for node_key, node_item in self._node_widgets.items():
@@ -580,17 +384,314 @@ class _GraphSelectionMixin(_GraphEditorView):
             item.setSelected(True)
         self.blockSignals(False)
 
+    # def dragEnterEvent(self, event: QDragEnterEvent) -> None:
+    #     ...
 
+    def dragMoveEvent(self, event: QDragMoveEvent) -> None:
+        if event.mimeData().hasFormat(GraphMimeData.OutletData):
+            source_node, outlet = event.mimeData().data(GraphMimeData.OutletData).toStdString().split("/")
+            source_item = self._node_widgets[source_node]._outlet_widgets[outlet]
+            if self._draft_link:
+                line = self._draft_link.line()
+                mouse_scene_pos = self.mapToScene(event.position().toPoint())
+                line = makeLineBetweenShapes(source_item, mouse_scene_pos)
+                self._draft_link.setLine(line)
+            return super().dragMoveEvent(event)
+
+        if event.mimeData().hasFormat(GraphMimeData.LinkTargetData):
+            link_key = event.mimeData().data(GraphMimeData.LinkTargetData).toStdString().split("/")
+            source, target, outlet, inlet = link_key
+            source_item = self._node_widgets[source]._outlet_widgets[outlet]
+            target_item = self._node_widgets[target]._inlet_widgets[inlet]
+
+            if self._draft_link:
+                line = self._draft_link.line()
+                mouse_scene_pos = self.mapToScene(event.position().toPoint())
+                line = makeLineBetweenShapes(source_item, mouse_scene_pos)
+                self._draft_link.setLine(line)
+            event.acceptProposedAction()
+            return super().dragMoveEvent(event)
+
+    def dropEvent(self, event: QDropEvent) -> None:
+        print("drop event")
+        if event.mimeData().hasFormat(GraphMimeData.LinkTargetData):
+            assert self._model
+            link_key = event.mimeData().data(GraphMimeData.LinkTargetData).toStdString().split("/")
+            source, target, outlet, inlet = link_key
+            self._model.unlinkNodes(source, target, inlet)
+
+class PortItem(QGraphicsItem):
+    def __init__(self, key:str, parent:QGraphicsItem|None=None):
+        super().__init__(parent=parent)
+        self.key = key
+        self.links:set[LinkItem] = set()
+        self.label = QGraphicsTextItem(f"{self.key}")
+        self.label.setPlainText
+        self.label.setParentItem(self)
+        self.label.setPos(0,-20)
+        self.label.hide()
+        self.setAcceptHoverEvents(True)
+        r = 3
+        # self.setGeometry(QRectF(-r,-r,r*2,r*2))
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges, True)
+        self._view:PyDataGraphEditorView|None = None
+
+    def view(self)->PyDataGraphEditorView|None:
+        return self._view
+
+    def itemChange(self, change: QGraphicsItem.GraphicsItemChange, value: Any) -> Any:
+        if change == QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
+            for link in self.links:
+                link.move()
+        return super().itemChange(change, value)
+
+    def boundingRect(self) -> QRectF:
+        r = 6
+        return QRectF(-r,-r,r*2,r*2)
+
+    def shape(self):
+        r = 3
+        path = QPainterPath()
+        path.addEllipse(QRectF(-r,-r,r*2,r*2))
+        return path
+
+    def paint(self, painter:QPainter, option:QStyleOption, widget:QWidget|None=None):
+        palette = widget.palette() if widget else QApplication.palette()
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(palette.text())
+        if QStyle.StateFlag.State_MouseOver in option.state:
+            painter.setBrush(palette.accent())
+        r = 3
+        painter.drawEllipse(QRectF(-r,-r,r*2,r*2))
+
+
+class InletItem(PortItem):
+    def __init__(self, key: str, parent: QGraphicsItem | None = None):
+        super().__init__(key, parent)
+        self.setAcceptHoverEvents(True)
+        self.setAcceptDrops(True)
+
+    def paint(self, painter:QPainter, option:QStyleOption, widget:QWidget|None=None):
+        assert self._view
+        assert self._view._model
+        node_widget = self.parentItem()
+        assert isinstance(node_widget, NodeItem)
+        node_key = node_widget.key
+
+        if self._view._model.hasParameter(node_key, self.key):
+            super().paint(painter, option, widget)
+        else:
+            r = 3
+            palette = widget.palette() if widget else QApplication.palette()
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setBrush(palette.placeholderText())
+            painter.drawEllipse(QRectF(-r,-r,r*2,r*2))
+
+    def dragEnterEvent(self, event: QGraphicsSceneDragDropEvent) -> None:
+        if event.mimeData().hasFormat(GraphMimeData.OutletData):
+            assert self._view
+            assert self._view._model
+            node_widget = self.parentItem()
+            assert isinstance(node_widget, NodeItem)
+            node_key = node_widget.key
+            if self._view._model.hasParameter(node_key, self.key):
+                event.setAccepted(True)
+                return
+
+        if event.mimeData().hasFormat(GraphMimeData.LinkTargetData):
+            assert self._view
+            assert self._view._model
+            node_widget = self.parentItem()
+            assert isinstance(node_widget, NodeItem)
+            node_key = node_widget.key
+            if self._view._model.hasParameter(node_key, self.key):
+                event.setAccepted(True)
+                return
+
+        event.setAccepted(False)
+
+    def dragMoveEvent(self, event: QGraphicsSceneDragDropEvent) -> None:
+        if event.mimeData().hasFormat(GraphMimeData.OutletData):
+            assert self._view
+            source_node, outlet = event.mimeData().data(GraphMimeData.OutletData).toStdString().split("/")
+            source_item = self._view._node_widgets[source_node]._outlet_widgets[outlet]
+            if self._view._draft_link:
+                line = self._view._draft_link.line()
+                line = makeLineBetweenShapes(source_item, self)
+                self._view._draft_link.setLine(line)
+        if event.mimeData().hasFormat(GraphMimeData.LinkTargetData):
+            assert self._view
+            link_key = event.mimeData().data(GraphMimeData.LinkTargetData).toStdString().split("/")
+            source, target, outlet, inlet = link_key
+            source_item = self._view._node_widgets[source]._outlet_widgets[outlet]
+            if self._view._draft_link:
+                line = self._view._draft_link.line()
+                line = makeLineBetweenShapes(source_item, self)
+                self._view._draft_link.setLine(line)
+        return super().dragMoveEvent(event)
+
+    def dropEvent(self, event: QGraphicsSceneDragDropEvent) -> None:
+        if event.mimeData().hasFormat('application/outlet'):
+            assert self._view
+            assert self._view._model
+            source_node, outlet = event.mimeData().data('application/outlet').toStdString().split("/")
+            
+            node_widget = self.parentItem()
+            assert isinstance(node_widget, NodeItem)
+            target_node_key = node_widget.key
+            target_inlet_key = self.key
+            self._view._model.linkNodes(source_node, target_node_key, target_inlet_key)
+
+        return super().dragMoveEvent(event)
+
+class OutletItem(PortItem):
+    def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+        print("press outlet")
+        # Setup new drag
+        assert self._view
+        node_widget = self.parentItem()
+        assert isinstance(node_widget, NodeItem)
+
+        mime = QMimeData()
+        mime.setData('application/outlet', f"{node_widget.key}/{self.key}".encode("utf-8"))
+        drag = QDrag(self._view)
+        drag.setMimeData(mime)
+
+        # Create visual feedback
+        assert self._view
+        self._view._createDraftLink()
+
+        # Execute drag
+        try:
+            action = drag.exec(Qt.DropAction.LinkAction)
+        except Exception as err:
+            traceback.print_exc()
+        finally:
+            self._view._cleanupDraftLink()
+
+
+class NodeItem(QGraphicsItem):
+    # scenePositionChanged = Signal()
+    def __init__(self, key:str, parent:QGraphicsItem|None=None):
+        super().__init__(parent=parent)
+        self.key:str = key
+
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges, True)
+
+        self._inlet_widgets:bidict[str, InletItem] = bidict()
+        self._outlet_widgets:bidict[str, OutletItem] = bidict()
+
+        self._view:PyDataGraphEditorView|None = None
+
+    def view(self)->PyDataGraphEditorView|None:
+        return self._view
+
+    def font(self):
+        if widget:=self.parentWidget():
+            return widget.font()
+
+        if scene :=self.scene():
+            return scene.font()
+
+        app = QApplication.instance()
+        if isinstance(app, QGuiApplication):
+            return app.font()
         
+        raise NotImplementedError()
 
-class GraphEditorView(
-    # _GraphDragAndDropMixin,
-    # _InternalDragMixin,
-    _GraphSelectionMixin, 
-    _GraphLayoutMixin,
-     _GraphEditorView
-    ):
-    ...
+    def palette(self)->QPalette:
+        if widget:=self.parentWidget():
+            return widget.palette()
+
+        if scene :=self.scene():
+            return scene.palette()
+
+        app = QApplication.instance()
+        if isinstance(app, QGuiApplication):
+            return app.palette()
+        
+        raise NotImplementedError()
+
+    def boundingRect(self) -> QRectF:
+        # return QRectF(0,0,19,16)
+        fm = QFontMetrics(self.font())
+        size = fm.boundingRect(f"{self.key}").size().toSizeF()
+        return QRectF(QPointF(), size+QSizeF(18,2))
+
+    def paint(self, painter: QPainter, option, widget=None):
+        rect = self.boundingRect().normalized()
+
+        pen = painter.pen()
+        pen.setBrush(self.palette().text())
+        if self.isSelected():
+            pen.setBrush(self.palette().accent())
+        painter.setPen(pen)
+
+        rect.moveTo(QPoint(0,0))
+        painter.drawRoundedRect(rect, 6,6)
+        painter.drawText(rect, f"{self.key}", QTextOption(Qt.AlignmentFlag.AlignCenter))
+        # painter.drawText(QPoint(0,0), )
+
+
+class LinkItem(QGraphicsLineItem):
+    def __init__(self, key:tuple[str,str,str,str], source:OutletItem, target:InletItem, parent:QGraphicsItem|None=None):
+        super().__init__(parent=parent)
+        self.key:tuple[str,str,str,str] = key
+        self.setLine(0,0,10,10)
+        self.setPen(QPen(self.palette().text(), 1))
+        self.source = source
+        self.target = target
+        self.setAcceptHoverEvents(True)
+        self._view:PyDataGraphEditorView|None = None
+
+    def view(self)->PyDataGraphEditorView|None:
+        return self._view
+
+    def move(self):
+        self.setLine( makeLineBetweenShapes(self.source, self.target) )
+
+    def palette(self)->QPalette:
+        if widget:=self.parentWidget():
+            return widget.palette()
+
+        if scene :=self.scene():
+            return scene.palette()
+
+        app = QApplication.instance()
+        if isinstance(app, QGuiApplication):
+            return app.palette()
+        
+        raise NotImplementedError()
+
+    def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+        assert self._view
+        d1 = (event.scenePos() - self.line().p1()).manhattanLength()
+        d2 = (event.scenePos() - self.line().p2()).manhattanLength()
+        if d1 < d2:
+            raise NotImplementedError()
+        else:
+            mime = QMimeData()
+            source, target, outlet, inlet = self.key
+            mime.setData(GraphMimeData.LinkTargetData, f"{source}/{target}/{outlet}/{inlet}".encode("utf-8"))
+            drag = QDrag(self._view)
+            drag.setMimeData(mime)
+            
+            # Execute drag
+            self._view._draft_link = self
+            try:
+                action = drag.exec(Qt.DropAction.LinkAction)
+            except Exception as err:
+                traceback.print_exc()
+            finally:
+                self.move()
+            
+    def paint(self, painter:QPainter, option:QStyleOption, widget:QWidget|None=None):
+        painter.setPen( QPen(self.palette().text(), 1) )
+        if QStyle.StateFlag.State_MouseOver in option.state:
+            painter.setPen( QPen(self.palette().accent(), 1) )
+        painter.drawLine(self.line())
 
 
 def main():
@@ -601,6 +702,7 @@ def main():
             super().__init__(parent=parent)
             self._model=PyDataModel()
             self._model.load("./tests/math_script.yaml")
+            self._model.compileNodes(self._model.nodes())
 
             self.setupUI()
             self.action_connections = []
@@ -609,7 +711,7 @@ def main():
             self.graphview.layoutNodes()
 
         def setupUI(self):
-            self.graphview = GraphEditorView()
+            self.graphview = PyDataGraphEditorView()
             self.graphview.setWindowTitle("NXNetworkScene")
 
             self.create_node_action = QPushButton("create node", self)

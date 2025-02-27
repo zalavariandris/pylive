@@ -145,7 +145,9 @@ class PyDataModel(QObject):
             raise ValueError(f"graph has no node named: '{source}'")
         if target not in self._nodes.keys():
             raise ValueError(f"graph has no node named: '{target}'")
-        if inlet not in map(lambda item:item.name, self._nodes[target].parameters):
+        parameter_names = set(map(lambda item:item.name, self._nodes[target].parameters))
+
+        if inlet not in parameter_names:
             raise ValueError(f"node '{target}' has no parameter named: '{inlet}'!")
         self.nodesAboutToBeLinked.emit( [(source, target, inlet)] )
         self._links.add( (source, target, inlet) )
@@ -346,6 +348,13 @@ class PyDataModel(QObject):
         if not self._nodes:
             return 0
         return len(self._nodes[node].parameters)
+
+    def hasParameter(self, node, param:str)->int:
+        parameter_names = set()
+        for i in range(self.parameterCount(node)):
+            parameter_names.add(self.parameterName(node, i))
+
+        return param in parameter_names
 
     def setParameters(self, node:str, parameters:list[PyParameterItem]):
         logger.debug(f"setParameters: {node}, {parameters}")
