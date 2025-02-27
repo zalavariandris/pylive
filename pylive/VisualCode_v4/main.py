@@ -63,7 +63,6 @@ class Window(QWidget):
         self.graph_view.installEventFilter(self)
         self.graph_view.setModel(self.graph_model)
 
-
         ### SheetsView
         self.nodes_table_view = QTableView()
         # self.nodes_table_view.horizontalHeader().setVisible(True)

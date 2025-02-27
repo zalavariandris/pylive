@@ -319,6 +319,7 @@ def makeLineToShape(
 def makeLineBetweenShapes(
     A: QPointF | QRectF | QPainterPath | QGraphicsItem,
     B: QPointF | QRectF | QPainterPath | QGraphicsItem,
+    distance:float=10
 ) -> QLineF:
     Ac = getShapeCenter(A)
     Bc = getShapeCenter(B)
@@ -326,7 +327,13 @@ def makeLineBetweenShapes(
     I2 = makeLineToShape(Ac, B).p2()
     I1 = makeLineToShape(Bc, A).p2()
 
-    return QLineF(I1, I2)
+    line = QLineF(I1, I2)
+    length = line.length()
+    line.setP1(line.pointAt(distance/length))
+
+    line.setLength(length-distance*2)
+
+    return line
 
 def makeArrowShape(line:QLineF, width=1.0):
     # arrow shape

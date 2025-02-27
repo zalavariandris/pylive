@@ -113,8 +113,8 @@ class PyDataGraphEditorView(QGraphicsView):
                 (model.nodesLinked, lambda source, target, inlet:
                     self.addLinkItems([(source, target, "out", inlet)])
                     ),
-                (model.nodesAboutToBeUnlinked, lambda source, target, inlet:
-                    self.removeLinkItems([(source, target, "out", inlet)])
+                (model.nodesAboutToBeUnlinked, lambda links:
+                    self.removeLinkItems([(source, target, "out", inlet) for source, target, inlet in links])
                     ),
                 
             ]
@@ -384,10 +384,13 @@ class PyDataGraphEditorView(QGraphicsView):
             item.setSelected(True)
         self.blockSignals(False)
 
-    # def dragEnterEvent(self, event: QDragEnterEvent) -> None:
-    #     ...
+    def dragEnterEvent(self, event: QDragEnterEvent) -> None:
+        print(f"View.dragEnter {event.mimeData().formats()}")
+        super().dragEnterEvent(event)
 
     def dragMoveEvent(self, event: QDragMoveEvent) -> None:
+        super().dragMoveEvent(event)
+        print(f"View.dragMove {event.mimeData().formats()}")
         if event.mimeData().hasFormat(GraphMimeData.OutletData):
             source_node, outlet = event.mimeData().data(GraphMimeData.OutletData).toStdString().split("/")
             source_item = self._node_widgets[source_node]._outlet_widgets[outlet]
@@ -395,11 +398,10 @@ class PyDataGraphEditorView(QGraphicsView):
                 line = self._draft_link.line()
                 mouse_scene_pos = self.mapToScene(event.position().toPoint())
                 line = makeLineBetweenShapes(source_item, mouse_scene_pos)
-                self._draft_link.setLine(line)
-            return super().dragMoveEvent(event)
+                self._draft_link.setLine(line)                
 
-        if event.mimeData().hasFormat(GraphMimeData.LinkTargetData):
-            link_key = event.mimeData().data(GraphMimeData.LinkTargetData).toStdString().split("/")
+        if event.mimeData().hasFormat(GraphMimeData.LinkSourceData):
+            link_key = event.mimeData().data(GraphMimeData.LinkSourceData).toStdString().split("/")
             source, target, outlet, inlet = link_key
             source_item = self._node_widgets[source]._outlet_widgets[outlet]
             target_item = self._node_widgets[target]._inlet_widgets[inlet]
@@ -409,14 +411,14 @@ class PyDataGraphEditorView(QGraphicsView):
                 mouse_scene_pos = self.mapToScene(event.position().toPoint())
                 line = makeLineBetweenShapes(source_item, mouse_scene_pos)
                 self._draft_link.setLine(line)
-            event.acceptProposedAction()
-            return super().dragMoveEvent(event)
+            # return super().dragMoveEvent(event)
 
     def dropEvent(self, event: QDropEvent) -> None:
-        print("drop event")
-        if event.mimeData().hasFormat(GraphMimeData.LinkTargetData):
+        super().dropEvent(event)
+        print(f"View.drop {event.mimeData().formats()}")
+        if event.mimeData().hasFormat(GraphMimeData.LinkSourceData):
             assert self._model
-            link_key = event.mimeData().data(GraphMimeData.LinkTargetData).toStdString().split("/")
+            link_key = event.mimeData().data(GraphMimeData.LinkSourceData).toStdString().split("/")
             source, target, outlet, inlet = link_key
             self._model.unlinkNodes(source, target, inlet)
 
@@ -464,7 +466,6 @@ class PortItem(QGraphicsItem):
         r = 3
         painter.drawEllipse(QRectF(-r,-r,r*2,r*2))
 
-
 class InletItem(PortItem):
     def __init__(self, key: str, parent: QGraphicsItem | None = None):
         super().__init__(key, parent)
@@ -488,29 +489,30 @@ class InletItem(PortItem):
             painter.drawEllipse(QRectF(-r,-r,r*2,r*2))
 
     def dragEnterEvent(self, event: QGraphicsSceneDragDropEvent) -> None:
-        if event.mimeData().hasFormat(GraphMimeData.OutletData):
-            assert self._view
-            assert self._view._model
-            node_widget = self.parentItem()
-            assert isinstance(node_widget, NodeItem)
-            node_key = node_widget.key
-            if self._view._model.hasParameter(node_key, self.key):
-                event.setAccepted(True)
-                return
+        print(f"Inlet.dragEnter {event.mimeData().formats()}")
+        # if event.mimeData().hasFormat(GraphMimeData.OutletData):
+        #     assert self._view
+        #     assert self._view._model
+        #     node_widget = self.parentItem()
+        #     assert isinstance(node_widget, NodeItem)
+        #     node_key = node_widget.key
+        #     if self._view._model.hasParameter(node_key, self.key):
+        #         event.acceptProposedAction()
+        #         return
 
-        if event.mimeData().hasFormat(GraphMimeData.LinkTargetData):
-            assert self._view
-            assert self._view._model
-            node_widget = self.parentItem()
-            assert isinstance(node_widget, NodeItem)
-            node_key = node_widget.key
-            if self._view._model.hasParameter(node_key, self.key):
-                event.setAccepted(True)
-                return
-
-        event.setAccepted(False)
+        # if event.mimeData().hasFormat(GraphMimeData.LinkSourceData):
+        #     assert self._view
+        #     assert self._view._model
+        #     node_widget = self.parentItem()
+        #     assert isinstance(node_widget, NodeItem)
+        #     node_key = node_widget.key
+        #     if self._view._model.hasParameter(node_key, self.key):
+        #         event.acceptProposedAction()
+        #         return
+        # super
 
     def dragMoveEvent(self, event: QGraphicsSceneDragDropEvent) -> None:
+        print(f"Inlet.dragMove {event.mimeData().formats()}")
         if event.mimeData().hasFormat(GraphMimeData.OutletData):
             assert self._view
             source_node, outlet = event.mimeData().data(GraphMimeData.OutletData).toStdString().split("/")
@@ -519,28 +521,53 @@ class InletItem(PortItem):
                 line = self._view._draft_link.line()
                 line = makeLineBetweenShapes(source_item, self)
                 self._view._draft_link.setLine(line)
-        if event.mimeData().hasFormat(GraphMimeData.LinkTargetData):
+                event.acceptProposedAction()
+                return
+
+        if event.mimeData().hasFormat(GraphMimeData.LinkSourceData):
             assert self._view
-            link_key = event.mimeData().data(GraphMimeData.LinkTargetData).toStdString().split("/")
+            link_key = event.mimeData().data(GraphMimeData.LinkSourceData).toStdString().split("/")
             source, target, outlet, inlet = link_key
             source_item = self._view._node_widgets[source]._outlet_widgets[outlet]
             if self._view._draft_link:
                 line = self._view._draft_link.line()
                 line = makeLineBetweenShapes(source_item, self)
                 self._view._draft_link.setLine(line)
+                event.acceptProposedAction()
+                return
         return super().dragMoveEvent(event)
 
     def dropEvent(self, event: QGraphicsSceneDragDropEvent) -> None:
-        if event.mimeData().hasFormat('application/outlet'):
+        print(f"Inlet.drop {event.mimeData().formats()}")
+        if event.mimeData().hasFormat(GraphMimeData.OutletData):
             assert self._view
             assert self._view._model
-            source_node, outlet = event.mimeData().data('application/outlet').toStdString().split("/")
+            source_node, outlet = event.mimeData().data(GraphMimeData.OutletData).toStdString().split("/")
             
             node_widget = self.parentItem()
             assert isinstance(node_widget, NodeItem)
             target_node_key = node_widget.key
             target_inlet_key = self.key
             self._view._model.linkNodes(source_node, target_node_key, target_inlet_key)
+            event.acceptProposedAction()
+            return
+
+        if event.mimeData().hasFormat(GraphMimeData.LinkSourceData):
+            assert self._view
+            assert self._view._model
+            link_key = event.mimeData().data(GraphMimeData.LinkSourceData).toStdString().split("/")
+            source, target, outlet, inlet = link_key
+            # unlink current
+            self._view._model.unlinkNodes(source, target, inlet)
+
+            # link source with new target
+            node_widget = self.parentItem()
+            assert isinstance(node_widget, NodeItem)
+            target_node_key = node_widget.key
+            target_inlet_key = self.key
+            self._view._model.linkNodes(source, target_node_key, target_inlet_key)
+            event.acceptProposedAction()
+            return
 
         return super().dragMoveEvent(event)
 
@@ -568,7 +595,6 @@ class OutletItem(PortItem):
             traceback.print_exc()
         finally:
             self._view._cleanupDraftLink()
-
 
 class NodeItem(QGraphicsItem):
     # scenePositionChanged = Signal()
@@ -634,7 +660,6 @@ class NodeItem(QGraphicsItem):
         painter.drawText(rect, f"{self.key}", QTextOption(Qt.AlignmentFlag.AlignCenter))
         # painter.drawText(QPoint(0,0), )
 
-
 class LinkItem(QGraphicsLineItem):
     def __init__(self, key:tuple[str,str,str,str], source:OutletItem, target:InletItem, parent:QGraphicsItem|None=None):
         super().__init__(parent=parent)
@@ -674,7 +699,7 @@ class LinkItem(QGraphicsLineItem):
         else:
             mime = QMimeData()
             source, target, outlet, inlet = self.key
-            mime.setData(GraphMimeData.LinkTargetData, f"{source}/{target}/{outlet}/{inlet}".encode("utf-8"))
+            mime.setData(GraphMimeData.LinkSourceData, f"{source}/{target}/{outlet}/{inlet}".encode("utf-8"))
             drag = QDrag(self._view)
             drag.setMimeData(mime)
             
@@ -685,6 +710,7 @@ class LinkItem(QGraphicsLineItem):
             except Exception as err:
                 traceback.print_exc()
             finally:
+                self._view._draft_link = None
                 self.move()
             
     def paint(self, painter:QPainter, option:QStyleOption, widget:QWidget|None=None):
