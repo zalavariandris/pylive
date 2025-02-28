@@ -31,9 +31,9 @@ class PySubgraphProxyModel(QObject):
 
     # Node Links
     nodesAboutToBeLinked = Signal(list) # tuple[source, target, inlet]
-    nodesLinked = Signal(list) # list[str,str,str]
-    nodesAboutToBeUnlinked = Signal(list) # list[str,str,str]
-    nodesUnlinked = Signal(list) # list[str,str,str]
+    nodesLinked = Signal(list) # list[str,str,str,str]
+    nodesAboutToBeUnlinked = Signal(list) # list[str,str,str,str]
+    nodesUnlinked = Signal(list) # list[str,str,str,str]
 
 
     def __init__(self, source_model:PyDataModel|None=None, parent:QObject|None=None):
@@ -54,8 +54,8 @@ class PySubgraphProxyModel(QObject):
                 if n in self._nodes:
                     signal.emit(n, *args)
 
-            def filterLinkSignal(signal, links:list[tuple[str,str,str]]):
-                filtered_links = [(src, dst, inlet) for src,dst,inlet in links if src in self._nodes or dst in self._nodes]
+            def filterLinkSignal(signal, links:list[tuple[str,str,str,str]]):
+                filtered_links = [(src, dst, outlet, inlet) for src, dst, outlet, inlet in links if src in self._nodes or dst in self._nodes]
                 if len(links)>0:
                     signal.emit(filtered_links)
 
@@ -106,11 +106,11 @@ class PySubgraphProxyModel(QObject):
             return []
         return [n for n in self._source_model._nodes.keys() if n in self._nodes]
 
-    def links(self)->Collection[tuple[str,str,str]]:
+    def links(self)->Collection[tuple[str,str,str,str]]:
         if not self._source_model:
             return []
-        return [(source, target, inlet) 
-            for source, target, inlet in self._source_model.links() 
+        return [(source, target, outlet, inlet) 
+            for source, target, outlet, inlet in self._source_model.links() 
             if source in self._nodes or target in self._nodes]
 
     def linkCount(self):

@@ -437,8 +437,8 @@ class Window(QWidget):
         link_indexes:list[QModelIndex] = self.link_selection_model.selectedIndexes()
         link_rows = set(index.row() for index in link_indexes)
         for link_row in sorted(link_rows, reverse=True):
-            source, target, inlet = self.link_proxy_model.mapToSource(self.link_proxy_model.index(link_row, 0))
-            self.graph_model.unlinkNodes(source, target, inlet)
+            source, target, outlet, inlet = self.link_proxy_model.mapToSource(self.link_proxy_model.index(link_row, 0))
+            self.graph_model.unlinkNodes(source, target, outlet, inlet)
 
         # delete selected nodes
         node_indexes:list[QModelIndex] = self.node_selection_model.selectedRows(column=0)
@@ -461,10 +461,10 @@ class Window(QWidget):
                 print("connect", source_node, target_node)
                 if self.graph_model.parameterCount(target_node)>0:
                     inlet = self.graph_model.parameterName(target_node, 0)
-                    self.graph_model.linkNodes(source_node, target_node, inlet)
+                    self.graph_model.linkNodes(source_node, target_node, "out", inlet)
 
     def connect_nodes(self, source:str, target:str, inlet:str):
-        self.graph_model.linkNodes(source, target, inlet)
+        self.graph_model.linkNodes(source, target, "out", inlet)
 
     def eventFilter(self, watched, event):
         if watched == self.graph_view:

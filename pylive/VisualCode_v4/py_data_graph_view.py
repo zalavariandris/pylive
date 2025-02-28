@@ -112,10 +112,10 @@ class PyDataGraphEditorView(QGraphicsView):
 
                 # Node Links
                 (model.nodesLinked, lambda links:
-                    self.addLinkItems([(source, target, "out", inlet) for source, target, inlet in links])
+                    self.addLinkItems([(source, target, outlet, inlet) for source, target, outlet, inlet in links])
                     ),
                 (model.nodesAboutToBeUnlinked, lambda links:
-                    self.removeLinkItems([(source, target, "out", inlet) for source, target, inlet in links])
+                    self.removeLinkItems([(source, target, outlet, inlet) for source, target, outlet, inlet in links])
                     ),
                 
             ]
@@ -145,8 +145,8 @@ class PyDataGraphEditorView(QGraphicsView):
             self.insertInletItems(node_key, 0, port_keys)
 
         link_keys = set()
-        for source, target, inlet in self._model.links():
-            link_keys.add( (source, target, "out", inlet) )
+        for source, target, outlet, inlet in self._model.links():
+            link_keys.add( (source, target, outlet, inlet) )
         self.addLinkItems(link_keys)
 
         self.layoutNodes()        
@@ -269,7 +269,7 @@ class PyDataGraphEditorView(QGraphicsView):
         node_widget = self._node_widgets[node_key]
         for key in outlet_keys:
             widget = node_widget._outlet_widgets[key]
-            del node_widget._outlet_widgets[widget]
+            del node_widget._outlet_widgets[key]
             self.scene().removeItem(widget)
             #TODO: remove connected links
 
@@ -298,13 +298,10 @@ class PyDataGraphEditorView(QGraphicsView):
             inlet_item = self._node_widgets[target_key]._inlet_widgets[inlet_key]
             outlet_item = self._node_widgets[source_key]._outlet_widgets[outlet_key]
 
-            link_widget = LinkItem(link_key, outlet_item, inlet_item)
+            link_widget = LinkItem(link_key)
             self._link_widgets[link_key] = link_widget
             self.scene().addItem(link_widget)
             link_widget._view = self
-            self._node_widgets[target_key]._inlet_widgets[inlet_key].links.add(link_widget)
-            inlet_item.links.add(link_widget)
-            outlet_item.links.add(link_widget)
             link_widget.move()
 
     def updateLinkItems(self, link_keys:Iterable[tuple[str,str,str,str]], hint=None):
@@ -358,7 +355,7 @@ class PyDataGraphEditorView(QGraphicsView):
         for node_key in self._model.nodes():
             G.add_node(node_key)
 
-        for source, target, inlet in self._model.links():
+        for source, target, outlet, inlet in self._model.links():
             G.add_edge(source, target, key=inlet)
 
         pos:dict[str, tuple[float, float]] = hiearchical_layout_with_nx(G, scale=scale)
@@ -457,22 +454,20 @@ class PyDataGraphEditorView(QGraphicsView):
             assert self._model
             link_key = event.mimeData().data(GraphMimeData.LinkSourceData).toStdString().split("/")
             source, target, outlet, inlet = link_key
-            self._model.unlinkNodes(source, target, inlet)
+            self._model.unlinkNodes(source, target, outlet, inlet)
 
         if event.mimeData().hasFormat(GraphMimeData.LinkTargetData):
             assert self._model
             link_key = event.mimeData().data(GraphMimeData.LinkTargetData).toStdString().split("/")
             source, target, outlet, inlet = link_key
-            self._model.unlinkNodes(source, target, inlet)
+            self._model.unlinkNodes(source, target, outlet, inlet)
 
 
 class PortItem(QGraphicsItem):
     def __init__(self, key:str, parent:QGraphicsItem|None=None):
         super().__init__(parent=parent)
         self.key = key
-        self.links:set[LinkItem] = set()
         self.label = QGraphicsTextItem(f"{self.key}")
-        self.label.setPlainText
         self.label.setParentItem(self)
         self.label.setPos(0,-20)
         self.label.hide()
@@ -487,8 +482,17 @@ class PortItem(QGraphicsItem):
 
     def itemChange(self, change: QGraphicsItem.GraphicsItemChange, value: Any) -> Any:
         if change == QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
-            for link in self.links:
-                link.move()
+            assert self._view
+            assert self._view._model
+            node_widget = self.parentItem()
+            assert isinstance(node_widget, NodeItem)
+            inlink_keys = self._view._model.inLinks(node_widget.key)
+            outlink_keys = self._view._model.outLinks(node_widget.key)
+            link_keys = list(chain(inlink_keys, outlink_keys))
+
+            for link_key in link_keys:
+                if link_item := self._view._link_widgets.get(link_key):
+                    link_item.move()
         return super().itemChange(change, value)
 
     def boundingRect(self) -> QRectF:
@@ -610,13 +614,13 @@ class InletItem(PortItem):
         if event.mimeData().hasFormat(GraphMimeData.OutletData):
             assert self._view
             assert self._view._model
-            source_node, outlet = event.mimeData().data(GraphMimeData.OutletData).toStdString().split("/")
+            source_node, source_outlet = event.mimeData().data(GraphMimeData.OutletData).toStdString().split("/")
             
             node_widget = self.parentItem()
             assert isinstance(node_widget, NodeItem)
             target_node_key = node_widget.key
             target_inlet_key = self.key
-            self._view._model.linkNodes(source_node, target_node_key, target_inlet_key)
+            self._view._model.linkNodes(source_node, target_node_key, source_outlet, target_inlet_key)
             event.acceptProposedAction()
             return
 
@@ -626,14 +630,14 @@ class InletItem(PortItem):
             link_key = event.mimeData().data(GraphMimeData.LinkSourceData).toStdString().split("/")
             source, target, outlet, inlet = link_key
             # unlink current
-            self._view._model.unlinkNodes(source, target, inlet)
+            self._view._model.unlinkNodes(source, target, outlet, inlet)
 
             # link source with new target
             node_widget = self.parentItem()
             assert isinstance(node_widget, NodeItem)
             target_node_key = node_widget.key
             target_inlet_key = self.key
-            self._view._model.linkNodes(source, target_node_key, target_inlet_key)
+            self._view._model.linkNodes(source, target_node_key, outlet, target_inlet_key)
             event.acceptProposedAction()
             return
 
@@ -713,11 +717,8 @@ class OutletItem(PortItem):
             assert self._view
             assert self._view._model
             target_node, inlet = event.mimeData().data(GraphMimeData.InletData).toStdString().split("/")
-            
-            node_widget = self.parentItem()
-            assert isinstance(node_widget, NodeItem)
-            target_inlet_key = self.key
-            self._view._model.linkNodes(node_widget.key, target_node, inlet)
+
+            self._view._model.linkNodes(cast(NodeItem, self.parentItem()).key, target_node, self.key, inlet)
             event.acceptProposedAction()
             return
 
@@ -727,14 +728,10 @@ class OutletItem(PortItem):
             link_key = event.mimeData().data(GraphMimeData.LinkTargetData).toStdString().split("/")
             source, target, outlet, inlet = link_key
             # unlink current
-            self._view._model.unlinkNodes(source, target, inlet)
+            self._view._model.unlinkNodes(source, target, outlet, inlet)
 
             # link source with new target
-            node_widget = self.parentItem()
-            assert isinstance(node_widget, NodeItem)
-            target_node_key = node_widget.key
-            target_inlet_key = self.key
-            self._view._model.linkNodes(source, target_node_key, target_inlet_key)
+            self._view._model.linkNodes(source, cast(NodeItem, self.parentItem()).key, outlet, self.key)
             event.acceptProposedAction()
             return
 
@@ -807,13 +804,12 @@ class NodeItem(QGraphicsItem):
 
 
 class LinkItem(QGraphicsLineItem):
-    def __init__(self, key:tuple[str,str,str,str], source:OutletItem|None, target:InletItem|None, parent:QGraphicsItem|None=None):
+    def __init__(self, key:tuple[str,str,str,str], parent:QGraphicsItem|None=None):
         super().__init__(parent=parent)
         self.key:tuple[str,str,str,str] = key
         self.setLine(0,0,10,10)
         self.setPen(QPen(self.palette().text(), 1))
-        self.source = source
-        self.target = target
+
         self.setAcceptHoverEvents(True)
         self._view:PyDataGraphEditorView|None = None
 
@@ -821,13 +817,12 @@ class LinkItem(QGraphicsLineItem):
         return self._view
 
     def move(self):
-        if self.source and self.target:
-            self.setLine( makeLineBetweenShapes(self.source, self.target) )
-        elif self.target:
-            self.setLine(makeLineToShape(self.line().p1(), self.target))
-        elif self.source:
-            line = makeLineToShape(self.line().p2(), self.source)
-            self.setLine( QLineF(line.p2(), line.p1()) )
+        assert self._view
+        source, target, outlet, inlet = self.key
+        source = self._view._node_widgets[source]._outlet_widgets[outlet]
+        target = self._view._node_widgets[target]._inlet_widgets[inlet]
+
+        self.setLine( makeLineBetweenShapes(source, target) )
 
     def palette(self)->QPalette:
         if widget:=self.parentWidget():

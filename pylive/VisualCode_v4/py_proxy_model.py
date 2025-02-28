@@ -243,7 +243,7 @@ from pylive.VisualCode_v4.graph_editor.graph_data_roles import GraphDataRole
 class PyProxyLinkModel(QAbstractItemModel):
     def __init__(self, source_model:PyDataModel, parent:QObject|None=None):
         super().__init__(parent=parent)
-        self._links:list[tuple[str, str, str]] = list()
+        self._links:list[tuple[str, str, str, str]] = list()
 
         self._items_model:PyProxyNodeModel|None=None
         self._source_model:PyDataModel|None=None
@@ -251,7 +251,7 @@ class PyProxyLinkModel(QAbstractItemModel):
         self._model_connections = []
         self.setSourceModel(source_model)
 
-        self._headers = ['source', 'target', 'inlet']
+        self._headers = ['source', 'target', 'outlet', 'inlet']
 
     def itemsModel(self)->PyProxyNodeModel|None:
         return self._items_model
@@ -289,26 +289,26 @@ class PyProxyLinkModel(QAbstractItemModel):
             self._links.insert(row, link)
         self.endResetModel()
 
-    def _on_source_nodes_about_to_be_linked(self, links:list[tuple[str,str,str]]):
+    def _on_source_nodes_about_to_be_linked(self, links:list[tuple[str,str,str,str]]):
         first = len(self._links)
         last = first+len(links)-1
         self.rowsAboutToBeInserted.emit(QModelIndex(), first, last)
 
-    def _on_source_nodes_linked(self, links:list[tuple[str,str,str]]):
+    def _on_source_nodes_linked(self, links:list[tuple[str,str,str,str]]):
         first = len(self._links)
         last = first+len(links)-1
         for row, link in enumerate(links, start=first):
             self._links.insert(row, link)
         self.rowsInserted.emit(QModelIndex(), first, last)
 
-    def _on_source_nodes_about_to_be_unlinked(self, links:list[tuple[str,str,str]]):
+    def _on_source_nodes_about_to_be_unlinked(self, links:list[tuple[str,str,str,str]]):
         indexes = [self.mapFromSource(link) for link in links]
         rows = set([idx.row() for idx in indexes])
         ranges = list(group_consecutive_numbers(sorted(rows)))
         for r in reversed(ranges):
             self.rowsAboutToBeRemoved.emit(QModelIndex(), r.start, r.stop-1)
 
-    def _on_source_nodes_unlinked(self, links:list[tuple[str,str,str]]):
+    def _on_source_nodes_unlinked(self, links:list[tuple[str,str,str,str]]):
         indexes = [self.mapFromSource(link) for link in links]
         rows = set([idx.row() for idx in indexes])
         ranges = list(group_consecutive_numbers(sorted(rows)))
@@ -318,15 +318,15 @@ class PyProxyLinkModel(QAbstractItemModel):
             self.rowsRemoved.emit(QModelIndex(), range_group.start, range_group.stop-1)
 
     # Proxy functions
-    def mapFromSource(self, link:tuple[str,str,str])->QModelIndex:
+    def mapFromSource(self, link:tuple[str,str,str,str])->QModelIndex:
         row = self._links.index(link)
         return self.index(row, 0)
 
-    def mapToSource(self, proxy:QModelIndex|QPersistentModelIndex)->tuple[str, str, str]:
+    def mapToSource(self, proxy:QModelIndex|QPersistentModelIndex)->tuple[str, str, str, str]:
         link = self._links[proxy.row()]
         return link
 
-    def mapSelectionFromSource(self, links:Sequence[tuple[str, str, str]])->QItemSelection:
+    def mapSelectionFromSource(self, links:Sequence[tuple[str, str, str, str]])->QItemSelection:
         rows = sorted([self.mapFromSource(link).row() for link in links])
         ranges = group_consecutive_numbers(list(rows))
 
@@ -344,7 +344,7 @@ class PyProxyLinkModel(QAbstractItemModel):
 
         return item_selection
 
-    def mapSelectionToSource(self, proxySelection: QItemSelection)->Sequence[tuple[str, str,str]]:
+    def mapSelectionToSource(self, proxySelection: QItemSelection)->Sequence[tuple[str, str, str, str]]:
         """on selection model changed"""
 
         ### update widgets seleection
@@ -387,10 +387,10 @@ class PyProxyLinkModel(QAbstractItemModel):
         if not self._items_model:
             return None
 
-        source, target, inlet = self.mapToSource(index)
+        source, target, outlet, inlet = self.mapToSource(index)
 
         if role == GraphDataRole.LinkSourceRole:
-            return self._items_model.mapFromSource(source), "out"
+            return self._items_model.mapFromSource(source), outlet
 
         if role == GraphDataRole.LinkTargetRole:
             return self._items_model.mapFromSource(target), inlet
@@ -404,6 +404,10 @@ class PyProxyLinkModel(QAbstractItemModel):
             case 'target':
                 if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
                     return target
+
+            case 'outlet':
+                if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
+                    return outlet
 
             case 'inlet':
                 if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):

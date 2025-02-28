@@ -170,10 +170,10 @@ class PyDataModel(QObject):
     resultChanged = Signal(str)
 
     # Node Links
-    nodesAboutToBeLinked = Signal(list) # list of edges: tuple[source, target, inlet]
-    nodesLinked = Signal(list) # list[str,str,str]
-    nodesAboutToBeUnlinked = Signal(list) # list[str,str,str]
-    nodesUnlinked = Signal(list) # list[str,str,str]
+    nodesAboutToBeLinked = Signal(list) # list of edges: tuple[source, target, outlet, inlet]
+    nodesLinked = Signal(list) # list[str,str,str, str]
+    nodesAboutToBeUnlinked = Signal(list) # list[str,str,str,str]
+    nodesUnlinked = Signal(list) # list[str,str,str,str]
 
     # Node Parameters
     parametersAboutToBeReset = Signal(str)
@@ -198,7 +198,7 @@ class PyDataModel(QObject):
         # but keep an eye on the proxy model implementation, which refers to nodes by index
         """
         self._nodes:OrderedDict[str, PyNodeItem] = OrderedDict()
-        self._links:set[tuple[str,str,str]] = set()
+        self._links:set[tuple[str,str,str,str]] = set()
 
     def nodeCount(self)->int:
         return len(self._nodes)
@@ -213,14 +213,14 @@ class PyDataModel(QObject):
     def linkCount(self):
         return len(self._links)
 
-    def links(self)->Collection[tuple[str,str,str]]:
+    def links(self)->Collection[tuple[str,str,str,str]]:
         return [_ for _ in self._links]
 
-    def inLinks(self, node:str)->Sequence[tuple[str,str,str]]:
+    def inLinks(self, node:str)->Sequence[tuple[str,str,str,str]]:
         #TODO: optimize, by using networkx graph to store nodes and edges
         return list(filter(lambda link: link[1]==node, self._links))
 
-    def outLinks(self, node:str)->Sequence[tuple[str,str,str]]:
+    def outLinks(self, node:str)->Sequence[tuple[str,str,str,str]]:
         #TODO: optimize, by using networkx graph to store nodes and edges
         return list(filter(lambda link: link[0]==node, self._links))
 
@@ -234,10 +234,10 @@ class PyDataModel(QObject):
 
     def removeNode(self, name:str):
         ### remove links
-        for source, target, inlet in self.inLinks(name):
-            self.unlinkNodes(source, target, inlet)
-        for source, target, inlet in self.outLinks(name):
-            self.unlinkNodes(source, target, inlet)
+        for source, target, outlet, inlet in self.inLinks(name):
+            self.unlinkNodes(source, target, outlet, inlet)
+        for source, target, outlet, inlet in self.outLinks(name):
+            self.unlinkNodes(source, target, outlet, inlet)
         ### remove parameters
 
         self.nodesAboutToBeRemoved.emit([name])
@@ -245,7 +245,7 @@ class PyDataModel(QObject):
         self.nodesRemoved.emit([name])
 
     ### Links
-    def linkNodes(self, source:str, target:str, inlet:str):
+    def linkNodes(self, source:str, target:str, outlet:str, inlet:str):
         if source not in self._nodes.keys():
             raise ValueError(f"graph has no node named: '{source}'")
         if target not in self._nodes.keys():
@@ -254,14 +254,14 @@ class PyDataModel(QObject):
 
         if inlet not in parameter_names:
             raise ValueError(f"node '{target}' has no parameter named: '{inlet}'!")
-        self.nodesAboutToBeLinked.emit( [(source, target, inlet)] )
-        self._links.add( (source, target, inlet) )
-        self.nodesLinked.emit([(source, target, inlet)])
+        self.nodesAboutToBeLinked.emit( [(source, target, outlet, inlet)] )
+        self._links.add( (source, target, outlet, inlet) )
+        self.nodesLinked.emit([(source, target, outlet, inlet)])
 
-    def unlinkNodes(self, source:str, target:str, inlet:str):
-        self.nodesAboutToBeUnlinked.emit([(source, target, inlet)])
-        self._links.remove( (source, target, inlet) )
-        self.nodesUnlinked.emit([(source, target, inlet)])
+    def unlinkNodes(self, source:str, target:str, outlet:str, inlet:str):
+        self.nodesAboutToBeUnlinked.emit([(source, target, outlet, inlet)])
+        self._links.remove( (source, target, outlet, inlet) )
+        self.nodesUnlinked.emit([(source, target, outlet, inlet)])
 
     ### Node Data
     def nodePosition(self, name:str)->QPointF:
@@ -360,7 +360,7 @@ class PyDataModel(QObject):
             ### Get parameters
             ### load arguments from sources
             named_args = dict()
-            for source, target, inlet in self.inLinks(node):
+            for source, target, outlet, inlet in self.inLinks(node):
                 assert not self.needsEvaluation(source) and self.nodeError(source) is None, "at this point dependencies must have been evaluated without errors!"
                 named_args[inlet] = self.nodeResult(source)
 
@@ -465,8 +465,8 @@ class PyDataModel(QObject):
         G = nx.MultiDiGraph()
         for node, item in self._nodes.items():
             G.add_node(node, item=item)
-        for source, target, inlet in self._links:
-            G.add_edge(source, target, inlet)
+        for source, target, outlet, inlet in self._links:
+            G.add_edge(source, target, (outlet, inlet))
         return G
 
     def ancestors(self, source:str)->set[str]:
@@ -492,7 +492,7 @@ class PyDataModel(QObject):
         self._links = set()
         self._nodes = OrderedDict()
 
-        links_from_parameters:set[tuple[str,str,str]] = set()
+        links_from_parameters:set[tuple[str,str,str, str]] = set()
         for node_data in data['nodes']:
             parameters = []
             
@@ -501,11 +501,12 @@ class PyDataModel(QObject):
                     if isinstance(value, str) and value.strip().startswith("->"):
                         source = value.strip()[2:].strip()
                         target = node_data['name'].strip()
+                        outlet = 'out'
                         inlet = name.strip()
                         assert isinstance(source, str)
                         assert isinstance(target, str)
                         assert isinstance(inlet, str)
-                        self._links.add( (source, target, inlet) )
+                        self._links.add( (source, target, outlet, inlet) )
                     else:
                         item = PyParameterItem(name=name, value=value)
                         parameters.append(item)
@@ -517,10 +518,11 @@ class PyDataModel(QObject):
             self._nodes[node_data['name'].strip()] = node_item
 
         ### iterate explicit edges
-        def linkFromData(data:dict)->tuple[str,str,str]:
+        def linkFromData(data:dict)->tuple[str,str,str,str]:
             return (
                 data['source'],
                 data['target'],
+                'out',
                 data['inlet']
             )
 
@@ -550,7 +552,7 @@ class PyDataModel(QObject):
                     fields_data[item.name] = item.value
 
             
-            for source, target, inlet in self.inLinks(node_name):
+            for source, target, outlet, inlet in self.inLinks(node_name):
                 assert target == node_name
                 fields_data[inlet] = f" -> {source}"
 
