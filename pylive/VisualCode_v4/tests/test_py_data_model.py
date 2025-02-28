@@ -171,7 +171,7 @@ class TestCompilation(unittest.TestCase):
         """)))
 
         success = data_model.compileNodes(["hello"])
-        self.assertTrue(data_model.isCompiled("hello"))
+        self.assertFalse(data_model.needsCompilation("hello"))
 
     def test_compile_bad_syntax_function(self):
         from textwrap import dedent
@@ -180,7 +180,7 @@ class TestCompilation(unittest.TestCase):
 
         success = data_model.compileNodes(["bad"])
         self.assertFalse(success)
-        self.assertFalse(data_model.isCompiled("bad"))
+        self.assertTrue(data_model.needsCompilation("bad"))
         self.assertIsNotNone(data_model.nodeError("bad"))
         self.assertIsInstance(data_model.nodeError("bad"), SyntaxError)
 
@@ -196,7 +196,7 @@ class TestCompilation(unittest.TestCase):
 
         success = data_model.compileNodes(["class_definition"])
         self.assertFalse(success)
-        self.assertFalse(data_model.isCompiled("class_definition"))
+        self.assertTrue(data_model.needsEvaluation("class_definition"))
         self.assertIsNotNone(data_model.nodeError("class_definition"))
         self.assertIsInstance(data_model.nodeError("class_definition"), ValueError)
 
@@ -279,8 +279,8 @@ class TestEvaluation(unittest.TestCase):
 
         data_model.evaluateNodes(['say_hello'])
         self.assertIsNone(data_model.nodeError("say_hello"))
-        self.assertTrue(data_model.isCompiled("say_hello"))
-        self.assertTrue(data_model.isEvaluated("say_hello"))
+        self.assertFalse(data_model.needsCompilation("say_hello"))
+        self.assertFalse(data_model.needsEvaluation("say_hello"))
         self.assertEqual(data_model.nodeResult("say_hello"), "Hello!")
 
     def test_evaluate_chain_of_nodes(self):

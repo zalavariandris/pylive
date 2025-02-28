@@ -14,7 +14,7 @@ from pylive.VisualCode_v4.py_data_model import Empty, PyDataModel
 
 
 class PyProxyNodeModel(QAbstractItemModel):
-    _headers = ['name', 'source', 'parameters', 'compiled', 'evaluated', 'error', 'result']
+    _headers = ['name', 'source', 'parameters', 'needs_compilation', 'needs_evaluation', 'error', 'result']
     def __init__(self, source_model:PyDataModel, parent:QObject|None=None):
         super().__init__(parent=parent)
         self._nodes:list[str] = list()
@@ -41,8 +41,8 @@ class PyProxyNodeModel(QAbstractItemModel):
 
             source_model.sourceChanged.connect(self._on_source_changed)
             source_model.parametersReset.connect(self._on_parameters_reset)
-            source_model.compiledChanged.connect(self._on_compiled_changed)
-            source_model.evaluatedChanged.connect(self._on_evaluated_changed)
+            source_model.needsCompilationChanged.connect(self._on_needs_compilation_changed)
+            source_model.needsEvaluationChanged.connect(self._on_needs_evaluation_changed)
             source_model.errorChanged.connect(self._on_error_changed)
             source_model.resultChanged.connect(self._on_result_changed)
 
@@ -57,12 +57,12 @@ class PyProxyNodeModel(QAbstractItemModel):
         index = self.mapFromSource(node).siblingAtColumn(self._headers.index('parameters'))
         self.dataChanged.emit(index, index, [])
 
-    def _on_compiled_changed(self, node:str):
-        index = self.mapFromSource(node).siblingAtColumn(self._headers.index('compiled'))
+    def _on_needs_compilation_changed(self, node:str):
+        index = self.mapFromSource(node).siblingAtColumn(self._headers.index('needs_compilation'))
         self.dataChanged.emit(index, index, [])
 
-    def _on_evaluated_changed(self, node:str):
-        index = self.mapFromSource(node).siblingAtColumn(self._headers.index('evaluated'))
+    def _on_needs_evaluation_changed(self, node:str):
+        index = self.mapFromSource(node).siblingAtColumn(self._headers.index('needs_evaluation'))
         self.dataChanged.emit(index, index, [])
 
     def _on_error_changed(self, node:str):
@@ -216,13 +216,13 @@ class PyProxyNodeModel(QAbstractItemModel):
                         parameter_names.append(name)
                     return ",".join( parameter_names )
 
-            case 'compiled':
+            case 'needs_compilation':
                 if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
-                    return self._source_model.isCompiled(node_name)
+                    return self._source_model.needsCompilation(node_name)
 
-            case 'evaluated':
+            case 'needs_evaluation':
                 if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
-                    return self._source_model.isEvaluated(node_name)
+                    return self._source_model.needsEvaluation(node_name)
 
             case 'error':
                 if role == Qt.ItemDataRole.DisplayRole:
@@ -237,6 +237,7 @@ class PyProxyNodeModel(QAbstractItemModel):
                 raise ValueError(f"column {index.column()} is not in headers: {self._headers}")
 
         return None
+
 
 from pylive.VisualCode_v4.graph_editor.graph_data_roles import GraphDataRole
 class PyProxyLinkModel(QAbstractItemModel):

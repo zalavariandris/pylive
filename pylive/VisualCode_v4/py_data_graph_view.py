@@ -91,8 +91,8 @@ class PyDataGraphEditorView(QGraphicsView):
                 # Node Data
                 (model.sourceChanged, lambda node:    self.updateNodeItems([node], 'source')),
                 (model.positionChanged, lambda node:  self.updateNodeItems([node], 'position')),
-                (model.compiledChanged, lambda node:  self.updateNodeItems([node], 'compiled')),
-                (model.evaluatedChanged, lambda node: self.updateNodeItems([node], 'evaluated')),
+                (model.needsCompilationChanged, lambda node:  self.updateNodeItems([node], 'needs_compilation')),
+                (model.needsEvaluationChanged, lambda node: self.updateNodeItems([node], 'needs_evaluation')),
                 (model.errorChanged, lambda node:     self.updateNodeItems([node], 'error')),
                 (model.resultChanged, lambda node:    self.updateNodeItems([node], 'result')),
 
@@ -105,6 +105,9 @@ class PyDataGraphEditorView(QGraphicsView):
                 ),
                 (model.parametersAboutToBeRemoved, lambda node_key, first, last, model=model:
                     self.removeInletItem(node_key, [model.parameterName(node_key, i) for i in range(first, last)])
+                ),
+                (model.parametersReset, lambda node_key, model=model:
+                    self.resetInletItems(node_key)
                 ),
 
                 # Node Links
@@ -146,7 +149,7 @@ class PyDataGraphEditorView(QGraphicsView):
             link_keys.add( (source, target, "out", inlet) )
         self.addLinkItems(link_keys)
 
-        self.layoutNodes()
+        self.layoutNodes()        
 
     ### Node
     def addNodeItems(self, node_keys:Iterable[str]):
@@ -160,7 +163,7 @@ class PyDataGraphEditorView(QGraphicsView):
             else:
                 self.updateNodeItems([node_key])
 
-    def updateNodeItems(self, node_keys:Iterable[str], hint:Literal['source', 'position', 'compiled', 'evaluated', 'error', 'result', None]=None):
+    def updateNodeItems(self, node_keys:Iterable[str], hint:Literal['source', 'position', 'needs_compilation', 'needs_compilation', 'error', 'result', None]=None):
         assert all(key in self._node_widgets for key in node_keys)
         for node_key in node_keys:
             node_widget = self._node_widgets[node_key]
@@ -194,6 +197,18 @@ class PyDataGraphEditorView(QGraphicsView):
             else:
                 self.updateInletItems(node_key, [key])
         distribute_items_horizontal([_ for _ in node_widget._inlet_widgets.values()], node_widget.boundingRect())
+
+    def resetInletItems(self, node_key:str):
+        assert self._model
+        node_widget = self._node_widgets[node_key]
+        # clear inlets
+        for item in node_widget._inlet_widgets.values():
+            self.scene().removeItem(item)
+        node_widget._inlet_widgets.clear()
+
+        # insert all
+        inlet_keys = [self._model.parameterName(node_key, i) for i in range(self._model.parameterCount(node_key))]
+        self.insertInletItems(node_key, 0, inlet_keys)
 
     def insertOutletItems(self, node_key:str, index:int, outlet_keys:Iterable[str]):
         """insert inlet item for keys.
@@ -243,7 +258,7 @@ class PyDataGraphEditorView(QGraphicsView):
         node_widget = self._node_widgets[node_key]
         for key in inlet_keys:
             widget = node_widget._inlet_widgets[key]
-            del node_widget._inlet_widgets[widget]
+            del node_widget._inlet_widgets[key]
             self.scene().removeItem(widget)
             #TODO: remove connected links
 

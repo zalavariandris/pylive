@@ -15,8 +15,8 @@ class PySubgraphProxyModel(QObject):
     # Node data
     positionChanged = Signal(str)
     sourceChanged = Signal(str)
-    compiledChanged = Signal(str)
-    evaluatedChanged = Signal(str)
+    needsCompilationChanged = Signal(str)
+    needsEvaluationChanged = Signal(str)
     errorChanged = Signal(str)
     resultChanged = Signal(str)
 
@@ -67,8 +67,8 @@ class PySubgraphProxyModel(QObject):
                 # nodes
                 (sourceModel.positionChanged, lambda n: filterDataChangeSignal(self.positionChanged, n)),
                 (sourceModel.sourceChanged, lambda n: filterDataChangeSignal(self.sourceChanged, n)),
-                (sourceModel.compiledChanged, lambda n: filterDataChangeSignal(self.compiledChanged, n)),
-                (sourceModel.evaluatedChanged, lambda n: filterDataChangeSignal(self.evaluatedChanged, n)),
+                (sourceModel.needsCompilationChanged, lambda n: filterDataChangeSignal(self.needsCompilationChanged, n)),
+                (sourceModel.needsEvaluationChanged, lambda n: filterDataChangeSignal(self.needsEvaluationChanged, n)),
                 (sourceModel.errorChanged, lambda n: filterDataChangeSignal(self.errorChanged, n)),
                 (sourceModel.resultChanged, lambda n: filterDataChangeSignal(self.resultChanged, n)),
 

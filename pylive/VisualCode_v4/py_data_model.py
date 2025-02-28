@@ -63,8 +63,8 @@ class PyNodeItem:
     def __init__(self, source:str="def func(x:int):\n    ...", parameters:list[PyParameterItem]=[]):
         self._source = source
         self._parameters: list[PyParameterItem] = parameters
-        self._is_compiled:bool=False
-        self._is_evaluated:bool=False
+        self._needs_compilation:bool=True
+        self._needs_evaluation:bool=True
         self._position:QPointF=QPointF()
         self._error:Exception|None=None
         self._result:object|None=None
@@ -93,20 +93,20 @@ class PyNodeItem:
             from pylive.utils.evaluate_python import compile_python_function
             func = compile_python_function(self.source)
         except SyntaxError as err:
-            self._is_compiled = False
-            self._is_evaluated = False
+            self._needs_compilation = True
+            self._needs_evaluation = True
             self._error = err
             self._func = None
             self._result = None
         except Exception as err:
-            self._is_compiled = False
-            self._is_evaluated = False
+            self._needs_compilation = True
+            self._needs_evaluation = True
             self._error = err
             self._func = None
             self._result = None
         else:
-            self._is_compiled = True
-            self._is_evaluated = False
+            self._needs_compilation = False
+            self._needs_evaluation = True
             self._func = func
             sig = inspect.signature(func)
 
@@ -126,27 +126,9 @@ class PyNodeItem:
                     value=value
                 )
                 new_parameters.append(param_item)
-
+            self._parameters = new_parameters
             self._error = None
             self._result = None
-
-        # if node_item._is_compiled != new_compiled:
-        #     node_item._is_compiled = new_compiled
-        #     self.compiledChanged.emit(node)
-        # if node_item._func != new_func:
-        #     node_item._func = new_func
-        # if node_item._is_evaluated != new_evaluated:
-        #     node_item._is_evaluated = new_evaluated
-        #     self.evaluatedChanged.emit(node)
-        # if node_item.error != new_error:
-        #     node_item.error = new_error
-        #     self.errorChanged.emit(node)
-        # if node_item.result != new_result:
-        #     node_item.result = new_result
-        #     self.resultChanged.emit(node)
-        # if new_parameters is not None:
-        #     node_item.parameters = new_parameters
-        #     self.parametersReset.emit(node)
 
         if self._error is None:
             return True
@@ -154,17 +136,15 @@ class PyNodeItem:
             return False
 
     @property
-    def is_compiled(self)->bool:
-        return self._is_compiled
-
-
+    def needs_compilation(self)->bool:
+        return self._needs_compilation
 
     def evaluate(self)->bool:
         ...
 
     @property
-    def is_evaluated(self)->bool:
-        return self._is_evaluated
+    def needs_evaluated(self)->bool:
+        return self._needs_evaluation
 
     @property
     def result(self):
@@ -184,8 +164,8 @@ class PyDataModel(QObject):
     # Node data
     positionChanged = Signal(str)
     sourceChanged = Signal(str)
-    compiledChanged = Signal(str)
-    evaluatedChanged = Signal(str)
+    needsCompilationChanged = Signal(str)
+    needsEvaluationChanged = Signal(str)
     errorChanged = Signal(str)
     resultChanged = Signal(str)
 
@@ -226,6 +206,13 @@ class PyDataModel(QObject):
     def nodes(self)->Collection[str]:
         return [_ for _ in self._nodes.keys()]
 
+    def nodeAt(self, index:int)->str:
+        node = list(self._nodes.keys())[index]
+        return node
+
+    def linkCount(self):
+        return len(self._links)
+
     def links(self)->Collection[tuple[str,str,str]]:
         return [_ for _ in self._links]
 
@@ -237,10 +224,7 @@ class PyDataModel(QObject):
         #TODO: optimize, by using networkx graph to store nodes and edges
         return list(filter(lambda link: link[0]==node, self._links))
 
-    def nodeAt(self, index:int)->str:
-        node = list(self._nodes.keys())[index]
-        return node
-
+    ### Nodes
     def addNode(self, name:str, node_item:PyNodeItem):
         if name in self._nodes:
             raise ValueError("nodes must have a unique name")
@@ -260,9 +244,7 @@ class PyDataModel(QObject):
         del self._nodes[name]
         self.nodesRemoved.emit([name])
 
-    def linkCount(self):
-        return len(self._links)
-
+    ### Links
     def linkNodes(self, source:str, target:str, inlet:str):
         if source not in self._nodes.keys():
             raise ValueError(f"graph has no node named: '{source}'")
@@ -281,6 +263,7 @@ class PyDataModel(QObject):
         self._links.remove( (source, target, inlet) )
         self.nodesUnlinked.emit([(source, target, inlet)])
 
+    ### Node Data
     def nodePosition(self, name:str)->QPointF:
         return self._nodes[name]._position
 
@@ -290,14 +273,14 @@ class PyDataModel(QObject):
     def setNodeSource(self, node:str, value:str):
         if self._nodes[node].source != value:
             self._nodes[node].source = value
-            self._nodes[node]._is_compiled = False
-            self._nodes[node]._is_evaluated = False
+            self._nodes[node]._needs_compilation = True
+            self._nodes[node]._needs_evaluation = False
             self._nodes[node]._error = None
             self._nodes[node]._parameters = []
 
             self.sourceChanged.emit(node)
-            self.compiledChanged.emit(node)
-            self.evaluatedChanged.emit(node)
+            self.needsCompilationChanged.emit(node)
+            self.needsCompilationChanged.emit(node)
             self.errorChanged.emit(node)
             self.parametersReset.emit(node)
 
@@ -308,27 +291,26 @@ class PyDataModel(QObject):
 
         TODO: test compilation succes with multiple nodes, and each scenario: all compiles, a few fail, all fails...
         """
-        
 
         # if all nodes compiled succesfully return True, otherwise return False
         success_by_node = dict()
         for node_key in nodes:
             node_item = self._nodes[node_key]
 
-            prev_compiled = node_item._is_compiled
+            prev_compiled = node_item._needs_compilation
             prev_func = node_item._func
-            prev_evaluated = node_item._is_evaluated
+            prev_evaluated = node_item._needs_evaluation
             prev_error = node_item._error
             prev_result = node_item._result
             prev_parameters = node_item._parameters
             success = node_item.compile()
             success_by_node[node_key]=success
-            if prev_compiled != node_item._is_compiled:
-                self.compiledChanged.emit(node_key)
+            if prev_compiled != node_item._needs_compilation:
+                self.needsCompilationChanged.emit(node_key)
             # if prev_func != node_item._func:
             #     self.funcChanged.emit(node_key)
-            if prev_evaluated != node_item._is_evaluated:
-                self.evaluatedChanged.emit(node_key)
+            if prev_evaluated != node_item._needs_evaluation:
+                self.needsEvaluationChanged.emit(node_key)
             if prev_error != node_item._error:
                 self.errorChanged.emit(node_key)
             if prev_result != node_item._result:
@@ -338,22 +320,6 @@ class PyDataModel(QObject):
 
         success = all(success_by_node.values())
         return success
-
-    def _toNetworkX(self)->nx.MultiDiGraph:
-        G = nx.MultiDiGraph()
-        for node, item in self._nodes.items():
-            G.add_node(node, item=item)
-        for source, target, inlet in self._links:
-            G.add_edge(source, target, inlet)
-        return G
-
-    def ancestors(self, source:str)->set[str]:
-        G = self._toNetworkX()
-        return nx.ancestors(G, source) # | {node} # source 
-
-    def descendants(self, source:str)->set[str]:
-        G = self._toNetworkX()
-        return nx.descendants(G, source) # | {node} # source 
 
     def evaluateNodes(self, nodes:Sequence[str], ancestors=True, autocompile=True):
         ### build temporary nx graph (TODO: store nodes and edges in a graph!)
@@ -375,7 +341,7 @@ class PyDataModel(QObject):
         ordered_nodes = list(nx.topological_sort(subgraph))
 
         # compile nodes if necessary
-        nodes_need_compilation = filter(lambda node: not self.isCompiled(node), ordered_nodes)
+        nodes_need_compilation = filter(lambda node: self.needsCompilation(node), ordered_nodes)
         compile_success = self.compileNodes(nodes_need_compilation)
         if not compile_success:
             return False
@@ -395,7 +361,7 @@ class PyDataModel(QObject):
             ### load arguments from sources
             named_args = dict()
             for source, target, inlet in self.inLinks(node):
-                assert self.isEvaluated(source) and self.nodeError(source) is None, "at this point dependencies must have been evaluated without errors!"
+                assert not self.needsEvaluation(source) and self.nodeError(source) is None, "at this point dependencies must have been evaluated without errors!"
                 named_args[inlet] = self.nodeResult(source)
 
             ### load arguments from parameters
@@ -407,21 +373,21 @@ class PyDataModel(QObject):
             try:
                 result = call_function_with_named_args(func, named_args)
             except SyntaxError as err:
-                new_evaluated = True
+                new_needs_evaluation = True
                 new_error = err
                 new_result = None
             except Exception as err:
-                new_evaluated = True
+                new_needs_evaluation = True
                 new_error = err
                 new_result = None
             else:
-                new_evaluated = True
+                new_needs_evaluation = False
                 new_error = None
                 new_result = result
 
-            if node_item.is_evaluated != new_evaluated:
-                node_item._is_evaluated = new_evaluated
-                self.evaluatedChanged.emit(node)
+            if node_item._needs_evaluation != new_needs_evaluation:
+                node_item._needs_evaluation = new_needs_evaluation
+                self.needsEvaluationChanged.emit(node)
             if node_item._error != new_error:
                 node_item._error = new_error
                 self.errorChanged.emit(node)
@@ -483,17 +449,33 @@ class PyDataModel(QObject):
     def parameterValue(self, node:str, index:int)->object|None|Empty:
         return self._nodes[node].parameters[index].value
 
-    def isCompiled(self, node)->bool:
-        return self._nodes[node].is_compiled
+    def needsCompilation(self, node)->bool:
+        return self._nodes[node]._needs_compilation
 
-    def isEvaluated(self, node:str)->bool:
-        return self._nodes[node].is_evaluated
+    def needsEvaluation(self, node:str)->bool:
+        return self._nodes[node]._needs_evaluation
 
     def nodeError(self, node)->Exception|None:
         return self._nodes[node]._error
 
     def nodeResult(self, node)->Any:
         return self._nodes[node]._result
+
+    def _toNetworkX(self)->nx.MultiDiGraph:
+        G = nx.MultiDiGraph()
+        for node, item in self._nodes.items():
+            G.add_node(node, item=item)
+        for source, target, inlet in self._links:
+            G.add_edge(source, target, inlet)
+        return G
+
+    def ancestors(self, source:str)->set[str]:
+        G = self._toNetworkX()
+        return nx.ancestors(G, source) # | {node} # source 
+
+    def descendants(self, source:str)->set[str]:
+        G = self._toNetworkX()
+        return nx.descendants(G, source) # | {node} # source 
 
     def load(self, path:Path|str):
         text = Path(path).read_text()
