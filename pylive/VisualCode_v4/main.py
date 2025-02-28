@@ -59,17 +59,13 @@ class Window(QWidget):
         self._subgraph = PySubgraphProxyModel(self.graph_model)
         def evaluateWatched():
             print(f"evaluateWatched {self._watched_nodes}")
-            self.graph_model.evaluateNodes(self._watched_nodes)
+            for node in self._watched_nodes:
+                print("#TODO: evaluate nodes in topological order")
+                self.graph_model.evaluateNode(node)
 
         self._subgraph_connections = [
             (self._subgraph.modelReset, evaluateWatched),
-            (self._subgraph.sourceChanged, evaluateWatched),
-            (self._subgraph.parametersReset, evaluateWatched),
-            (self._subgraph.parametersInserted, evaluateWatched),
-            (self._subgraph.patametersChanged, evaluateWatched),
-            (self._subgraph.parametersRemoved, evaluateWatched),
-            (self._subgraph.nodesLinked, evaluateWatched),
-            (self._subgraph.nodesUnlinked, evaluateWatched)
+            (self._subgraph.needsEvaluationChanged, evaluateWatched),
         ]
         for signal, slot in self._subgraph_connections:
             signal.connect(slot)
@@ -156,7 +152,7 @@ class Window(QWidget):
             self.watchNode(node)
             
             if node:
-                self.graph_model.evaluateNodes([node])
+                self.graph_model.evaluateNode(node)
 
         self.node_selection_model.currentChanged.connect(onCurrentChanged)
             
@@ -423,14 +419,17 @@ class Window(QWidget):
             return
 
         nodes = map(self.node_proxy_model.mapToSource, self.node_selection_model.selectedIndexes())
-        self.graph_model.compileNodes(nodes)
+        for node in nodes:
+            self.graph_model.compileNode(node)
 
     def evaluate_selected_nodes(self):
         if not self.node_selection_model:
             return
 
         nodes = list(map(self.node_proxy_model.mapToSource, self.node_selection_model.selectedIndexes()))
-        self.graph_model.evaluateNodes(nodes)
+        raise NotImplementedError("node should be evaluated in topological order")
+        for node in nodes:
+            self.graph_model.evaluateNode(node)
 
     def delete_selected(self):
         # delete selected links

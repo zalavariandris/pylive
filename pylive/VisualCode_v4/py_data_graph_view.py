@@ -893,7 +893,8 @@ def main():
             super().__init__(parent=parent)
             self._model=PyDataModel()
             self._model.load("./tests/math_script.yaml")
-            self._model.compileNodes(self._model.nodes())
+            for node in self._model.nodes():
+                self._model.compileNode(node)
 
             self.setupUI()
             self.action_connections = []

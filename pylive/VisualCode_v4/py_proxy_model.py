@@ -425,30 +425,30 @@ class PyProxyParameterModel(QAbstractItemModel):
         self._source_model:PyDataModel|None=None
         self._node:str|None = None
         self._headers = ["name", "value"]
-
+        self._model_connections = []
         self.setSourceModel(source_model)
 
     def setSourceModel(self, source_model:PyDataModel):
         if self._source_model:
-            self._source_model.modelAboutToBeReset.disconnect(self.modelAboutToBeReset.emit)
-            self._source_model.modelReset.disconnect(self._resetModel)
-
-            self._source_model.parametersAboutToBeReset.disconnect(self.modelAboutToBeReset.emit)
-            self._source_model.parametersReset.disconnect(self._resetModel)
-            self._source_model.parametersAboutToBeInserted.disconnect(self._on_parameters_about_to_be_inserted)
-            self._source_model.parametersInserted.disconnect(self._on_parameters_inserted)
-            self._source_model.parametersAboutToBeRemoved.disconnect(self._on_parameters_about_to_be_removed)
-            self._source_model.parametersRemoved.disconnect(self._on_parameters_removed)
-            self._source_model.patametersChanged.disconnect(self._on_parameters_changed)
+            for signal, slot in self._model_connections:
+                signal.disconnect(slot)
 
         if source_model:
-            source_model.parametersAboutToBeReset.connect(self.modelAboutToBeReset.emit)
-            source_model.parametersReset.connect(self._resetModel)
-            source_model.parametersAboutToBeInserted.connect(self._on_parameters_about_to_be_inserted)
-            source_model.parametersInserted.connect(self._on_parameters_inserted)
-            source_model.parametersAboutToBeRemoved.connect(self._on_parameters_about_to_be_removed)
-            source_model.parametersRemoved.connect(self._on_parameters_removed)
-            source_model.patametersChanged.connect(self._on_parameters_changed)
+            self._model_connections = [
+                (source_model.modelAboutToBeReset, self.modelAboutToBeReset.emit),
+                (source_model.modelReset, self._resetModel),
+
+                (source_model.parametersAboutToBeReset, lambda node: self.modelAboutToBeReset.emit() if node and node == self._node else None),
+                (source_model.parametersReset, self._resetModel),
+                (source_model.parametersAboutToBeInserted, self._on_parameters_about_to_be_inserted),
+                (source_model.parametersInserted, self._on_parameters_inserted),
+                (source_model.parametersAboutToBeRemoved, self._on_parameters_about_to_be_removed),
+                (source_model.parametersRemoved, self._on_parameters_removed),
+                (source_model.patametersChanged, self._on_parameters_changed)
+            ]
+
+            for signal, slot in self._model_connections:
+                signal.connect(slot)
             
         self._source_model = source_model
         self._resetModel()
