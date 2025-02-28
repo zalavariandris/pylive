@@ -58,16 +58,117 @@ class Value:
         self.deleter_func(instance)
 
 
-@dataclass 
+# @dataclass 
 class PyNodeItem:
-    source:str="def func(x:int):\n    ..." # emit changed
-    parameters: list[PyParameterItem] = field(default_factory=list)
-    is_compiled:bool=False
-    is_evaluated:bool=False
-    position:QPointF=field(default_factory=QPointF)
-    error:Exception|None=None
-    result:object|None=None
-    _func:Callable|None=None # cache compiled function
+    def __init__(self, source:str="def func(x:int):\n    ...", parameters:list[PyParameterItem]=[]):
+        self._source = source
+        self._parameters: list[PyParameterItem] = parameters
+        self._is_compiled:bool=False
+        self._is_evaluated:bool=False
+        self._position:QPointF=QPointF()
+        self._error:Exception|None=None
+        self._result:object|None=None
+        self._func:Callable|None=None # cache compiled function
+
+    @property
+    def source(self)->str:
+        return self._source
+
+    @source.setter
+    def source(self, value:str):
+        self._source = value
+
+    @property
+    def parameters(self):
+        return self._parameters
+
+    @parameters.setter
+    def parameters(self, value):
+        self._parameters = value
+
+    def compile(self):
+        new_parameters:list[PyParameterItem]|None = None
+
+        try:
+            from pylive.utils.evaluate_python import compile_python_function
+            func = compile_python_function(self.source)
+        except SyntaxError as err:
+            self._is_compiled = False
+            self._is_evaluated = False
+            self._error = err
+            self._func = None
+            self._result = None
+        except Exception as err:
+            self._is_compiled = False
+            self._is_evaluated = False
+            self._error = err
+            self._func = None
+            self._result = None
+        else:
+            self._is_compiled = True
+            self._is_evaluated = False
+            self._func = func
+            sig = inspect.signature(func)
+
+            new_parameters = []
+            for idx, param in enumerate(sig.parameters.values()):
+                # find stored field value
+                value = Empty # default parameter value
+                for parameter in self.parameters:
+                    if parameter.name==param.name:
+                        value = parameter.value
+                
+                param_item = PyParameterItem(
+                    name=param.name, 
+                    default=param.default,
+                    annotation=param.annotation, 
+                    kind=param.kind,
+                    value=value
+                )
+                new_parameters.append(param_item)
+
+            self._error = None
+            self._result = None
+
+        # if node_item._is_compiled != new_compiled:
+        #     node_item._is_compiled = new_compiled
+        #     self.compiledChanged.emit(node)
+        # if node_item._func != new_func:
+        #     node_item._func = new_func
+        # if node_item._is_evaluated != new_evaluated:
+        #     node_item._is_evaluated = new_evaluated
+        #     self.evaluatedChanged.emit(node)
+        # if node_item.error != new_error:
+        #     node_item.error = new_error
+        #     self.errorChanged.emit(node)
+        # if node_item.result != new_result:
+        #     node_item.result = new_result
+        #     self.resultChanged.emit(node)
+        # if new_parameters is not None:
+        #     node_item.parameters = new_parameters
+        #     self.parametersReset.emit(node)
+
+        if self._error is None:
+            return True
+        else:
+            return False
+
+    @property
+    def is_compiled(self)->bool:
+        return self._is_compiled
+
+
+
+    def evaluate(self)->bool:
+        ...
+
+    @property
+    def is_evaluated(self)->bool:
+        return self._is_evaluated
+
+    @property
+    def result(self):
+        return self._result
 
 
 class PyDataModel(QObject):
@@ -181,7 +282,7 @@ class PyDataModel(QObject):
         self.nodesUnlinked.emit([(source, target, inlet)])
 
     def nodePosition(self, name:str)->QPointF:
-        return self._nodes[name].position
+        return self._nodes[name]._position
 
     def nodeSource(self, name:str)->str:
         return self._nodes[name].source
@@ -189,7 +290,16 @@ class PyDataModel(QObject):
     def setNodeSource(self, node:str, value:str):
         if self._nodes[node].source != value:
             self._nodes[node].source = value
+            self._nodes[node]._is_compiled = False
+            self._nodes[node]._is_evaluated = False
+            self._nodes[node]._error = None
+            self._nodes[node]._parameters = []
+
             self.sourceChanged.emit(node)
+            self.compiledChanged.emit(node)
+            self.evaluatedChanged.emit(node)
+            self.errorChanged.emit(node)
+            self.parametersReset.emit(node)
 
     def compileNodes(self, nodes:Iterable[str])->bool:
         """compile all nodes
@@ -198,80 +308,34 @@ class PyDataModel(QObject):
 
         TODO: test compilation succes with multiple nodes, and each scenario: all compiles, a few fail, all fails...
         """
-        def _compile_node(node):
-            node_item = self._nodes[node]
-            new_parameters:list[PyParameterItem]|None = None
-
-            try:
-                from pylive.utils.evaluate_python import compile_python_function
-                func = compile_python_function(node_item.source)
-            except SyntaxError as err:
-                new_compiled = False
-                new_evaluated = False
-                new_error = err
-                new_func = None
-                new_result = None
-            except Exception as err:
-                new_compiled = False
-                new_evaluated = False
-                new_error = err
-                new_func = None
-                new_result = None
-            else:
-                new_compiled = True
-                new_evaluated = False
-                new_func = func
-                sig = inspect.signature(func)
-
-                new_parameters = []
-                for idx, param in enumerate(sig.parameters.values()):
-                    # find stored field value
-                    value = Empty # default parameter value
-                    for parameter in node_item.parameters:
-                        if parameter.name==param.name:
-                            value = parameter.value
-                    
-                    param_item = PyParameterItem(
-                        name=param.name, 
-                        default=param.default,
-                        annotation=param.annotation, 
-                        kind=param.kind,
-                        value=value
-                    )
-                    new_parameters.append(param_item)
-
-                new_error = None
-                new_result = None
-
-            if node_item.is_compiled != new_compiled:
-                node_item.is_compiled = new_compiled
-                self.compiledChanged.emit(node)
-
-            if node_item._func != new_func:
-                node_item._func = new_func
-            if node_item.is_evaluated != new_evaluated:
-                node_item.is_evaluated = new_evaluated
-                self.evaluatedChanged.emit(node)
-            if node_item.error != new_error:
-                node_item.error = new_error
-                self.errorChanged.emit(node)
-            if node_item.result != new_result:
-                node_item.result = new_result
-                self.resultChanged.emit(node)
-            if new_parameters is not None:
-                node_item.parameters = new_parameters
-                self.parametersReset.emit(node)
-
-            if new_error is None:
-                return True
-            else:
-                return False
+        
 
         # if all nodes compiled succesfully return True, otherwise return False
         success_by_node = dict()
-        for node in nodes:
-            success = _compile_node(node)
-            success_by_node[node]=success
+        for node_key in nodes:
+            node_item = self._nodes[node_key]
+
+            prev_compiled = node_item._is_compiled
+            prev_func = node_item._func
+            prev_evaluated = node_item._is_evaluated
+            prev_error = node_item._error
+            prev_result = node_item._result
+            prev_parameters = node_item._parameters
+            success = node_item.compile()
+            success_by_node[node_key]=success
+            if prev_compiled != node_item._is_compiled:
+                self.compiledChanged.emit(node_key)
+            # if prev_func != node_item._func:
+            #     self.funcChanged.emit(node_key)
+            if prev_evaluated != node_item._is_evaluated:
+                self.evaluatedChanged.emit(node_key)
+            if prev_error != node_item._error:
+                self.errorChanged.emit(node_key)
+            if prev_result != node_item._result:
+                self.resultChanged.emit(node_key)
+            if prev_parameters != node_item._parameters:
+                self.parametersReset.emit(node_key)
+
         success = all(success_by_node.values())
         return success
 
@@ -356,13 +420,13 @@ class PyDataModel(QObject):
                 new_result = result
 
             if node_item.is_evaluated != new_evaluated:
-                node_item.is_evaluated = new_evaluated
+                node_item._is_evaluated = new_evaluated
                 self.evaluatedChanged.emit(node)
-            if node_item.error != new_error:
-                node_item.error = new_error
+            if node_item._error != new_error:
+                node_item._error = new_error
                 self.errorChanged.emit(node)
-            if node_item.result != new_result:
-                node_item.result = new_result
+            if node_item._result != new_result:
+                node_item._result = new_result
                 print(f"emit result changed fro node: '{node}'")
                 self.resultChanged.emit(node)
 
@@ -426,10 +490,10 @@ class PyDataModel(QObject):
         return self._nodes[node].is_evaluated
 
     def nodeError(self, node)->Exception|None:
-        return self._nodes[node].error
+        return self._nodes[node]._error
 
     def nodeResult(self, node)->Any:
-        return self._nodes[node].result
+        return self._nodes[node]._result
 
     def load(self, path:Path|str):
         text = Path(path).read_text()

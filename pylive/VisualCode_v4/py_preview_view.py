@@ -65,7 +65,7 @@ class PyPreviewView(QFrame):
         if node == self._current_node:
             self._syncEditorData()
 
-    def _syncEditorData(self, attributes:list[str]=[]):
+    def _syncEditorData(self, hint=None):
         print(f"PyPreviewView->_syncEditorData")
         if not self._model:
             return
@@ -82,7 +82,7 @@ class PyPreviewView(QFrame):
             self.display("- no selection -")
 
     def setCurrent(self, node:str|None):
-        print(f"PyPreviewView->setCurrent")
+        print(f"PyPreviewView->setCurrent {node}")
         if node != self._current_node:
             self._current_node = node
             self._syncEditorData()

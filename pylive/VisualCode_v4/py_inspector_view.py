@@ -5,7 +5,7 @@ from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
 import pylive.utils.qtfactory as qf
-import qt_parameters
+# import qt_parameters
 
 from pylive.VisualCode_v4.py_data_model import PyDataModel
 from pylive.VisualCode_v4.py_proxy_model import PyProxyParameterModel

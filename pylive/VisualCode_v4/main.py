@@ -58,7 +58,7 @@ class Window(QWidget):
         self._watched_nodes:list[str] = list()
         self._subgraph = PySubgraphProxyModel(self.graph_model)
         def evaluateWatched():
-            print(f"evaluate watched {self._watched_nodes}")
+            print(f"evaluateWatched {self._watched_nodes}")
             self.graph_model.evaluateNodes(self._watched_nodes)
 
         self._subgraph_connections = [
@@ -149,8 +149,8 @@ class Window(QWidget):
 
         # bind model to current change
         def onCurrentChanged(current:QModelIndex, previous:QModelIndex):
-            
             node = self.node_proxy_model.mapToSource(current) if current.isValid() else None
+            print(f"onCurrentChanged: {node}")
             self.result_view.setCurrent(node)
             self.inspector_view.setCurrent(node)
             self.watchNode(node)
