@@ -77,7 +77,6 @@ class PyDataGraphEditorView(QGraphicsView):
         self.setScene(scene)
 
     def setModel(self, model:PyDataModel|None):
-        # logger.debug(f"setModel {model}")
         if self._model:
             for signal, slot in self._model_connections:
                 signal.disconnect(slot)
@@ -179,7 +178,6 @@ class PyDataGraphEditorView(QGraphicsView):
         """insert inlet item for keys.
         if the item already exist, update it!"""
         assert not isinstance(inlet_keys, str)
-        # logger.debug(f"insertInletItems {inlet_keys}")
         #TODO: index is not yet supported
         node_widget = self._node_widgets[node_key]
         for key in inlet_keys:
@@ -201,7 +199,6 @@ class PyDataGraphEditorView(QGraphicsView):
         """insert inlet item for keys.
         if the item already exist, update it!"""
         assert not isinstance(outlet_keys, str)
-        # logger.debug(f"insertOutletItems {outlet_keys}")
         #TODO: index is not yet supported
         node_widget = self._node_widgets[node_key]
         for key in outlet_keys:
@@ -265,7 +262,6 @@ class PyDataGraphEditorView(QGraphicsView):
     def addLinkItems(self, link_keys:Iterable[tuple[str,str,str,str]]):
         """add link items connecting the ports.
         if inlets, outlets or nodes does not exist, create them"""
-        # logger.debug(f"addLinkItems {link_keys}")
 
         for link_key in link_keys:
             source_key, target_key, outlet_key, inlet_key = link_key
@@ -337,11 +333,9 @@ class PyDataGraphEditorView(QGraphicsView):
 
     ### Layout
     def centerNodes(self):
-        # logger.debug("centerNodes")
         self.centerOn(self.scene().itemsBoundingRect().center())
 
     def layoutNodes(self, orientation=Qt.Orientation.Vertical, scale=100):
-        logger.debug('layoutNodes')
         assert self._model, f"bad _model, got: {self._model}"
         from pylive.utils.graph import hiearchical_layout_with_nx
         import networkx as nx

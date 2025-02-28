@@ -18,7 +18,7 @@ import pdb
 # from pylive.QtGraphEditor.py_functions_model import PyFunctionsModel
 from pylive.VisualCode_v4.py_data_model import PyDataModel, PyNodeItem
 from pylive.VisualCode_v4.py_proxy_model import PyProxyNodeModel, PyProxyLinkModel, PyProxyParameterModel
-
+from pylive.VisualCode_v4.py_subgraph_proxy_model import PySubgraphProxyModel
 
 from pylive.VisualCode_v4.py_data_graph_view import PyDataGraphEditorView
 
@@ -32,30 +32,60 @@ from pylive.VisualCode_v4.py_preview_view import PyPreviewView
 class Window(QWidget):
     def __init__(self, parent:QWidget|None=None):
         super().__init__(parent=parent)
-        ### document state
 
+        ### Track file document change
         self._is_modified = False
         self._filepath = None
-        self._watcher = QFileSystemWatcher()
-        self._watcher.fileChanged.connect(lambda:
+        self._file_watcher = QFileSystemWatcher()
+        self._file_watcher.fileChanged.connect(lambda:
             self._onFileChanged(self._filepath))
 
-        self._autocompile_connections = []
-        self._autoevaluate_connections = []
-        self.graph_view_connections = []
+        # MODEL
         self.graph_model = PyDataModel()
+
+        # PROXY MODELS
         self.link_proxy_model = PyProxyLinkModel(self.graph_model)
         self.node_proxy_model:PyProxyNodeModel = self.link_proxy_model.itemsModel()
         assert self.node_proxy_model
         self.node_selection_model = QItemSelectionModel(self.node_proxy_model)
         self.link_selection_model = QItemSelectionModel(self.link_proxy_model)
 
+        ### UI
+        self.graph_view_connections = []
         self.setupUI()
-        self.setAutoCompile(True)
-        self.setAutoEvaluate(True)
+
+        # Watch selected nodes
+        self._watched_nodes:list[str] = list()
+        self._subgraph = PySubgraphProxyModel(self.graph_model)
+        def evaluateWatched():
+            print(f"evaluate watched {self._watched_nodes}")
+            self.graph_model.evaluateNodes(self._watched_nodes)
+
+        self._subgraph_connections = [
+            (self._subgraph.modelReset, evaluateWatched),
+            (self._subgraph.sourceChanged, evaluateWatched),
+            (self._subgraph.parametersReset, evaluateWatched),
+            (self._subgraph.parametersInserted, evaluateWatched),
+            (self._subgraph.patametersChanged, evaluateWatched),
+            (self._subgraph.parametersRemoved, evaluateWatched),
+            (self._subgraph.nodesLinked, evaluateWatched),
+            (self._subgraph.nodesUnlinked, evaluateWatched)
+        ]
+        for signal, slot in self._subgraph_connections:
+            signal.connect(slot)
 
     def showEvent(self, event: QShowEvent) -> None:
         self.graph_view.centerNodes()
+
+    def watchNode(self, node:str|None):
+        if node:
+            ancestors = self.graph_model.ancestors(node)
+            print(f"watchNode: {node}, ({ancestors})")
+            self._watched_nodes = [node]
+            self._subgraph.setNodes(ancestors | {node})
+        else:
+            self._watched_nodes = []
+            self._subgraph.setNodes([])
 
     def setupUI(self):
         ### GRAPH View
@@ -103,37 +133,33 @@ class Window(QWidget):
             (self.graph_view.scene().selectionChanged, update_model_selection),
             (self.node_selection_model.selectionChanged, update_graphview_selection)
         ]
+
         for signal, slot in self.graph_view_connections:
             signal.connect(slot)
-
-        # self.graph_view.setSelectionModel(self.node_selection_model)
-        # self.graph_view.setSelectionModel(self.selection_model)
 
         # ### NODEINSPECTOR
         self.inspector_view = PyInspectorView()
         self.inspector_view.setModel(self.graph_model)
-
-        def set_inspector_node(current:QModelIndex, previous:QModelIndex):
-            if current.isValid():
-                node = self.node_proxy_model.mapToSource(current)
-                self.inspector_view.setCurrent(node)
-            else:
-                self.inspector_view.setCurrent(None)
-
-        self.node_selection_model.currentChanged.connect(set_inspector_node)
 
 
         # ### PREVIEW WIDGET
         self.result_view = PyPreviewView()
         self.result_view.setModel(self.graph_model)
         self.result_view.setCurrent(None)
-        def set_preview_node(current:QModelIndex, previous:QModelIndex):
-            if current.isValid():
-                node = self.node_proxy_model.mapToSource(current)
-                self.result_view.setCurrent(node)
-            else:
-                self.result_view.setCurrent(None)
-        self.node_selection_model.currentChanged.connect(set_preview_node)
+
+        # bind model to current change
+        def onCurrentChanged(current:QModelIndex, previous:QModelIndex):
+            
+            node = self.node_proxy_model.mapToSource(current) if current.isValid() else None
+            self.result_view.setCurrent(node)
+            self.inspector_view.setCurrent(node)
+            self.watchNode(node)
+            
+            if node:
+                self.graph_model.evaluateNodes([node])
+
+        self.node_selection_model.currentChanged.connect(onCurrentChanged)
+            
 
         ### STATUS BAR WIDGET
         self.statusbar = QStatusBar()
@@ -220,48 +246,48 @@ class Window(QWidget):
         main_layout.setMenuBar(menubar)
         self.setLayout(main_layout)
 
-    def setAutoCompile(self, auto: bool):
-        if auto:
-            # compile all nodes
-            self.graph_model.compileNodes(self.graph_model.nodes())
+    # def setAutoCompile(self, auto: bool):
+    #     if auto:
+    #         # compile all nodes
+    #         self.graph_model.compileNodes(self.graph_model.nodes())
 
-            # compile nodes on changes
-            self._autocompile_connections = [
-                (self.graph_model.modelReset, lambda:         self.graph_model.compileNodes(self.graph_model.nodes())),
-                (self.graph_model.nodesAdded, lambda nodes:   self.graph_model.compileNodes(nodes)),
-                (self.graph_model.sourceChanged, lambda node: self.graph_model.compileNodes([node]))
-            ]
-            for signal, slot in self._autocompile_connections:
-                signal.connect(slot)
+    #         # compile nodes on changes
+    #         self._autocompile_connections = [
+    #             (self.graph_model.modelReset, lambda:         self.graph_model.compileNodes(self.graph_model.nodes())),
+    #             (self.graph_model.nodesAdded, lambda nodes:   self.graph_model.compileNodes(nodes)),
+    #             (self.graph_model.sourceChanged, lambda node: self.graph_model.compileNodes([node]))
+    #         ]
+    #         for signal, slot in self._autocompile_connections:
+    #             signal.connect(slot)
 
-        else:
-            for signal, slot in self._autocompile_connections:
-                signal.disconnect(slot)
-            self._autocompile_connections = []
+    #     else:
+    #         for signal, slot in self._autocompile_connections:
+    #             signal.disconnect(slot)
+    #         self._autocompile_connections = []
 
-    def setAutoEvaluate(self, auto:bool):
-        self._current_ancestors = set()
-        if auto:
-            ### TODO: check what has changed, and only evaluate if the current ancestors changed
-            ### basically make sure that only necessary evaluations are happening.
-            ### by the way this could happen in the model itself.
-            ### evaluate nodes only if necessary
+    # def setAutoEvaluate(self, auto:bool):
+    #     self._current_ancestors = set()
+    #     if auto:
+    #         ### TODO: check what has changed, and only evaluate if the current ancestors changed
+    #         ### basically make sure that only necessary evaluations are happening.
+    #         ### by the way this could happen in the model itself.
+    #         ### evaluate nodes only if necessary
 
-            self._autoevaluate_connections = [
-                (self.node_selection_model.currentChanged, 
-                    lambda current, previous: self.graph_model.evaluateNodes(
-                        [self.node_proxy_model.mapToSource(current)]) if current.isValid() else None
-                ),
-                (self.graph_model.nodesLinked,lambda current, previous: self.graph_model.evaluateNodes(
-                        [self.node_proxy_model.mapToSource(current)]) if current.isValid() else None
-                )
-            ]
-            for signal, slot in self._autoevaluate_connections:
-                signal.connect(slot)
-        else:
-            for signal, slot in self._autoevaluate_connections:
-                signal.disconnect(slot)
-            self._autoevaluate_connections = []
+    #         self._autoevaluate_connections = [
+    #             (self.node_selection_model.currentChanged, 
+    #                 lambda current, previous: self.graph_model.evaluateNodes(
+    #                     [self.node_proxy_model.mapToSource(current)]) if current.isValid() else None
+    #             ),
+    #             (self.graph_model.nodesLinked,lambda current, previous: self.graph_model.evaluateNodes(
+    #                     [self.node_proxy_model.mapToSource(current)]) if current.isValid() else None
+    #             )
+    #         ]
+    #         for signal, slot in self._autoevaluate_connections:
+    #             signal.connect(slot)
+    #     else:
+    #         for signal, slot in self._autoevaluate_connections:
+    #             signal.disconnect(slot)
+    #         self._autoevaluate_connections = []
 
     def sizeHint(self):
         return QSize(2048, 900) 
@@ -333,7 +359,7 @@ class Window(QWidget):
         script. It reloads silently, because if the document is not modified,
         and the file has been changed, it will silently reload the script.
         """
-        self._watcher.removePath(filepath) 
+        self._file_watcher.removePath(filepath) 
         try:
             with open(filepath, 'w') as file:
                 file_contents = self.graph_model.serialize()
@@ -341,7 +367,7 @@ class Window(QWidget):
                 self.setModified(False)
         except FileNotFoundError:
             pass
-        self._watcher.addPath(filepath)
+        self._file_watcher.addPath(filepath)
         self._filepath = filepath
 
     def closeFile(self)->bool:
@@ -372,7 +398,7 @@ class Window(QWidget):
 
         # ignore file changes, while prompt is open
         from pylive.utils.qt import signalsBlocked
-        with signalsBlocked(self._watcher):
+        with signalsBlocked(self._file_watcher):
             if not self.isModified() or QMessageBox.StandardButton.Yes==QMessageBox.information(window, 
                 "File has changed on disk!", 
                 f"Do you want to reaload '{self.filepath()}'?", 

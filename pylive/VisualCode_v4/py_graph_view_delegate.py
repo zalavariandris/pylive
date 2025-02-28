@@ -22,7 +22,6 @@ class PyGraphViewDelegate(StandardGraphDelegate):
         return node_widget
 
     def updateNodeWidget(self, index:QModelIndex, node_widget:QGraphicsItem)->None:
-        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
         node_widget = cast(PyNodeWidget, node_widget)
         for column, header in enumerate(PyProxyNodeModel._headers):
             column_index = index.siblingAtColumn(column)

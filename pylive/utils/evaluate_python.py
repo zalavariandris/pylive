@@ -44,7 +44,6 @@ def call_function_with_named_args(func: Callable, named_args: Dict[str, Any]) ->
                 kw_args[param_name] = named_args[param_name]
     
     result = func(*pos_args, **kw_args)
-    print("!!!!!!!!!!!!!!!!", result)
     return result
 
 

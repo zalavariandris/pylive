@@ -175,9 +175,6 @@ class Window(QWidget):
             if source_node_key !=current_node_key:
                 self.model.add_edge(source_node_key, current_node_key)
 
-        print(current_node_key)
-        print("-", selected_node_keys)
-
     @Slot()
     def remove_selected_edges(self):
         for index in self.edge_selection.selectedIndexes():

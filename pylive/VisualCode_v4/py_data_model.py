@@ -28,25 +28,46 @@ class PyParameterItem:
     value: object|None|Any=Empty #TODO: object|None|inspect.Parameter.empty
 
 
-@dataclass
+class Value:
+    def __init__(self, getter):
+        self.getter = getter
+        self.setter_func = None
+        self.deleter_func = None
+
+    def __get__(self, instance, owner):
+        if instance is None:
+            return self  # When accessed from the class, return the descriptor itself
+        return self.getter(instance)
+
+    def setter(self, setter_func):
+        self.setter_func = setter_func
+        return self  # Return self to allow method chaining
+
+    def deleter(self, deleter_func):
+        self.deleter_func = deleter_func
+        return self
+
+    def __set__(self, instance, value):
+        if self.setter_func is None:
+            raise AttributeError("Can't set attribute")
+        self.setter_func(instance, value)
+
+    def __delete__(self, instance):
+        if self.deleter_func is None:
+            raise AttributeError("Can't delete attribute")
+        self.deleter_func(instance)
+
+
+@dataclass 
 class PyNodeItem:
     source:str="def func(x:int):\n    ..." # emit changed
     parameters: list[PyParameterItem] = field(default_factory=list)
     is_compiled:bool=False
     is_evaluated:bool=False
-    #position:QPointF=field(default_factory=QPointF)
+    position:QPointF=field(default_factory=QPointF)
     error:Exception|None=None
     result:object|None=None
     _func:Callable|None=None # cache compiled function
-
-
-class AutoEvaluate(QObject):
-    def __init__(self, parent:QObject|None=None):
-        super().__init__(parent=parent)
-
-    def setWatchedNodes(self, nodes:Iterable[str]):
-        self._nodes = nodes
-
 
 
 class PyDataModel(QObject):
@@ -127,7 +148,6 @@ class PyDataModel(QObject):
         self.nodesAdded.emit([name])
 
     def removeNode(self, name:str):
-        logger.debug(f"removeNode: {name}")
         ### remove links
         for source, target, inlet in self.inLinks(name):
             self.unlinkNodes(source, target, inlet)
@@ -143,7 +163,6 @@ class PyDataModel(QObject):
         return len(self._links)
 
     def linkNodes(self, source:str, target:str, inlet:str):
-        logger.debug(f"PyDataModel->linkNodes {source}, {target}, {inlet}")
         if source not in self._nodes.keys():
             raise ValueError(f"graph has no node named: '{source}'")
         if target not in self._nodes.keys():
@@ -169,7 +188,6 @@ class PyDataModel(QObject):
 
     def setNodeSource(self, node:str, value:str):
         if self._nodes[node].source != value:
-            logger.debug(f"setNodeSource: {node}, {value}")
             self._nodes[node].source = value
             self.sourceChanged.emit(node)
 
@@ -181,7 +199,6 @@ class PyDataModel(QObject):
         TODO: test compilation succes with multiple nodes, and each scenario: all compiles, a few fail, all fails...
         """
         def _compile_node(node):
-            logger.debug(f"_compile_node: {node}")
             node_item = self._nodes[node]
             new_parameters:list[PyParameterItem]|None = None
 
@@ -346,6 +363,7 @@ class PyDataModel(QObject):
                 self.errorChanged.emit(node)
             if node_item.result != new_result:
                 node_item.result = new_result
+                print(f"emit result changed fro node: '{node}'")
                 self.resultChanged.emit(node)
 
             if new_error is not None:
@@ -354,7 +372,6 @@ class PyDataModel(QObject):
                 return True
 
         for node in ordered_nodes:
-            logger.debug(f"- {node}") 
             success = _evaluate_node(node)
             if not success:
                 return False
@@ -373,26 +390,22 @@ class PyDataModel(QObject):
         return param in parameter_names
 
     def setParameters(self, node:str, parameters:list[PyParameterItem]):
-        logger.debug(f"setParameters: {node}, {parameters}")
         self.parametersAboutToBeReset.emit(node)
         self._nodes[node].parameters = parameters
         self.parametersReset.emit(node)
 
     def insertParameter(self, node:str, index:int, parameter:PyParameterItem)->bool:
-        logger.debug(f"insertParameter: {node}, {index}, {parameter}")
         self.parametersAboutToBeInserted.emit(node, index, index)
         self._nodes[node].parameters.insert(index, parameter)
         self.parametersInserted.emit(node, index, index)
         return True
 
     def removeParameter(self, node:str, index:int):
-        logger.debug(f"removeParameter: {node}, {index}")
         self.parametersAboutToBeRemoved.emit(node, index, index)
         del self._nodes[node].parameters[index]
         self.parametersRemoved.emit(node, index, index)
 
     def setParameterValue(self, node:str, index:int, value:object|None|Empty):
-        logger.debug(f"setParameterValue: {node}, {index}, {value}")
         if self._nodes[node].parameters[index].value != value:
             self._nodes[node].parameters[index].value = value
             self.patametersChanged.emit(node, index, index)

@@ -29,13 +29,12 @@ class PyPreviewView(QFrame):
 
         if model:
             self._model_connections = [
-                (model.resultChanged, lambda node: self._syncEditorData() if node == self._current_node else None)
+                (model.resultChanged, self._onResultChanged)
             ]
             for signal, slot in self._model_connections:
                 signal.connect(slot)
 
         self._model = model
-
 
     def display(self, data:Any):
         layout = cast(QVBoxLayout, self.layout())
@@ -61,13 +60,17 @@ class PyPreviewView(QFrame):
                 label.setText(f"<p style='white-space:pre'>{data}<p>")
                 layout.addWidget(label)
 
+    def _onResultChanged(self, node):
+        print(f"PyPreviewView->_onResultChanged {node}, {self._current_node}")
+        if node == self._current_node:
+            self._syncEditorData()
 
     def _syncEditorData(self, attributes:list[str]=[]):
+        print(f"PyPreviewView->_syncEditorData")
         if not self._model:
             return
 
         if self._current_node:
-            info = []
             result = self._model.nodeResult(self._current_node)
             error = self._model.nodeError(self._current_node)
 
@@ -79,7 +82,7 @@ class PyPreviewView(QFrame):
             self.display("- no selection -")
 
     def setCurrent(self, node:str|None):
-        print("Preview setCurrent", node)
+        print(f"PyPreviewView->setCurrent")
         if node != self._current_node:
             self._current_node = node
             self._syncEditorData()
