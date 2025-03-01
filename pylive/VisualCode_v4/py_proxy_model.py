@@ -502,7 +502,7 @@ class PyProxyParameterModel(QAbstractItemModel):
         if not self._source_model or not self._node:
             return None
 
-        parameter = self._source_model.parameterItem(self._node, index.row())
+        parameter = self._source_model._parameterItem(self._node, index.row())
         column_name = self._headers[index.column()]
         match column_name:
             case 'name':
@@ -532,7 +532,7 @@ class PyProxyParameterModel(QAbstractItemModel):
         if not self._source_model or not self._node:
             return False
 
-        parameter = self._source_model.parameterItem(self._node, index.row())
+        parameter = self._source_model._parameterItem(self._node, index.row())
         column_name = self._headers[index.column()]
         match column_name:
             case 'value':
@@ -544,7 +544,7 @@ class PyProxyParameterModel(QAbstractItemModel):
     def index(self, row:int, column:int, parent:QModelIndex|QPersistentModelIndex=QModelIndex()):
         if not self._source_model or not self._node:
             return QModelIndex()
-        parameter_item = self._source_model.parameterItem(self._node, row)
+        parameter_item = self._source_model._parameterItem(self._node, row)
         return self.createIndex(row, column, parameter_item)
 
     def parent(self, index:QModelIndex)->QModelIndex:

@@ -173,7 +173,6 @@ class PyDataGraphEditorView(QGraphicsView):
             node_widget = self._node_widgets[node_key]
             node_widget.update()
 
-            print("update node item", node_key)
             node_widget.debug.setHtml(dedent(f"""\
             <div>
             {"<p  style='margin:0; color: orange'>⚑ needs compilation</p>" if self._model.needsCompilation(node_key) else ""}
@@ -404,7 +403,6 @@ class PyDataGraphEditorView(QGraphicsView):
         self.blockSignals(False)
 
     def dragEnterEvent(self, event: QDragEnterEvent) -> None:
-        print(f"View.dragEnter {event.mimeData().formats()}")
         super().dragEnterEvent(event)
 
     def dragMoveEvent(self, event: QDragMoveEvent) -> None:
@@ -412,7 +410,6 @@ class PyDataGraphEditorView(QGraphicsView):
         if event.isAccepted():
             return
 
-        print(f"View.dragMove {event.mimeData().formats()}")
         if event.mimeData().hasFormat(GraphMimeData.OutletData):
             source_node, outlet = event.mimeData().data(GraphMimeData.OutletData).toStdString().split("/")
             source_item = self._node_widgets[source_node]._outlet_widgets[outlet]
@@ -462,7 +459,7 @@ class PyDataGraphEditorView(QGraphicsView):
         super().dropEvent(event)
         # if event.isAccepted():
         #     return
-        print(f"View.drop {event.mimeData().formats()}")
+
         if event.mimeData().hasFormat(GraphMimeData.LinkSourceData):
             assert self._model
             link_key = event.mimeData().data(GraphMimeData.LinkSourceData).toStdString().split("/")
@@ -551,7 +548,6 @@ class InletItem(PortItem):
             painter.drawEllipse(QRectF(-r,-r,r*2,r*2))
 
     def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
-        print("press inlet")
         # Setup new drag
         assert self._view
         node_widget = self.parentItem()
@@ -575,7 +571,6 @@ class InletItem(PortItem):
             self._view._cleanupDraftLink()
 
     def dragEnterEvent(self, event: QGraphicsSceneDragDropEvent) -> None:
-        print(f"Inlet.dragEnter {event.mimeData().formats()}")
         if event.mimeData().hasFormat(GraphMimeData.OutletData):
             assert self._view
             assert self._view._model
@@ -597,7 +592,6 @@ class InletItem(PortItem):
                 return
 
     def dragMoveEvent(self, event: QGraphicsSceneDragDropEvent) -> None:
-        print(f"Inlet.dragMove {event.mimeData().formats()}")
         if event.mimeData().hasFormat(GraphMimeData.OutletData):
             assert self._view
             source_node, outlet = event.mimeData().data(GraphMimeData.OutletData).toStdString().split("/")
@@ -623,7 +617,6 @@ class InletItem(PortItem):
         return super().dragMoveEvent(event)
 
     def dropEvent(self, event: QGraphicsSceneDragDropEvent) -> None:
-        print(f"Inlet.drop {event.mimeData().formats()}")
         if event.mimeData().hasFormat(GraphMimeData.OutletData):
             assert self._view
             assert self._view._model
@@ -664,7 +657,6 @@ class OutletItem(PortItem):
         self.setAcceptDrops(True)
 
     def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
-        print("press outlet")
         # Setup new drag
         assert self._view
         node_widget = self.parentItem()
@@ -688,7 +680,6 @@ class OutletItem(PortItem):
             self._view._cleanupDraftLink()
 
     def dragEnterEvent(self, event: QGraphicsSceneDragDropEvent) -> None:
-        print(f"Outlet.dragEnter {event.mimeData().formats()}")
         if event.mimeData().hasFormat(GraphMimeData.InletData):
             event.acceptProposedAction() # Todo: set accepted action
             return
@@ -698,7 +689,6 @@ class OutletItem(PortItem):
             return
 
     def dragMoveEvent(self, event: QGraphicsSceneDragDropEvent) -> None:
-        print(f"Outlet.dragMove {event.mimeData().formats()}")
         if event.mimeData().hasFormat(GraphMimeData.InletData):
             assert self._view
             target_node, inlet = event.mimeData().data(GraphMimeData.InletData).toStdString().split("/")
@@ -725,7 +715,6 @@ class OutletItem(PortItem):
         return super().dragMoveEvent(event)
 
     def dropEvent(self, event: QGraphicsSceneDragDropEvent) -> None:
-        print(f"Inlet.drop {event.mimeData().formats()}")
         if event.mimeData().hasFormat(GraphMimeData.InletData):
             assert self._view
             assert self._view._model
@@ -892,7 +881,7 @@ class LinkItem(QGraphicsLineItem):
                 self.move()
 
     def mouseMoveEvent(self, event):
-        print("link move")
+        ...
             
     def paint(self, painter:QPainter, option:QStyleOption, widget:QWidget|None=None):
         painter.setPen( QPen(self.palette().text(), 1) )

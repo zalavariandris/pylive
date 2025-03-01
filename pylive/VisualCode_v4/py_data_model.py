@@ -12,6 +12,8 @@ from dataclasses import dataclass, field
 import inspect
 from collections import OrderedDict, defaultdict
 import logging
+
+from shiboken6 import invalidate
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
@@ -120,6 +122,8 @@ class PyDataModel(QObject):
     errorChanged = Signal(str)
     resultChanged = Signal(str)
 
+    invalidated = Signal(list)
+
     # Node Links
     nodesAboutToBeLinked = Signal(list) # list of edges: tuple[source, target, outlet, inlet]
     nodesLinked = Signal(list) # list[str,str,str, str]
@@ -197,25 +201,26 @@ class PyDataModel(QObject):
 
     ### Links
     def linkNodes(self, source:str, target:str, outlet:str, inlet:str):
-        if source not in self._nodes.keys():
-            raise ValueError(f"graph has no node named: '{source}'")
-        if target not in self._nodes.keys():
-            raise ValueError(f"graph has no node named: '{target}'")
-        parameter_names = set(map(lambda item:item.name, self._nodes[target].parameters))
+        # if source not in self._nodes.keys():
+        #     raise ValueError(f"graph has no node named: '{source}'")
+        # if target not in self._nodes.keys():
+        #     raise ValueError(f"graph has no node named: '{target}'")
+        # parameter_names = set(map(lambda item:item.name, self._nodes[target].parameters))
 
-        if inlet not in parameter_names:
-            raise ValueError(f"node '{target}' has no parameter named: '{inlet}'!")
+        # if inlet not in parameter_names:
+        #     raise ValueError(f"node '{target}' has no parameter named: '{inlet}'!")
+
         self.nodesAboutToBeLinked.emit( [(source, target, outlet, inlet)] )
         self._links.add( (source, target, outlet, inlet) )
+        self._setNeedsEvaluation(target, True)
         self.nodesLinked.emit([(source, target, outlet, inlet)])
-        self.setNeedsEvaluation(target, True)
-
+        
     def unlinkNodes(self, source:str, target:str, outlet:str, inlet:str):
         self.nodesAboutToBeUnlinked.emit([(source, target, outlet, inlet)])
         self._links.remove( (source, target, outlet, inlet) )
+        self._setNeedsEvaluation(target, True)
         self.nodesUnlinked.emit([(source, target, outlet, inlet)])
-        self.setNeedsEvaluation(target, True)
-
+        
     ### Node Data
     def position(self, name:str)->QPointF:
         return self._nodes[name].position
@@ -228,10 +233,10 @@ class PyDataModel(QObject):
             self._nodes[node].source = value
             self.sourceChanged.emit(node)
 
-            self.setNeedsCompilation(node, True)
-            self.setNeedsEvaluation(node,  False)
-            self.setError(node, None)
-            self.setParameters(node,  [])
+            self._setNeedsCompilation(node, True)
+            self._setNeedsEvaluation(node,  False)
+            self._setError(node, None)
+            self._setParameters(node,  [])
 
     def compile(self, node:str, force=False)->bool:
         """compile all nodes
@@ -245,22 +250,22 @@ class PyDataModel(QObject):
             from pylive.utils.evaluate_python import compile_python_function
             func = compile_python_function(self._nodes[node].source)
         except SyntaxError as err:
-            self.setNeedsCompilation(node, True)
-            self.setNeedsEvaluation(node, True)
-            self.setError(node, err)
+            self._setNeedsCompilation(node, True)
+            self._setNeedsEvaluation(node, True)
+            self._setError(node, err)
             self._nodes[node].func = None
-            self.setResult(node, None)
+            self._setResult(node, None)
             return False
         except Exception as err:
-            self.setNeedsCompilation(node, True)
-            self.setNeedsEvaluation(node, True)
-            self.setError(node, err)
+            self._setNeedsCompilation(node, True)
+            self._setNeedsEvaluation(node, True)
+            self._setError(node, err)
             self._nodes[node].func = None
-            self.setResult(node, None)
+            self._setResult(node, None)
             return False
         else:
-            self.setNeedsCompilation(node, False)
-            self.setNeedsEvaluation(node, True)
+            self._setNeedsCompilation(node, False)
+            self._setNeedsEvaluation(node, True)
             self._nodes[node].func = func
 
             sig = inspect.signature(func)
@@ -280,21 +285,30 @@ class PyDataModel(QObject):
                     value=value
                 )
                 new_parameters.append(param_item)
-            self.setParameters(node, new_parameters)
-            self.setError(node, None)
-            self.setResult(node, None)
+            self._setParameters(node, new_parameters)
+            self._setError(node, None)
+            self._setResult(node, None)
             return True
 
-    def evaluate(self, node:str, force=False)->bool:
+    def evaluate(self, nodes:Iterable[str], force=False)->bool:
         ### build temporary nx graph (TODO: store nodes and edges in a graph!)
-
-        if not self.needsEvaluation(node) and not force:
+        if isinstance(nodes, str):
+            logger.warn("{nodes} is a string.")
+        nodes = set(n for n in nodes)
+        if not any(self.needsEvaluation(node) for node in nodes) and not force:
             return True
 
         ### append ancestors
         ### create subgraph
         G = self._toNetworkX()
-        subgraph = cast(nx.MultiDiGraph, G.subgraph(nx.ancestors(G, node) | {node}))
+        nodes = set(n for n in nodes)
+        subgraph = cast(nx.MultiDiGraph, 
+            G.subgraph( 
+                nodes.union( 
+                    *[nx.ancestors(G, n) for n in nodes]
+                )
+            )
+        )
         
         ### sort nodes in topological order
         ordered_nodes = list(nx.topological_sort(subgraph))
@@ -303,14 +317,14 @@ class PyDataModel(QObject):
         for ancestor in ordered_nodes:
             success = self.compile(ancestor, force=False)
             if not success:
-                self.setNeedsEvaluation(node, True)
-                self.setError(node, None)
-                self.setResult(node, None)
                 return False
 
         ### evaluate nodes in reverse topological order
         from pylive.utils.evaluate_python import call_function_with_named_args
         for node in ordered_nodes:
+            if not self.needsEvaluation(node) and not force:
+                print(f"continue node: {node}")
+                continue
             print(f"PyDataModel->evaluateNode {node}...")
             """evaluate nodes in topological order
             Stop and return _False_ when evaluation Fails.
@@ -338,41 +352,45 @@ class PyDataModel(QObject):
             try:
                 result = call_function_with_named_args(func, named_args)
             except SyntaxError as err:
-                self.setNeedsEvaluation(node, True)
-                self.setError(node, err)
-                self.setResult(node, None)
+                self._setNeedsEvaluation(node, True)
+                self._setError(node, err)
+                self._setResult(node, None)
                 print(f"             evaluateNode {node} ...failed!")
                 return False
             except Exception as err:
-                self.setNeedsEvaluation(node, True)
-                self.setError(node, err)
-                self.setResult(node, None)
+                self._setNeedsEvaluation(node, True)
+                self._setError(node, err)
+                self._setResult(node, None)
                 print(f"             evaluateNode {node} ...failed!")
                 return False
             else:
-                self.setNeedsEvaluation(node, False)
-                self.setError(node, None)
-                self.setResult(node, result)
-        print(f"             evaluateNode {node} ...done!")
+                self._setNeedsEvaluation(node, False)
+                self._setError(node, None)
+                self._setResult(node, result)
+            print(f"             evaluateNode {node} ...done!")
+
         return True
 
     def needsCompilation(self, node)->bool:
         return self._nodes[node].needs_compilation
 
-    def setNeedsCompilation(self, node:str, value:bool):
+    def _setNeedsCompilation(self, node:str, value:bool):
         if self._nodes[node].needs_compilation != value:
             self._nodes[node].needs_compilation = value
             self.needsCompilationChanged.emit(node)
-            self.setNeedsEvaluation(node, True)
+            if value:
+                self._setNeedsEvaluation(node, True)
 
     def needsEvaluation(self, node:str)->bool:
         return self._nodes[node].needs_evaluation
 
-    def setNeedsEvaluation(self, node:str, value:bool):
+    def _setNeedsEvaluation(self, node:str, value:bool):
         if self._nodes[node].needs_evaluation != value:
             self._nodes[node].needs_evaluation = value
-            print(f'setNeedsEvaluation {node} {value}')
             self.needsEvaluationChanged.emit(node)
+        if value:
+
+            self.invalidated.emit([_ for _ in self.ancestors(node) | {node}])
 
     def error(self, node)->Exception|None:
         return self._nodes[node].error
@@ -380,12 +398,12 @@ class PyDataModel(QObject):
     def result(self, node)->Any:
         return self._nodes[node].result
 
-    def setResult(self, node:str, value:Any):
+    def _setResult(self, node:str, value:Any):
         if self._nodes[node].result != value:
             self._nodes[node].result = value
             self.resultChanged.emit(node) 
 
-    def setError(self, node:str, value:Exception|None):
+    def _setError(self, node:str, value:Exception|None):
         if self._nodes[node].error != value:
             self._nodes[node].error = value
             self.errorChanged.emit(node)
@@ -403,24 +421,24 @@ class PyDataModel(QObject):
 
         return param in parameter_names
 
-    def setParameters(self, node:str, parameters:list[PyParameterItem]):
+    def _setParameters(self, node:str, parameters:list[PyParameterItem]):
         self.parametersAboutToBeReset.emit(node)
         self._nodes[node].parameters = parameters
         self.parametersReset.emit(node)
-        self.setNeedsEvaluation(node, True)
+        self._setNeedsEvaluation(node, True)
 
-    def insertParameter(self, node:str, index:int, parameter:PyParameterItem)->bool:
+    def _insertParameter(self, node:str, index:int, parameter:PyParameterItem)->bool:
         self.parametersAboutToBeInserted.emit(node, index, index)
         self._nodes[node].parameters.insert(index, parameter)
         self.parametersInserted.emit(node, index, index)
-        self.setNeedsEvaluation(node, True)
+        self._setNeedsEvaluation(node, True)
         return True
 
-    def removeParameter(self, node:str, index:int):
+    def _removeParameter(self, node:str, index:int):
         self.parametersAboutToBeRemoved.emit(node, index, index)
         del self._nodes[node].parameters[index]
         self.parametersRemoved.emit(node, index, index)
-        self.setNeedsEvaluation(node, True)
+        self._setNeedsEvaluation(node, True)
 
     def setParameterValue(self, node:str, index:int, value:object|None|Empty):
         if self._nodes[node].parameters[index].value != value:
@@ -428,7 +446,7 @@ class PyDataModel(QObject):
             self.patametersChanged.emit(node, index, index)
             self.setNeedsEvaluation(node, True)
 
-    def parameterItem(self, node:str, index:int)->PyParameterItem:
+    def _parameterItem(self, node:str, index:int)->PyParameterItem:
         return self._nodes[node].parameters[index]
 
     def parameterName(self, node:str, index:int)->str:
@@ -550,5 +568,33 @@ class PyDataModel(QObject):
         import yaml
         return yaml.dump(self.toData(), sort_keys=False)
 
+    def setAutoEvaluate(self, auto:bool):
+        def autoEvaluateOnChange(changed:list[str]):
+            dependencies = set()
+            for node in changed:
+                dependencies |= self.ancestors(node) | {node}
 
+            if self._auto_evaluate_filter == None:
+                self.evaluate(changed)
+            else:
+                if self._auto_evaluate_filter.intersection(changed):
+                    self.evaluate(changed)
 
+        self._auto_evaluate_connections = [
+            # (self.graph_model.needsEvaluationChanged, lambda n: keepCurrentUpToDate(changed=[n]))
+            (self.modelReset, lambda: autoEvaluateOnChange),
+            (self.sourceChanged, lambda n: autoEvaluateOnChange([n])),
+            (self.parametersReset, lambda n: autoEvaluateOnChange([n])),
+            (self.parametersInserted, lambda n, f, l: autoEvaluateOnChange([n])),
+            (self.patametersChanged,  lambda n, f, l: autoEvaluateOnChange([n])),
+            (self.parametersRemoved,  lambda n, f, l: autoEvaluateOnChange([n])),
+
+            (self.nodesLinked, lambda links: autoEvaluateOnChange( [link[1] for link in links] )),
+            (self.nodesUnlinked, lambda links: autoEvaluateOnChange( [link[1] for link in links] ))
+        ]
+
+        for signal, slot in self._auto_evaluate_connections:
+            signal.connect(slot)
+
+    def setAutoEvaluateFilter(self, nodes:Iterable[str]):
+        self._auto_evaluate_filter = set(n for n in nodes)

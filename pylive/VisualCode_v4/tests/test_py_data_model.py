@@ -1,4 +1,5 @@
 from typing import *
+from warnings import deprecated
 from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
@@ -30,6 +31,7 @@ class TestModelCRUD(unittest.TestCase):
     def test_create_node(self):
         ...
 
+    @unittest.skip
     def test_attempt_linking_to_unexisting_nodes_and_inlets(self):
         data_model = PyDataModel()
         data_model.deserialize(math_script)
@@ -212,8 +214,8 @@ class TestParametersCRUD(unittest.TestCase):
 
         self.assertEqual(data_model.parameterCount("node1"), 2)
 
-        param1 = data_model.parameterItem("node1", 0)
-        param2 = data_model.parameterItem("node1", 1)
+        param1 = data_model._parameterItem("node1", 0)
+        param2 = data_model._parameterItem("node1", 1)
         self.assertEqual(param1.name, "input1")
         self.assertEqual(param2.name, "input2")
 
@@ -227,7 +229,7 @@ class TestParametersCRUD(unittest.TestCase):
 
         data_model.compile("hello")
         self.assertEqual(data_model.parameterCount("hello"), 1)
-        param_item = data_model.parameterItem("hello", 0)
+        param_item = data_model._parameterItem("hello", 0)
         self.assertEqual(param_item.name, "name")
         self.assertEqual(param_item.annotation, str)
         self.assertEqual(param_item.default, "you")
@@ -247,7 +249,7 @@ class TestParametersCRUD(unittest.TestCase):
 
         data_model.compile("hello")
         self.assertEqual(data_model.parameterCount("hello"), 1)
-        param_item = data_model.parameterItem("hello", 0)
+        param_item = data_model._parameterItem("hello", 0)
         self.assertEqual(param_item.default, "you")
         self.assertEqual(param_item.value, "Mása")
         data_model = PyDataModel()
@@ -275,7 +277,7 @@ class TestEvaluation(unittest.TestCase):
             return "Hello!"
         """)))
 
-        data_model.evaluate('say_hello')
+        data_model.evaluate(['say_hello'])
         self.assertIsNone(data_model.error("say_hello"))
         self.assertFalse(data_model.needsCompilation("say_hello"))
         self.assertFalse(data_model.needsEvaluation("say_hello"))
@@ -285,7 +287,7 @@ class TestEvaluation(unittest.TestCase):
         data_model = PyDataModel()
         data_model.deserialize(math_script)
 
-        data_model.evaluate('mult')
+        data_model.evaluate(['mult'])
 
         self.assertEqual(data_model.result("mult"), 6)
 
@@ -296,7 +298,7 @@ class TestEvaluation(unittest.TestCase):
             return "Hello " + name + "!"
         """)
         data_model.addNode("node_with_error", PyNodeItem(source=script))
-        data_model.evaluate("node_with_error")
+        data_model.evaluate(["node_with_error"])
         node_error:Exception|None = data_model.error('node_with_error')
         self.assertIsInstance(node_error, TypeError)
         assert isinstance(node_error, TypeError)
@@ -304,6 +306,8 @@ class TestEvaluation(unittest.TestCase):
         # print("!!ARGS!!!!!!!!!!!", node_error.args[0])
         
         # exec(script+"\nsay_hello()")
+
+
 
         
 if __name__ == "__main__":

@@ -54,38 +54,56 @@ class Window(QWidget):
         self.graph_view_connections = []
         self.setupUI()
 
-        # Watch selected nodes
-        self._watched_nodes:list[str] = list()
-        self._subgraph = PySubgraphProxyModel(self.graph_model)
-        def evaluateWatched():
-            print(f"evaluateWatched {self._watched_nodes}")
-            for node in self._watched_nodes:
-                print("#TODO: evaluate nodes in topological order")
-                self.graph_model.evaluate(node)
+        #
+        def keepCurrentUpToDate(changed:list[str]):
+            current_index = self.node_selection_model.currentIndex()
+            if not current_index.isValid():
+                return
+            current_node = self.node_proxy_model.mapToSource( self.node_selection_model.currentIndex() )
+            ancestors = self.graph_model.ancestors(current_node)
 
-        self._subgraph_connections = [
-            (self._subgraph.modelReset, evaluateWatched),
-            (self._subgraph.sourceChanged, evaluateWatched),
-            (self._subgraph.parametersReset, evaluateWatched),
-            (self._subgraph.parametersInserted, evaluateWatched),
-            (self._subgraph.patametersChanged, evaluateWatched),
-            (self._subgraph.parametersRemoved, evaluateWatched)
+            IsDependency = current_node in changed or any(n in ancestors for n in changed)
+            if IsDependency:
+                self.graph_model.evaluate([current_node])
+
+        self._keep_current_connections = [
+            # (self.graph_model.needsEvaluationChanged, lambda n: keepCurrentUpToDate(changed=[n]))
+            (self.graph_model.modelReset, lambda: keepCurrentUpToDate),
+            (self.graph_model.sourceChanged, lambda n: keepCurrentUpToDate([n])),
+            (self.graph_model.parametersReset, lambda n: keepCurrentUpToDate([n])),
+            (self.graph_model.parametersInserted, lambda n, f, l: keepCurrentUpToDate([n])),
+            (self.graph_model.patametersChanged,  lambda n, f, l: keepCurrentUpToDate([n])),
+            (self.graph_model.parametersRemoved,  lambda n, f, l: keepCurrentUpToDate([n])),
+
+            (self.graph_model.nodesLinked, lambda links: keepCurrentUpToDate( [link[1] for link in links] )),
+            (self.graph_model.nodesUnlinked, lambda links: keepCurrentUpToDate( [link[1] for link in links] ))
         ]
-        for signal, slot in self._subgraph_connections:
+
+        for signal, slot in self._keep_current_connections:
             signal.connect(slot)
+
+        # def keepCurrentUpToDate(invalidated_nodes: list[str]):
+        #     current_index = self.node_selection_model.currentIndex()
+        #     if not current_index.isValid():
+        #         return
+        #     current_node = self.node_proxy_model.mapToSource( self.node_selection_model.currentIndex() )
+        #     print("current node was invalidated")
+        #     # self.graph_model.evaluate([current_node])
+
+        # self.graph_model.invalidated.connect(keepCurrentUpToDate)
 
     def showEvent(self, event: QShowEvent) -> None:
         self.graph_view.centerNodes()
 
-    def watchNode(self, node:str|None):
-        if node:
-            ancestors = self.graph_model.ancestors(node)
-            print(f"watchNode: {node}, ({ancestors})")
-            self._watched_nodes = [node]
-            self._subgraph.setNodes(ancestors | {node})
-        else:
-            self._watched_nodes = []
-            self._subgraph.setNodes([])
+    # def watchNode(self, node:str|None):
+    #     if node:
+    #         ancestors = self.graph_model.ancestors(node)
+    #         print(f"watchNode: {node}, ({ancestors})")
+    #         self._watched_nodes = [node]
+    #         self._subgraph.setNodes(ancestors | {node})
+    #     else:
+    #         self._watched_nodes = []
+    #         self._subgraph.setNodes([])
 
     def setupUI(self):
         ### GRAPH View
@@ -153,10 +171,10 @@ class Window(QWidget):
             print(f"onCurrentChanged: {node}")
             self.result_view.setCurrent(node)
             self.inspector_view.setCurrent(node)
-            self.watchNode(node)
+            # self.watchNode(node)
             
             if node:
-                self.graph_model.evaluate(node)
+                self.graph_model.evaluate([node])
 
         self.node_selection_model.currentChanged.connect(onCurrentChanged)
             

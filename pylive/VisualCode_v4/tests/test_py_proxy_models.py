@@ -264,8 +264,8 @@ class TestParametersCRUD(unittest.TestCase):
 
 		self.assertEqual(data_model.parameterCount("node1"), 2)
 
-		param1 = data_model.parameterItem("node1", 0)
-		param2 = data_model.parameterItem("node1", 1)
+		param1 = data_model._parameterItem("node1", 0)
+		param2 = data_model._parameterItem("node1", 1)
 		self.assertEqual(param1.name, "input1")
 		self.assertEqual(param2.name, "input2")
 
