@@ -65,7 +65,11 @@ class Window(QWidget):
 
         self._subgraph_connections = [
             (self._subgraph.modelReset, evaluateWatched),
-            (self._subgraph.needsEvaluationChanged, evaluateWatched),
+            (self._subgraph.sourceChanged, evaluateWatched),
+            (self._subgraph.parametersReset, evaluateWatched),
+            (self._subgraph.parametersInserted, evaluateWatched),
+            (self._subgraph.patametersChanged, evaluateWatched),
+            (self._subgraph.parametersRemoved, evaluateWatched)
         ]
         for signal, slot in self._subgraph_connections:
             signal.connect(slot)
