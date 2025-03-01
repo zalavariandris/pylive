@@ -35,13 +35,13 @@ class TestModelCRUD(unittest.TestCase):
         data_model.deserialize(math_script)
 
         with self.assertRaises(ValueError):
-            data_model.linkNodes("NOTHING", "mult", "x")
+            data_model.linkNodes("NOTHING", "mult", "out", "x")
 
         with self.assertRaises(ValueError):
-            data_model.linkNodes("two", "NOTHING", "x")
+            data_model.linkNodes("two", "NOTHING", "out", "x")
 
         with self.assertRaises(ValueError):
-            data_model.linkNodes("two", "mult", "NOTHING")
+            data_model.linkNodes("two", "mult", "out", "NOTHING")
 
     def test_create_link(self):
         ...
@@ -66,8 +66,8 @@ class TestModelCRUD(unittest.TestCase):
         self.assertEqual(nodes, {'two', 'three', 'mult'})
         links = {_ for _ in data_model.links()}
         self.assertEqual(links, {
-            ('two', 'mult', 'x'),
-            ('three', 'mult', 'y'),
+            ('two', 'mult', "out", 'x'),
+            ('three', 'mult', "out", 'y'),
         })
 
     def test_remove_node_with_links(self):
@@ -105,7 +105,7 @@ class TestSerialization(unittest.TestCase):
         nodes = set(_ for _ in data_model.nodes())
         self.assertEqual(nodes, {'person', 'say_hello'})
         links = {_ for _ in data_model.links()}
-        self.assertEqual(links, {('person', 'say_hello', 'name')})
+        self.assertEqual(links, {('person', 'say_hello', "out", 'name')})
 
     def test_explicit_edges(self):
         """test support edges defined under 'edges'"""
@@ -126,7 +126,7 @@ class TestSerialization(unittest.TestCase):
         """)
 
         self.assertEqual(data_model.linkCount(), 1)
-        self.assertIn( ("Judit", "say_hello", "name"),  data_model.links())
+        self.assertIn( ("Judit", "say_hello", "out", "name"),  data_model.links())
         
     def test_parameter_link_syntax(self):
         """test support ing parameters with link using @"""
@@ -142,9 +142,10 @@ class TestSerialization(unittest.TestCase):
         data_model.addNode("C", PyNodeItem(
             source="""def create_label(text:str):  return QLabel(text)""", 
         ))
-        data_model.compileNodes(["A", "B", "C"])
-        data_model.linkNodes("A", "B", 'html')
-        data_model.linkNodes("B", "C", 'text')
+        for n in ["A", "B", "C"]:
+            data_model.compile(n)
+        data_model.linkNodes("A", "B", "out", 'html')
+        data_model.linkNodes("B", "C", "out", 'text')
 
         file_data = data_model.toData()
         import yaml
@@ -170,7 +171,7 @@ class TestCompilation(unittest.TestCase):
             return f"Hello {name}"
         """)))
 
-        success = data_model.compileNodes(["hello"])
+        success = data_model.compile("hello")
         self.assertFalse(data_model.needsCompilation("hello"))
 
     def test_compile_bad_syntax_function(self):
@@ -178,11 +179,11 @@ class TestCompilation(unittest.TestCase):
         data_model = PyDataModel()
         data_model.addNode("bad", PyNodeItem(source="clas bum"))
 
-        success = data_model.compileNodes(["bad"])
+        success = data_model.compile("bad")
         self.assertFalse(success)
         self.assertTrue(data_model.needsCompilation("bad"))
-        self.assertIsNotNone(data_model.nodeError("bad"))
-        self.assertIsInstance(data_model.nodeError("bad"), SyntaxError)
+        self.assertIsNotNone(data_model.error("bad"))
+        self.assertIsInstance(data_model.error("bad"), SyntaxError)
 
     def test_compile_no_valid_function(self):
         """if no functions found in the script, raise a ValueError"""
@@ -194,11 +195,11 @@ class TestCompilation(unittest.TestCase):
             ...
         """)))
 
-        success = data_model.compileNodes(["class_definition"])
+        success = data_model.compile("class_definition")
         self.assertFalse(success)
         self.assertTrue(data_model.needsEvaluation("class_definition"))
-        self.assertIsNotNone(data_model.nodeError("class_definition"))
-        self.assertIsInstance(data_model.nodeError("class_definition"), ValueError)
+        self.assertIsNotNone(data_model.error("class_definition"))
+        self.assertIsInstance(data_model.error("class_definition"), ValueError)
 
 
 class TestParametersCRUD(unittest.TestCase):
@@ -223,11 +224,8 @@ class TestParametersCRUD(unittest.TestCase):
         def hello(name:str="you"):
             return f"Hello {name}"
         """)))
-        # data_model.addNode("bad_function", PyNodeItem(source=dedent("""\
-        # de
-        # """)))
 
-        data_model.compileNodes(["hello"])
+        data_model.compile("hello")
         self.assertEqual(data_model.parameterCount("hello"), 1)
         param_item = data_model.parameterItem("hello", 0)
         self.assertEqual(param_item.name, "name")
@@ -247,7 +245,7 @@ class TestParametersCRUD(unittest.TestCase):
             parameters=[PyParameterItem(name="name", value="Mása")]
         ))
 
-        data_model.compileNodes(["hello"])
+        data_model.compile("hello")
         self.assertEqual(data_model.parameterCount("hello"), 1)
         param_item = data_model.parameterItem("hello", 0)
         self.assertEqual(param_item.default, "you")
@@ -265,7 +263,7 @@ class TestParametersCRUD(unittest.TestCase):
             return "Hello " + name + "!"
         """)
         data_model.addNode("node_with_error", PyNodeItem(source=script))
-        data_model.compileNodes(['node_with_error'])
+        data_model.compile('node_with_error')
         self.assertEqual(data_model.parameterValue('node_with_error', 0), Empty)
 
 
@@ -277,19 +275,19 @@ class TestEvaluation(unittest.TestCase):
             return "Hello!"
         """)))
 
-        data_model.evaluateNodes(['say_hello'])
-        self.assertIsNone(data_model.nodeError("say_hello"))
+        data_model.evaluate('say_hello')
+        self.assertIsNone(data_model.error("say_hello"))
         self.assertFalse(data_model.needsCompilation("say_hello"))
         self.assertFalse(data_model.needsEvaluation("say_hello"))
-        self.assertEqual(data_model.nodeResult("say_hello"), "Hello!")
+        self.assertEqual(data_model.result("say_hello"), "Hello!")
 
     def test_evaluate_chain_of_nodes(self):
         data_model = PyDataModel()
         data_model.deserialize(math_script)
 
-        data_model.evaluateNodes(['mult'])
+        data_model.evaluate('mult')
 
-        self.assertEqual(data_model.nodeResult("mult"), 6)
+        self.assertEqual(data_model.result("mult"), 6)
 
     def test_evaluate_node_with_missing_parameters(self):
         data_model = PyDataModel()
@@ -298,8 +296,8 @@ class TestEvaluation(unittest.TestCase):
             return "Hello " + name + "!"
         """)
         data_model.addNode("node_with_error", PyNodeItem(source=script))
-        data_model.evaluateNodes(["node_with_error"])
-        node_error:Exception|None = data_model.nodeError('node_with_error')
+        data_model.evaluate("node_with_error")
+        node_error:Exception|None = data_model.error('node_with_error')
         self.assertIsInstance(node_error, TypeError)
         assert isinstance(node_error, TypeError)
         self.assertEqual(node_error.args[0], "say_hello() missing 1 required positional argument: 'name'")

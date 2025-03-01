@@ -30,7 +30,7 @@ class TestSignals(unittest.TestCase):
         subgraph.setNodes(["node1"])
 
         spy = QSignalSpy(subgraph.sourceChanged)
-        graph.setNodeSource('node1', """\
+        graph.setSource('node1', """\
           def hello(name:str="You"):
               return "Hello {name}"
         """)
@@ -51,7 +51,7 @@ class TestSignals(unittest.TestCase):
         subgraph.setNodes(["node1"])
 
         spy = QSignalSpy(subgraph.sourceChanged)
-        graph.setNodeSource('node1', dedent("""\
+        graph.setSource('node1', dedent("""\
             def hello(name:str="You"):
                 return "Hello {name}"
         """))
@@ -78,7 +78,7 @@ class TestSignals(unittest.TestCase):
         subgraph.setNodes(graph.ancestors('say_hello') | {'say_hello'})
         result_changed_spy = QSignalSpy(graph.resultChanged)
         subgraph.sourceChanged.connect(lambda n: graph.evaluateNodes(['say_hello']))
-        graph.setNodeSource('make_name', dedent("def identity():    'Judit'"))
+        graph.setSource('make_name', dedent("def identity():    'Judit'"))
 
         self.assertEqual(result_changed_spy.count(), 1)
     

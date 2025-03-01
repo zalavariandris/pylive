@@ -71,8 +71,8 @@ class PyPreviewView(QFrame):
             return
 
         if self._current_node:
-            result = self._model.nodeResult(self._current_node)
-            error = self._model.nodeError(self._current_node)
+            result = self._model.result(self._current_node)
+            error = self._model.error(self._current_node)
 
             if error:
                 self.display(error)

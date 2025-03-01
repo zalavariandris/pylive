@@ -206,7 +206,7 @@ class PyProxyNodeModel(QAbstractItemModel):
 
             case 'source':
                 if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
-                    return self._source_model.nodeSource(node_name)
+                    return self._source_model.source(node_name)
 
             case 'parameters':
                 if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
@@ -226,13 +226,13 @@ class PyProxyNodeModel(QAbstractItemModel):
 
             case 'error':
                 if role == Qt.ItemDataRole.DisplayRole:
-                    return f"{self._source_model.nodeError(node_name)}"
+                    return f"{self._source_model.error(node_name)}"
                 elif role ==  Qt.ItemDataRole.EditRole:
-                    return self._source_model.nodeError(node_name)
+                    return self._source_model.error(node_name)
 
             case 'result':
                 if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
-                    return f"{self._source_model.nodeResult(node_name)}"
+                    return f"{self._source_model.result(node_name)}"
             case _:
                 raise ValueError(f"column {index.column()} is not in headers: {self._headers}")
 

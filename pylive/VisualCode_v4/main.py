@@ -61,7 +61,7 @@ class Window(QWidget):
             print(f"evaluateWatched {self._watched_nodes}")
             for node in self._watched_nodes:
                 print("#TODO: evaluate nodes in topological order")
-                self.graph_model.evaluateNode(node)
+                self.graph_model.evaluate(node)
 
         self._subgraph_connections = [
             (self._subgraph.modelReset, evaluateWatched),
@@ -152,7 +152,7 @@ class Window(QWidget):
             self.watchNode(node)
             
             if node:
-                self.graph_model.evaluateNode(node)
+                self.graph_model.evaluate(node)
 
         self.node_selection_model.currentChanged.connect(onCurrentChanged)
             
@@ -420,7 +420,7 @@ class Window(QWidget):
 
         nodes = map(self.node_proxy_model.mapToSource, self.node_selection_model.selectedIndexes())
         for node in nodes:
-            self.graph_model.compileNode(node)
+            self.graph_model.compile(node)
 
     def evaluate_selected_nodes(self):
         if not self.node_selection_model:

@@ -121,6 +121,8 @@ class PyDataGraphEditorView(QGraphicsView):
             ]
             for signal, slot in self._model_connections:
                 signal.connect(slot)
+
+            
             
         self._model = model
 
@@ -160,14 +162,25 @@ class PyDataGraphEditorView(QGraphicsView):
                 self.scene().addItem(node_widget)
                 node_widget._view = self
                 self.insertOutletItems(node_key, 0, ["out"])
+                self.updateNodeItems([node_key])
             else:
                 self.updateNodeItems([node_key])
 
-    def updateNodeItems(self, node_keys:Iterable[str], hint:Literal['source', 'position', 'needs_compilation', 'needs_compilation', 'error', 'result', None]=None):
+    def updateNodeItems(self, node_keys:Iterable[str], hint:Literal['source', 'position', 'needs_compilation', 'needs_evaluation', 'error', 'result', None]=None):
+        assert self._model
         assert all(key in self._node_widgets for key in node_keys)
         for node_key in node_keys:
             node_widget = self._node_widgets[node_key]
             node_widget.update()
+
+            print("update node item", node_key)
+            node_widget.debug.setHtml(dedent(f"""\
+            <div>
+            {"<p  style='margin:0; color: orange'>⚑ needs compilation</p>" if self._model.needsCompilation(node_key) else ""}
+            {"<p  style='margin:0; color: orange'>⚑ needs evaluation</p>" if self._model.needsEvaluation(node_key) else ""}
+            {f"<p style='margin:0; color: red'>⚑ error {self._model.error(node_key)}" if self._model.error(node_key) else ""}
+            </div>
+            """))
 
     def removeNodeItems(self, node_keys:list[str]):
         for key in node_keys:
@@ -336,7 +349,7 @@ class PyDataGraphEditorView(QGraphicsView):
         self._draft_link = QGraphicsLineItem()
         self._draft_link.setPen(QPen(self.palette().text(), 1))
         self.scene().addItem(self._draft_link)
-
+ 
     def _cleanupDraftLink(self):
         """Safely cleanup draft link"""
         assert self._draft_link
@@ -744,14 +757,18 @@ class NodeItem(QGraphicsItem):
         super().__init__(parent=parent)
         self.key:str = key
 
-        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
-        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)
-        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges, True)
-
         self._inlet_widgets:bidict[str, InletItem] = bidict()
         self._outlet_widgets:bidict[str, OutletItem] = bidict()
 
         self._view:PyDataGraphEditorView|None = None
+
+        self.debug = QGraphicsTextItem("debug")
+        self.debug.setParentItem(self)
+        self.debug.setPos(self.boundingRect().width(), 0)
+
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges, True)
 
     def view(self)->PyDataGraphEditorView|None:
         return self._view
@@ -884,6 +901,7 @@ class LinkItem(QGraphicsLineItem):
         painter.drawLine(self.line())
 
 
+
 def main():
     app = QApplication()
 
@@ -894,7 +912,7 @@ def main():
             self._model=PyDataModel()
             self._model.load("./tests/math_script.yaml")
             for node in self._model.nodes():
-                self._model.compileNode(node)
+                self._model.compile(node)
 
             self.setupUI()
             self.action_connections = []

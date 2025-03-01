@@ -103,7 +103,7 @@ class PyInspectorView(QFrame):
                 pretty_name = pretty_name.replace("_", " ").title()
                 self.name_label.setText(f"<h1>{pretty_name}<h1>")
             case 'source':
-                value = self._model.nodeSource(self._current_node)
+                value = self._model.source(self._current_node)
                 if value != self.source_editor.toPlainText():
                     self.source_editor.setPlainText(value)
 
@@ -113,7 +113,7 @@ class PyInspectorView(QFrame):
 
         match attr:
             case 'source':
-                self._model.setNodeSource(self._current_node, self.source_editor.toPlainText())
+                self._model.setSource(self._current_node, self.source_editor.toPlainText())
 
     def setCurrent(self, node:str|None):
         self._current_node = node

@@ -217,23 +217,23 @@ class PyDataModel(QObject):
         self.setNeedsEvaluation(target, True)
 
     ### Node Data
-    def nodePosition(self, name:str)->QPointF:
+    def position(self, name:str)->QPointF:
         return self._nodes[name].position
 
-    def nodeSource(self, name:str)->str:
+    def source(self, name:str)->str:
         return self._nodes[name].source
 
-    def setNodeSource(self, node:str, value:str):
+    def setSource(self, node:str, value:str):
         if self._nodes[node].source != value:
             self._nodes[node].source = value
             self.sourceChanged.emit(node)
 
             self.setNeedsCompilation(node, True)
             self.setNeedsEvaluation(node,  False)
-            self.setNodeError(node, None)
+            self.setError(node, None)
             self.setParameters(node,  [])
 
-    def compileNode(self, node:str, force=False)->bool:
+    def compile(self, node:str, force=False)->bool:
         """compile all nodes
         if the node has compiled succeslfully return 'True', otherwise return 'False'!
         """
@@ -247,16 +247,16 @@ class PyDataModel(QObject):
         except SyntaxError as err:
             self.setNeedsCompilation(node, True)
             self.setNeedsEvaluation(node, True)
-            self.setNodeError(node, err)
+            self.setError(node, err)
             self._nodes[node].func = None
-            self.setNodeResult(node, None)
+            self.setResult(node, None)
             return False
         except Exception as err:
             self.setNeedsCompilation(node, True)
             self.setNeedsEvaluation(node, True)
-            self.setNodeError(node, err)
+            self.setError(node, err)
             self._nodes[node].func = None
-            self.setNodeResult(node, None)
+            self.setResult(node, None)
             return False
         else:
             self.setNeedsCompilation(node, False)
@@ -281,19 +281,17 @@ class PyDataModel(QObject):
                 )
                 new_parameters.append(param_item)
             self.setParameters(node, new_parameters)
-            self.setNodeError(node, None)
-            self.setNodeResult(node, None)
+            self.setError(node, None)
+            self.setResult(node, None)
             return True
 
-    def evaluateNode(self, node:str, force=False)->bool:
+    def evaluate(self, node:str, force=False)->bool:
         ### build temporary nx graph (TODO: store nodes and edges in a graph!)
 
-        if not self.needsCompilation(node) and not force:
+        if not self.needsEvaluation(node) and not force:
             return True
 
         ### append ancestors
-        
-
         ### create subgraph
         G = self._toNetworkX()
         subgraph = cast(nx.MultiDiGraph, G.subgraph(nx.ancestors(G, node) | {node}))
@@ -303,11 +301,11 @@ class PyDataModel(QObject):
 
         # make sure nodes are compiled
         for ancestor in ordered_nodes:
-            success = self.compileNode(ancestor, force=False)
+            success = self.compile(ancestor, force=False)
             if not success:
                 self.setNeedsEvaluation(node, True)
-                self.setNodeError(node, None)
-                self.setNodeResult(node, None)
+                self.setError(node, None)
+                self.setResult(node, None)
                 return False
 
         ### evaluate nodes in reverse topological order
@@ -326,8 +324,8 @@ class PyDataModel(QObject):
             ### from links
             named_args = dict()
             for source, target, outlet, inlet in self.inLinks(node):
-                assert not self.needsEvaluation(source) and self.nodeError(source) is None, "at this point dependencies must have been evaluated without errors!"
-                named_args[inlet] = self.nodeResult(source)
+                assert not self.needsEvaluation(source) and self.error(source) is None, "at this point dependencies must have been evaluated without errors!"
+                named_args[inlet] = self.result(source)
 
             ### from fields
             for param_item in node_item.parameters:
@@ -341,22 +339,56 @@ class PyDataModel(QObject):
                 result = call_function_with_named_args(func, named_args)
             except SyntaxError as err:
                 self.setNeedsEvaluation(node, True)
-                self.setNodeError(node, err)
-                self.setNodeResult(node, None)
+                self.setError(node, err)
+                self.setResult(node, None)
                 print(f"             evaluateNode {node} ...failed!")
                 return False
             except Exception as err:
                 self.setNeedsEvaluation(node, True)
-                self.setNodeError(node, err)
-                self.setNodeResult(node, None)
+                self.setError(node, err)
+                self.setResult(node, None)
                 print(f"             evaluateNode {node} ...failed!")
                 return False
             else:
                 self.setNeedsEvaluation(node, False)
-                self.setNodeError(node, None)
-                self.setNodeResult(node, result)
+                self.setError(node, None)
+                self.setResult(node, result)
         print(f"             evaluateNode {node} ...done!")
         return True
+
+    def needsCompilation(self, node)->bool:
+        return self._nodes[node].needs_compilation
+
+    def setNeedsCompilation(self, node:str, value:bool):
+        if self._nodes[node].needs_compilation != value:
+            self._nodes[node].needs_compilation = value
+            self.needsCompilationChanged.emit(node)
+            self.setNeedsEvaluation(node, True)
+
+    def needsEvaluation(self, node:str)->bool:
+        return self._nodes[node].needs_evaluation
+
+    def setNeedsEvaluation(self, node:str, value:bool):
+        if self._nodes[node].needs_evaluation != value:
+            self._nodes[node].needs_evaluation = value
+            print(f'setNeedsEvaluation {node} {value}')
+            self.needsEvaluationChanged.emit(node)
+
+    def error(self, node)->Exception|None:
+        return self._nodes[node].error
+
+    def result(self, node)->Any:
+        return self._nodes[node].result
+
+    def setResult(self, node:str, value:Any):
+        if self._nodes[node].result != value:
+            self._nodes[node].result = value
+            self.resultChanged.emit(node) 
+
+    def setError(self, node:str, value:Exception|None):
+        if self._nodes[node].error != value:
+            self._nodes[node].error = value
+            self.errorChanged.emit(node)
 
     # Node parameters
     def parameterCount(self, node)->int:
@@ -405,42 +437,7 @@ class PyDataModel(QObject):
     def parameterValue(self, node:str, index:int)->object|None|Empty:
         return self._nodes[node].parameters[index].value
 
-    ### Node data
-    def needsCompilation(self, node)->bool:
-        return self._nodes[node].needs_compilation
-
-    def setNeedsCompilation(self, node:str, value:bool):
-        if self._nodes[node].needs_compilation != value:
-            self._nodes[node].needs_compilation = value
-            self.needsCompilationChanged.emit(node)
-            self.setNeedsEvaluation(node, True)
-
-    def needsEvaluation(self, node:str)->bool:
-        return self._nodes[node].needs_evaluation
-
-    def setNeedsEvaluation(self, node:str, value:bool):
-        if self._nodes[node].needs_evaluation != value:
-            self._nodes[node].needs_evaluation = value
-            print(f'setNeedsEvaluation {node} {value}')
-            self.needsEvaluationChanged.emit(node)
-
-    def nodeError(self, node)->Exception|None:
-        return self._nodes[node].error
-
-    def nodeResult(self, node)->Any:
-        return self._nodes[node].result
-
-    def setNodeResult(self, node:str, value:Any):
-        if self._nodes[node].result != value:
-            self._nodes[node].result = value
-            self.resultChanged.emit(node) 
-
-    def setNodeError(self, node:str, value:Exception|None):
-        if self._nodes[node].error != value:
-            self._nodes[node].error = value
-            self.errorChanged.emit(node)
-
-    ### other
+    ### helpers
     def _toNetworkX(self)->nx.MultiDiGraph:
         G = nx.MultiDiGraph()
         for node, item in self._nodes.items():
@@ -457,6 +454,7 @@ class PyDataModel(QObject):
         G = self._toNetworkX()
         return nx.descendants(G, source) # | {node} # source 
 
+    ### Serialization
     def load(self, path:Path|str):
         text = Path(path).read_text()
         self.deserialize(text)
@@ -551,5 +549,6 @@ class PyDataModel(QObject):
     def serialize(self)->str:
         import yaml
         return yaml.dump(self.toData(), sort_keys=False)
+
 
 
