@@ -153,7 +153,7 @@ class TestSerialization(unittest.TestCase):
         import yaml
 
         self.maxDiff = None
-        print(file_data)
+        # print(file_data)
         expected_data = {
             'nodes': [
                 {'name': 'A', 'source': "def read_abstract():  return 'text'"}, 
@@ -308,7 +308,53 @@ class TestEvaluation(unittest.TestCase):
         # exec(script+"\nsay_hello()")
 
 
+class TestAutoEvaluation(unittest.TestCase):
+    def test_autoevaluate_single_node(self):
+        model = PyDataModel()
+        model.addNode("say_hello", PyNodeItem(source="def func():    ..."))
+        model.setAutoEvaluate(True)
 
-        
+        result_spy = QSignalSpy(model.resultChanged)
+        model.setSource("say_hello", dedent("""\
+        def say_hello(name:str="You"):
+            return f"Hello {name}!"
+        """))
+
+        self.assertEqual(model.result("say_hello"), "Hello You!")
+        # self.assertEqual(result_spy.count(), 1)
+
+    def test_dependendts(self):
+        model = PyDataModel()
+        model.fromData({
+            'nodes': [
+                {
+                    'name': "user",
+                    'source': dedent("""\
+                        def get_user():
+                            return 'name'
+                    """)
+                },
+                {
+                    'name': "say_hello",
+                    'source': dedent("""\
+                        def say_hello(name:str):
+                            return f'Hello {name}!'
+                    """),
+                    'fields':{
+                        'name': ' -> user'
+                    }
+                }
+            ]
+        })
+
+        model.setAutoEvaluate(True)
+        model.setSource("user", dedent("""\
+            def get_user():
+                return 'Mása'
+        """))
+        self.assertEqual(model.result("user"), 'Mása')
+        self.assertEqual(model.result("say_hello"), 'Hello Mása!')
+
+
 if __name__ == "__main__":
     unittest.main()

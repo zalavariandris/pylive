@@ -1,14 +1,14 @@
 nodes:
 - name: person
   source: |
-    def identity(data:Any):
+    def identity(data):
       return data
   fields:
     data: "TheName"
 
 - name: say_hello
   source: |
-    def say_hello(name:str):
+    def say_hello(name):
       return f"Hello {name}!"
   fields:
     name: "you"

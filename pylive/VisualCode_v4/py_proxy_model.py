@@ -170,7 +170,7 @@ class PyProxyNodeModel(QAbstractItemModel):
         return len(self._nodes)
 
     def columnCount(self, parent:QModelIndex|QPersistentModelIndex=QModelIndex())->int:
-        return 6
+        return len(self._headers)
 
     def headerData(self, section: int, orientation: Qt.Orientation, role:int=Qt.ItemDataRole.DisplayRole) -> Any:
         if orientation == Qt.Orientation.Horizontal:

@@ -154,6 +154,7 @@ class PyDataModel(QObject):
         """
         self._nodes:OrderedDict[str, PyNodeItem] = OrderedDict()
         self._links:set[tuple[str,str,str,str]] = set()
+        self._auto_evaluate_filter = None
 
     def nodeCount(self)->int:
         return len(self._nodes)
@@ -323,9 +324,7 @@ class PyDataModel(QObject):
         from pylive.utils.evaluate_python import call_function_with_named_args
         for node in ordered_nodes:
             if not self.needsEvaluation(node) and not force:
-                print(f"continue node: {node}")
                 continue
-            print(f"PyDataModel->evaluateNode {node}...")
             """evaluate nodes in topological order
             Stop and return _False_ when evaluation Fails.
             """
@@ -355,19 +354,19 @@ class PyDataModel(QObject):
                 self._setNeedsEvaluation(node, True)
                 self._setError(node, err)
                 self._setResult(node, None)
-                print(f"             evaluateNode {node} ...failed!")
+                # print(f"             evaluateNode {node} ...failed!")
                 return False
             except Exception as err:
                 self._setNeedsEvaluation(node, True)
                 self._setError(node, err)
                 self._setResult(node, None)
-                print(f"             evaluateNode {node} ...failed!")
+                # print(f"             evaluateNode {node} ...failed!")
                 return False
             else:
                 self._setNeedsEvaluation(node, False)
                 self._setError(node, None)
                 self._setResult(node, result)
-            print(f"             evaluateNode {node} ...done!")
+            # print(f"             evaluateNode {node} ...done!")
 
         return True
 
@@ -568,33 +567,40 @@ class PyDataModel(QObject):
         import yaml
         return yaml.dump(self.toData(), sort_keys=False)
 
+    Slot(list)
+    def evaluateDependents(self, nodes:Collection[str]):
+        print(f"evaluate dependents {nodes}")
+        dependents = {n for n in nodes}
+
+        G = self._toNetworkX()
+        dependents.union(*[nx.descendants(G, n) for n in nodes])
+        self.evaluate(dependents)
+        # if self._auto_evaluate_filter == None:
+        #     self.evaluate(nodes)
+        # else: 
+        #     dependencies = set()
+        #     for node in nodes:
+        #         dependencies |= self.ancestors(node) | {node}
+        #     if self._auto_evaluate_filter.intersection(nodes):
+        #         self.evaluate(nodes)
+
     def setAutoEvaluate(self, auto:bool):
-        def autoEvaluateOnChange(changed:list[str]):
-            dependencies = set()
-            for node in changed:
-                dependencies |= self.ancestors(node) | {node}
-
-            if self._auto_evaluate_filter == None:
-                self.evaluate(changed)
-            else:
-                if self._auto_evaluate_filter.intersection(changed):
-                    self.evaluate(changed)
-
         self._auto_evaluate_connections = [
             # (self.graph_model.needsEvaluationChanged, lambda n: keepCurrentUpToDate(changed=[n]))
-            (self.modelReset, lambda: autoEvaluateOnChange),
-            (self.sourceChanged, lambda n: autoEvaluateOnChange([n])),
-            (self.parametersReset, lambda n: autoEvaluateOnChange([n])),
-            (self.parametersInserted, lambda n, f, l: autoEvaluateOnChange([n])),
-            (self.patametersChanged,  lambda n, f, l: autoEvaluateOnChange([n])),
-            (self.parametersRemoved,  lambda n, f, l: autoEvaluateOnChange([n])),
+            (self.modelReset,         lambda:         self.evaluateDependents(self.nodes())),
+            (self.sourceChanged,      lambda n:       self.evaluateDependents([n])),
+            (self.parametersReset,    lambda n:       self.evaluateDependents([n])),
+            (self.parametersInserted, lambda n, f, l: self.evaluateDependents([n])),
+            (self.patametersChanged,  lambda n, f, l: self.evaluateDependents([n])),
+            (self.parametersRemoved,  lambda n, f, l: self.evaluateDependents([n])),
 
-            (self.nodesLinked, lambda links: autoEvaluateOnChange( [link[1] for link in links] )),
-            (self.nodesUnlinked, lambda links: autoEvaluateOnChange( [link[1] for link in links] ))
+            (self.nodesLinked, lambda links: self.evaluateDependents( [link[1] for link in links] )),
+            (self.nodesUnlinked, lambda links: self.evaluateDependents( [link[1] for link in links] ))
         ]
 
         for signal, slot in self._auto_evaluate_connections:
             signal.connect(slot)
 
     def setAutoEvaluateFilter(self, nodes:Iterable[str]):
+        raise NotImplementedError()
         self._auto_evaluate_filter = set(n for n in nodes)

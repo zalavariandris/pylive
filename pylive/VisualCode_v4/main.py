@@ -431,9 +431,8 @@ class Window(QWidget):
         self.graph_model.addNode(func_name, PyNodeItem())
 
         ### position node widget
-        node_index = self.node_proxy_model.mapFromSource(func_name)
-        node_graphics_item = self.graph_view.nodeWidget(node_index)
-        if node_graphics_item := self.graph_view.nodeWidget(node_index):
+        node_graphics_item = self.graph_view.nodeItem(func_name)
+        if node_graphics_item := self.graph_view.nodeItem(func_name):
             node_graphics_item.setPos(scenepos-node_graphics_item.boundingRect().center())
 
     def compile_selected_nodes(self):

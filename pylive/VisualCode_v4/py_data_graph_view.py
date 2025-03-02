@@ -161,8 +161,8 @@ class PyDataGraphEditorView(QGraphicsView):
                 self._node_widgets[node_key] = node_widget
                 self.scene().addItem(node_widget)
                 node_widget._view = self
-                self.insertOutletItems(node_key, 0, ["out"])
                 self.updateNodeItems([node_key])
+                self.insertOutletItems(node_key, 0, ["out"])
             else:
                 self.updateNodeItems([node_key])
 
@@ -171,15 +171,19 @@ class PyDataGraphEditorView(QGraphicsView):
         assert all(key in self._node_widgets for key in node_keys)
         for node_key in node_keys:
             node_widget = self._node_widgets[node_key]
-            node_widget.update()
+            
 
             node_widget.debug.setHtml(dedent(f"""\
             <div>
-            {"<p  style='margin:0; color: orange'>⚑ needs compilation</p>" if self._model.needsCompilation(node_key) else ""}
-            {"<p  style='margin:0; color: orange'>⚑ needs evaluation</p>" if self._model.needsEvaluation(node_key) else ""}
-            {f"<p style='margin:0; color: red'>⚑ error {self._model.error(node_key)}" if self._model.error(node_key) else ""}
+                {"<p  style='margin:0; color: orange'>⚑ needs compilation</p>" if self._model.needsCompilation(node_key) else ""}
+                {"<p  style='margin:0; color: orange'>⚑ needs evaluation</p>" if self._model.needsEvaluation(node_key) else ""}
+                {f"<p style='margin:0; color: red'>⚑ error {self._model.error(node_key)}" if self._model.error(node_key) else ""}
             </div>
             """))
+            assert self._model
+            source = self._model.source(node_key)
+            func_name = get_function_name(source)
+            node_widget.setText(func_name)
 
     def removeNodeItems(self, node_keys:list[str]):
         for key in node_keys:
@@ -187,6 +191,9 @@ class PyDataGraphEditorView(QGraphicsView):
                 node_widget = self._node_widgets[key]
                 del self._node_widgets[key]
                 self.scene().removeItem(node_widget)
+
+    def nodeItem(self, node:str)->'NodeItem':
+        return self._node_widgets[node]
 
     ### Ports
     def insertInletItems(self, node_key:str, index:int, inlet_keys:Iterable[str]):
@@ -739,12 +746,13 @@ class OutletItem(PortItem):
 
         return super().dragMoveEvent(event)
 
-
+from pylive.utils.evaluate_python import get_function_name
 class NodeItem(QGraphicsItem):
     # scenePositionChanged = Signal()
     def __init__(self, key:str, parent:QGraphicsItem|None=None):
         super().__init__(parent=parent)
         self.key:str = key
+        self._text = f"{self.key}"
 
         self._inlet_widgets:bidict[str, InletItem] = bidict()
         self._outlet_widgets:bidict[str, OutletItem] = bidict()
@@ -753,11 +761,18 @@ class NodeItem(QGraphicsItem):
 
         self.debug = QGraphicsTextItem("debug")
         self.debug.setParentItem(self)
-        self.debug.setPos(self.boundingRect().width(), 0)
+        self.debug.setPos(0, self.boundingRect().bottom())
 
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges, True)
+
+    def text(self)->str:
+        return self._text
+
+    def setText(self, text:str):
+        self._text = text
+        self.update()
 
     def view(self)->PyDataGraphEditorView|None:
         return self._view
@@ -791,12 +806,11 @@ class NodeItem(QGraphicsItem):
     def boundingRect(self) -> QRectF:
         # return QRectF(0,0,19,16)
         fm = QFontMetrics(self.font())
-        size = fm.boundingRect(f"{self.key}").size().toSizeF()
+        size = fm.boundingRect(f"{self._text}").size().toSizeF()
         return QRectF(QPointF(), size+QSizeF(18,2))
 
     def paint(self, painter: QPainter, option, widget=None):
         rect = self.boundingRect().normalized()
-
         pen = painter.pen()
         pen.setBrush(self.palette().text())
         if self.isSelected():
@@ -805,7 +819,7 @@ class NodeItem(QGraphicsItem):
 
         rect.moveTo(QPoint(0,0))
         painter.drawRoundedRect(rect, 6,6)
-        painter.drawText(rect, f"{self.key}", QTextOption(Qt.AlignmentFlag.AlignCenter))
+        painter.drawText(rect, f"{self._text}", QTextOption(Qt.AlignmentFlag.AlignCenter))
         # painter.drawText(QPoint(0,0), )
 
 
