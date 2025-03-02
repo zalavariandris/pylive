@@ -1,0 +1,8 @@
+nodes:
+- name: masa
+  source: "def Masa():\n    return \"M\xE1sa\""
+- name: say_hello
+  source: "def say_hello(name):\n  return f\"Hello {name}!\"\n"
+  fields:
+    name: ' -> masa'
+

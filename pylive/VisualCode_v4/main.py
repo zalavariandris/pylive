@@ -53,57 +53,10 @@ class Window(QWidget):
         ### UI
         self.graph_view_connections = []
         self.setupUI()
-
-        #
-        def keepCurrentUpToDate(changed:list[str]):
-            current_index = self.node_selection_model.currentIndex()
-            if not current_index.isValid():
-                return
-            current_node = self.node_proxy_model.mapToSource( self.node_selection_model.currentIndex() )
-            ancestors = self.graph_model.ancestors(current_node)
-
-            IsDependency = current_node in changed or any(n in ancestors for n in changed)
-            if IsDependency:
-                self.graph_model.evaluate([current_node])
-
-        self._keep_current_connections = [
-            # (self.graph_model.needsEvaluationChanged, lambda n: keepCurrentUpToDate(changed=[n]))
-            (self.graph_model.modelReset, lambda: keepCurrentUpToDate),
-            (self.graph_model.sourceChanged, lambda n: keepCurrentUpToDate([n])),
-            (self.graph_model.parametersReset, lambda n: keepCurrentUpToDate([n])),
-            (self.graph_model.parametersInserted, lambda n, f, l: keepCurrentUpToDate([n])),
-            (self.graph_model.patametersChanged,  lambda n, f, l: keepCurrentUpToDate([n])),
-            (self.graph_model.parametersRemoved,  lambda n, f, l: keepCurrentUpToDate([n])),
-
-            (self.graph_model.nodesLinked, lambda links: keepCurrentUpToDate( [link[1] for link in links] )),
-            (self.graph_model.nodesUnlinked, lambda links: keepCurrentUpToDate( [link[1] for link in links] ))
-        ]
-
-        for signal, slot in self._keep_current_connections:
-            signal.connect(slot)
-
-        # def keepCurrentUpToDate(invalidated_nodes: list[str]):
-        #     current_index = self.node_selection_model.currentIndex()
-        #     if not current_index.isValid():
-        #         return
-        #     current_node = self.node_proxy_model.mapToSource( self.node_selection_model.currentIndex() )
-        #     print("current node was invalidated")
-        #     # self.graph_model.evaluate([current_node])
-
-        # self.graph_model.invalidated.connect(keepCurrentUpToDate)
+        self.graph_model.setAutoEvaluate(True)
 
     def showEvent(self, event: QShowEvent) -> None:
         self.graph_view.centerNodes()
-
-    # def watchNode(self, node:str|None):
-    #     if node:
-    #         ancestors = self.graph_model.ancestors(node)
-    #         print(f"watchNode: {node}, ({ancestors})")
-    #         self._watched_nodes = [node]
-    #         self._subgraph.setNodes(ancestors | {node})
-    #     else:
-    #         self._watched_nodes = []
-    #         self._subgraph.setNodes([])
 
     def setupUI(self):
         ### GRAPH View
@@ -168,13 +121,9 @@ class Window(QWidget):
         # bind model to current change
         def onCurrentChanged(current:QModelIndex, previous:QModelIndex):
             node = self.node_proxy_model.mapToSource(current) if current.isValid() else None
-            print(f"onCurrentChanged: {node}")
             self.result_view.setCurrent(node)
             self.inspector_view.setCurrent(node)
-            # self.watchNode(node)
-            
-            if node:
-                self.graph_model.evaluate([node])
+    
 
         self.node_selection_model.currentChanged.connect(onCurrentChanged)
             
@@ -263,49 +212,6 @@ class Window(QWidget):
 
         main_layout.setMenuBar(menubar)
         self.setLayout(main_layout)
-
-    # def setAutoCompile(self, auto: bool):
-    #     if auto:
-    #         # compile all nodes
-    #         self.graph_model.compileNodes(self.graph_model.nodes())
-
-    #         # compile nodes on changes
-    #         self._autocompile_connections = [
-    #             (self.graph_model.modelReset, lambda:         self.graph_model.compileNodes(self.graph_model.nodes())),
-    #             (self.graph_model.nodesAdded, lambda nodes:   self.graph_model.compileNodes(nodes)),
-    #             (self.graph_model.sourceChanged, lambda node: self.graph_model.compileNodes([node]))
-    #         ]
-    #         for signal, slot in self._autocompile_connections:
-    #             signal.connect(slot)
-
-    #     else:
-    #         for signal, slot in self._autocompile_connections:
-    #             signal.disconnect(slot)
-    #         self._autocompile_connections = []
-
-    # def setAutoEvaluate(self, auto:bool):
-    #     self._current_ancestors = set()
-    #     if auto:
-    #         ### TODO: check what has changed, and only evaluate if the current ancestors changed
-    #         ### basically make sure that only necessary evaluations are happening.
-    #         ### by the way this could happen in the model itself.
-    #         ### evaluate nodes only if necessary
-
-    #         self._autoevaluate_connections = [
-    #             (self.node_selection_model.currentChanged, 
-    #                 lambda current, previous: self.graph_model.evaluateNodes(
-    #                     [self.node_proxy_model.mapToSource(current)]) if current.isValid() else None
-    #             ),
-    #             (self.graph_model.nodesLinked,lambda current, previous: self.graph_model.evaluateNodes(
-    #                     [self.node_proxy_model.mapToSource(current)]) if current.isValid() else None
-    #             )
-    #         ]
-    #         for signal, slot in self._autoevaluate_connections:
-    #             signal.connect(slot)
-    #     else:
-    #         for signal, slot in self._autoevaluate_connections:
-    #             signal.disconnect(slot)
-    #         self._autoevaluate_connections = []
 
     def sizeHint(self):
         return QSize(2048, 900) 
@@ -505,7 +411,7 @@ if __name__ == "__main__":
 
     app = QApplication()
     window = Window()
-    window.openFile(parent_folder/"tests/website_builder.yaml")
+    window.openFile(parent_folder/"tests/hello_masa.yaml")
     window.setGeometry(QRect(QPoint(), app.primaryScreen().size()).adjusted(40,80,-30,-300))
     window.show()
     sys.exit(app.exec())
