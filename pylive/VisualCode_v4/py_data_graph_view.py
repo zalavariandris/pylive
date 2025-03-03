@@ -30,7 +30,7 @@ import logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-from pylive.VisualCode_v4.py_data_model import PyDataModel, PyNodeItem
+from pylive.VisualCode_v4.py_data_model import PyDataModel
 
 
 from enum import StrEnum
@@ -90,25 +90,11 @@ class PyDataGraphEditorView(QGraphicsView):
 
                 # Node Data
                 (model.sourceChanged, lambda node:    self.updateNodeItems([node], 'source')),
-                (model.positionChanged, lambda node:  self.updateNodeItems([node], 'position')),
-                (model.needsCompilationChanged, lambda node:  self.updateNodeItems([node], 'needs_compilation')),
-                (model.needsEvaluationChanged, lambda node: self.updateNodeItems([node], 'needs_evaluation')),
-                (model.errorChanged, lambda node:     self.updateNodeItems([node], 'error')),
-                (model.resultChanged, lambda node:    self.updateNodeItems([node], 'result')),
-
-                # Node Parameters
-                (model.parametersInserted, lambda node_key, first, last, model=model: 
-                    self.insertInletItems(node_key, 0, [model.parameterName(node_key, i) for i in range(first, last)])
-                ),
-                (model.patametersChanged, lambda node_key, first, last, model=model: 
-                    self.updateInletItems(node_key, [model.parameterName(node_key, i) for i in range(first, last)])
-                ),
-                (model.parametersAboutToBeRemoved, lambda node_key, first, last, model=model:
-                    self.removeInletItem(node_key, [model.parameterName(node_key, i) for i in range(first, last)])
-                ),
-                (model.parametersReset, lambda node_key, model=model:
+                (model.resultsInvaliadated, lambda node:    self.updateNodeItems([node], 'result')),
+                (model.inletsInvalidated, lambda node_key, model=model:
                     self.resetInletItems(node_key)
-                ),
+                    ),
+
 
                 # Node Links
                 (model.nodesLinked, lambda links:
@@ -135,22 +121,27 @@ class PyDataGraphEditorView(QGraphicsView):
     ### Handle Model Signals
     def resetItems(self):
         assert self._model
-        ### clear
+        ## clear
         self.scene().clear()
         self._node_widgets.clear()
         self._link_widgets.clear()
 
-        ### populate
+        ## populate
+        ### nodes
         self.addNodeItems(self._model.nodes())
-        for node_key in self._model.nodes():
-            port_keys = [self._model.parameterName(node_key, i) for i in range(self._model.parameterCount(node_key))]
-            self.insertInletItems(node_key, 0, port_keys)
 
+        ### inlets
+        for node_key in self._model.nodes():
+            inlet_keys = [inlet for inlet in self._model.inlets(node_key)]
+            self.insertInletItems(node_key, 0, inlet_keys)
+
+        ### links
         link_keys = set()
         for source, target, outlet, inlet in self._model.links():
             link_keys.add( (source, target, outlet, inlet) )
         self.addLinkItems(link_keys)
 
+        ## layout
         self.layoutNodes()        
 
     ### Node
@@ -172,12 +163,11 @@ class PyDataGraphEditorView(QGraphicsView):
         for node_key in node_keys:
             node_widget = self._node_widgets[node_key]
             
-
+            error, value = self._model.result(node_key)
             node_widget.debug.setHtml(dedent(f"""\
             <div>
-                {"<p  style='margin:0; color: orange'>⚑ needs compilation</p>" if self._model.needsCompilation(node_key) else ""}
-                {"<p  style='margin:0; color: orange'>⚑ needs evaluation</p>" if self._model.needsEvaluation(node_key) else ""}
-                {f"<p style='margin:0; color: red'>⚑ error {self._model.error(node_key)}" if self._model.error(node_key) else ""}
+                {f"<p style='margin:0; color: red'>🤬 error {error}" if error else ""}
+                {f"<p style='margin:0; color: green'>😀" if error is None else ""}
             </div>
             """))
             assert self._model
@@ -538,22 +528,6 @@ class InletItem(PortItem):
         self.setAcceptHoverEvents(True)
         self.setAcceptDrops(True)
 
-    def paint(self, painter:QPainter, option:QStyleOption, widget:QWidget|None=None):
-        assert self._view
-        assert self._view._model
-        node_widget = self.parentItem()
-        assert isinstance(node_widget, NodeItem)
-        node_key = node_widget.key
-
-        if self._view._model.hasParameter(node_key, self.key):
-            super().paint(painter, option, widget)
-        else:
-            r = 3
-            palette = widget.palette() if widget else QApplication.palette()
-            painter.setPen(Qt.PenStyle.NoPen)
-            painter.setBrush(palette.placeholderText())
-            painter.drawEllipse(QRectF(-r,-r,r*2,r*2))
-
     def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         # Setup new drag
         assert self._view
@@ -584,9 +558,9 @@ class InletItem(PortItem):
             node_widget = self.parentItem()
             assert isinstance(node_widget, NodeItem)
             node_key = node_widget.key
-            if self._view._model.hasParameter(node_key, self.key):
-                event.acceptProposedAction()
-                return
+
+            event.acceptProposedAction()
+            return
 
         if event.mimeData().hasFormat(GraphMimeData.LinkSourceData):
             assert self._view
@@ -594,9 +568,8 @@ class InletItem(PortItem):
             node_widget = self.parentItem()
             assert isinstance(node_widget, NodeItem)
             node_key = node_widget.key
-            if self._view._model.hasParameter(node_key, self.key):
-                event.acceptProposedAction()
-                return
+            event.acceptProposedAction()
+            return
 
     def dragMoveEvent(self, event: QGraphicsSceneDragDropEvent) -> None:
         if event.mimeData().hasFormat(GraphMimeData.OutletData):
@@ -914,9 +887,6 @@ def main():
             super().__init__(parent=parent)
             self._model=PyDataModel()
             self._model.load("./tests/math_script.yaml")
-            for node in self._model.nodes():
-                self._model.compile(node)
-
             self.setupUI()
             self.action_connections = []
             self.bindView()
@@ -961,7 +931,7 @@ def main():
         def create_node(self):
             assert self._model
             unique_name = make_unique_name("node0", self._model.nodes())
-            self._model.addNode(unique_name, PyNodeItem())
+            self._model.addNode(unique_name)
 
         @Slot()
         def link_selected(self):

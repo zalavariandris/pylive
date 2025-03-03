@@ -1,5 +1,6 @@
 
 import functools
+from os import stat
 from sys import exec_prefix
 from typing import *
 from PySide6.QtCore import *
@@ -13,13 +14,14 @@ import inspect
 from collections import OrderedDict, defaultdict
 import logging
 
-from shiboken6 import invalidate
+from pylive.utils import evaluate_python
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 import networkx as nx
 
 Empty = inspect.Parameter.empty
+from pylive.utils.evaluate_python import call_function_with_named_args, compile_python_function
 
 @dataclass
 class PyParameterItem:
@@ -30,78 +32,33 @@ class PyParameterItem:
     value: object|None|Any=Empty #TODO: object|None|inspect.Parameter.empty
 
 
-class Value:
-    def __init__(self, getter):
-        self.getter = getter
-        self.setter_func = None
-        self.deleter_func = None
-
-    def __get__(self, instance, owner):
-        if instance is None:
-            return self  # When accessed from the class, return the descriptor itself
-        return self.getter(instance)
-
-    def setter(self, setter_func):
-        self.setter_func = setter_func
-        return self  # Return self to allow method chaining
-
-    def deleter(self, deleter_func):
-        self.deleter_func = deleter_func
-        return self
-
-    def __set__(self, instance, value):
-        if self.setter_func is None:
-            raise AttributeError("Can't set attribute")
-        self.setter_func(instance, value)
-
-    def __delete__(self, instance):
-        if self.deleter_func is None:
-            raise AttributeError("Can't delete attribute")
-        self.deleter_func(instance)
-
-
 # @dataclass 
-class PyNodeItem:
-    def __init__(self, source:str="def func(x:int):\n    ...", parameters:list[PyParameterItem]=[]):
-        self.source = source
-        self.parameters: list[PyParameterItem] = parameters
-        self.needs_compilation:bool=True
-        self.needs_evaluation:bool=True
-        self.position:QPointF=QPointF()
-        self.error:Exception|None=None
-        self.result:object|None=None
-        self.func:Callable|None=None # cache compiled function
+class PyNodeDataItem:
+    def __init__(self, source:str="def func():\n    ..."):
+        self._source = source
+        self._cache_func = None
+        self._cache_evaluation = None
 
-    # @property
-    # def source(self)->str:
-    #     return self._source
+    @property
+    def source(self):
+        return self._source
 
-    # @source.setter
-    # def source(self, value:str):
-    #     self._source = value
+    @source.setter
+    def source(self, value:str):
+        self._source = value
+        self._cache_func = None
+        self._cache_evaluation = None
 
-    # @property
-    # def parameters(self):
-    #     return self._parameters
+    def compile(self)->Callable:
+        if not self._cache_func:
+            self._cache_func = compile_python_function(self.source)
+        return self._cache_func
 
-    # @parameters.setter
-    # def parameters(self, value):
-    #     self._parameters = value
-
-    # @property
-    # def needs_compilation(self)->bool:
-    #     return self._needs_compilation
-
-    # def evaluate(self)->bool:
-    #     ...
-
-    # @property
-    # def needs_evaluated(self)->bool:
-    #     return self._needs_evaluation
-
-    # @property
-    # def result(self):
-    #     return self._result
+    def evaluate(self, named_args:dict):
+        if not self._cache_evaluation:
+            func = self.compile()
+            self._cache_evaluation = call_function_with_named_args(func, named_args)
+        return self._cache_evaluation
 
 
 class PyDataModel(QObject):
@@ -115,27 +72,24 @@ class PyDataModel(QObject):
     nodesRemoved = Signal(list) # list of node names
 
     # Node data
-    positionChanged = Signal(str)
     sourceChanged = Signal(str)
-    needsCompilationChanged = Signal(str)
-    needsEvaluationChanged = Signal(str)
-    errorChanged = Signal(str)
-    resultChanged = Signal(str)
+    inletsInvalidated = Signal(str)
+    resultsInvaliadated = Signal(str)
 
-    # Node Links
+    # Inlets
+    # inletsAboutToBeReset = Signal(str)
+    # inletsReset = Signal(str)
+    # inletsAboutToBeInserted = Signal(str, int, int) # node, start, end
+    # inletsInserted = Signal(str, int, int) # node, start, end
+    # inletsChanged = Signal(str, int, int) # node, first, last
+    # inletsAboutToBeRemoved = Signal(str, int, int) # node, start, end
+    # inletsRemoved = Signal(str, int, int) # node, start, end
+
+    # Links
     nodesAboutToBeLinked = Signal(list) # list of edges: tuple[source, target, outlet, inlet]
     nodesLinked = Signal(list) # list[str,str,str, str]
     nodesAboutToBeUnlinked = Signal(list) # list[str,str,str,str]
     nodesUnlinked = Signal(list) # list[str,str,str,str]
-
-    # Node Parameters
-    parametersAboutToBeReset = Signal(str)
-    parametersReset = Signal(str)
-    parametersAboutToBeInserted = Signal(str, int, int) # node, start, end
-    parametersInserted = Signal(str, int, int) # node, start, end
-    patametersChanged = Signal(str, int, int) # node, first, last
-    parametersAboutToBeRemoved = Signal(str, int, int) # node, start, end
-    parametersRemoved = Signal(str, int, int) # node, start, end
 
     def __init__(self, parent:QObject|None=None):
         super().__init__(parent=parent)
@@ -150,7 +104,7 @@ class PyDataModel(QObject):
         """TODO: store nodes and edges with networkx, 
         # but keep an eye on the proxy model implementation, which refers to nodes by index
         """
-        self._nodes:OrderedDict[str, PyNodeItem] = OrderedDict()
+        self._nodes:OrderedDict[str, PyNodeDataItem] = OrderedDict()
         self._links:set[tuple[str,str,str,str]] = set()
         self._auto_evaluate_filter = None
 
@@ -179,11 +133,13 @@ class PyDataModel(QObject):
         return list(filter(lambda link: link[0]==node, self._links))
 
     ### Nodes
-    def addNode(self, name:str, node_item:PyNodeItem):
+    def addNode(self, name:str, source:str|None=None):
         if name in self._nodes:
             raise ValueError("nodes must have a unique name")
         self.nodesAboutToBeAdded.emit([name])
-        self._nodes[name] = node_item
+        self._nodes[name] = PyNodeDataItem()
+        if source is not None:
+            self._nodes[name].source = source
         self.nodesAdded.emit([name])
 
     def removeNode(self, name:str):
@@ -211,19 +167,18 @@ class PyDataModel(QObject):
 
         self.nodesAboutToBeLinked.emit( [(source, target, outlet, inlet)] )
         self._links.add( (source, target, outlet, inlet) )
-        self._setNeedsEvaluation(target, True)
         self.nodesLinked.emit([(source, target, outlet, inlet)])
+        self._nodes[target]._cache_evaluation=None
+        self.resultsInvaliadated.emit(target)
         
     def unlinkNodes(self, source:str, target:str, outlet:str, inlet:str):
         self.nodesAboutToBeUnlinked.emit([(source, target, outlet, inlet)])
         self._links.remove( (source, target, outlet, inlet) )
-        self._setNeedsEvaluation(target, True)
         self.nodesUnlinked.emit([(source, target, outlet, inlet)])
+        self._nodes[target]._cache_evaluation=None
+        self.resultsInvaliadated.emit(target)
         
     ### Node Data
-    def position(self, name:str)->QPointF:
-        return self._nodes[name].position
-
     def source(self, name:str)->str:
         return self._nodes[name].source
 
@@ -231,220 +186,235 @@ class PyDataModel(QObject):
         if self._nodes[node].source != value:
             self._nodes[node].source = value
             self.sourceChanged.emit(node)
+            self.inletsInvalidated.emit(node)
+            self.resultsInvaliadated.emit(node)
             # self._setError(node, None)
             # self._setParameters(node,  [])
 
-    def compile(self, node:str, force=False)->bool:
-        """compile all nodes
-        if the node has compiled succeslfully return 'True', otherwise return 'False'!
-        """
+    ### COMPUTED
+    # depends on source
+    def inlets(self, node:str)->list[str]:
+        try:
+            func = self._nodes[node].compile()
+        except Exception:
+            return []
+        else:
+            sig = inspect.signature(func)
+            return [name for name in sig.parameters.keys()]
 
-        if not self.needsCompilation(node):
-            return True
+    # depends on source, an ascendents response and inlinks
+    def result(self, node:str)->tuple[Exception|None, Any]:
 
         try:
-            from pylive.utils.evaluate_python import compile_python_function
-            func = compile_python_function(self._nodes[node].source)
+            func = self._nodes[node].compile()# compile_python_function(self._nodes[node].source)
         except SyntaxError as err:
-            self._setNeedsCompilation(node, True)
-            self._setNeedsEvaluation(node, True)
-            self._setError(node, err)
-            self._nodes[node].func = None
-            self._setResult(node, None)
-            return False
+            return err, None
         except Exception as err:
-            self._setNeedsCompilation(node, True)
-            self._setNeedsEvaluation(node, True)
-            self._setError(node, err)
-            self._nodes[node].func = None
-            self._setResult(node, None)
-            return False
+            return err, None
         else:
-            self._setNeedsCompilation(node, False)
-            self._setNeedsEvaluation(node, True)
-            self._nodes[node].func = func
-
-            sig = inspect.signature(func)
-            new_parameters = []
-            for idx, param in enumerate(sig.parameters.values()):
-                # find stored field value
-                value = Empty # default parameter value
-                for parameter in self._nodes[node].parameters:
-                    if parameter.name==param.name:
-                        value = parameter.value
-                
-                param_item = PyParameterItem(
-                    name=param.name, 
-                    default=param.default,
-                    annotation=param.annotation, 
-                    kind=param.kind,
-                    value=value
-                )
-                new_parameters.append(param_item)
-            self._setParameters(node, new_parameters)
-            self._setError(node, None)
-            self._setResult(node, None)
-            return True
-
-    def evaluate(self, nodes:Iterable[str], force=False)->bool:
-        ### build temporary nx graph (TODO: store nodes and edges in a graph!)
-        if isinstance(nodes, str):
-            logger.warn("{nodes} is a string.")
-        nodes = set(n for n in nodes)
-        if not any(self.needsEvaluation(node) for node in nodes) and not force:
-            return True
-
-        ### append ancestors
-        ### create subgraph
-        G = self._toNetworkX()
-        nodes = set(n for n in nodes)
-        subgraph = cast(nx.MultiDiGraph, 
-            G.subgraph( 
-                nodes.union( 
-                    *[nx.ancestors(G, n) for n in nodes]
-                )
-            )
-        )
-        
-        ### sort nodes in topological order
-        ordered_nodes = list(nx.topological_sort(subgraph))
-
-        # make sure nodes are compiled
-        for ancestor in ordered_nodes:
-            success = self.compile(ancestor, force=False)
-            if not success:
-                return False
-
-        ### evaluate nodes in reverse topological order
-        from pylive.utils.evaluate_python import call_function_with_named_args
-        for node in ordered_nodes:
-            if not self.needsEvaluation(node) and not force:
-                continue
-            """evaluate nodes in topological order
-            Stop and return _False_ when evaluation Fails.
-            """
-            ### Get function
-            node_item = self._nodes[node]
-            func = node_item.func
-            assert func is not None, "if compilation as succesfull, func cant be None"
-
             ### GET FUNCTION ARGUMENTS
             ### from links
             named_args = dict()
-            for source, target, outlet, inlet in self.inLinks(node):
-                assert not self.needsEvaluation(source) and self.error(source) is None, "at this point dependencies must have been evaluated without errors!"
-                named_args[inlet] = self.result(source)
+            for source_node, target, outlet, inlet in self.inLinks(node):
+                error, value = self.result(source_node)
+                if error:
+                    return error, None
 
-            ### from fields
-            for param_item in node_item.parameters:
-                if param_item.name in named_args:
-                    continue # skip connected fields
-                if param_item.value != Empty:
-                    named_args[param_item.name] = param_item.value
+                named_args[inlet] = value
 
-            ### Evaluate function
             try:
-                result = call_function_with_named_args(func, named_args)
-            except SyntaxError as err:
-                self._setNeedsEvaluation(node, True)
-                self._setError(node, err)
-                self._setResult(node, None)
-                # print(f"             evaluateNode {node} ...failed!")
-                return False
+                value = self._nodes[node].evaluate(named_args)
             except Exception as err:
-                self._setNeedsEvaluation(node, True)
-                self._setError(node, err)
-                self._setResult(node, None)
-                # print(f"             evaluateNode {node} ...failed!")
-                return False
+                return err, None
             else:
-                self._setNeedsEvaluation(node, False)
-                self._setError(node, None)
-                self._setResult(node, result)
-            # print(f"             evaluateNode {node} ...done!")
+                return None, value
+        
 
-        return True
+    # ### Commands
+    # def compile(self, node:str, force=False)->bool:
+    #     """compile all nodes
+    #     if the node has compiled succeslfully return 'True', otherwise return 'False'!
+    #     """
 
-    def needsCompilation(self, node)->bool:
-        return self._nodes[node].needs_compilation
+    #     if not self.needsCompilation(node):
+    #         return True
 
-    def _setNeedsCompilation(self, node:str, value:bool):
-        if self._nodes[node].needs_compilation != value:
-            self._nodes[node].needs_compilation = value
-            self.needsCompilationChanged.emit(node)
+    #     try:
+            
+    #         func = compile_python_function(self._nodes[node].source)
+    #     except SyntaxError as err:
+    #         self._setNeedsCompilation(node, True)
+    #         self._setNeedsEvaluation(node, True)
+    #         self._setError(node, err)
+    #         self._nodes[node].func = None
+    #         self._setResult(node, None)
+    #         return False
+    #     except Exception as err:
+    #         self._setNeedsCompilation(node, True)
+    #         self._setNeedsEvaluation(node, True)
+    #         self._setError(node, err)
+    #         self._nodes[node].func = None
+    #         self._setResult(node, None)
+    #         return False
+    #     else:
+    #         self._setNeedsCompilation(node, False)
+    #         self._setNeedsEvaluation(node, True)
+    #         self._nodes[node].func = func
 
-    def needsEvaluation(self, node:str)->bool:
-        return self._nodes[node].needs_evaluation
+    #         sig = inspect.signature(func)
+    #         new_parameters = []
+    #         for idx, param in enumerate(sig.parameters.values()):
+    #             # find stored field value
+    #             value = Empty # default parameter value
+    #             for parameter in self._nodes[node].parameters:
+    #                 if parameter.name==param.name:
+    #                     value = parameter.value
+                
+    #             param_item = PyParameterItem(
+    #                 name=param.name, 
+    #                 default=param.default,
+    #                 annotation=param.annotation, 
+    #                 kind=param.kind,
+    #                 value=value
+    #             )
+    #             new_parameters.append(param_item)
+    #         self._setParameters(node, new_parameters)
+    #         self._setError(node, None)
+    #         self._setResult(node, None)
+    #         return True
 
-    def _setNeedsEvaluation(self, node:str, value:bool):
-        if self._nodes[node].needs_evaluation != value:
-            self._nodes[node].needs_evaluation = value
-            self.needsEvaluationChanged.emit(node)
-        # if value:
-        #     self.invalidated.emit([_ for _ in self.ancestors(node) | {node}])
+    # def evaluate(self, nodes:Iterable[str], force=False)->bool:
+    #     ### build temporary nx graph (TODO: store nodes and edges in a graph!)
+    #     if isinstance(nodes, str):
+    #         logger.warn("{nodes} is a string.")
+    #     nodes = set(n for n in nodes)
+    #     if not any(self.needsEvaluation(node) for node in nodes) and not force:
+    #         return True
 
-    def error(self, node)->Exception|None:
-        return self._nodes[node].error
+    #     ### append ancestors
+    #     ### create subgraph
+    #     G = self._toNetworkX()
+    #     nodes = set(n for n in nodes)
+    #     subgraph = cast(nx.MultiDiGraph, 
+    #         G.subgraph( 
+    #             nodes.union( 
+    #                 *[nx.ancestors(G, n) for n in nodes]
+    #             )
+    #         )
+    #     )
+        
+    #     ### sort nodes in topological order
+    #     ordered_nodes = list(nx.topological_sort(subgraph))
 
-    def result(self, node)->Any:
-        return self._nodes[node].result
+    #     # make sure nodes are compiled
+    #     for ancestor in ordered_nodes:
+    #         success = self.compile(ancestor, force=False)
+    #         if not success:
+    #             return False
 
-    def _setResult(self, node:str, value:Any):
-        if self._nodes[node].result != value:
-            self._nodes[node].result = value
-            self.resultChanged.emit(node) 
+    #     ### evaluate nodes in reverse topological order
+    #     from pylive.utils.evaluate_python import call_function_with_named_args
+    #     for node in ordered_nodes:
+    #         if not self.needsEvaluation(node) and not force:
+    #             continue
+    #         """evaluate nodes in topological order
+    #         Stop and return _False_ when evaluation Fails.
+    #         """
+    #         ### Get function
+    #         node_item = self._nodes[node]
+    #         func = node_item.func
+    #         assert func is not None, "if compilation as succesfull, func cant be None"
 
-    def _setError(self, node:str, value:Exception|None):
-        if self._nodes[node].error != value:
-            self._nodes[node].error = value
-            self.errorChanged.emit(node)
+    #         ### GET FUNCTION ARGUMENTS
+    #         ### from links
+    #         named_args = dict()
+    #         for source, target, outlet, inlet in self.inLinks(node):
+    #             assert not self.needsEvaluation(source) and self.error(source) is None, "at this point dependencies must have been evaluated without errors!"
+    #             named_args[inlet] = self.result(source)
 
-    # Node parameters
-    def parameterCount(self, node)->int:
-        if not self._nodes:
-            return 0
-        return len(self._nodes[node].parameters)
+    #         ### from fields
+    #         for param_item in node_item.parameters:
+    #             if param_item.name in named_args:
+    #                 continue # skip connected fields
+    #             if param_item.value != Empty:
+    #                 named_args[param_item.name] = param_item.value
 
-    def hasParameter(self, node, param:str)->int:
-        parameter_names = set()
-        for i in range(self.parameterCount(node)):
-            parameter_names.add(self.parameterName(node, i))
+    #         ### Evaluate function
+    #         try:
+    #             result = call_function_with_named_args(func, named_args)
+    #         except SyntaxError as err:
+    #             self._setNeedsEvaluation(node, True)
+    #             self._setError(node, err)
+    #             self._setResult(node, None)
+    #             # print(f"             evaluateNode {node} ...failed!")
+    #             return False
+    #         except Exception as err:
+    #             self._setNeedsEvaluation(node, True)
+    #             self._setError(node, err)
+    #             self._setResult(node, None)
+    #             # print(f"             evaluateNode {node} ...failed!")
+    #             return False
+    #         else:
+    #             self._setNeedsEvaluation(node, False)
+    #             self._setError(node, None)
+    #             self._setResult(node, result)
+    #         # print(f"             evaluateNode {node} ...done!")
 
-        return param in parameter_names
+    #     return True
 
-    def _setParameters(self, node:str, parameters:list[PyParameterItem]):
-        self.parametersAboutToBeReset.emit(node)
-        self._nodes[node].parameters = parameters
-        self.parametersReset.emit(node)
-        self._setNeedsEvaluation(node, True)
 
-    def _insertParameter(self, node:str, index:int, parameter:PyParameterItem)->bool:
-        self.parametersAboutToBeInserted.emit(node, index, index)
-        self._nodes[node].parameters.insert(index, parameter)
-        self.parametersInserted.emit(node, index, index)
-        self._setNeedsEvaluation(node, True)
-        return True
 
-    def _removeParameter(self, node:str, index:int):
-        self.parametersAboutToBeRemoved.emit(node, index, index)
-        del self._nodes[node].parameters[index]
-        self.parametersRemoved.emit(node, index, index)
-        self._setNeedsEvaluation(node, True)
+    # def _setResult(self, node:str, value:Result):
+    #     if self._nodes[node].result != value:
+    #         self._nodes[node].result = value
+    #         self.resultChanged.emit(node) 
 
-    def setParameterValue(self, node:str, index:int, value:object|None|Empty):
-        if self._nodes[node].parameters[index].value != value:
-            self._nodes[node].parameters[index].value = value
-            self.patametersChanged.emit(node, index, index)
-            self.setNeedsEvaluation(node, True)
+    ### Node fields
+    # def parameterCount(self, node)->int:
+    #     if not self._nodes:
+    #         return 0
+    #     return len(self._nodes[node].parameters)
 
-    def _parameterItem(self, node:str, index:int)->PyParameterItem:
-        return self._nodes[node].parameters[index]
+    # def hasParameter(self, node, param:str)->int:
+    #     parameter_names = set()
+    #     for i in range(self.parameterCount(node)):
+    #         parameter_names.add(self.parameterName(node, i))
 
-    def parameterName(self, node:str, index:int)->str:
-        return self._nodes[node].parameters[index].name
+    #     return param in parameter_names
 
-    def parameterValue(self, node:str, index:int)->object|None|Empty:
-        return self._nodes[node].parameters[index].value
+    # def _setParameters(self, node:str, parameters:list[PyParameterItem]):
+    #     self.parametersAboutToBeReset.emit(node)
+    #     self._nodes[node].parameters = parameters
+    #     self.parametersReset.emit(node)
+    #     self._setNeedsEvaluation(node, True)
+
+    # def _insertParameter(self, node:str, index:int, parameter:PyParameterItem)->bool:
+    #     self.parametersAboutToBeInserted.emit(node, index, index)
+    #     self._nodes[node].parameters.insert(index, parameter)
+    #     self.parametersInserted.emit(node, index, index)
+    #     self._setNeedsEvaluation(node, True)
+    #     return True
+
+    # def _removeParameter(self, node:str, index:int):
+    #     self.parametersAboutToBeRemoved.emit(node, index, index)
+    #     del self._nodes[node].parameters[index]
+    #     self.parametersRemoved.emit(node, index, index)
+    #     self._setNeedsEvaluation(node, True)
+
+    # def setParameterValue(self, node:str, index:int, value:object|None|Empty):
+    #     if self._nodes[node].parameters[index].value != value:
+    #         self._nodes[node].parameters[index].value = value
+    #         self.patametersChanged.emit(node, index, index)
+    #         self.setNeedsEvaluation(node, True)
+
+    # def _parameterItem(self, node:str, index:int)->PyParameterItem:
+    #     return self._nodes[node].parameters[index]
+
+    # def parameterName(self, node:str, index:int)->str:
+    #     return self._nodes[node].parameters[index].name
+
+    # def parameterValue(self, node:str, index:int)->object|None|Empty:
+    #     return self._nodes[node].parameters[index].value
 
     ### helpers
     def _toNetworkX(self)->nx.MultiDiGraph:
@@ -498,9 +468,8 @@ class PyDataModel(QObject):
                         item = PyParameterItem(name=name, value=value)
                         parameters.append(item)
         
-            node_item = PyNodeItem(
+            node_item = PyNodeDataItem(
                 source=node_data['source'],
-                parameters = parameters
             )
             self._nodes[node_data['name'].strip()] = node_item
 
@@ -533,12 +502,7 @@ class PyDataModel(QObject):
                 'source':node_item.source
             }
 
-            fields_data = dict()
-            for item in node_item.parameters:
-                if item.value != Empty:
-                    fields_data[item.name] = item.value
-
-            
+            fields_data = dict()        
             for source, target, outlet, inlet in self.inLinks(node_name):
                 assert target == node_name
                 fields_data[inlet] = f" -> {source}"
@@ -588,23 +552,3 @@ class PyDataModel(QObject):
         #     if self._auto_evaluate_filter.intersection(nodes):
         #         self.evaluate(nodes)
 
-    def setAutoEvaluate(self, auto:bool):
-        self._auto_evaluate_connections = [
-            # (self.graph_model.needsEvaluationChanged, lambda n: keepCurrentUpToDate(changed=[n]))
-            (self.modelReset,         lambda:         self._evaluateDependents(self.nodes())),
-            (self.sourceChanged,      lambda n:       self._evaluateDependents([n])),
-            (self.parametersReset,    lambda n:       self._evaluateDependents([n])),
-            (self.parametersInserted, lambda n, f, l: self._evaluateDependents([n])),
-            (self.patametersChanged,  lambda n, f, l: self._evaluateDependents([n])),
-            (self.parametersRemoved,  lambda n, f, l: self._evaluateDependents([n])),
-
-            (self.nodesLinked, lambda links: self._evaluateDependents( [link[1] for link in links] )),
-            (self.nodesUnlinked, lambda links: self._evaluateDependents( [link[1] for link in links] ))
-        ]
-
-        for signal, slot in self._auto_evaluate_connections:
-            signal.connect(slot)
-
-    def setAutoEvaluateFilter(self, nodes:Iterable[str]):
-        raise NotImplementedError()
-        self._auto_evaluate_filter = set(n for n in nodes)

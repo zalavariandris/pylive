@@ -14,7 +14,7 @@ from pylive.VisualCode_v4.py_data_model import Empty, PyDataModel
 
 
 class PyProxyNodeModel(QAbstractItemModel):
-    _headers = ['name', 'source', 'parameters', 'needs_compilation', 'needs_evaluation', 'error', 'result']
+    _headers = ['name', 'source', 'fields', 'inlets', 'response']
     def __init__(self, source_model:PyDataModel, parent:QObject|None=None):
         super().__init__(parent=parent)
         self._nodes:list[str] = list()
@@ -40,11 +40,8 @@ class PyProxyNodeModel(QAbstractItemModel):
             source_model.nodesRemoved.connect(self._on_source_nodes_removed)
 
             source_model.sourceChanged.connect(self._on_source_changed)
-            source_model.parametersReset.connect(self._on_parameters_reset)
-            source_model.needsCompilationChanged.connect(self._on_needs_compilation_changed)
-            source_model.needsEvaluationChanged.connect(self._on_needs_evaluation_changed)
-            source_model.errorChanged.connect(self._on_error_changed)
-            source_model.resultChanged.connect(self._on_result_changed)
+            source_model.fieldsChanged.connect(self._on_source_changed)
+            source_model.responseChanged.connect(self._on_result_changed)
 
         self._source_model = source_model
         self._resetModel()
