@@ -204,7 +204,6 @@ class PyDataModel(QObject):
 
     # depends on source, an ascendents response and inlinks
     def result(self, node:str)->tuple[Exception|None, Any]:
-
         try:
             func = self._nodes[node].compile()# compile_python_function(self._nodes[node].source)
         except SyntaxError as err:
@@ -361,8 +360,6 @@ class PyDataModel(QObject):
     #         # print(f"             evaluateNode {node} ...done!")
 
     #     return True
-
-
 
     # def _setResult(self, node:str, value:Result):
     #     if self._nodes[node].result != value:

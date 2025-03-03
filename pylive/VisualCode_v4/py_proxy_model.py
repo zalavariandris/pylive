@@ -14,7 +14,7 @@ from pylive.VisualCode_v4.py_data_model import Empty, PyDataModel
 
 
 class PyProxyNodeModel(QAbstractItemModel):
-    _headers = ['name', 'source', 'fields', 'inlets', 'response']
+    _headers = ['name', 'source', 'inlets', 'results']
     def __init__(self, source_model:PyDataModel, parent:QObject|None=None):
         super().__init__(parent=parent)
         self._nodes:list[str] = list()
@@ -40,30 +40,14 @@ class PyProxyNodeModel(QAbstractItemModel):
             source_model.nodesRemoved.connect(self._on_source_nodes_removed)
 
             source_model.sourceChanged.connect(self._on_source_changed)
-            source_model.fieldsChanged.connect(self._on_source_changed)
-            source_model.responseChanged.connect(self._on_result_changed)
+            source_model.inletsInvalidated.connect(self._on_source_changed)
+            source_model.resultsInvaliadated.connect(self._on_result_changed)
 
         self._source_model = source_model
         self._resetModel()
 
     def _on_source_changed(self, node:str):
         index = self.mapFromSource(node).siblingAtColumn(self._headers.index('source'))
-        self.dataChanged.emit(index, index, [])
-
-    def _on_parameters_reset(self, node:str):
-        index = self.mapFromSource(node).siblingAtColumn(self._headers.index('parameters'))
-        self.dataChanged.emit(index, index, [])
-
-    def _on_needs_compilation_changed(self, node:str):
-        index = self.mapFromSource(node).siblingAtColumn(self._headers.index('needs_compilation'))
-        self.dataChanged.emit(index, index, [])
-
-    def _on_needs_evaluation_changed(self, node:str):
-        index = self.mapFromSource(node).siblingAtColumn(self._headers.index('needs_evaluation'))
-        self.dataChanged.emit(index, index, [])
-
-    def _on_error_changed(self, node:str):
-        index = self.mapFromSource(node).siblingAtColumn(self._headers.index('error'))
         self.dataChanged.emit(index, index, [])
 
     def _on_result_changed(self, node:str):

@@ -16,7 +16,7 @@ import pdb
 ### DATA ###
 # 
 # from pylive.QtGraphEditor.py_functions_model import PyFunctionsModel
-from pylive.VisualCode_v4.py_data_model import PyDataModel, PyNodeItem
+from pylive.VisualCode_v4.py_data_model import PyDataModel
 from pylive.VisualCode_v4.py_proxy_model import PyProxyNodeModel, PyProxyLinkModel, PyProxyParameterModel
 from pylive.VisualCode_v4.py_subgraph_proxy_model import PySubgraphProxyModel
 
@@ -53,7 +53,6 @@ class Window(QWidget):
         ### UI
         self.graph_view_connections = []
         self.setupUI()
-        self.graph_model.setAutoEvaluate(True)
 
     def showEvent(self, event: QShowEvent) -> None:
         self.graph_view.centerNodes()
