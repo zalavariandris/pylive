@@ -109,48 +109,37 @@ class Window(QWidget):
             current = self.node_selection_model.currentIndex()
             if current.isValid():
                 node = self.node_proxy_model.mapToSource(current)
-                node_source = self.graph_model.source(node)
+                node_source = self.graph_model.data(node, 'source')
                 if node_source!=self.code_edit.toPlainText():
-                    self.graph_model.setSource(node, self.code_edit.toPlainText())
+                    self.graph_model.setData(node, 'source', self.code_edit.toPlainText())
 
         self.code_edit.textChanged.connect(set_source_model)
 
-        def set_source_editor():
+        def set_editors(node_index:QModelIndex, hints:list):
             current = self.node_selection_model.currentIndex()
             if current.isValid():
                 node = self.node_proxy_model.mapToSource(current)
-                node_source = self.graph_model.source(node)
-                if node_source!=self.code_edit.toPlainText():
-                    self.code_edit.setPlainText(node_source)
 
-        self.graph_model.sourceChanged.connect(set_source_editor)
+                if 'source' in hints or not hints:
+                    node_source = self.graph_model.data(node, 'source')
+                    if node_source!=self.code_edit.toPlainText():
+                        self.code_edit.setPlainText(node_source)
+
+                if 'result' in hints or not hints:
+                    error, result = self.graph_model.data(node, 'result')
+
+                    if error:
+                        self.preview_label.setText(f"{error}")
+                    else:
+                        self.preview_label.setText(f"{result}")
+
+        self.graph_model.dataChanged.connect(lambda node, hints: set_editors(node, hints))
 
         # ### PREVIEW WIDGET
         self.preview_label = QLabel()
 
-        def sync_preview_label():
-            current = self.node_selection_model.currentIndex()
-            if current.isValid():
-                node = self.node_proxy_model.mapToSource(current)
-                error, result = self.graph_model.result(node)
 
-                if error:
-                    self.preview_label.setText(f"{error}")
-                else:
-                    self.preview_label.setText(f"{result}")
-
-        self.graph_model.resultInvaliadated.connect(sync_preview_label)
-
-        # bind model to current change
-        def onCurrentChanged(current:QModelIndex, previous:QModelIndex):
-            if current.isValid():
-                node = self.node_proxy_model.mapToSource(current)
-                self.code_edit.setPlainText(self.graph_model.source(node))
-                sync_preview_label()
-            else:
-                sync_preview_label()
-
-        self.node_selection_model.currentChanged.connect(onCurrentChanged)
+        self.node_selection_model.currentChanged.connect(lambda current, previous: set_editors(current, []))
             
 
         ### STATUS BAR WIDGET
@@ -229,6 +218,7 @@ class Window(QWidget):
 
         main_layout.setMenuBar(menubar)
         self.setLayout(main_layout)
+        self.updateWindowTitle()
 
     def sizeHint(self):
         return QSize(2048, 900) 
@@ -409,7 +399,6 @@ if __name__ == "__main__":
 
     app = QApplication()
     window = Window()
-    window.openFile(parent_folder/"tests/dissertation_builder.yaml")
     window.setGeometry(QRect(QPoint(), app.primaryScreen().size()).adjusted(40,80,-30,-300))
     window.show()
     sys.exit(app.exec())

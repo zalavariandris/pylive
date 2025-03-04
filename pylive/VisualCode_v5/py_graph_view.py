@@ -31,7 +31,7 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 from pylive.VisualCode_v5.py_graph_model import PyGraphModel
-
+from pylive.utils.evaluate_python import get_function_name
 
 from enum import StrEnum
 class GraphMimeData(StrEnum):
@@ -84,8 +84,8 @@ class PyGraphView(QGraphicsView):
                 (model.nodesAboutToBeRemoved, lambda nodes: self.removeNodeItems([node_key for node_key in nodes])),
 
                 # Node Data
-                (model.sourceChanged, lambda node:    self.updateNodeItems([node], 'source')),
-                (model.resultInvaliadated, lambda node:    self.updateNodeItems([node], 'result')),
+                (model.dataChanged, lambda node, hints:    self.updateNodeItems([node], hints)),
+                # (model.resultInvaliadated, lambda node:    self.updateNodeItems([node], 'result')),
                 (model.inletsReset, lambda node_key, model=model:
                     self.resetInletItems(node_key)
                     ),
@@ -151,13 +151,13 @@ class PyGraphView(QGraphicsView):
             else:
                 self.updateNodeItems([node_key])
 
-    def updateNodeItems(self, node_keys:Iterable[str], hint:Literal['source', 'position', 'needs_compilation', 'needs_evaluation', 'error', 'result', None]=None):
+    def updateNodeItems(self, node_keys:Iterable[str], hints:list[Literal['source', 'position', 'needs_compilation', 'needs_evaluation', 'error', 'result']]=[]):
         assert self._model
         assert all(key in self._node_widgets for key in node_keys)
         for node_key in node_keys:
             node_widget = self._node_widgets[node_key]
             
-            error, value = self._model.result(node_key)
+            error, value = self._model.data(node_key, 'result')
             node_widget.debug.setHtml(dedent(f"""\
             <div>
                 {f"<p style='margin:0; color: red'>🤬 error {error}" if error else ""}
@@ -165,7 +165,7 @@ class PyGraphView(QGraphicsView):
             </div>
             """))
             assert self._model
-            source = self._model.source(node_key)
+            source = self._model.data(node_key, 'source')
             func_name = get_function_name(source)
             node_widget.setText(func_name)
 
@@ -191,7 +191,7 @@ class PyGraphView(QGraphicsView):
                 widget = InletItem(key)
                 node_key = node_key
                 node_widget._inlet_widgets[key] = widget
-                widget.setY(-5)
+                widget.setY(node_widget.boundingRect().top()-widget.boundingRect().bottom())
                 widget.setParentItem(node_widget)
                 widget._view = self
                 # widget.scenePositionChanged.connect(lambda n=node_key, p=key: self.moveInletLinks(n, p))
@@ -224,7 +224,7 @@ class PyGraphView(QGraphicsView):
                 widget = OutletItem(key)
                 node_key = node_key
                 node_widget._outlet_widgets[key] = widget
-                widget.setY(24)
+                widget.setY(node_widget.boundingRect().bottom()-widget.boundingRect().top())
                 widget.setParentItem(node_widget)
                 widget._view = self
 
@@ -713,7 +713,7 @@ class OutletItem(PortItem):
 
         return super().dragMoveEvent(event)
 
-from pylive.utils.evaluate_python import get_function_name
+
 class NodeItem(QGraphicsItem):
     # scenePositionChanged = Signal()
     def __init__(self, key:str, parent:QGraphicsItem|None=None):
@@ -728,7 +728,7 @@ class NodeItem(QGraphicsItem):
 
         self.debug = QGraphicsTextItem("debug")
         self.debug.setParentItem(self)
-        self.debug.setPos(0, self.boundingRect().bottom())
+        self.debug.setPos(self.boundingRect().left(), self.boundingRect().bottom())
 
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)
@@ -739,6 +739,7 @@ class NodeItem(QGraphicsItem):
 
     def setText(self, text:str):
         self._text = text
+        self.prepareGeometryChange()
         self.update()
 
     def view(self)->PyGraphView|None:
@@ -773,21 +774,24 @@ class NodeItem(QGraphicsItem):
     def boundingRect(self) -> QRectF:
         # return QRectF(0,0,19,16)
         fm = QFontMetrics(self.font())
-        size = fm.boundingRect(f"{self._text}").size().toSizeF()
-        return QRectF(QPointF(), size+QSizeF(18,2))
+        bbox = fm.boundingRect(f"{self._text}")
+        return bbox.adjusted(-6,-2,6,2)
 
-    def paint(self, painter: QPainter, option, widget=None):
-        rect = self.boundingRect().normalized()
+    def shape(self)->QPainterPath:
+        path = QPainterPath()
+        path.addRect( self.boundingRect() )
+        return path
+
+    def paint(self, painter: QPainter, option:QStyleOption, widget=None):
+        rect = option.rect
         pen = painter.pen()
         pen.setBrush(self.palette().text())
         if self.isSelected():
             pen.setBrush(self.palette().accent())
         painter.setPen(pen)
 
-        rect.moveTo(QPoint(0,0))
         painter.drawRoundedRect(rect, 6,6)
         painter.drawText(rect, f"{self._text}", QTextOption(Qt.AlignmentFlag.AlignCenter))
-        # painter.drawText(QPoint(0,0), )
 
 
 class LinkItem(QGraphicsLineItem):
@@ -871,10 +875,8 @@ class LinkItem(QGraphicsLineItem):
         painter.drawLine(self.line())
 
 
-
 def main():
     app = QApplication()
-
 
     class Window(QWidget):
         def __init__(self, parent: QWidget | None = None) -> None:

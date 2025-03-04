@@ -45,8 +45,6 @@ class _PyNodeDataItem:
 
 class PyGraphModel(AbstractGraphModel):
     # Node data
-    sourceChanged = Signal(str)
-    resultInvaliadated = Signal(str)
 
 
     def __init__(self, parent:QObject|None=None):
@@ -136,50 +134,55 @@ class PyGraphModel(AbstractGraphModel):
         self._links.add( (source, target, outlet, inlet) )
         self.nodesLinked.emit([(source, target, outlet, inlet)])
         self._node_data[target]._cache_evaluation=None
-        self.resultInvaliadated.emit(target)
+        self.dataChanged.emit(target, ['result'])
         
     def unlinkNodes(self, source:str, target:str, outlet:str, inlet:str):
         self.nodesAboutToBeUnlinked.emit([(source, target, outlet, inlet)])
         self._links.remove( (source, target, outlet, inlet) )
         self.nodesUnlinked.emit([(source, target, outlet, inlet)])
         self._node_data[target]._cache_evaluation=None
-        self.resultInvaliadated.emit(target)
+        self.dataChanged.emit(target, ['result'])
         
     ### Node Data
-    def source(self, name:str)->str:
-        return self._node_data[name].source
+    def data(self, node_key:str, attr:str)->Any:
+        node_item = self._node_data[node_key]
+        match attr:
+            case 'source':
+                return node_item.source
+            case 'result':
+                try:
+                    func = self._node_data[node_key].compile()# compile_python_function(self._nodes[node].source)
+                except SyntaxError as err:
+                    return err, None
+                except Exception as err:
+                    return err, None
+                else:
+                    ### GET FUNCTION ARGUMENTS
+                    ### from links
+                    named_args = dict()
+                    for source_node, target, outlet, inlet in self.inLinks(node_key):
+                        error, value = self.data(source_node, 'result')
+                        if error:
+                            return error, None
+                        named_args[inlet] = value
+                    try:
+                        value = self._node_data[node_key].evaluate(named_args)
+                    except Exception as err:
+                        return err, None
+                    else:
+                        return None, value
+            case _:
+                return getattr(node_item, attr)
 
-    def setSource(self, node:str, value:str):
-        if self._node_data[node].source != value:
-            self._node_data[node].source = value
-            self.sourceChanged.emit(node)
-            self.inletsReset.emit(node)
-            self.resultInvaliadated.emit(node)
+    def setData(self, node:str, attr:str, value:str):
+        node_item = self._node_data[node]
 
-    def result(self, node:str)->tuple[Exception|None, Any]:
-        try:
-            func = self._node_data[node].compile()# compile_python_function(self._nodes[node].source)
-        except SyntaxError as err:
-            return err, None
-        except Exception as err:
-            return err, None
-        else:
-            ### GET FUNCTION ARGUMENTS
-            ### from links
-            named_args = dict()
-            for source_node, target, outlet, inlet in self.inLinks(node):
-                error, value = self.result(source_node)
-                if error:
-                    return error, None
-
-                named_args[inlet] = value
-
-            try:
-                value = self._node_data[node].evaluate(named_args)
-            except Exception as err:
-                return err, None
-            else:
-                return None, value
+        match attr:
+            case 'source':
+                node_item.source = value
+                self.dataChanged.emit(node, ['source'])
+                self.inletsReset.emit(node)
+                self.dataChanged.emit(node, ['result'])
 
     ### Helpers
     def _toNetworkX(self)->nx.MultiDiGraph:
