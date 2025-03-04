@@ -14,16 +14,15 @@ logger = logging.getLogger(__name__)
 ### DATA ###
 # 
 # from pylive.QtGraphEditor.py_functions_model import PyFunctionsModel
-from pylive.VisualCode_v4.py_data_model import PyDataModel
-from pylive.VisualCode_v4.py_proxy_model import PyProxyNodeModel, PyProxyLinkModel
+from pylive.VisualCode_v5.py_graph_model import PyGraphModel
+from pylive.VisualCode_v5.py_proxy_node_model import PyProxyNodeModel
+from pylive.VisualCode_v5.py_proxy_link_model import PyProxyLinkModel
+from pylive.VisualCode_v5.py_graph_view import PyGraphView
+from pylive.VisualCode_v5.py_inspector_view import PyInspectorView
+from pylive.VisualCode_v5.py_preview_view import PyPreviewView
+
 from pylive.utils.unique import make_unique_id
-from pylive.VisualCode_v4.py_data_graph_view import PyDataGraphEditorView
-
-
 import pylive.utils.qtfactory as qf
-
-from pylive.VisualCode_v4.py_inspector_view import PyInspectorView
-from pylive.VisualCode_v4.py_preview_view import PyPreviewView
 
 
 class Window(QWidget):
@@ -38,7 +37,7 @@ class Window(QWidget):
             self._onFileChanged(self._filepath))
 
         # MODEL
-        self.graph_model = PyDataModel()
+        self.graph_model = PyGraphModel()
 
         # PROXY MODELS
         self.link_proxy_model = PyProxyLinkModel(self.graph_model)
@@ -56,7 +55,7 @@ class Window(QWidget):
 
     def setupUI(self):
         ### GRAPH View
-        self.graph_view = PyDataGraphEditorView()
+        self.graph_view = PyGraphView()
         self.graph_view.installEventFilter(self)
         self.graph_view.setModel(self.graph_model)
 

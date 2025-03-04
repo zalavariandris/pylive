@@ -12,7 +12,7 @@ from yaml import safe_dump
 app= QApplication( sys.argv )
 
 from pylive.VisualCode_v4.graph_editor.graph_data_roles import GraphDataRole
-from pylive.VisualCode_v4.py_data_model import Empty, PyDataModel, PyNodeDataItem, PyParameterItem
+from pylive.VisualCode_v4.py_data_model import PyDataModel
 
 import inspect
 
@@ -31,19 +31,18 @@ class TestModelCRUD(unittest.TestCase):
     def test_create_node(self):
         ...
 
-    @unittest.skip
-    def test_attempt_linking_to_unexisting_nodes_and_inlets(self):
-        data_model = PyNodeDataItem()
-        data_model.deserialize(math_script)
+    # def test_attempt_linking_to_unexisting_nodes_and_inlets(self):
+    #     data_model = PyDataModel()
+    #     data_model.deserialize(math_script)
 
-        with self.assertRaises(ValueError):
-            data_model.linkNodes("NOTHING", "mult", "out", "x")
+    #     with self.assertRaises(ValueError):
+    #         data_model.linkNodes("NOTHING", "mult", "out", "x")
 
-        with self.assertRaises(ValueError):
-            data_model.linkNodes("two", "NOTHING", "out", "x")
+    #     with self.assertRaises(ValueError):
+    #         data_model.linkNodes("two", "NOTHING", "out", "x")
 
-        with self.assertRaises(ValueError):
-            data_model.linkNodes("two", "mult", "out", "NOTHING")
+    #     with self.assertRaises(ValueError):
+    #         data_model.linkNodes("two", "mult", "out", "NOTHING")
 
     def test_create_link(self):
         ...

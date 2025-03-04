@@ -1,9 +1,13 @@
 nodes:
 - name: read_abstract
-  source: "def read_text(path:str)->str:\n  from pathlib import Path\n  return Path(path).read_text()\n"
+  source: "from pathlib import Path\ndef read_abstract(root:Path)->str:\n  return\
+    \ (root / '1. Bevezet\u0151.md').read_text(encoding=\"utf-8\")\n"
   fields:
-    path: ./tests/website_builder.yaml
+    root: ' -> KAQWTI'
 - name: parse_abstract
   source: "def markdown_to_html(md:str)->str:\n  return \"HTML\" + md\n"
   fields:
     md: ' -> read_abstract'
+- name: KAQWTI
+  source: "from pathlib import Path\ndef cwd():\n    return Path(\"C:/Users/and/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB\
+    \ edition\")"

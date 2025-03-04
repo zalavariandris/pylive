@@ -4,13 +4,15 @@ from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
 """ WIDGETS """
-def patch_label(label:QLabel, text:str):
-    label.setText(text)
-
 def label(text:str)->QLabel:
-    lbl = QLabel()
-    patch_label(lbl, text=text)
-    return lbl
+    label = QLabel()
+    label.setText(text)
+    return label
+
+def scrollarea(widget:QWidget):
+    area = QScrollArea()
+    area.setWidget(widget)
+    return area
 
 """ LAYOUTS """
 def boxlayout(direction:QBoxLayout.Direction, children:Sequence[QWidget|QLayout|QLayoutItem], stretch:Sequence[int]=[])->QBoxLayout:

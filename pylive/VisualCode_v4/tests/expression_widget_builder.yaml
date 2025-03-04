@@ -1,0 +1,4 @@
+nodes:
+- name: KOEFHJ
+  source: "from typing import *\nfrom PySide6.QtWidgets import *\ndef func():\n  \
+    \  return QLabel(\"Hello\")"

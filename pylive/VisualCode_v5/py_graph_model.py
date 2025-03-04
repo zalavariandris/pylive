@@ -1,81 +1,17 @@
-
-import functools
-from os import stat
-from sys import exec_prefix
 from typing import *
 from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
-
-from pathlib import Path
-from dataclasses import dataclass, field
+from pylive.VisualCode_v5.abstract_graph_model import AbstractGraphModel
+from pylive.utils.evaluate_python import call_function_with_named_args, compile_python_function
 import inspect
-from collections import OrderedDict, defaultdict
-import logging
+import networkx as nx
+from pathlib import Path
 
-from pylive.utils import evaluate_python
+import logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
-
-import networkx as nx
-
-
-_NodeKey = str
-class AbstractGraphModel(QObject):
-    modelAboutToBeReset = Signal()
-    modelReset = Signal()
-
-    # Nodes
-    nodesAboutToBeAdded = Signal(list) # list of NodeKey
-    nodesAdded = Signal(list) # list of NodeKey
-    nodesAboutToBeRemoved = Signal(list) # list of NodeKey
-    nodesRemoved = Signal(list) # list of NodeKey
-
-    # Links
-    nodesAboutToBeLinked = Signal(list) # list of edges: tuple[source, target, outlet, inlet]
-    nodesLinked = Signal(list) # list[NodeKey,NodeKey,NodeKey, NodeKey]
-    nodesAboutToBeUnlinked = Signal(list) # list[NodeKey,NodeKey,NodeKey,NodeKey]
-    nodesUnlinked = Signal(list) # list[NodeKey,NodeKey,NodeKey,NodeKey]
-
-    # Inlets
-    inletsReset = Signal(_NodeKey) # 
-
-    def nodes(self)->Collection[Hashable]:
-        raise NotImplementedError("Abstract base method not implemented!")
-
-    def inlets(self, node:_NodeKey)->Collection[_NodeKey]:
-        raise NotImplementedError("Abstract base method not implemented!")
-
-    def outlets(self, node:_NodeKey)->Collection[_NodeKey]:
-        raise NotImplementedError("Abstract base method not implemented!")
-
-    def links(self)->Collection[tuple[_NodeKey,_NodeKey,_NodeKey,_NodeKey]]:
-        raise NotImplementedError("Abstract base method not implemented!")
-
-    def inLinks(self, node:_NodeKey)->Collection[tuple[_NodeKey,_NodeKey,_NodeKey,_NodeKey]]:
-        raise NotImplementedError("Abstract base method not implemented!")
-
-    def outLinks(self, node:_NodeKey)->Collection[tuple[_NodeKey,_NodeKey,_NodeKey,_NodeKey]]:
-        raise NotImplementedError("Abstract base method not implemented!")
-
-    def linkNodes(self, source:_NodeKey, target:_NodeKey, outlet, inlet):
-        raise NotImplementedError("Abstract base method not implemented!")
-
-    def unlinkNodes(self, source:_NodeKey, target:_NodeKey, outlet, inlet):
-        raise NotImplementedError("Abstract base method not implemented!")
-
-
-Empty = inspect.Parameter.empty
-from pylive.utils.evaluate_python import call_function_with_named_args, compile_python_function
-
-@dataclass
-class _PyParameterItem:
-    name: str
-    default: Any=Empty #TODO: object|None|inspect.Parameter.empty
-    annotation: str|Any='' # TODO str|inspect.Parameter.empty
-    kind:inspect._ParameterKind = inspect.Parameter.POSITIONAL_OR_KEYWORD
-    value: object|None|Any=Empty #TODO: object|None|inspect.Parameter.empty
 
 
 class _PyNodeDataItem:
@@ -107,7 +43,7 @@ class _PyNodeDataItem:
         return self._cache_evaluation
 
 
-class PyDataModel(AbstractGraphModel):
+class PyGraphModel(AbstractGraphModel):
     # Node data
     sourceChanged = Signal(str)
     resultInvaliadated = Signal(str)
@@ -116,7 +52,7 @@ class PyDataModel(AbstractGraphModel):
     def __init__(self, parent:QObject|None=None):
         super().__init__(parent=parent)
         """
-        PyDataModel is model for a python computation graph.
+        PyGraphModel is model for a python computation graph.
         Each node has a unique name. Nodes has unique inlets.
         Source nodes and inlets are connected by links.
         To evaluate a node in the gaph, cal _evaluateNodes_ with the specific nodes.
@@ -270,10 +206,7 @@ class PyDataModel(AbstractGraphModel):
         self._links = set()
         self._node_data = OrderedDict()
 
-        links_from_parameters:set[tuple[str,str,str, str]] = set()
-        for node_data in data['nodes']:
-            parameters = []
-            
+        for node_data in data['nodes']:        
             if fields:=node_data.get('fields'):
                 for name, value in fields.items():
                     if isinstance(value, str) and value.strip().startswith("->"):
@@ -286,8 +219,7 @@ class PyDataModel(AbstractGraphModel):
                         assert isinstance(inlet, str)
                         self._links.add( (source, target, outlet, inlet) )
                     else:
-                        item = _PyParameterItem(name=name, value=value)
-                        parameters.append(item)
+                        logger.warning("field values are not implemented yet!")
         
             node_item = _PyNodeDataItem(
                 source=node_data['source'],
@@ -343,33 +275,3 @@ class PyDataModel(AbstractGraphModel):
     def serialize(self)->str:
         import yaml
         return yaml.dump(self.toData(), sort_keys=False)
-
-    # Slot(list)
-    # def _setDependentsDirty(self, nodes:Collection[str]):
-    #     print(f"evaluate dependents {nodes}")
-    #     dependents = {n for n in nodes}
-
-    #     G = self._toNetworkX()
-    #     dependents = dependents.union(*[nx.descendants(G, n) for n in nodes])
-    #     subgraph = nx.subgraph(G, dependents)
-    #     ordered_nodes = list(nx.topological_sort(subgraph))
-    #     for dep in ordered_nodes:
-    #         dep.setNeedsEvaluation(dep, True)
-
-    # Slot(list)
-    # def _evaluateDependents(self, nodes:Collection[str]):
-    #     print(f"evaluate dependents {nodes}")
-    #     dependents = {n for n in nodes}
-
-    #     G = self._toNetworkX()
-    #     dependents = dependents.union(*[nx.descendants(G, n) for n in nodes])
-    #     self.evaluate(dependents)
-    #     # if self._auto_evaluate_filter == None:
-    #     #     self.evaluate(nodes)
-    #     # else: 
-    #     #     dependencies = set()
-    #     #     for node in nodes:
-    #     #         dependencies |= self.ancestors(node) | {node}
-    #     #     if self._auto_evaluate_filter.intersection(nodes):
-    #     #         self.evaluate(nodes)
-

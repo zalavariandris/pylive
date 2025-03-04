@@ -6,19 +6,16 @@ from PySide6.QtWidgets import *
 from pylive.VisualCode_v4.py_data_model import PyDataModel
 
 
-class PyPreviewView(QFrame):
+class PyPreviewView(QScrollArea):
     def __init__(self, parent:QWidget|None=None):
         super().__init__(parent=parent)
         self._model:PyDataModel|None=None
         self._current_node:str|None = None
 
+        self.setBackgroundRole(QPalette.ColorRole.Accent)
+
         self._model_connections = []
         self._view_connections = []
-        self.setupUI()
-
-    def setupUI(self):
-        main_layout = QVBoxLayout()
-        self.setLayout(main_layout)
 
     def setModel(self, model: PyDataModel|None):
         if self._model:
@@ -29,7 +26,7 @@ class PyPreviewView(QFrame):
 
         if model:
             self._model_connections = [
-                (model.resultChanged, self._onResultChanged)
+                (model.resultInvaliadated, self._onResultInvalidated)
             ]
             for signal, slot in self._model_connections:
                 signal.connect(slot)
@@ -37,13 +34,6 @@ class PyPreviewView(QFrame):
         self._model = model
 
     def display(self, data:Any):
-        layout = cast(QVBoxLayout, self.layout())
-
-        for i in reversed(range(layout.count())):
-            item=layout.takeAt(i)
-            if widget:=item.widget():
-                widget.deleteLater()
-
         match data:
             case Exception():
                 import traceback
@@ -51,16 +41,14 @@ class PyPreviewView(QFrame):
                 label = QLabel()
                 label.setWordWrap(True)
                 label.setText(f"<p style='white-space:pre; color: red'>{error_text}<p>")
-                layout.addWidget(label)
-            case QWidget():
-                layout.addWidget(data)
+                self.setWidget(label)
             case _:
                 label = QLabel()
                 label.setWordWrap(True)
                 label.setText(f"<p style='white-space:pre'>{data}<p>")
-                layout.addWidget(label)
+                self.setWidget(label)
 
-    def _onResultChanged(self, node):
+    def _onResultInvalidated(self, node):
         print(f"PyPreviewView->_onResultChanged {node}, {self._current_node}")
         if node == self._current_node:
             self._syncEditorData()
@@ -71,8 +59,7 @@ class PyPreviewView(QFrame):
             return
 
         if self._current_node:
-            result = self._model.result(self._current_node)
-            error = self._model.error(self._current_node)
+            error, result = self._model.result(self._current_node)
 
             if error:
                 self.display(error)

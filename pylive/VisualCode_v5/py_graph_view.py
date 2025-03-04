@@ -3,7 +3,7 @@
 #####################
 
 #
-# A Graph view that directly connects to PyDataModel
+# A Graph view that directly connects to PyGraphmodel
 #
 
 
@@ -30,7 +30,7 @@ import logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-from pylive.VisualCode_v4.py_data_model import PyDataModel
+from pylive.VisualCode_v5.py_graph_model import PyGraphModel
 
 
 from enum import StrEnum
@@ -41,17 +41,12 @@ class GraphMimeData(StrEnum):
     LinkTargetData = 'application/link/target'
 
 
-class PyDataGraphEditorView(QGraphicsView):
-    SourceRole = Qt.ItemDataRole.UserRole+1
-    TargetRole = Qt.ItemDataRole.UserRole+2
-    InletsRole = Qt.ItemDataRole.UserRole+3
-    OutletsRole = Qt.ItemDataRole.UserRole+4
-
+class PyGraphView(QGraphicsView):
     nodesLinked = Signal(QModelIndex, QModelIndex, str, str)
 
     def __init__(self, parent:QWidget|None=None):
         super().__init__(parent=parent)
-        self._model: PyDataModel | None = None
+        self._model: PyGraphModel | None = None
         self._model_connections = []
 
         # store model widget relations
@@ -76,7 +71,7 @@ class PyDataGraphEditorView(QGraphicsView):
         scene.setSceneRect(QRectF(-9999,-9999,9999*2, 9999*2))
         self.setScene(scene)
 
-    def setModel(self, model:PyDataModel|None):
+    def setModel(self, model:PyGraphModel|None):
         if self._model:
             for signal, slot in self._model_connections:
                 signal.disconnect(slot)
@@ -113,7 +108,7 @@ class PyDataGraphEditorView(QGraphicsView):
         # populate initial scene
         self.resetItems()
 
-    def model(self)->QAbstractItemModel|None:
+    def model(self)->PyGraphModel|None:
         return self._model
 
     ### Handle Model Signals
@@ -143,8 +138,9 @@ class PyDataGraphEditorView(QGraphicsView):
         self.layoutNodes()        
 
     ### Node
-    def addNodeItems(self, node_keys:Iterable[str]):
+    def addNodeItems(self, node_keys:Iterable[Hashable]):
         for node_key in node_keys:
+            assert isinstance(node_key, str)
             if node_key not in self._node_widgets:
                 node_widget = NodeItem(key=node_key)
                 self._node_widgets[node_key] = node_widget
@@ -480,9 +476,9 @@ class PortItem(QGraphicsItem):
         r = 3
         # self.setGeometry(QRectF(-r,-r,r*2,r*2))
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges, True)
-        self._view:PyDataGraphEditorView|None = None
+        self._view:PyGraphView|None = None
 
-    def view(self)->PyDataGraphEditorView|None:
+    def view(self)->PyGraphView|None:
         return self._view
 
     def itemChange(self, change: QGraphicsItem.GraphicsItemChange, value: Any) -> Any:
@@ -728,7 +724,7 @@ class NodeItem(QGraphicsItem):
         self._inlet_widgets:bidict[str, InletItem] = bidict()
         self._outlet_widgets:bidict[str, OutletItem] = bidict()
 
-        self._view:PyDataGraphEditorView|None = None
+        self._view:PyGraphView|None = None
 
         self.debug = QGraphicsTextItem("debug")
         self.debug.setParentItem(self)
@@ -745,7 +741,7 @@ class NodeItem(QGraphicsItem):
         self._text = text
         self.update()
 
-    def view(self)->PyDataGraphEditorView|None:
+    def view(self)->PyGraphView|None:
         return self._view
 
     def font(self):
@@ -802,9 +798,9 @@ class LinkItem(QGraphicsLineItem):
         self.setPen(QPen(self.palette().text(), 1))
 
         self.setAcceptHoverEvents(True)
-        self._view:PyDataGraphEditorView|None = None
+        self._view:PyGraphView|None = None
 
-    def view(self)->PyDataGraphEditorView|None:
+    def view(self)->PyGraphView|None:
         return self._view
 
     def move(self):
@@ -883,8 +879,27 @@ def main():
     class Window(QWidget):
         def __init__(self, parent: QWidget | None = None) -> None:
             super().__init__(parent=parent)
-            self._model=PyDataModel()
-            self._model.load("./tests/math_script.yaml")
+            self._model=PyGraphModel()
+            self._model.fromData({
+                    'nodes':[
+                    {
+                        'name': "two",
+                        'source': """def two():\n    return 2"""
+                    },
+                    {
+                        'name': "three",
+                        'source': """def three():\n    return 3"""
+                    },
+                    {
+                        'name': "mult",
+                        'source': """def mult(x, y):\n    return x*y""",
+                        'fields':{
+                            'x':"->two",
+                            'y':"->three"
+                        }
+                    }
+                ]
+            })
             self.setupUI()
             self.action_connections = []
             self.bindView()
@@ -892,7 +907,7 @@ def main():
             self.graphview.layoutNodes()
 
         def setupUI(self):
-            self.graphview = PyDataGraphEditorView()
+            self.graphview = PyGraphView()
             self.graphview.setWindowTitle("NXNetworkScene")
 
             self.create_node_action = QPushButton("create node", self)

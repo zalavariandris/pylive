@@ -9,17 +9,11 @@ import sys
 app= QApplication( sys.argv )
 
 from pylive.VisualCode_v4.graph_editor.graph_data_roles import GraphDataRole
-from pylive.VisualCode_v4.py_data_model import (
-	PyDataModel, 
-	PyNodeItem, 
-	PyParameterItem,
-	Empty
-)
+from pylive.VisualCode_v4.py_data_model import PyDataModel
 
 from pylive.VisualCode_v4.py_proxy_model import (
 	PyProxyNodeModel, 
-	PyProxyLinkModel, 
-	PyProxyParameterModel,
+	PyProxyLinkModel
 )
 
 from textwrap import dedent
@@ -75,7 +69,7 @@ edges:
 class TestNodesCRUD(unittest.TestCase):
 	def test_init_with_nodes(self) -> None:
 		data_model = PyDataModel()
-		data_model.addNode("node1", PyNodeItem())
+		data_model.addNode("node1")
 
 		proxy_model = PyProxyNodeModel(data_model)
 		self.assertEqual(proxy_model.rowCount(), 1)
@@ -85,19 +79,19 @@ class TestNodesCRUD(unittest.TestCase):
 		data_model = PyDataModel()
 		proxy_model = PyProxyNodeModel(data_model)
 
-		data_model.addNode("node1", PyNodeItem())
+		data_model.addNode("node1")
 		self.assertEqual(proxy_model.rowCount(), 1)
 		self.assertEqual(proxy_model.data(proxy_model.index(0,0), Qt.ItemDataRole.EditRole), "node1")
 
-		data_model.addNode("node2", PyNodeItem())
+		data_model.addNode("node2")
 		self.assertEqual(proxy_model.rowCount(), 2)
 		self.assertEqual(proxy_model.data(proxy_model.index(1,0), Qt.ItemDataRole.EditRole), "node2")
 
 	def test_remove_last_node(self) -> None:
 		data_model = PyDataModel()
-		data_model.addNode("node1", PyNodeItem())
-		data_model.addNode("node2", PyNodeItem())
-		data_model.addNode("node3", PyNodeItem())
+		data_model.addNode("node1")
+		data_model.addNode("node2")
+		data_model.addNode("node3")
 		proxy_model = PyProxyNodeModel(data_model)
 
 		data_model.removeNode("node3")
@@ -111,9 +105,9 @@ class TestNodesCRUD(unittest.TestCase):
 
 	def test_remove_first_node(self) -> None:
 		data_model = PyDataModel()
-		data_model.addNode("node1", PyNodeItem())
-		data_model.addNode("node2", PyNodeItem())
-		data_model.addNode("node3", PyNodeItem())
+		data_model.addNode("node1")
+		data_model.addNode("node2")
+		data_model.addNode("node3")
 		proxy_model = PyProxyNodeModel(data_model)
 
 		data_model.removeNode("node1")
@@ -125,23 +119,9 @@ class TestNodesCRUD(unittest.TestCase):
 
 		self.assertNotIn("node1", proxy_names)
 
-	def test_node_comilation(self):
-		data_model = PyDataModel()
-		data_model.addNode("hello1", PyNodeItem(dedent("""\
-			def hello(name:str='You'):
-				...
-		""")))
-		data_model.compileNodes(['hello1'])
-
-		proxy_model = PyProxyNodeModel(data_model)
-		column = proxy_model._headers.index('compiled')
-		node_status_index = proxy_model.index(0, column)
-
-		self.assertEqual(proxy_model.data(node_status_index, Qt.ItemDataRole.DisplayRole), True)
-
 	def test_source_model_reset(self):
 		data_model = PyDataModel()
-		data_model.addNode("node1", PyNodeItem())
+		data_model.addNode("node1")
 
 		nodes_proxy = PyProxyNodeModel(data_model)
 		
@@ -169,17 +149,17 @@ class TestNodesCRUD(unittest.TestCase):
 
 		self.assertEqual(nodes_proxy.rowCount(), 2)
 		
+
 class TestNodeSignals(unittest.TestCase):
 	...
-
 
 
 class TestLinksCRUD(unittest.TestCase):
 	def test_read_links(self) -> None:
 		data_model = PyDataModel()
-		data_model.addNode("node1", PyNodeItem())
-		data_model.addNode("node2", PyNodeItem(parameters=[PyParameterItem('in')]))
-		data_model.linkNodes("node1", "node2", "in")
+		data_model.addNode("node1")
+		data_model.addNode("node2")
+		data_model.linkNodes("node1", "node2", "out", "in")
 
 		edges = PyProxyLinkModel(data_model)
 		nodes = edges.itemsModel()
@@ -195,29 +175,30 @@ class TestLinksCRUD(unittest.TestCase):
 		data_model = PyDataModel()
 		proxy_model = PyProxyLinkModel(data_model)
 		
-		data_model.addNode("node1", PyNodeItem())
-		data_model.addNode("node2", PyNodeItem(parameters=[PyParameterItem('in')]))
-		data_model.linkNodes("node1", "node2", "in")
+		data_model.addNode("node1", source="def func(x):\n    ...")
+		data_model.addNode("node2")
+		data_model.linkNodes("node1", "node2", "out", "x")
 
 		self.assertEqual(proxy_model.rowCount(), 1)
 		self.assertEqual(proxy_model.data(proxy_model.index(0,0)), "node1")
 		self.assertEqual(proxy_model.data(proxy_model.index(0,1)), "node2")
-		self.assertEqual(proxy_model.data(proxy_model.index(0,2)), "in")
+		self.assertEqual(proxy_model.data(proxy_model.index(0,2)), "out")
+		self.assertEqual(proxy_model.data(proxy_model.index(0,3)), "x")
 
 	def test_delete_link(self) -> None:
 		data_model = PyDataModel()
-		data_model.addNode("node1", PyNodeItem())
-		data_model.addNode("node2", PyNodeItem(parameters=[PyParameterItem('in')]))
-		data_model.linkNodes("node1", "node2", "in")
+		data_model.addNode("node1")
+		data_model.addNode("node2")
+		data_model.linkNodes("node1", "node2", "out", "in")
 
 		proxy_model = PyProxyLinkModel(data_model)
 		self.assertEqual(proxy_model.rowCount(), 1)
-		data_model.unlinkNodes("node1", "node2", "in")
+		data_model.unlinkNodes("node1", "node2", "out", "in")
 		self.assertEqual(proxy_model.rowCount(), 0)
 
 	def test_source_model_reset(self):
 		data_model = PyDataModel()
-		data_model.addNode("node1", PyNodeItem())
+		data_model.addNode("node1")
 
 		links_proxy = PyProxyLinkModel(data_model)
 		nodes_proxy = links_proxy.itemsModel()
@@ -240,53 +221,53 @@ class TestLinksCRUD(unittest.TestCase):
 class TestProxyLinkSignals(unittest.TestCase):
 	def test_delete_link(self) -> None:
 		data_model = PyDataModel()
-		data_model.addNode("node1", PyNodeItem())
-		data_model.addNode("node2", PyNodeItem(parameters=[PyParameterItem('in')]))
-		data_model.linkNodes("node1", "node2", "in")
+		data_model.addNode("node1")
+		data_model.addNode("node2")
+		data_model.linkNodes("node1", "node2", "out", "in")
 
 		proxy_model = PyProxyLinkModel(data_model)
 
 		spy_about_to_be_removed = QSignalSpy(proxy_model.rowsAboutToBeRemoved)
 		spy_removed = QSignalSpy(proxy_model.rowsRemoved)
-		data_model.unlinkNodes("node1", "node2", "in")
+		data_model.unlinkNodes("node1", "node2", "out", "in")
 		self.assertEqual(spy_about_to_be_removed.count(), 1, "'rowsAboutToBeRemoved' Signal was not emitted exactly once.")
 		self.assertEqual(spy_removed.count(), 1, "'rowsRemoved' Signal was not emitted exactly once.")
 
 
-import inspect
-class TestParametersCRUD(unittest.TestCase):
-	def test_init_with_empty_parameters(self):
-		data_model = PyDataModel()
-		data_model.addNode("node1", PyNodeItem(parameters=[
-			PyParameterItem("input1"),
-			PyParameterItem("input2")
-		]))
+# import inspect
+# class TestParametersCRUD(unittest.TestCase):
+# 	def test_init_with_empty_parameters(self):
+# 		data_model = PyDataModel()
+# 		data_model.addNode("node1", PyNodeItem(parameters=[
+# 			_PyParameterItem("input1"),
+# 			_PyParameterItem("input2")
+# 		]))
 
-		self.assertEqual(data_model.parameterCount("node1"), 2)
+# 		self.assertEqual(data_model.parameterCount("node1"), 2)
 
-		param1 = data_model._parameterItem("node1", 0)
-		param2 = data_model._parameterItem("node1", 1)
-		self.assertEqual(param1.name, "input1")
-		self.assertEqual(param2.name, "input2")
+# 		param1 = data_model._parameterItem("node1", 0)
+# 		param2 = data_model._parameterItem("node1", 1)
+# 		self.assertEqual(param1.name, "input1")
+# 		self.assertEqual(param2.name, "input2")
 
-	def test_compile_parameters(self):
-		from textwrap import dedent
-		data_model = PyDataModel()
-		data_model.addNode("hello", PyNodeItem(source=dedent("""\
-		def hello(name:str="you"):
-			return f"Hello {name}"
-		""")))
+# 	def test_compile_parameters(self):
+# 		from textwrap import dedent
+# 		data_model = PyDataModel()
+# 		data_model.addNode("hello", PyNodeItem(source=dedent("""\
+# 		def hello(name:str="you"):
+# 			return f"Hello {name}"
+# 		""")))
 
-		proxy = PyProxyParameterModel(data_model)
-		proxy.setNode("hello")
+# 		proxy = PyProxyParameterModel(data_model)
+# 		proxy.setNode("hello")
 
-		data_model.compileNodes(["hello"])
-		self.assertEqual(proxy.rowCount(), 1)
+# 		data_model.compileNodes(["hello"])
+# 		self.assertEqual(proxy.rowCount(), 1)
 
-		self.assertEqual(proxy.data(proxy.index(0,0), Qt.ItemDataRole.DisplayRole), "name")
-		self.assertEqual(proxy.data(proxy.index(0,0), Qt.ItemDataRole.EditRole), "name")
-		self.assertEqual(proxy.data(proxy.index(0,1), Qt.ItemDataRole.DisplayRole), '-Empty-')
-		self.assertEqual(proxy.data(proxy.index(0,1), Qt.ItemDataRole.EditRole), Empty)
+# 		self.assertEqual(proxy.data(proxy.index(0,0), Qt.ItemDataRole.DisplayRole), "name")
+# 		self.assertEqual(proxy.data(proxy.index(0,0), Qt.ItemDataRole.EditRole), "name")
+# 		self.assertEqual(proxy.data(proxy.index(0,1), Qt.ItemDataRole.DisplayRole), '-Empty-')
+# 		self.assertEqual(proxy.data(proxy.index(0,1), Qt.ItemDataRole.EditRole), Empty)
 		
 
 if __name__ == "__main__":

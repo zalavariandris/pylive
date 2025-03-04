@@ -1,0 +1,194 @@
+from typing import *
+from PySide6.QtCore import *
+from PySide6.QtGui import *
+from PySide6.QtWidgets import *
+
+
+from pylive.VisualCode_v5.py_graph_model import PyGraphModel
+from pylive.utils import group_consecutive_numbers
+
+
+class PyProxyNodeModel(QAbstractItemModel):
+    _headers = ['name', 'source', 'inlets', 'result']
+    def __init__(self, source_model:PyGraphModel, parent:QObject|None=None):
+        super().__init__(parent=parent)
+        self._nodes:list[str] = list()
+        self._source_model:PyGraphModel|None=None
+
+        self.setSourceModel(source_model)
+
+    def setSourceModel(self, source_model:PyGraphModel):
+        if self._source_model:
+            self._source_model.modelAboutToBeReset.disconnect(self.modelAboutToBeReset.emit)
+            self._source_model.modelReset.disconnect(self._resetModel)
+            self._source_model.nodesAboutToBeAdded.disconnect(self._on_source_nodes_about_to_be_added)
+            self._source_model.nodesAdded.disconnect(self._on_source_nodes_added)
+            self._source_model.nodesAboutToBeRemoved.disconnect(self._on_source_nodes_about_to_be_removed)
+            self._source_model.nodesRemoved.disconnect(self._on_source_nodes_removed)
+
+        if source_model:
+            source_model.modelAboutToBeReset.connect(self.modelAboutToBeReset.emit)
+            source_model.modelReset.connect(self._resetModel)
+            source_model.nodesAboutToBeAdded.connect(self._on_source_nodes_about_to_be_added)
+            source_model.nodesAdded.connect(self._on_source_nodes_added)
+            source_model.nodesAboutToBeRemoved.connect(self._on_source_nodes_about_to_be_removed)
+            source_model.nodesRemoved.connect(self._on_source_nodes_removed)
+
+            source_model.sourceChanged.connect(self._on_source_changed)
+            source_model.inletsReset.connect(self._on_source_changed)
+            source_model.resultInvaliadated.connect(self._on_result_changed)
+
+        self._source_model = source_model
+        self._resetModel()
+
+    def _on_source_changed(self, node:str):
+        index = self.mapFromSource(node).siblingAtColumn(self._headers.index('source'))
+        self.dataChanged.emit(index, index, [])
+
+    def _on_result_changed(self, node:str):
+        index = self.mapFromSource(node).siblingAtColumn(self._headers.index('result'))
+        self.dataChanged.emit(index, index, [])
+
+    def _resetModel(self):
+        assert self._source_model
+        self.beginResetModel()
+        self._nodes.clear()
+        for row, node in enumerate(self._source_model.nodes()):
+            self._nodes.insert(row, node)
+
+        self.modelReset.emit()
+        self.endResetModel()
+
+    def _on_source_nodes_about_to_be_added(self, nodes:list[str]):
+        first = len(self._nodes)
+        last = first+len(nodes)-1
+        self.rowsAboutToBeInserted.emit(QModelIndex(), first, last)
+
+    def _on_source_nodes_added(self, nodes:list[str]):
+        first = len(self._nodes)
+        last = first+len(nodes)-1
+        for row, node in enumerate(nodes, start=first):
+            self._nodes.insert(row, node)
+        self.rowsInserted.emit(QModelIndex(), first, last)
+
+    def _on_source_nodes_about_to_be_removed(self, nodes:list[str]):
+        indexes = [self.mapFromSource(node) for node in nodes]
+        rows = set([idx.row() for idx in indexes])
+        ranges = list(group_consecutive_numbers(sorted(rows)))
+        for r in reversed(ranges):
+            self.rowsAboutToBeRemoved.emit(QModelIndex(), r.start, r.stop-1)
+
+    def _on_source_nodes_removed(self, nodes:list[str]):
+        indexes = [self.mapFromSource(node) for node in nodes]
+        rows = set([idx.row() for idx in indexes])
+        ranges = list(group_consecutive_numbers(sorted(rows)))
+        for range_group in reversed(ranges):
+            for row in reversed(range_group):
+                del self._nodes[row]
+            self.rowsRemoved.emit(QModelIndex(), range_group.start, range_group.stop-1)
+
+    # Proxy functions
+    def mapFromSource(self, node:str)->QModelIndex:
+        row = self._nodes.index(node)
+        index = self.index(row, 0)
+        assert index.isValid()
+        return index
+
+    def mapToSource(self, proxy:QModelIndex|QPersistentModelIndex)->str:
+        if not proxy.isValid():
+            raise ValueError("proxy index is invalid: ", proxy)
+        node = self._nodes[proxy.row()]
+        return node
+
+    def mapSelectionFromSource(self, nodes:Sequence[str])->QItemSelection:
+        rows = sorted([self.mapFromSource(node).row() for node in nodes])
+        ranges = group_consecutive_numbers(list(rows))
+
+        item_selection = QItemSelection()
+        for r in ranges:
+            r.start
+            r.stop
+
+            selection_range = QItemSelectionRange(
+                self.index(r.start, 0), 
+                self.index(r.stop-1, self.columnCount()-1)
+            )
+
+            item_selection.append(selection_range)
+
+        return item_selection
+
+    def mapSelectionToSource(self, proxySelection: QItemSelection)->Sequence[str]:
+        """on selection model changed"""
+
+        ### update widgets seleection
+        selected_indexes = proxySelection.indexes()
+        selected_rows = set([idx.row() for idx in selected_indexes])
+
+        selected_nodes = [self.mapToSource(self.index(row, 0)) for row in selected_rows]
+        return selected_nodes
+
+    # read functions
+    def index(self, row:int, column:int, parent:QModelIndex|QPersistentModelIndex=QModelIndex()):
+        if not self._source_model:
+            return QModelIndex()
+        node = self._nodes[row]
+        index = self.createIndex(row, column, node) # consider storing the index of the node
+        assert index.isValid()
+        return index
+
+    def parent(self, index:QModelIndex)->QModelIndex:
+        return QModelIndex()
+
+    def rowCount(self, parent:QModelIndex|QPersistentModelIndex=QModelIndex())->int:
+        if not self._source_model:
+            return 0
+        return len(self._nodes)
+
+    def columnCount(self, parent:QModelIndex|QPersistentModelIndex=QModelIndex())->int:
+        return len(self._headers)
+
+    def headerData(self, section: int, orientation: Qt.Orientation, role:int=Qt.ItemDataRole.DisplayRole) -> Any:
+        if orientation == Qt.Orientation.Horizontal:
+            if role == Qt.ItemDataRole.DisplayRole:
+                return self._headers[section]
+        return super().headerData(section, orientation, role)
+
+    def data(self, index:QModelIndex|QPersistentModelIndex, role:int=Qt.ItemDataRole.DisplayRole)->Any:
+        if not self._source_model:
+            return None
+
+        node_name = self.mapToSource(index)
+        column_name = self._headers[index.column()]
+
+        match column_name:
+            case 'name':
+                if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
+                    return node_name
+
+            case 'source':
+                if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
+                    return self._source_model.source(node_name)
+
+            case 'inlets':
+                if role == Qt.ItemDataRole.DisplayRole:
+                    return ",".join( self._source_model.inlets(node_name) )
+
+                elif role == Qt.ItemDataRole.EditRole:
+                    return self._source_model.inlets(node_name)
+
+            case 'outlets':
+                if role == Qt.ItemDataRole.DisplayRole:
+                    return ",".join( self._source_model.outlets(node_name) )
+
+                elif role == Qt.ItemDataRole.EditRole:
+                    return self._source_model.outlets(node_name)
+
+            case 'result':
+                if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
+                    return f"{self._source_model.result(node_name)}"
+
+            case _:
+                raise ValueError(f"column {index.column()} is not in headers: {self._headers}")
+
+        return None

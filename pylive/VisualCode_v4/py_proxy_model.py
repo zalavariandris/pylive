@@ -9,12 +9,12 @@ logger = logging.getLogger(__name__)
 
 from pylive.utils import group_consecutive_numbers
 
-from pylive.VisualCode_v4.py_data_model import Empty, PyDataModel
+from pylive.VisualCode_v4.py_data_model import PyDataModel
 
 
 
 class PyProxyNodeModel(QAbstractItemModel):
-    _headers = ['name', 'source', 'inlets', 'results']
+    _headers = ['name', 'source', 'inlets', 'result']
     def __init__(self, source_model:PyDataModel, parent:QObject|None=None):
         super().__init__(parent=parent)
         self._nodes:list[str] = list()
@@ -40,8 +40,8 @@ class PyProxyNodeModel(QAbstractItemModel):
             source_model.nodesRemoved.connect(self._on_source_nodes_removed)
 
             source_model.sourceChanged.connect(self._on_source_changed)
-            source_model.inletsInvalidated.connect(self._on_source_changed)
-            source_model.resultsInvaliadated.connect(self._on_result_changed)
+            source_model.inletsReset.connect(self._on_source_changed)
+            source_model.resultInvaliadated.connect(self._on_result_changed)
 
         self._source_model = source_model
         self._resetModel()
@@ -166,54 +166,30 @@ class PyProxyNodeModel(QAbstractItemModel):
         node_name = self.mapToSource(index)
         if role == GraphDataRole.NodeInletsRole:
             # Todo: consider using map or comprehension
-            parameter_names = []
-            for i in range(self._source_model.parameterCount(node_name)):
-                param_name = self._source_model.parameterName(node_name, i)
-                parameter_names.append(param_name)
-            return parameter_names
+            return self._source_model.inlets(node_name)
 
         if role == GraphDataRole.NodeOutletsRole:
-            return ['out']
+            return self._source_model.outlets(node_name)
 
         column_name = self._headers[index.column()]
 
         match column_name:
             case 'name':
-                if role == Qt.ItemDataRole.DisplayRole:
-                    return node_name.replace("_", " ").title()
-
-                elif role == Qt.ItemDataRole.EditRole:
+                if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
                     return node_name
 
             case 'source':
                 if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
                     return self._source_model.source(node_name)
 
-            case 'parameters':
+            case 'inlets':
                 if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
-                    parameter_names = []
-                    for i in range(self._source_model.parameterCount(node_name)):
-                        name = self._source_model.parameterName(node_name, i)
-                        parameter_names.append(name)
-                    return ",".join( parameter_names )
-
-            case 'needs_compilation':
-                if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
-                    return self._source_model.needsCompilation(node_name)
-
-            case 'needs_evaluation':
-                if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
-                    return self._source_model.needsEvaluation(node_name)
-
-            case 'error':
-                if role == Qt.ItemDataRole.DisplayRole:
-                    return f"{self._source_model.error(node_name)}"
-                elif role ==  Qt.ItemDataRole.EditRole:
-                    return self._source_model.error(node_name)
+                    return ",".join( self._source_model.inlets(node_name) )
 
             case 'result':
                 if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
                     return f"{self._source_model.result(node_name)}"
+
             case _:
                 raise ValueError(f"column {index.column()} is not in headers: {self._headers}")
 
@@ -400,133 +376,133 @@ class PyProxyLinkModel(QAbstractItemModel):
         return None
 
 
-class PyProxyParameterModel(QAbstractItemModel):
-    def __init__(self, source_model:PyDataModel, parent:QObject|None=None):
-        super().__init__(parent=parent)
-        self._source_model:PyDataModel|None=None
-        self._node:str|None = None
-        self._headers = ["name", "value"]
-        self._model_connections = []
-        self.setSourceModel(source_model)
+# class PyProxyParameterModel(QAbstractItemModel):
+#     def __init__(self, source_model:PyDataModel, parent:QObject|None=None):
+#         super().__init__(parent=parent)
+#         self._source_model:PyDataModel|None=None
+#         self._node:str|None = None
+#         self._headers = ["name", "value"]
+#         self._model_connections = []
+#         self.setSourceModel(source_model)
 
-    def setSourceModel(self, source_model:PyDataModel):
-        if self._source_model:
-            for signal, slot in self._model_connections:
-                signal.disconnect(slot)
+#     def setSourceModel(self, source_model:PyDataModel):
+#         if self._source_model:
+#             for signal, slot in self._model_connections:
+#                 signal.disconnect(slot)
 
-        if source_model:
-            self._model_connections = [
-                (source_model.modelAboutToBeReset, self.modelAboutToBeReset.emit),
-                (source_model.modelReset, self._resetModel),
+#         if source_model:
+#             self._model_connections = [
+#                 (source_model.modelAboutToBeReset, self.modelAboutToBeReset.emit),
+#                 (source_model.modelReset, self._resetModel),
 
-                (source_model.parametersAboutToBeReset, lambda node: self.modelAboutToBeReset.emit() if node and node == self._node else None),
-                (source_model.parametersReset, self._resetModel),
-                (source_model.parametersAboutToBeInserted, self._on_parameters_about_to_be_inserted),
-                (source_model.parametersInserted, self._on_parameters_inserted),
-                (source_model.parametersAboutToBeRemoved, self._on_parameters_about_to_be_removed),
-                (source_model.parametersRemoved, self._on_parameters_removed),
-                (source_model.patametersChanged, self._on_parameters_changed)
-            ]
+#                 (source_model.parametersAboutToBeReset, lambda node: self.modelAboutToBeReset.emit() if node and node == self._node else None),
+#                 (source_model.parametersReset, self._resetModel),
+#                 (source_model.parametersAboutToBeInserted, self._on_parameters_about_to_be_inserted),
+#                 (source_model.parametersInserted, self._on_parameters_inserted),
+#                 (source_model.parametersAboutToBeRemoved, self._on_parameters_about_to_be_removed),
+#                 (source_model.parametersRemoved, self._on_parameters_removed),
+#                 (source_model.patametersChanged, self._on_parameters_changed)
+#             ]
 
-            for signal, slot in self._model_connections:
-                signal.connect(slot)
+#             for signal, slot in self._model_connections:
+#                 signal.connect(slot)
             
-        self._source_model = source_model
-        self._resetModel()
+#         self._source_model = source_model
+#         self._resetModel()
 
-    def _resetModel(self):
-        self.beginResetModel()
-        self.endResetModel()
-        # self.modelAboutToBeReset.emit()
-        # self.modelReset.emit()
+#     def _resetModel(self):
+#         self.beginResetModel()
+#         self.endResetModel()
+#         # self.modelAboutToBeReset.emit()
+#         # self.modelReset.emit()
 
-    def setNode(self, node:str|None):
-        self.modelAboutToBeReset.emit()
-        self._node = node
-        self.modelReset.emit()
+#     def setNode(self, node:str|None):
+#         self.modelAboutToBeReset.emit()
+#         self._node = node
+#         self.modelReset.emit()
 
-    def _on_parameters_about_to_be_inserted(self, node:str, start:int, end:int):
-        if self._node and self._node==node:
-            self.rowsAboutToBeInserted.emit(QModelIndex(), start, end)
+#     def _on_parameters_about_to_be_inserted(self, node:str, start:int, end:int):
+#         if self._node and self._node==node:
+#             self.rowsAboutToBeInserted.emit(QModelIndex(), start, end)
 
-    def _on_parameters_inserted(self, node:str, first:int, last:int):
-        if self._node and self._node==node:
-            self.rowsInserted.emit(QModelIndex(), first, last)
+#     def _on_parameters_inserted(self, node:str, first:int, last:int):
+#         if self._node and self._node==node:
+#             self.rowsInserted.emit(QModelIndex(), first, last)
 
-    def _on_parameters_about_to_be_removed(self, node:str, first:int, last:int):
-        if self._node and self._node==node:
-            self.rowsAboutToBeRemoved.emit(QModelIndex(), first, last)
+#     def _on_parameters_about_to_be_removed(self, node:str, first:int, last:int):
+#         if self._node and self._node==node:
+#             self.rowsAboutToBeRemoved.emit(QModelIndex(), first, last)
 
-    def _on_parameters_removed(self, node:str, first:int, last:int):
-        if self._node and self._node==node:
-            self.rowsRemoved.emit(QModelIndex(), first, last)
+#     def _on_parameters_removed(self, node:str, first:int, last:int):
+#         if self._node and self._node==node:
+#             self.rowsRemoved.emit(QModelIndex(), first, last)
 
-    def _on_parameters_changed(self, node:str, first:int, last:int):
-        if self._node and self._node==node:
-            self.dataChanged.emit(QModelIndex(), self.index(first, 0), self.index(last, 1))
+#     def _on_parameters_changed(self, node:str, first:int, last:int):
+#         if self._node and self._node==node:
+#             self.dataChanged.emit(QModelIndex(), self.index(first, 0), self.index(last, 1))
 
-    def rowCount(self, parent:QModelIndex|QPersistentModelIndex=QModelIndex())->int:
-        if not self._source_model or not self._node:
-            return 0
-        return self._source_model.parameterCount(self._node)
+#     def rowCount(self, parent:QModelIndex|QPersistentModelIndex=QModelIndex())->int:
+#         if not self._source_model or not self._node:
+#             return 0
+#         return self._source_model.parameterCount(self._node)
 
-    def columnCount(self, parent:QModelIndex|QPersistentModelIndex=QModelIndex())->int:
-        return len(self._headers)
+#     def columnCount(self, parent:QModelIndex|QPersistentModelIndex=QModelIndex())->int:
+#         return len(self._headers)
 
-    def headerData(self, section: int, orientation: Qt.Orientation, role:int=Qt.ItemDataRole.DisplayRole) -> Any:
-        if orientation == Qt.Orientation.Horizontal:
-            if role == Qt.ItemDataRole.DisplayRole:
-                return self._headers[section]
-        return super().headerData(section, orientation, role)
+#     def headerData(self, section: int, orientation: Qt.Orientation, role:int=Qt.ItemDataRole.DisplayRole) -> Any:
+#         if orientation == Qt.Orientation.Horizontal:
+#             if role == Qt.ItemDataRole.DisplayRole:
+#                 return self._headers[section]
+#         return super().headerData(section, orientation, role)
 
-    def data(self, index:QModelIndex|QPersistentModelIndex, role:int=Qt.ItemDataRole.DisplayRole):
-        if not self._source_model or not self._node:
-            return None
+#     def data(self, index:QModelIndex|QPersistentModelIndex, role:int=Qt.ItemDataRole.DisplayRole):
+#         if not self._source_model or not self._node:
+#             return None
 
-        parameter = self._source_model._parameterItem(self._node, index.row())
-        column_name = self._headers[index.column()]
-        match column_name:
-            case 'name':
-                if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
-                    return parameter.name
+#         parameter = self._source_model._parameterItem(self._node, index.row())
+#         column_name = self._headers[index.column()]
+#         match column_name:
+#             case 'name':
+#                 if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
+#                     return parameter.name
 
-            case 'value':
-                match role:
-                    case Qt.ItemDataRole.DisplayRole:
-                        if parameter.value is Empty:
-                            return "-Empty-"
-                        else:
-                            return f"{parameter.value}"
+#             case 'value':
+#                 match role:
+#                     case Qt.ItemDataRole.DisplayRole:
+#                         if parameter.value is Empty:
+#                             return "-Empty-"
+#                         else:
+#                             return f"{parameter.value}"
 
-                    case Qt.ItemDataRole.EditRole:
-                        return parameter.value
+#                     case Qt.ItemDataRole.EditRole:
+#                         return parameter.value
 
-    def flags(self, index: QModelIndex | QPersistentModelIndex, /) -> Qt.ItemFlag:
-        flags = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
-        column_name = self._headers[index.column()]
-        match column_name:
-            case 'value':
-                flags |= Qt.ItemFlag.ItemIsEditable
-        return flags
+#     def flags(self, index: QModelIndex | QPersistentModelIndex, /) -> Qt.ItemFlag:
+#         flags = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
+#         column_name = self._headers[index.column()]
+#         match column_name:
+#             case 'value':
+#                 flags |= Qt.ItemFlag.ItemIsEditable
+#         return flags
 
-    def setData(self, index:QModelIndex|QPersistentModelIndex, value:Any, role:int=Qt.ItemDataRole.DisplayRole)->bool:
-        if not self._source_model or not self._node:
-            return False
+#     def setData(self, index:QModelIndex|QPersistentModelIndex, value:Any, role:int=Qt.ItemDataRole.DisplayRole)->bool:
+#         if not self._source_model or not self._node:
+#             return False
 
-        parameter = self._source_model._parameterItem(self._node, index.row())
-        column_name = self._headers[index.column()]
-        match column_name:
-            case 'value':
-                if role == Qt.ItemDataRole.EditRole:
-                    self._source_model.setParameterValue(self._node, index.row(), value)
-                    return True
-        return False
+#         parameter = self._source_model._parameterItem(self._node, index.row())
+#         column_name = self._headers[index.column()]
+#         match column_name:
+#             case 'value':
+#                 if role == Qt.ItemDataRole.EditRole:
+#                     self._source_model.setParameterValue(self._node, index.row(), value)
+#                     return True
+#         return False
                     
-    def index(self, row:int, column:int, parent:QModelIndex|QPersistentModelIndex=QModelIndex()):
-        if not self._source_model or not self._node:
-            return QModelIndex()
-        parameter_item = self._source_model._parameterItem(self._node, row)
-        return self.createIndex(row, column, parameter_item)
+#     def index(self, row:int, column:int, parent:QModelIndex|QPersistentModelIndex=QModelIndex()):
+#         if not self._source_model or not self._node:
+#             return QModelIndex()
+#         parameter_item = self._source_model._parameterItem(self._node, row)
+#         return self.createIndex(row, column, parameter_item)
 
-    def parent(self, index:QModelIndex)->QModelIndex:
-        return QModelIndex()
+#     def parent(self, index:QModelIndex)->QModelIndex:
+#         return QModelIndex()

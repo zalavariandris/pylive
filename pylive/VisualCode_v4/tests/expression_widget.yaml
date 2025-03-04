@@ -1,0 +1,4 @@
+nodes:
+- name: SDLJCX
+  source: "from typing import *\nfrom PySide6.QtWidgets import *\ndef create_label():\n\
+    \    return QLabel(\"Hello\")"
