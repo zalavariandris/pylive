@@ -15,7 +15,7 @@ class AbstractGraphModel(QObject):
     nodesRemoved = Signal(list) # list of NodeKey
 
     # 
-    dataChanged = Signal(str, )
+    dataChanged = Signal(str, list) # key:Hashable, hints:list[str], node key and list of data name hints. if hints is empty consider all data changed
 
     # Links
     nodesAboutToBeLinked = Signal(list) # list of edges: tuple[source, target, outlet, inlet]
