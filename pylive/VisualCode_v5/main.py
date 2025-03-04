@@ -18,8 +18,7 @@ from pylive.VisualCode_v5.py_graph_model import PyGraphModel
 from pylive.VisualCode_v5.py_proxy_node_model import PyProxyNodeModel
 from pylive.VisualCode_v5.py_proxy_link_model import PyProxyLinkModel
 from pylive.VisualCode_v5.py_graph_view import PyGraphView
-from pylive.VisualCode_v5.py_inspector_view import PyInspectorView
-from pylive.VisualCode_v5.py_preview_view import PyPreviewView
+from pylive.QtScriptEditor.script_edit import ScriptEdit
 
 from pylive.utils.unique import make_unique_id
 import pylive.utils.qtfactory as qf
@@ -41,7 +40,7 @@ class Window(QWidget):
 
         # PROXY MODELS
         self.link_proxy_model = PyProxyLinkModel(self.graph_model)
-        self.node_proxy_model:PyProxyNodeModel = self.link_proxy_model.itemsModel()
+        self.node_proxy_model = PyProxyNodeModel(self.graph_model)
         assert self.node_proxy_model
         self.node_selection_model = QItemSelectionModel(self.node_proxy_model)
         self.link_selection_model = QItemSelectionModel(self.link_proxy_model)
@@ -103,21 +102,53 @@ class Window(QWidget):
         for signal, slot in self.graph_view_connections:
             signal.connect(slot)
 
-        # ### NODEINSPECTOR
-        self.inspector_view = PyInspectorView()
-        self.inspector_view.setModel(self.graph_model)
+        ### Code Editor
+        self.code_edit = ScriptEdit()
 
+        def set_source_model():
+            current = self.node_selection_model.currentIndex()
+            if current.isValid():
+                node = self.node_proxy_model.mapToSource(current)
+                node_source = self.graph_model.source(node)
+                if node_source!=self.code_edit.toPlainText():
+                    self.graph_model.setSource(node, self.code_edit.toPlainText())
+
+        self.code_edit.textChanged.connect(set_source_model)
+
+        def set_source_editor():
+            current = self.node_selection_model.currentIndex()
+            if current.isValid():
+                node = self.node_proxy_model.mapToSource(current)
+                node_source = self.graph_model.source(node)
+                if node_source!=self.code_edit.toPlainText():
+                    self.code_edit.setPlainText(node_source)
+
+        self.graph_model.sourceChanged.connect(set_source_editor)
 
         # ### PREVIEW WIDGET
-        self.result_view = PyPreviewView()
-        self.result_view.setModel(self.graph_model)
-        self.result_view.setCurrent(None)
+        self.preview_label = QLabel()
+
+        def sync_preview_label():
+            current = self.node_selection_model.currentIndex()
+            if current.isValid():
+                node = self.node_proxy_model.mapToSource(current)
+                error, result = self.graph_model.result(node)
+
+                if error:
+                    self.preview_label.setText(f"{error}")
+                else:
+                    self.preview_label.setText(f"{result}")
+
+        self.graph_model.resultInvaliadated.connect(sync_preview_label)
 
         # bind model to current change
         def onCurrentChanged(current:QModelIndex, previous:QModelIndex):
-            node = self.node_proxy_model.mapToSource(current) if current.isValid() else None
-            self.result_view.setCurrent(node)
-            self.inspector_view.setCurrent(node)
+            if current.isValid():
+                node = self.node_proxy_model.mapToSource(current)
+                self.code_edit.setPlainText(self.graph_model.source(node))
+                sync_preview_label()
+            else:
+                sync_preview_label()
 
         self.node_selection_model.currentChanged.connect(onCurrentChanged)
             
@@ -182,7 +213,7 @@ class Window(QWidget):
         ### Layout
         main_layout = qf.vboxlayout([
             qf.splitter(Qt.Orientation.Horizontal, [
-                self.inspector_view,
+                self.code_edit,
                 qf.tabwidget({
                     'graph':self.graph_view,
                     'sheets':qf.widget(qf.vboxlayout([
@@ -190,7 +221,7 @@ class Window(QWidget):
                         self.links_table_view,
                     ])),
                 }), 
-                self.result_view
+                self.preview_label
             ]),
             self.statusbar
         ])
