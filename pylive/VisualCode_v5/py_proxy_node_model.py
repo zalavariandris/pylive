@@ -106,7 +106,7 @@ class PyProxyNodeModel(QAbstractItemModel):
 
     def mapToSource(self, proxy:QModelIndex|QPersistentModelIndex)->str:
         if not proxy.isValid():
-            raise ValueError("proxy index is invalid: ", proxy)
+            return None
         node = self._nodes[proxy.row()]
         return node
 

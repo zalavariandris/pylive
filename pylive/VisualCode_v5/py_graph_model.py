@@ -43,9 +43,11 @@ class _PyNodeDataItem:
         return self._cache_evaluation
 
 
+
+
+
 class PyGraphModel(AbstractGraphModel):
     # Node data
-
 
     def __init__(self, parent:QObject|None=None):
         super().__init__(parent=parent)
@@ -182,6 +184,7 @@ class PyGraphModel(AbstractGraphModel):
                 node_item.source = value
                 self.dataChanged.emit(node, ['source'])
                 self.inletsReset.emit(node)
+                self.outletsReset.emit(node)
                 self.dataChanged.emit(node, ['result'])
 
     ### Helpers

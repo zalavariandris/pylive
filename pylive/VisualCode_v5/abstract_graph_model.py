@@ -3,6 +3,15 @@ from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
+
+from enum import StrEnum
+class GraphMimeData(StrEnum):
+    OutletData = 'application/outlet'
+    InletData = 'application/inlet'
+    LinkSourceData = 'application/link/source'
+    LinkTargetData = 'application/link/target'
+
+
 _NodeKey = str
 class AbstractGraphModel(QObject):
     modelAboutToBeReset = Signal()
@@ -25,6 +34,7 @@ class AbstractGraphModel(QObject):
 
     # Inlets
     inletsReset = Signal(_NodeKey) # 
+    outletsReset = Signal(_NodeKey)
 
     def nodes(self)->Collection[Hashable]:
         raise NotImplementedError("Abstract base method not implemented!")

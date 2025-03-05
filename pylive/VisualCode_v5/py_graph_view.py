@@ -33,12 +33,8 @@ logger = logging.getLogger(__name__)
 from pylive.VisualCode_v5.py_graph_model import PyGraphModel
 from pylive.utils.evaluate_python import get_function_name
 
-from enum import StrEnum
-class GraphMimeData(StrEnum):
-    OutletData = 'application/outlet'
-    InletData = 'application/inlet'
-    LinkSourceData = 'application/link/source'
-    LinkTargetData = 'application/link/target'
+
+from abstract_graph_model import GraphMimeData
 
 
 class PyGraphView(QGraphicsView):
@@ -79,17 +75,23 @@ class PyGraphView(QGraphicsView):
         if model:
             self._model_connections = [
                 # Node Collection
-                (model.modelReset, lambda: self.resetItems()),
-                (model.nodesAdded, lambda nodes: self.addNodeItems([node_key for node_key in nodes])),
-                (model.nodesAboutToBeRemoved, lambda nodes: self.removeNodeItems([node_key for node_key in nodes])),
+                (model.modelReset, lambda: 
+                    self.resetItems()),
 
-                # Node Data
-                (model.dataChanged, lambda node, hints:    self.updateNodeItems([node], hints)),
-                # (model.resultInvaliadated, lambda node:    self.updateNodeItems([node], 'result')),
+                (model.nodesAdded, lambda nodes: 
+                    self.addNodeItems([node_key for node_key in nodes])),
+
+                (model.nodesAboutToBeRemoved, lambda nodes: 
+                    self.removeNodeItems([node_key for node_key in nodes])),
+
+                (model.dataChanged, lambda node, hints:
+                    self.updateNodeItems([node], hints)),
+
                 (model.inletsReset, lambda node_key, model=model:
-                    self.resetInletItems(node_key)
-                    ),
+                    self.resetInletItems(node_key)),
 
+                (model.outletsReset, lambda node_key, model=model:
+                    self.resetOutletItems(node_key)),
 
                 # Node Links
                 (model.nodesLinked, lambda links:
@@ -125,8 +127,9 @@ class PyGraphView(QGraphicsView):
 
         ### inlets
         for node_key in self._model.nodes():
-            inlet_keys = [inlet for inlet in self._model.inlets(node_key)]
-            self.insertInletItems(node_key, 0, inlet_keys)
+            self.resetInletItems(node_key)
+            self.resetOutletItems(node_key)
+
 
         ### links
         link_keys = set()
@@ -146,10 +149,14 @@ class PyGraphView(QGraphicsView):
                 self._node_widgets[node_key] = node_widget
                 self.scene().addItem(node_widget)
                 node_widget._view = self
+
                 self.updateNodeItems([node_key])
-                self.insertOutletItems(node_key, 0, ["out"])
+                self.resetInletItems(node_key)
+                self.resetOutletItems(node_key)
             else:
                 self.updateNodeItems([node_key])
+                self.resetInletItems(node_key)
+                self.resetOutletItems(node_key)
 
     def updateNodeItems(self, node_keys:Iterable[str], hints:list[Literal['source', 'position', 'needs_compilation', 'needs_evaluation', 'error', 'result']]=[]):
         assert self._model
@@ -180,6 +187,31 @@ class PyGraphView(QGraphicsView):
         return self._node_widgets[node]
 
     ### Ports
+    def resetInletItems(self, node_key:str):
+        assert self._model
+        node_widget = self._node_widgets[node_key]
+        # clear inlets
+        for item in node_widget._inlet_widgets.values():
+            self.scene().removeItem(item)
+        node_widget._inlet_widgets.clear()
+
+        # insert all
+        inlet_keys = [_ for _ in self._model.inlets(node_key)]
+        self.insertInletItems(node_key, 0, inlet_keys)
+
+    def resetOutletItems(self, node_key:str):
+        assert self._model
+        node_widget = self._node_widgets[node_key]
+
+        # clear outlets
+        for item in node_widget._outlet_widgets.values():
+            self.scene().removeItem(item)
+        node_widget._outlet_widgets.clear()
+
+        # insert all
+        outlet_keys = [_ for _ in self._model.outlets(node_key)]
+        self.insertOutletItems(node_key, 0, outlet_keys)
+
     def insertInletItems(self, node_key:str, index:int, inlet_keys:Iterable[str]):
         """insert inlet item for keys.
         if the item already exist, update it!"""
@@ -194,33 +226,18 @@ class PyGraphView(QGraphicsView):
                 widget.setY(node_widget.boundingRect().top()-widget.boundingRect().bottom())
                 widget.setParentItem(node_widget)
                 widget._view = self
-                # widget.scenePositionChanged.connect(lambda n=node_key, p=key: self.moveInletLinks(n, p))
-                # widget.scenePositionChanged.connect(lambda n=node_key, p=key: self.moveOutletLinks(n, p))
 
             else:
                 self.updateInletItems(node_key, [key])
         distribute_items_horizontal([_ for _ in node_widget._inlet_widgets.values()], node_widget.boundingRect())
 
-    def resetInletItems(self, node_key:str):
-        assert self._model
-        node_widget = self._node_widgets[node_key]
-        # clear inlets
-        for item in node_widget._inlet_widgets.values():
-            self.scene().removeItem(item)
-        node_widget._inlet_widgets.clear()
-
-        # insert all
-        inlet_keys = [_ for _ in self._model.inlets(node_key)]
-        self.insertInletItems(node_key, 0, inlet_keys)
-
     def insertOutletItems(self, node_key:str, index:int, outlet_keys:Iterable[str]):
-        """insert inlet item for keys.
+        """insert outlet item for keys.
         if the item already exist, update it!"""
         assert not isinstance(outlet_keys, str)
-        #TODO: index is not yet supported
         node_widget = self._node_widgets[node_key]
         for key in outlet_keys:
-            if key not in node_widget._inlet_widgets.keys():
+            if key not in node_widget._outlet_widgets.keys():
                 widget = OutletItem(key)
                 node_key = node_key
                 node_widget._outlet_widgets[key] = widget
@@ -350,9 +367,10 @@ class PyGraphView(QGraphicsView):
     def centerNodes(self):
         self.centerOn(self.scene().itemsBoundingRect().center())
 
+
     def layoutNodes(self, orientation=Qt.Orientation.Vertical, scale=100):
         assert self._model, f"bad _model, got: {self._model}"
-        from pylive.utils.graph import hiearchical_layout_with_nx
+        from pylive.utils.graph import hiearchical_layout_with_nx, hiearchical_layout_with_grandalf
         import networkx as nx
         G = nx.MultiDiGraph()
         for node_key in self._model.nodes():
@@ -361,7 +379,7 @@ class PyGraphView(QGraphicsView):
         for source, target, outlet, inlet in self._model.links():
             G.add_edge(source, target, key=inlet)
 
-        pos:dict[str, tuple[float, float]] = hiearchical_layout_with_nx(G, scale=scale)
+        pos:dict[str, tuple[float, float]] = hiearchical_layout_with_grandalf(G, scale=scale)
         for node_key, (x, y) in pos.items():
             if node_widget := self._node_widgets[node_key]:
                 match orientation:

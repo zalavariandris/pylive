@@ -37,6 +37,15 @@ class Window(QWidget):
 
         # MODEL
         self.graph_model = PyGraphModel()
+        self._document_connections = [
+            (self.graph_model.nodesAdded, lambda: self.setModified(True)),
+            (self.graph_model.nodesRemoved, lambda: self.setModified(True)),
+            (self.graph_model.dataChanged, lambda: self.setModified(True)),
+            (self.graph_model.nodesLinked, lambda: self.setModified(True)),
+            (self.graph_model.nodesUnlinked, lambda: self.setModified(True))
+        ]
+        for signal, slot in self._document_connections:
+            signal.connect(slot)
 
         # PROXY MODELS
         self.link_proxy_model = PyProxyLinkModel(self.graph_model)
@@ -65,82 +74,16 @@ class Window(QWidget):
         self.nodes_table_view.setModel(self.node_proxy_model)
         self.nodes_table_view.setSelectionModel(self.node_selection_model)
         
-        
         self.links_table_view = QTableView()
         # self.links_table_view.horizontalHeader().setVisible(True)
         # self.links_table_view.verticalHeader().setVisible(False)s
         self.links_table_view.setModel(self.link_proxy_model)
         self.links_table_view.setSelectionModel(self.link_selection_model)
 
-        def update_model_selection():
-            selected_node_keys = self.graph_view.selectedNodes()
-            print("selected_node_keys", selected_node_keys)
-            selection = self.node_proxy_model.mapSelectionFromSource(selected_node_keys)
-            
-            if selection.count()>0:
-                self.node_selection_model.select(selection, QItemSelectionModel.SelectionFlag.ClearAndSelect)
-                self.node_selection_model.setCurrentIndex(selection.indexes()[0], QItemSelectionModel.SelectionFlag.Current)
-            else:
-                self.node_selection_model.clearSelection()
-                self.node_selection_model.clearCurrentIndex()
-
-        def update_graphview_selection():
-            model_selection = self.node_selection_model.selection()
-
-            selected_node_keys = self.node_proxy_model.mapSelectionToSource(model_selection)
-            self.graph_view.selectNodes(selected_node_keys)
-
-        
-        self.graph_view_connections = [
-            (self.graph_view.nodesLinked, lambda source, target, outlet, inlet: 
-                self.connect_nodes(self.node_proxy_model.mapToSource(source), self.node_proxy_model.mapToSource(target), inlet)
-            ),
-            (self.graph_view.scene().selectionChanged, update_model_selection),
-            (self.node_selection_model.selectionChanged, update_graphview_selection)
-        ]
-
-        for signal, slot in self.graph_view_connections:
-            signal.connect(slot)
-
         ### Code Editor
         self.code_edit = ScriptEdit()
-
-        def set_source_model():
-            current = self.node_selection_model.currentIndex()
-            if current.isValid():
-                node = self.node_proxy_model.mapToSource(current)
-                node_source = self.graph_model.data(node, 'source')
-                if node_source!=self.code_edit.toPlainText():
-                    self.graph_model.setData(node, 'source', self.code_edit.toPlainText())
-
-        self.code_edit.textChanged.connect(set_source_model)
-
-        def set_editors(node_index:QModelIndex, hints:list):
-            current = self.node_selection_model.currentIndex()
-            if current.isValid():
-                node = self.node_proxy_model.mapToSource(current)
-
-                if 'source' in hints or not hints:
-                    node_source = self.graph_model.data(node, 'source')
-                    if node_source!=self.code_edit.toPlainText():
-                        self.code_edit.setPlainText(node_source)
-
-                if 'result' in hints or not hints:
-                    error, result = self.graph_model.data(node, 'result')
-
-                    if error:
-                        self.preview_label.setText(f"{error}")
-                    else:
-                        self.preview_label.setText(f"{result}")
-
-        self.graph_model.dataChanged.connect(lambda node, hints: set_editors(node, hints))
-
-        # ### PREVIEW WIDGET
+        self.code_edit.setDisabled(True)
         self.preview_label = QLabel()
-
-
-        self.node_selection_model.currentChanged.connect(lambda current, previous: set_editors(current, []))
-            
 
         ### STATUS BAR WIDGET
         self.statusbar = QStatusBar()
@@ -149,55 +92,40 @@ class Window(QWidget):
         ## MENUBAR
 
         # Actions
-        open_action = QAction("Open", self)
-        save_action = QAction("Save", self)
-        save_as_action = QAction("Save As", self)
-        add_node_action = QAction("Add New Node", self)
-        delete_selected_action = QAction("Delete selected", self)
-        delete_selected_action.setShortcut("Del")
-        
-        layout_nodes_action = QAction("layout nodes", self)
-        center_nodes_action = QAction("center nodes", self)
+        self.open_action = QAction("Open", self)
+        self.save_action = QAction("Save", self)
+        self.save_as_action = QAction("Save As", self)
+        self.add_node_action = QAction("Add New Node", self)
+        self.delete_selected_action = QAction("Delete selected", self)
+        self.delete_selected_action.setShortcut("Del")
+        self.layout_nodes_action = QAction("layout nodes", self)
+        self.center_nodes_action = QAction("center nodes", self)
 
         self.addActions([
-            save_action,
-            save_as_action,
-            open_action,
-            add_node_action,
-            delete_selected_action,
-            layout_nodes_action,
-            center_nodes_action
+            self.save_action,
+            self.save_as_action,
+            self.open_action,
+            self.add_node_action,
+            self.delete_selected_action,
+            self.layout_nodes_action,
+            self.center_nodes_action
         ])
 
         menubar = QMenuBar(parent=self)
 
         filemenu = menubar.addMenu("File")
         filemenu.addActions([
-            open_action, 
-            save_action,
-            save_as_action
+            self.open_action, 
+            self.save_action,
+            self.save_as_action
         ])
         editmenu = menubar.addMenu("Edit")
         editmenu.addActions([
-            add_node_action, 
-            delete_selected_action, 
+            self.add_node_action, 
+            self.delete_selected_action, 
         ])
         viewmenu = menubar.addMenu("View")
-        viewmenu.addActions([layout_nodes_action, center_nodes_action])
-
-        # menubar.addActions(self.actions())
-
-        menubar_connections = [
-            (open_action.triggered, lambda: self.openFile()),
-            (save_action.triggered, lambda: self.saveFile()),
-            (save_as_action.triggered, lambda: self.saveAsFile()),
-            (add_node_action.triggered, lambda: self.create_new_node()),
-            (delete_selected_action.triggered, lambda: self.delete_selected()),
-            (layout_nodes_action.triggered, lambda: self.graph_view.layoutNodes()),
-            (center_nodes_action.triggered, lambda: self.graph_view.centerNodes())
-        ]
-        for signal, slot in menubar_connections:
-            signal.connect(slot)
+        viewmenu.addActions([self.layout_nodes_action, self.center_nodes_action])
 
         ### Layout
         main_layout = qf.vboxlayout([
@@ -220,9 +148,142 @@ class Window(QWidget):
         self.setLayout(main_layout)
         self.updateWindowTitle()
 
+        self.bind_widgets_to_model()
+
+    def bind_widgets_to_model(self):
+        ### Bind widgets to model
+        def set_model(node:str, hints:list=[]):
+            assert isinstance(node, str)
+            current = self.node_selection_model.currentIndex()
+            if current.isValid():
+                node = self.node_proxy_model.mapToSource(current)
+                print(f"set model, {node}, {hints}")
+                if 'source' in hints or not hints:
+                    node_source = self.graph_model.data(node, 'source')
+                    if node_source!=self.code_edit.toPlainText():
+                        self.graph_model.setData(node, 'source', self.code_edit.toPlainText())
+
+        def set_editors(node:str, hints:list=[]):
+            self.code_edit.setEnabled(True)
+
+            if 'source' in hints or not hints:
+                node_source = self.graph_model.data(node, 'source')
+                if node_source!=self.code_edit.toPlainText():
+                    self.code_edit.setPlainText(node_source)
+
+            if 'result' in hints or not hints:
+                error, result = self.graph_model.data(node, 'result')
+
+                if error:
+                    self.preview_label.setText(f"{error}")
+                else:
+                    self.preview_label.setText(f"{result}")
+
+        def clear_editors():
+            self.code_edit.setPlainText("")
+            self.code_edit.setEnabled(False)
+            self.preview_label.setText("")
+
+        self.code_edit.textChanged.connect(lambda: 
+            set_model(self.node_proxy_model.mapToSource(self.node_selection_model.currentIndex()), ["source"])
+            if self.node_selection_model.currentIndex().isValid() 
+            else
+            None)
+
+        self.graph_model.dataChanged.connect(lambda node, hints: 
+            set_editors(node, hints) 
+            if node == self.node_proxy_model.mapToSource(self.node_selection_model.currentIndex()) 
+            else 
+            None)
+
+        self.node_selection_model.currentChanged.connect(lambda current, previous: 
+            set_editors(self.node_proxy_model.mapToSource(current), []) 
+            if current.isValid() 
+            else 
+            clear_editors())
+
+        def update_model_selection():
+            selected_node_keys = self.graph_view.selectedNodes()
+            selection = self.node_proxy_model.mapSelectionFromSource(selected_node_keys)
+            
+            if selection.count()>0:
+                self.node_selection_model.select(selection, QItemSelectionModel.SelectionFlag.ClearAndSelect)
+                self.node_selection_model.setCurrentIndex(selection.indexes()[0], QItemSelectionModel.SelectionFlag.Current)
+            else:
+                self.node_selection_model.clearSelection()
+                self.node_selection_model.clearCurrentIndex()
+
+        def update_graphview_selection():
+            model_selection = self.node_selection_model.selection()
+            selected_node_keys = self.node_proxy_model.mapSelectionToSource(model_selection)
+            self.graph_view.selectNodes(selected_node_keys)
+
+        self.graph_view.nodesLinked.connect(lambda source, target, outlet, inlet: 
+            self.connect_nodes(self.node_proxy_model.mapToSource(source), self.node_proxy_model.mapToSource(target), inlet))
+
+        self.graph_view.scene().selectionChanged.connect(update_model_selection)
+        
+        self.node_selection_model.selectionChanged.connect(lambda selected, deselected:
+            update_graphview_selection)
+
+        for signal, slot in self.graph_view_connections:
+            signal.connect(slot)
+            
+
+        menubar_connections = [
+            (self.open_action.triggered, lambda: self.openFile()),
+            (self.save_action.triggered, lambda: self.saveFile()),
+            (self.save_as_action.triggered, lambda: self.saveAsFile()),
+            (self.add_node_action.triggered, lambda: self.create_new_node()),
+            (self.delete_selected_action.triggered, lambda: self.delete_selected()),
+            (self.layout_nodes_action.triggered, lambda: self.graph_view.layoutNodes()),
+            (self.center_nodes_action.triggered, lambda: self.graph_view.centerNodes())
+        ]
+        for signal, slot in menubar_connections:
+            signal.connect(slot)
+
     def sizeHint(self):
         return QSize(2048, 900) 
 
+    ### Commands
+    def create_new_node(self, scenepos:QPointF=QPointF()):
+        existing_names = list(self.graph_model.nodes())
+
+        func_name = make_unique_id(6)
+        self.graph_model.addNode(func_name)
+
+        ### position node widget
+        node_graphics_item = self.graph_view.nodeItem(func_name)
+        if node_graphics_item := self.graph_view.nodeItem(func_name):
+            node_graphics_item.setPos(scenepos-node_graphics_item.boundingRect().center())
+
+    def delete_selected(self):
+        # delete selected links
+        link_indexes:list[QModelIndex] = self.link_selection_model.selectedIndexes()
+        link_rows = set(index.row() for index in link_indexes)
+        for link_row in sorted(link_rows, reverse=True):
+            source, target, outlet, inlet = self.link_proxy_model.mapToSource(self.link_proxy_model.index(link_row, 0))
+            self.graph_model.unlinkNodes(source, target, outlet, inlet)
+
+        # delete selected nodes
+        node_indexes:list[QModelIndex] = self.node_selection_model.selectedRows(column=0)
+        for node_index in sorted(node_indexes, key=lambda idx:idx.row(), reverse=True):
+            node = self.node_proxy_model.mapToSource(node_index)
+            self.graph_model.removeNode(node)
+
+    def connect_nodes(self, source:str, target:str, inlet:str):
+        self.graph_model.linkNodes(source, target, "out", inlet)
+
+    def eventFilter(self, watched, event):
+        if watched == self.graph_view:
+            if event.type() == QEvent.Type.MouseButtonDblClick:
+                event = cast(QMouseEvent, event)
+                self.create_new_node(self.graph_view.mapToScene(event.position().toPoint()))
+                return True
+
+        return super().eventFilter(watched, event)
+
+    ### Document
     def fileFilter(self):
         return ".yaml"
 
@@ -234,6 +295,7 @@ class Window(QWidget):
 
     def setModified(self, m:bool):
         self._is_modified = m
+        self.updateWindowTitle()
 
     def openFile(self, filepath:Path|str|None=None):
         ### close current file
@@ -349,46 +411,8 @@ class Window(QWidget):
 
                 reload_script() 
 
-    def create_new_node(self, scenepos:QPointF=QPointF()):
-        existing_names = list(self.graph_model.nodes())
-
-        func_name = make_unique_id(6)
-        self.graph_model.addNode(func_name)
-
-        ### position node widget
-        node_graphics_item = self.graph_view.nodeItem(func_name)
-        if node_graphics_item := self.graph_view.nodeItem(func_name):
-            node_graphics_item.setPos(scenepos-node_graphics_item.boundingRect().center())
-
-
-    def delete_selected(self):
-        # delete selected links
-        link_indexes:list[QModelIndex] = self.link_selection_model.selectedIndexes()
-        link_rows = set(index.row() for index in link_indexes)
-        for link_row in sorted(link_rows, reverse=True):
-            source, target, outlet, inlet = self.link_proxy_model.mapToSource(self.link_proxy_model.index(link_row, 0))
-            self.graph_model.unlinkNodes(source, target, outlet, inlet)
-
-        # delete selected nodes
-        node_indexes:list[QModelIndex] = self.node_selection_model.selectedRows(column=0)
-        for node_index in sorted(node_indexes, key=lambda idx:idx.row(), reverse=True):
-            node = self.node_proxy_model.mapToSource(node_index)
-            self.graph_model.removeNode(node)
-
-    def connect_nodes(self, source:str, target:str, inlet:str):
-        self.graph_model.linkNodes(source, target, "out", inlet)
-
-    def eventFilter(self, watched, event):
-        if watched == self.graph_view:
-            if event.type() == QEvent.Type.MouseButtonDblClick:
-                event = cast(QMouseEvent, event)
-                self.create_new_node(self.graph_view.mapToScene(event.position().toPoint()))
-                return True
-
-        return super().eventFilter(watched, event)
-
     def updateWindowTitle(self):
-        self.setWindowTitle(f"VisuelCode v4{' - ' + str(Path(self._filepath).name) if self._filepath else ''}")
+        self.setWindowTitle(f"VisuelCode v4 - {str(Path(self._filepath).name) if self._filepath else 'Untitled'}{' *' if self.isModified() else ''}")
 
 if __name__ == "__main__":
     import sys
