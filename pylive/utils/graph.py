@@ -71,8 +71,9 @@ def hiearchical_layout_with_grandalf(G, scale=1):
 
     for v in g.C[0].sV:
         v.view = defaultview()
+
     sug = SugiyamaLayout(g.C[0])
-    sug.init_all()  # roots=[V[0]])
+    sug.init_all()
     sug.draw()
     return {
         v.data: (v.view.xy[0], v.view.xy[1]) for v in g.C[0].sV

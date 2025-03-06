@@ -13,8 +13,6 @@ class PyFunctionsModel(QAbstractItemModel):
     def __init__(self):
         super().__init__()
         self._sources:list[str] = []
-
-        self./
         self._cached_functions:dict[str, Callable] = dict()
         self._errors:dict[Callable, Exception] = dict()
 

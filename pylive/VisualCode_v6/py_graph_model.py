@@ -14,33 +14,69 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 
-class _PyNodeDataItem:
-    def __init__(self, source:str="def func():\n    ..."):
-        self._source = source
-        self._cache_func = None
+class _PyGraphItem:
+    def __init__(self):
         self._cache_evaluation = None
 
-    @property
-    def source(self):
-        return self._source
+    def inlets(self)->list[str]:
+        return ["inlet"]
 
-    @source.setter
-    def source(self, value:str):
-        self._source = value
-        self._cache_func = None
+    def evaluate(self, named_args:dict):
+        return None
+
+    def clearCache(self):
         self._cache_evaluation = None
 
-    def compile(self)->Callable:
-        if not self._cache_func:
-            self._cache_func = compile_python_function(self.source)
-        return self._cache_func
+
+class _PyFuncItem(_PyGraphItem):
+    def __init__(self, func:Callable):
+        super().__init__()
+        self._func = func
+
+    def inlets(self)->list[str]:
+        sig = inspect.signature(self._func)
+        return [name for name in sig.parameters.keys()]
 
     def evaluate(self, named_args:dict):
         if not self._cache_evaluation:
-            func = self.compile()
-            result = call_function_with_named_args(func, named_args)
+            result = call_function_with_named_args(self._func, named_args)
             self._cache_evaluation = result
+
         return self._cache_evaluation
+
+    def __str__(self):
+        return f"𝒇 {self._func.__name__})"
+
+
+class _PyValueItem(_PyGraphItem):
+    def __init__(self, value:Any):
+        super().__init__()
+        self._value = value
+
+    def inlets(self)->list[str]:
+        return []
+
+    def evaluate(self, named_args:dict):
+        return self._value
+
+    def __str__(self):
+        from textwrap import shorten
+        return f"I {shorten(self._value, 8)}"
+
+
+class _PyExpressionItem(_PyGraphItem):
+    def __init__(self, expression:Any):
+        self._expression = expression
+
+    def inlets(self)->list[str]:
+        return []
+
+    def evaluate(self, named_args:dict):
+        return eval(self._expression, named_args)
+
+    def __str__(self):
+        from textwrap import shorten
+        return f"∑ {self._expression}"
 
 
 class PyGraphModel(AbstractGraphModel):
@@ -59,7 +95,7 @@ class PyGraphModel(AbstractGraphModel):
         """TODO: store nodes and edges with networkx, 
         # but keep an eye on the proxy model implementation, which refers to nodes by index
         """
-        self._node_data:OrderedDict[str, _PyNodeDataItem] = OrderedDict()
+        self._node_data:OrderedDict[str, _PyGraphItem] = OrderedDict()
         self._links:set[tuple[str,str,str,str]] = set()
         self._auto_evaluate_filter = None
 
@@ -87,24 +123,23 @@ class PyGraphModel(AbstractGraphModel):
         return nx.descendants(G, source) # | {node} # source 
 
     def inlets(self, node:str)->Collection[str]:
-        try:
-            func = self._node_data[node].compile()
-        except Exception:
-            return []
-        else:
-            sig = inspect.signature(func)
-            return [name for name in sig.parameters.keys()]
+        return self._node_data[node].inlets()
 
     def outlets(self, node:str)->Collection[str]:
         return ['out']
 
-    def addNode(self, name:str, source:str|None=None):
+    def addFunction(self, name:str, func:Callable):
         if name in self._node_data:
             raise ValueError("nodes must have a unique name")
         self.nodesAboutToBeAdded.emit([name])
-        self._node_data[name] = _PyNodeDataItem()
-        if source is not None:
-            self._node_data[name].source = source
+        self._node_data[name] = _PyFuncItem(func)
+        self.nodesAdded.emit([name])
+
+    def addValue(self, name:str, value:object|None):
+        if name in self._node_data:
+            raise ValueError("nodes must have a unique name")
+        self.nodesAboutToBeAdded.emit([name])
+        self._node_data[name] = _PyValueItem(value)
         self.nodesAdded.emit([name])
 
     def removeNode(self, name:str):
@@ -132,57 +167,54 @@ class PyGraphModel(AbstractGraphModel):
         self.nodesAboutToBeLinked.emit( [(source, target, outlet, inlet)] )
         self._links.add( (source, target, outlet, inlet) )
         self.nodesLinked.emit([(source, target, outlet, inlet)])
-        self._node_data[target]._cache_evaluation=None
+        self._node_data[target].clearCache()
         self.dataChanged.emit(target, ['result'])
         
     def unlinkNodes(self, source:str, target:str, outlet:str, inlet:str):
         self.nodesAboutToBeUnlinked.emit([(source, target, outlet, inlet)])
         self._links.remove( (source, target, outlet, inlet) )
         self.nodesUnlinked.emit([(source, target, outlet, inlet)])
-        self._node_data[target]._cache_evaluation=None
+        self._node_data[target].clearCache()
         self.dataChanged.emit(target, ['result'])
         
     ### Node Data
     def data(self, node_key:str, attr:str)->Any:
         node_item = self._node_data[node_key]
         match attr:
-            case 'source':
-                return node_item.source
+            case 'name':
+                return f"{node_item}"
+
             case 'result':
+                ### GET FUNCTION ARGUMENTS
+                ### from links
+                named_args = dict()
+                for source_node, target, outlet, inlet in self.inLinks(node_key):
+                    error, value = self.data(source_node, 'result')
+                    if error:
+                        return error, None
+                    named_args[inlet] = value
                 try:
-                    func = self._node_data[node_key].compile()# compile_python_function(self._nodes[node].source)
-                except SyntaxError as err:
-                    return err, None
+                    value = self._node_data[node_key].evaluate(named_args)
                 except Exception as err:
+                    import traceback
+                    traceback.print_exc()
                     return err, None
                 else:
-                    ### GET FUNCTION ARGUMENTS
-                    ### from links
-                    named_args = dict()
-                    for source_node, target, outlet, inlet in self.inLinks(node_key):
-                        error, value = self.data(source_node, 'result')
-                        if error:
-                            return error, None
-                        named_args[inlet] = value
-                    try:
-                        value = self._node_data[node_key].evaluate(named_args)
-                    except Exception as err:
-                        return err, None
-                    else:
-                        return None, value
+                    return None, value
+
             case _:
                 return getattr(node_item, attr)
 
     def setData(self, node:str, attr:str, value:str):
         node_item = self._node_data[node]
 
-        match attr:
-            case 'source':
-                node_item.source = value
-                self.dataChanged.emit(node, ['source'])
-                self.inletsReset.emit(node)
-                self.outletsReset.emit(node)
-                self.dataChanged.emit(node, ['result'])
+        # match attr:
+        #     case 'source':
+        #         node_item.source = value
+        #         self.dataChanged.emit(node, ['source'])
+        #         self.inletsReset.emit(node)
+        #         self.outletsReset.emit(node)
+        #         self.dataChanged.emit(node, ['result'])
 
     ### Helpers
     def _toNetworkX(self)->nx.MultiDiGraph:
@@ -224,7 +256,7 @@ class PyGraphModel(AbstractGraphModel):
                     else:
                         logger.warning("field values are not implemented yet!")
         
-            node_item = _PyNodeDataItem(
+            node_item = _PyGraphItem(
                 source=node_data['source'],
             )
             self._node_data[node_data['name'].strip()] = node_item

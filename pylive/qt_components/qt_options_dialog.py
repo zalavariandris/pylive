@@ -1,6 +1,6 @@
 ### todo: Support arbitrary QAbstractItemModel
 
-from enum import IntEnum
+
 from typing import *
 from PySide6.QtCore import *
 from PySide6.QtGui import *
@@ -34,9 +34,6 @@ class QOptionDialog(QDialog):
         self.line_edit = QLineEdit()
         self.line_edit.setPlaceholderText("Search...")
 
-
-
-
         # Setup List
         
         self.filteredmodel = QSortFilterProxyModel()
@@ -47,8 +44,6 @@ class QOptionDialog(QDialog):
         self._listview = QListView()
         self._listview.setModel(self.filteredmodel)
         self._listview.setSelectionMode(QListView.SelectionMode.SingleSelection)
-
-
 
         # OK and Cancel buttons
         button_layout = QHBoxLayout()
@@ -86,7 +81,6 @@ class QOptionDialog(QDialog):
 
         # Enable event filter for keyboard navigation
         self.line_edit.installEventFilter(self)
-
 
         self.adjustSize()
 
@@ -194,15 +188,4 @@ if __name__ == "__main__":
     sys.exit(app.exec())
 
 
-
-
-# from pylive import livescript
-# livescript.display(OptionDialog([]))
-if __name__ == "__main__":
-	import sys
-	app = QApplication(sys.argv)
-	options = ["print", "Path.read_text", "Path.write_text", "sample_function"]
-	selected = QOptionDialog.getOption(options)
-	print(selected)
-	sys.exit(app.exec())
 

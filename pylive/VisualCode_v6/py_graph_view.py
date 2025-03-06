@@ -898,7 +898,7 @@ def main():
                     'nodes':[
                     {
                         'name': "two",
-                        'source': """def two():\n    return 2"""
+                        'func_name': """def two():\n    return 2"""
                     },
                     {
                         'name': "three",
