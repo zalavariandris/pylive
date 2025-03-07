@@ -14,69 +14,86 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 
+def say_hello(name:str):
+    return f"Hello {name}!"
+
 class _PyGraphItem:
-    def __init__(self):
-        self._cache_evaluation = None
-
-    def inlets(self)->list[str]:
-        return ["inlet"]
-
-    def evaluate(self, named_args:dict):
-        return None
+    def __init__(self, expression:str="print", kind:Literal["operator", 'value', 'expression']="operator", ):
+        assert isinstance(expression, str)
+        assert kind in ("operator", 'value')
+        self._kind:Literal["operator", 'value', 'expression'] = kind
+        self._expression = expression
+        self._compile_cache = None
+        self._cache = None
 
     def clearCache(self):
-        self._cache_evaluation = None
+        self._cache = None
 
+    @property
+    def expression(self)->str:
+        return self._expression
 
-class _PyFuncItem(_PyGraphItem):
-    def __init__(self, func:Callable):
-        super().__init__()
-        self._func = func
+    @expression.setter
+    def expression(self, value:str):
+        self._expression = value
+        self._compile_cache = None
+        self._cache = None
+
+    @property
+    def kind(self)->Literal["operator", 'value', 'expression']:
+        return self._kind
+
+    @kind.setter
+    def kind(self, value:Literal["operator", 'value', 'expression']="operator"):
+        self._kind = value
+        self._compile_cache = None
+        self._cache = None
+
+    def _compile(self):
+        if not self._compile_cache:
+            self._compile_cache = eval(self._expression)
+
+        return self._compile_cache
 
     def inlets(self)->list[str]:
-        sig = inspect.signature(self._func)
-        return [name for name in sig.parameters.keys()]
+        match self._kind:
+            case 'value':
+                return []
+            case 'operator':
+                try:
+                    func = self._compile()
+                except Exception:
+                    return []
+                else:
+                    sig = inspect.signature(func)
+                    return [name for name in sig.parameters.keys()]
 
     def evaluate(self, named_args:dict):
-        if not self._cache_evaluation:
-            result = call_function_with_named_args(self._func, named_args)
-            self._cache_evaluation = result
+        if not self._cache:
+            match self._kind:
+                case 'value':
+                    self._cache = self._compile()
+                case 'operator':
+                    func = self._compile()
+                    self._cache = call_function_with_named_args(func, named_args)
 
-        return self._cache_evaluation
-
-    def __str__(self):
-        return f"𝒇 {self._func.__name__})"
+        return self._cache
 
 
-class _PyValueItem(_PyGraphItem):
-    def __init__(self, value:Any):
-        super().__init__()
-        self._value = value
-
-    def inlets(self)->list[str]:
-        return []
-
-    def evaluate(self, named_args:dict):
-        return self._value
 
     def __str__(self):
         from textwrap import shorten
-        return f"I {shorten(self._value, 8)}"
+        match self._kind:
+            case 'operator':
+                return f"𝒇 {self._compile_cache.__name__ if self._compile_cache else "(not compiled)"})"
+            case 'value':
+                return f"I {shorten(str(self._cache), 8)}"
+            case 'expression':
+                return f"∑ {shorten(str(self._expression), 8)}"
+        
 
 
-class _PyExpressionItem(_PyGraphItem):
-    def __init__(self, expression:Any):
-        self._expression = expression
-
-    def inlets(self)->list[str]:
-        return []
-
-    def evaluate(self, named_args:dict):
-        return eval(self._expression, named_args)
-
-    def __str__(self):
-        from textwrap import shorten
-        return f"∑ {self._expression}"
+import pathlib
 
 
 class PyGraphModel(AbstractGraphModel):
@@ -128,18 +145,11 @@ class PyGraphModel(AbstractGraphModel):
     def outlets(self, node:str)->Collection[str]:
         return ['out']
 
-    def addFunction(self, name:str, func:Callable):
+    def addNode(self, name:str, expression:str, kind:Literal['operator', 'value', 'expression']='operator'):
         if name in self._node_data:
             raise ValueError("nodes must have a unique name")
         self.nodesAboutToBeAdded.emit([name])
-        self._node_data[name] = _PyFuncItem(func)
-        self.nodesAdded.emit([name])
-
-    def addValue(self, name:str, value:object|None):
-        if name in self._node_data:
-            raise ValueError("nodes must have a unique name")
-        self.nodesAboutToBeAdded.emit([name])
-        self._node_data[name] = _PyValueItem(value)
+        self._node_data[name] = _PyGraphItem(expression, kind)
         self.nodesAdded.emit([name])
 
     def removeNode(self, name:str):
@@ -182,7 +192,13 @@ class PyGraphModel(AbstractGraphModel):
         node_item = self._node_data[node_key]
         match attr:
             case 'name':
-                return f"{node_item}"
+                return f"{node_key}"
+
+            case 'expression':
+                return f"{node_item.expression}"
+
+            case 'kind':
+                return f"{node_item.kind}"
 
             case 'result':
                 ### GET FUNCTION ARGUMENTS
@@ -195,9 +211,13 @@ class PyGraphModel(AbstractGraphModel):
                     named_args[inlet] = value
                 try:
                     value = self._node_data[node_key].evaluate(named_args)
+                except SyntaxError as err:
+                    import traceback
+                    # traceback.print_exc()
+                    return err, None
                 except Exception as err:
                     import traceback
-                    traceback.print_exc()
+                    # traceback.print_exc()
                     return err, None
                 else:
                     return None, value
@@ -208,13 +228,20 @@ class PyGraphModel(AbstractGraphModel):
     def setData(self, node:str, attr:str, value:str):
         node_item = self._node_data[node]
 
-        # match attr:
-        #     case 'source':
-        #         node_item.source = value
-        #         self.dataChanged.emit(node, ['source'])
-        #         self.inletsReset.emit(node)
-        #         self.outletsReset.emit(node)
-        #         self.dataChanged.emit(node, ['result'])
+        match attr:
+            case 'kind':
+                node_item.kind = value
+                self.dataChanged.emit(node, ['kind'])
+                self.inletsReset.emit(node)
+                self.outletsReset.emit(node)
+                self.dataChanged.emit(node, ['result'])
+
+            case 'expression':
+                node_item.expression = value
+                self.dataChanged.emit(node, ['expression'])
+                self.inletsReset.emit(node)
+                self.outletsReset.emit(node)
+                self.dataChanged.emit(node, ['result'])
 
     ### Helpers
     def _toNetworkX(self)->nx.MultiDiGraph:

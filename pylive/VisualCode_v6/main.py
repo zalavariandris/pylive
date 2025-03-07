@@ -14,10 +14,10 @@ logger = logging.getLogger(__name__)
 ### DATA ###
 # 
 # from pylive.QtGraphEditor.py_functions_model import PyFunctionsModel
-from pylive.VisualCode_v5.py_graph_model import PyGraphModel
-from pylive.VisualCode_v5.py_proxy_node_model import PyProxyNodeModel
-from pylive.VisualCode_v5.py_proxy_link_model import PyProxyLinkModel
-from pylive.VisualCode_v5.py_graph_view import PyGraphView
+from pylive.VisualCode_v6.py_graph_model import PyGraphModel
+from pylive.VisualCode_v6.py_proxy_node_model import PyProxyNodeModel
+from pylive.VisualCode_v6.py_proxy_link_model import PyProxyLinkModel
+from pylive.VisualCode_v6.py_graph_view import PyGraphView
 from pylive.QtScriptEditor.script_edit import ScriptEdit
 
 from pylive.utils.unique import make_unique_id
@@ -81,8 +81,11 @@ class Window(QWidget):
         self.links_table_view.setSelectionModel(self.link_selection_model)
 
         ### Code Editor
-        self.code_edit = ScriptEdit()
-        self.code_edit.setDisabled(True)
+        self.kind_dropdown = QComboBox()
+        self.kind_dropdown.insertItems(0, ['operator', 'value', 'expression'])
+        self.kind_dropdown.setDisabled(True)
+        self.expression_edit = QLineEdit()
+        self.expression_edit.setDisabled(True)
         self.preview_label = QLabel()
 
         ### STATUS BAR WIDGET
@@ -130,7 +133,11 @@ class Window(QWidget):
         ### Layout
         main_layout = qf.vboxlayout([
             qf.splitter(Qt.Orientation.Horizontal, [
-                self.code_edit,
+                qf.widget(qf.vboxlayout([
+                    self.kind_dropdown,
+                    self.expression_edit,
+                    qf.spacer(0,500, wPolicy=QSizePolicy.Policy.Minimum, hPolicy=QSizePolicy.Policy.Minimum)
+                ])),
                 qf.tabwidget({
                     'graph':self.graph_view,
                     'sheets':qf.widget(qf.vboxlayout([
@@ -157,19 +164,31 @@ class Window(QWidget):
             current = self.node_selection_model.currentIndex()
             if current.isValid():
                 node = self.node_proxy_model.mapToSource(current)
-                print(f"set model, {node}, {hints}")
-                if 'source' in hints or not hints:
-                    node_source = self.graph_model.data(node, 'source')
-                    if node_source!=self.code_edit.toPlainText():
-                        self.graph_model.setData(node, 'source', self.code_edit.toPlainText())
+                if 'kind' in hints or not hints:
+                    node_kind = self.graph_model.data(node, 'kind')
+                    if node_kind!=self.kind_dropdown.currentText():
+                        self.graph_model.setData(node, 'kind', self.kind_dropdown.currentText())
+
+                if 'expression' in hints or not hints:
+                    node_source = self.graph_model.data(node, 'expression')
+                    if node_source!=self.expression_edit.text():
+                        self.graph_model.setData(node, 'expression', self.expression_edit.text())
+
+
 
         def set_editors(node:str, hints:list=[]):
-            self.code_edit.setEnabled(True)
+            self.expression_edit.setEnabled(True)
+            self.kind_dropdown.setEnabled(True)
 
-            if 'source' in hints or not hints:
-                node_source = self.graph_model.data(node, 'source')
-                if node_source!=self.code_edit.toPlainText():
-                    self.code_edit.setPlainText(node_source)
+            if 'kind' in hints or not hints:
+                node_kind = self.graph_model.data(node, 'kind')
+                if node_kind!=self.kind_dropdown.currentText():
+                    self.kind_dropdown.setCurrentText(node_kind)
+
+            if 'expression' in hints or not hints:
+                node_source = self.graph_model.data(node, 'expression')
+                if node_source!=self.expression_edit.text():
+                    self.expression_edit.setText(node_source)
 
             if 'result' in hints or not hints:
                 error, result = self.graph_model.data(node, 'result')
@@ -180,12 +199,19 @@ class Window(QWidget):
                     self.preview_label.setText(f"{result}")
 
         def clear_editors():
-            self.code_edit.setPlainText("")
-            self.code_edit.setEnabled(False)
+            self.expression_edit.setText("")
+            self.expression_edit.setEnabled(False)
+            self.kind_dropdown.setEnabled(False)
             self.preview_label.setText("")
 
-        self.code_edit.textChanged.connect(lambda: 
-            set_model(self.node_proxy_model.mapToSource(self.node_selection_model.currentIndex()), ["source"])
+        self.expression_edit.editingFinished.connect(lambda: 
+            set_model(self.node_proxy_model.mapToSource(self.node_selection_model.currentIndex()), ["expression"])
+            if self.node_selection_model.currentIndex().isValid() 
+            else
+            None)
+
+        self.kind_dropdown.currentIndexChanged.connect(lambda: 
+            set_model(self.node_proxy_model.mapToSource(self.node_selection_model.currentIndex()), ["kind"])
             if self.node_selection_model.currentIndex().isValid() 
             else
             None)
@@ -250,7 +276,7 @@ class Window(QWidget):
         existing_names = list(self.graph_model.nodes())
 
         func_name = make_unique_id(6)
-        self.graph_model.addNode(func_name)
+        self.graph_model.addNode(func_name, "print", kind='operator')
 
         ### position node widget
         node_graphics_item = self.graph_view.nodeItem(func_name)

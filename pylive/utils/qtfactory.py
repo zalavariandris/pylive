@@ -34,6 +34,7 @@ def boxlayout(direction:QBoxLayout.Direction, children:Sequence[QWidget|QLayout|
 
 def vboxlayout(children:Sequence[QWidget|QLayout|QLayoutItem], stretch:Sequence[int]=[])->QVBoxLayout:
     layout = QVBoxLayout()
+    layout.addStretch()
     layout.setSpacing(0)
     layout.setContentsMargins(0,0,0,0)
     for child in children:
@@ -74,6 +75,9 @@ def hboxlayout(children:Sequence[QWidget|QLayout|QLayoutItem], stretch:Sequence[
         layout.setStretch(i, value)
 
     return layout
+
+def spacer(w:int, h:int, wPolicy=QSizePolicy.Policy.Minimum, hPolicy=QSizePolicy.Policy.Minimum):
+    return QSpacerItem(w, h, wPolicy, hPolicy)
 
 def splitter(orientation:Qt.Orientation, children:Sequence[QWidget])->QSplitter:
     splitter = QSplitter(orientation)

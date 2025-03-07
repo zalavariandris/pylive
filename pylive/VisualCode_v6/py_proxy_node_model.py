@@ -9,7 +9,7 @@ from pylive.utils import group_consecutive_numbers
 
 
 class PyProxyNodeModel(QAbstractItemModel):
-    _headers = ['name', 'inlets', 'outlets', 'source', 'result']
+    _headers = ['name', 'inlets', 'outlets', 'kind', 'expression', 'result']
     def __init__(self, source_model:PyGraphModel, parent:QObject|None=None):
         super().__init__(parent=parent)
         self._nodes:list[str] = list()

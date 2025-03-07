@@ -172,9 +172,9 @@ class PyGraphView(QGraphicsView):
             </div>
             """))
             assert self._model
-            source = self._model.data(node_key, 'source')
+            source = self._model.data(node_key, 'name')
             func_name = get_function_name(source)
-            node_widget.setText(func_name)
+            node_widget.setHeaderText(node_key)
 
     def removeNodeItems(self, node_keys:list[str]):
         for key in node_keys:
@@ -731,7 +731,7 @@ class NodeItem(QGraphicsItem):
     def __init__(self, key:str, parent:QGraphicsItem|None=None):
         super().__init__(parent=parent)
         self.key:str = key
-        self._text = f"{self.key}"
+        self._header_text = f"{self.key}"
 
         self._inlet_widgets:bidict[str, InletItem] = bidict()
         self._outlet_widgets:bidict[str, OutletItem] = bidict()
@@ -746,11 +746,12 @@ class NodeItem(QGraphicsItem):
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges, True)
 
-    def text(self)->str:
-        return self._text
+    def headerText(self)->str:
+        return self._header_text
 
-    def setText(self, text:str):
-        self._text = text
+    def setHeaderText(self, text:str):
+        print("set header text", text)
+        self._header_text = text
         self.prepareGeometryChange()
         self.update()
 
@@ -786,7 +787,7 @@ class NodeItem(QGraphicsItem):
     def boundingRect(self) -> QRectF:
         # return QRectF(0,0,19,16)
         fm = QFontMetrics(self.font())
-        bbox = fm.boundingRect(f"{self._text}")
+        bbox = fm.boundingRect(f"{self._header_text}")
         return bbox.adjusted(-6,-2,6,2)
 
     def shape(self)->QPainterPath:
@@ -803,7 +804,7 @@ class NodeItem(QGraphicsItem):
         painter.setPen(pen)
 
         painter.drawRoundedRect(rect, 6,6)
-        painter.drawText(rect, f"{self._text}", QTextOption(Qt.AlignmentFlag.AlignCenter))
+        painter.drawText(rect, f"{self._header_text}", QTextOption(Qt.AlignmentFlag.AlignCenter))
 
 
 class LinkItem(QGraphicsLineItem):
