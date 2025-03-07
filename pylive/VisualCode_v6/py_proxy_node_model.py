@@ -9,7 +9,7 @@ from pylive.utils import group_consecutive_numbers
 
 
 class PyProxyNodeModel(QAbstractItemModel):
-    _headers = ['name', 'inlets', 'outlets', 'kind', 'expression', 'result']
+    _headers = ['header', 'inlets', 'outlets', 'kind', 'expression', 'result']
     def __init__(self, source_model:PyGraphModel, parent:QObject|None=None):
         super().__init__(parent=parent)
         self._nodes:list[str] = list()
@@ -24,10 +24,11 @@ class PyProxyNodeModel(QAbstractItemModel):
                 signal.disconnect(slot)
 
         if source_model:
-            def emit_inlets_changed(node):
-                row = self.mapFromSource(node).row()
-                index = self.index(row, self._headers.index('inlets'))
-                self.dataChanged.emit(index, index, [])
+            def emit_inlets_changed(nodes):
+                for node in nodes:
+                    row = self.mapFromSource(node).row()
+                    index = self.index(row, self._headers.index('inlets'))
+                    self.dataChanged.emit(index, index, [])
 
             self._connections = [
                 (source_model.modelAboutToBeReset, self.modelAboutToBeReset.emit),
@@ -36,8 +37,8 @@ class PyProxyNodeModel(QAbstractItemModel):
                 (source_model.nodesAdded, self._on_source_nodes_added),
                 (source_model.nodesAboutToBeRemoved, self._on_source_nodes_about_to_be_removed),
                 (source_model.nodesRemoved, self._on_source_nodes_removed),
-                (source_model.dataChanged, lambda node, hints: self._on_data_changed(node, hints)),
-                (source_model.inletsReset, lambda node: emit_inlets_changed(node))
+                (source_model.dataChanged, lambda nodes, hints: self._on_data_changed(nodes, hints)),
+                (source_model.inletsReset, lambda nodes: emit_inlets_changed(nodes))
             ]
 
             for signal, slot in self._connections:
@@ -46,18 +47,19 @@ class PyProxyNodeModel(QAbstractItemModel):
         self._source_model = source_model
         self._resetModel()
 
-    def _on_data_changed(self, node:str, hints:list[str]):
-        row = self.mapFromSource(node).row()
-        if not hints:
-            
-            self.dataChanged.emit(self.index(row, 0), self.index(row, self.columnCount()-1), [])
-        else:
-            columns = []
-            for hint in hints:
-                column = self._headers.index(hint)
-                columns.append(column)
-            columns.sort()
-            self.dataChanged.emit(self.index(row, columns[0]), self.index(row, columns[-1]), [])
+    def _on_data_changed(self, nodes:list[str], hints:list[str]):
+        for node in nodes:
+            row = self.mapFromSource(node).row()
+            if not hints:
+                
+                self.dataChanged.emit(self.index(row, 0), self.index(row, self.columnCount()-1), [])
+            else:
+                columns = []
+                for hint in hints:
+                    column = self._headers.index(hint)
+                    columns.append(column)
+                columns.sort()
+                self.dataChanged.emit(self.index(row, columns[0]), self.index(row, columns[-1]), [])
 
     def _resetModel(self):
         assert self._source_model

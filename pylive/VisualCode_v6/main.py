@@ -80,7 +80,9 @@ class Window(QWidget):
         self.links_table_view.setModel(self.link_proxy_model)
         self.links_table_view.setSelectionModel(self.link_selection_model)
 
-        ### Code Editor
+        ### Inspector
+        self.context_edit = ScriptEdit()
+        self.context_edit.textChanged.connect(lambda: self.graph_model.restartKernel(self.context_edit.toPlainText()))
         self.kind_dropdown = QComboBox()
         self.kind_dropdown.insertItems(0, ['operator', 'value', 'expression'])
         self.kind_dropdown.setDisabled(True)
@@ -134,6 +136,7 @@ class Window(QWidget):
         main_layout = qf.vboxlayout([
             qf.splitter(Qt.Orientation.Horizontal, [
                 qf.widget(qf.vboxlayout([
+                    self.context_edit,
                     self.kind_dropdown,
                     self.expression_edit,
                     qf.spacer(0,500, wPolicy=QSizePolicy.Policy.Minimum, hPolicy=QSizePolicy.Policy.Minimum)
@@ -157,6 +160,7 @@ class Window(QWidget):
 
         self.bind_widgets_to_model()
 
+
     def bind_widgets_to_model(self):
         ### Bind widgets to model
         def set_model(node:str, hints:list=[]):
@@ -173,8 +177,6 @@ class Window(QWidget):
                     node_source = self.graph_model.data(node, 'expression')
                     if node_source!=self.expression_edit.text():
                         self.graph_model.setData(node, 'expression', self.expression_edit.text())
-
-
 
         def set_editors(node:str, hints:list=[]):
             self.expression_edit.setEnabled(True)
@@ -216,9 +218,9 @@ class Window(QWidget):
             else
             None)
 
-        self.graph_model.dataChanged.connect(lambda node, hints: 
-            set_editors(node, hints) 
-            if node == self.node_proxy_model.mapToSource(self.node_selection_model.currentIndex()) 
+        self.graph_model.dataChanged.connect(lambda nodes, hints: 
+            set_editors(self.node_proxy_model.mapToSource(self.node_selection_model.currentIndex()), hints) 
+            if self.node_proxy_model.mapToSource(self.node_selection_model.currentIndex()) in nodes
             else 
             None)
 

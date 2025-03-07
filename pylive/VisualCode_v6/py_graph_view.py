@@ -30,11 +30,11 @@ import logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-from pylive.VisualCode_v5.py_graph_model import PyGraphModel
+from pylive.VisualCode_v6.py_graph_model import PyGraphModel
 from pylive.utils.evaluate_python import get_function_name
 
 
-from abstract_graph_model import GraphMimeData
+from py_graph_model import GraphMimeData
 
 
 class PyGraphView(QGraphicsView):
@@ -84,14 +84,14 @@ class PyGraphView(QGraphicsView):
                 (model.nodesAboutToBeRemoved, lambda nodes: 
                     self.removeNodeItems([node_key for node_key in nodes])),
 
-                (model.dataChanged, lambda node, hints:
-                    self.updateNodeItems([node], hints)),
+                (model.dataChanged, lambda node_keys, hints:
+                    self.updateNodeItems(node_keys, hints)),
 
-                (model.inletsReset, lambda node_key, model=model:
-                    self.resetInletItems(node_key)),
+                (model.inletsReset, lambda node_keys, model=model:
+                    self.resetInletItems(node_keys)),
 
-                (model.outletsReset, lambda node_key, model=model:
-                    self.resetOutletItems(node_key)),
+                (model.outletsReset, lambda node_keys, model=model:
+                    self.resetOutletItems(node_keys)),
 
                 # Node Links
                 (model.nodesLinked, lambda links:
@@ -127,8 +127,8 @@ class PyGraphView(QGraphicsView):
 
         ### inlets
         for node_key in self._model.nodes():
-            self.resetInletItems(node_key)
-            self.resetOutletItems(node_key)
+            self.resetInletItems([node_key])
+            self.resetOutletItems([node_key])
 
 
         ### links
@@ -141,7 +141,7 @@ class PyGraphView(QGraphicsView):
         self.layoutNodes()        
 
     ### Node
-    def addNodeItems(self, node_keys:Iterable[Hashable]):
+    def addNodeItems(self, node_keys:Iterable[str]):
         for node_key in node_keys:
             assert isinstance(node_key, str)
             if node_key not in self._node_widgets:
@@ -151,16 +151,16 @@ class PyGraphView(QGraphicsView):
                 node_widget._view = self
 
                 self.updateNodeItems([node_key])
-                self.resetInletItems(node_key)
-                self.resetOutletItems(node_key)
+                self.resetInletItems([node_key])
+                self.resetOutletItems([node_key])
             else:
                 self.updateNodeItems([node_key])
-                self.resetInletItems(node_key)
-                self.resetOutletItems(node_key)
+                self.resetInletItems([node_key])
+                self.resetOutletItems([node_key])
 
     def updateNodeItems(self, node_keys:Iterable[str], hints:list[Literal['source', 'position', 'needs_compilation', 'needs_evaluation', 'error', 'result']]=[]):
         assert self._model
-        assert all(key in self._node_widgets for key in node_keys)
+        assert all(key in self._node_widgets for key in node_keys), "{node_keys} some keys are not in graph"
         for node_key in node_keys:
             node_widget = self._node_widgets[node_key]
             
@@ -172,9 +172,8 @@ class PyGraphView(QGraphicsView):
             </div>
             """))
             assert self._model
-            source = self._model.data(node_key, 'name')
-            func_name = get_function_name(source)
-            node_widget.setHeaderText(node_key)
+            name_text = self._model.data(node_key, 'name')
+            node_widget.setHeaderText(name_text)
 
     def removeNodeItems(self, node_keys:list[str]):
         for key in node_keys:
@@ -187,30 +186,32 @@ class PyGraphView(QGraphicsView):
         return self._node_widgets[node]
 
     ### Ports
-    def resetInletItems(self, node_key:str):
+    def resetInletItems(self, node_keys:list[str]):
         assert self._model
-        node_widget = self._node_widgets[node_key]
-        # clear inlets
-        for item in node_widget._inlet_widgets.values():
-            self.scene().removeItem(item)
-        node_widget._inlet_widgets.clear()
+        for node_key in node_keys:
+            node_widget = self._node_widgets[node_key]
+            # clear inlets
+            for item in node_widget._inlet_widgets.values():
+                self.scene().removeItem(item)
+            node_widget._inlet_widgets.clear()
 
-        # insert all
-        inlet_keys = [_ for _ in self._model.inlets(node_key)]
-        self.insertInletItems(node_key, 0, inlet_keys)
+            # insert all
+            inlet_keys = [_ for _ in self._model.inlets(node_key)]
+            self.insertInletItems(node_key, 0, inlet_keys)
 
-    def resetOutletItems(self, node_key:str):
+    def resetOutletItems(self, node_keys:list[str]):
         assert self._model
-        node_widget = self._node_widgets[node_key]
+        for node_key in node_keys:
+            node_widget = self._node_widgets[node_key]
 
-        # clear outlets
-        for item in node_widget._outlet_widgets.values():
-            self.scene().removeItem(item)
-        node_widget._outlet_widgets.clear()
+            # clear outlets
+            for item in node_widget._outlet_widgets.values():
+                self.scene().removeItem(item)
+            node_widget._outlet_widgets.clear()
 
-        # insert all
-        outlet_keys = [_ for _ in self._model.outlets(node_key)]
-        self.insertOutletItems(node_key, 0, outlet_keys)
+            # insert all
+            outlet_keys = [_ for _ in self._model.outlets(node_key)]
+            self.insertOutletItems(node_key, 0, outlet_keys)
 
     def insertInletItems(self, node_key:str, index:int, inlet_keys:Iterable[str]):
         """insert inlet item for keys.
@@ -750,7 +751,7 @@ class NodeItem(QGraphicsItem):
         return self._header_text
 
     def setHeaderText(self, text:str):
-        print("set header text", text)
+        # print("set header text", text)
         self._header_text = text
         self.prepareGeometryChange()
         self.update()

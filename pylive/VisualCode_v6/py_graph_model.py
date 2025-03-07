@@ -14,13 +14,11 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 
-def say_hello(name:str):
-    return f"Hello {name}!"
-
 class _PyGraphItem:
-    def __init__(self, expression:str="print", kind:Literal["operator", 'value', 'expression']="operator", ):
+    def __init__(self, model:'PyGraphModel', expression:str="print", kind:Literal["operator", 'value', 'expression']="operator"):
         assert isinstance(expression, str)
         assert kind in ("operator", 'value')
+        self._model = model
         self._kind:Literal["operator", 'value', 'expression'] = kind
         self._expression = expression
         self._compile_cache = None
@@ -49,16 +47,14 @@ class _PyGraphItem:
         self._compile_cache = None
         self._cache = None
 
-    def _compile(self):
+    def _compile(self,):
         if not self._compile_cache:
-            self._compile_cache = eval(self._expression)
+            self._compile_cache = eval(self._expression, self._model._context)
 
         return self._compile_cache
 
     def inlets(self)->list[str]:
         match self._kind:
-            case 'value':
-                return []
             case 'operator':
                 try:
                     func = self._compile()
@@ -67,6 +63,8 @@ class _PyGraphItem:
                 else:
                     sig = inspect.signature(func)
                     return [name for name in sig.parameters.keys()]
+            case _:
+                return []
 
     def evaluate(self, named_args:dict):
         if not self._cache:
@@ -79,28 +77,53 @@ class _PyGraphItem:
 
         return self._cache
 
-
-
     def __str__(self):
         from textwrap import shorten
         match self._kind:
             case 'operator':
-                return f"𝒇 {self._compile_cache.__name__ if self._compile_cache else "(not compiled)"})"
+                return f"𝒇 {self._compile_cache.__name__ if self._compile_cache else "(not compiled)"}"
             case 'value':
-                return f"I {shorten(str(self._cache), 8)}"
+                return f"𝕀 {self._cache}"
             case 'expression':
-                return f"∑ {shorten(str(self._expression), 8)}"
-        
-
+                return f"⅀ {self._expression}"
 
 import pathlib
 
+from enum import StrEnum
+class GraphMimeData(StrEnum):
+    OutletData = 'application/outlet'
+    InletData = 'application/inlet'
+    LinkSourceData = 'application/link/source'
+    LinkTargetData = 'application/link/target'
 
-class PyGraphModel(AbstractGraphModel):
-    # Node data
+
+_NodeKey = str
+class PyGraphModel(QObject):
+    modelAboutToBeReset = Signal()
+    modelReset = Signal()
+
+    # Nodes
+    nodesAboutToBeAdded = Signal(list) # list of NodeKey
+    nodesAdded = Signal(list) # list of NodeKey
+    nodesAboutToBeRemoved = Signal(list) # list of NodeKey
+    nodesRemoved = Signal(list) # list of NodeKey
+
+    # 
+    dataChanged = Signal(list, list) # keys:list[str], hints:list[str], node key and list of data name hints. if hints is empty consider all data changed
+
+    # Links
+    nodesAboutToBeLinked = Signal(list) # list of edges: tuple[source, target, outlet, inlet]
+    nodesLinked = Signal(list) # list[NodeKey,NodeKey,NodeKey, NodeKey]
+    nodesAboutToBeUnlinked = Signal(list) # list[NodeKey,NodeKey,NodeKey,NodeKey]
+    nodesUnlinked = Signal(list) # list[NodeKey,NodeKey,NodeKey,NodeKey]
+
+    # Inlets
+    inletsReset = Signal(list) # list[_NodeKey]
+    outletsReset = Signal(list) # list[_NodeKey]
+
+    contextScriptChanged = Signal()
 
     def __init__(self, parent:QObject|None=None):
-        super().__init__(parent=parent)
         """
         PyGraphModel is model for a python computation graph.
         Each node has a unique name. Nodes has unique inlets.
@@ -108,7 +131,7 @@ class PyGraphModel(AbstractGraphModel):
         To evaluate a node in the gaph, cal _evaluateNodes_ with the specific nodes.
         All dependencies are automatically evaluated, unless specified otherwise.
         """
-
+        super().__init__(parent=parent)
         """TODO: store nodes and edges with networkx, 
         # but keep an eye on the proxy model implementation, which refers to nodes by index
         """
@@ -116,8 +139,44 @@ class PyGraphModel(AbstractGraphModel):
         self._links:set[tuple[str,str,str,str]] = set()
         self._auto_evaluate_filter = None
 
+        self._context_script:str = ""
+        self._context = {'__builtins__': __builtins__}
+
+    def restartKernel(self, script:str|None):
+        if script:
+            self.setContextScript(script)
+
+        import traceback
+        try:
+            context = {'__builtins__': __builtins__}
+            exec(self._context_script, context)
+        except SyntaxError as err:
+            traceback.print_exc()
+        except Exception as err:
+            traceback.print_exc()
+        else:
+            self._context = context
+            print("script successfully executed")
+        finally:
+            node_keys = [_ for _ in self.nodes()]
+            self.invalidate(node_keys, compilation=True)
+            # self.dataChanged.emit(node_keys, [])
+            # for node_key in node_keys:
+            #     self._node_data[node_key]._compile_cache = None
+            #     self._node_data[node_key].clearCache()
+                
+            # self.inletsReset.emit(node_keys)
+            # self.outletsReset.emit(node_keys)
+
+    def setContextScript(self, script:str):
+        self._context_script = script
+        self.contextScriptChanged.emit()
+
+    def contextScript(self):
+        return self._context_script
+
     ### Graph imlpementation
-    def nodes(self)->Collection[Hashable]:
+    def nodes(self)->Collection[str]:
         return [_ for _ in self._node_data.keys()]
 
     def links(self)->Collection[tuple[str,str,str,str]]:
@@ -149,7 +208,7 @@ class PyGraphModel(AbstractGraphModel):
         if name in self._node_data:
             raise ValueError("nodes must have a unique name")
         self.nodesAboutToBeAdded.emit([name])
-        self._node_data[name] = _PyGraphItem(expression, kind)
+        self._node_data[name] = _PyGraphItem(self, expression, kind)
         self.nodesAdded.emit([name])
 
     def removeNode(self, name:str):
@@ -178,21 +237,21 @@ class PyGraphModel(AbstractGraphModel):
         self._links.add( (source, target, outlet, inlet) )
         self.nodesLinked.emit([(source, target, outlet, inlet)])
         self._node_data[target].clearCache()
-        self.dataChanged.emit(target, ['result'])
+        self.dataChanged.emit([target], ['result'])
         
     def unlinkNodes(self, source:str, target:str, outlet:str, inlet:str):
         self.nodesAboutToBeUnlinked.emit([(source, target, outlet, inlet)])
         self._links.remove( (source, target, outlet, inlet) )
         self.nodesUnlinked.emit([(source, target, outlet, inlet)])
         self._node_data[target].clearCache()
-        self.dataChanged.emit(target, ['result'])
+        self.dataChanged.emit([target], ['result'])
         
     ### Node Data
     def data(self, node_key:str, attr:str)->Any:
         node_item = self._node_data[node_key]
         match attr:
             case 'name':
-                return f"{node_key}"
+                return f"{node_item}"
 
             case 'expression':
                 return f"{node_item.expression}"
@@ -225,23 +284,32 @@ class PyGraphModel(AbstractGraphModel):
             case _:
                 return getattr(node_item, attr)
 
+    def invalidate(self, nodes:list[str], compilation=False):
+        for node in nodes:
+            self._node_data[node]._cache = None
+
+            if compilation:
+                self._node_data[node]._compile_cache = None
+                self.inletsReset.emit([node])
+                self.outletsReset.emit([node])
+            
+            dependencies = [n for n in self.ancestors(node)]
+            dependencies.insert(0, node)
+            self.dataChanged.emit(dependencies.insert(0, node), ['result'])
+
     def setData(self, node:str, attr:str, value:str):
         node_item = self._node_data[node]
 
         match attr:
             case 'kind':
                 node_item.kind = value
-                self.dataChanged.emit(node, ['kind'])
-                self.inletsReset.emit(node)
-                self.outletsReset.emit(node)
-                self.dataChanged.emit(node, ['result'])
+                self.dataChanged.emit([node], ['kind'])
+                self.invalidate([node], compilation=True)
+
 
             case 'expression':
                 node_item.expression = value
-                self.dataChanged.emit(node, ['expression'])
-                self.inletsReset.emit(node)
-                self.outletsReset.emit(node)
-                self.dataChanged.emit(node, ['result'])
+                self.invalidate([node], compilation=True)
 
     ### Helpers
     def _toNetworkX(self)->nx.MultiDiGraph:
@@ -284,7 +352,9 @@ class PyGraphModel(AbstractGraphModel):
                         logger.warning("field values are not implemented yet!")
         
             node_item = _PyGraphItem(
-                source=node_data['source'],
+                self,
+                expression="print",
+                kind="operator"
             )
             self._node_data[node_data['name'].strip()] = node_item
 
