@@ -1,8 +1,4 @@
-context: "import pandoc\nfrom pathlib import Path\n\ndef root():\n    return Path(\"\
-  C:/Users/andris/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB edition\")\n\
-  \    \ndef join(folder:Path, file:Path):\n    return folder / file\n    \ndef read_text(path:Path):\n\
-  \    return path.read_text(encoding=\"utf-8\")\n    \ndef markdown_to_html(text):\n\
-  \    return text"
+context: from tests.dissertation_builder import *
 nodes:
 - name: MLWEYC
   kind: operator
@@ -25,22 +21,25 @@ nodes:
 - name: KZQFCW
   kind: operator
   expression: join
+- name: OJAJXV
+  kind: operator
+  expression: pandoc.read
 links:
+- source: MLWEYC
+  target: PXAICH
+  inlet: folder
 - source: WMMUVN
   target: PXAICH
+  inlet: file
+- source: DVSFGX
+  target: KZQFCW
   inlet: file
 - source: PXAICH
   target: GQBHCE
   inlet: path
+- source: MLWEYC
+  target: KZQFCW
+  inlet: folder
 - source: KZQFCW
   target: PPLUWR
   inlet: path
-- source: DVSFGX
-  target: KZQFCW
-  inlet: file
-- source: MLWEYC
-  target: PXAICH
-  inlet: folder
-- source: MLWEYC
-  target: KZQFCW
-  inlet: folder

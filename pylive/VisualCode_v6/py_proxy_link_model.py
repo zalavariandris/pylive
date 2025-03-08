@@ -4,18 +4,19 @@ from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
 
-from pylive.VisualCode_v5.py_graph_model import PyGraphModel
+from pylive.VisualCode_v6.py_graph_model import PyGraphModel
 from pylive.utils import group_consecutive_numbers
 
 
 class PyProxyLinkModel(QAbstractItemModel):
-    def __init__(self, source_model:PyGraphModel, parent:QObject|None=None):
+    def __init__(self, source_model:PyGraphModel|None=None, parent:QObject|None=None):
         super().__init__(parent=parent)
         self._links:list[tuple[str, str, str, str]] = list()
         self._source_model:PyGraphModel|None=None
 
         self._model_connections = []
-        self.setSourceModel(source_model)
+        if source_model:
+            self.setSourceModel(source_model)
 
         self._headers = ['source', 'target', 'outlet', 'inlet']
 

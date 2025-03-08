@@ -3,7 +3,7 @@ from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
-
+from pylive.VisualCode_v5.py_graph_model import PyGraphModel
 
 
 """ WIDGETS """
@@ -31,8 +31,6 @@ def boxlayout(direction:QBoxLayout.Direction, children:Sequence[QWidget|QLayout|
             case QWidget():
                 layout.addWidget(child)
             
-            
-
     return layout
 
 def vboxlayout(children:Sequence[QWidget|QLayout|QLayoutItem], stretch:Sequence[int]=[])->QVBoxLayout:

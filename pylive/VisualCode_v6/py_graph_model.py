@@ -142,7 +142,7 @@ class PyGraphModel(QObject):
         self._context_script:str = ""
         self._context = {'__builtins__': __builtins__}
 
-    def restartKernel(self, script:str|None):
+    def restartKernel(self, script:str|None=None):
         if script:
             self.setContextScript(script)
 
@@ -326,34 +326,29 @@ class PyGraphModel(QObject):
         return G
 
     ### Serialization
-    def load(self, path:Path|str):
-        text = Path(path).read_text()
-        self.deserialize(text)
+    @classmethod
+    def fromData(klass, data:dict)->Self:
+        graph = klass()
 
-    def save(self, path:Path|str):
-        text = self.serialize()
-        Path(path).write_text(text)
-
-    def fromData(self, data:dict)->bool:
-        self.modelAboutToBeReset.emit()
+        graph.modelAboutToBeReset.emit()
 
         ### iterate nodes (with potential links using @ syntax)
-        self._links = set()
-        self._node_data = OrderedDict()
+        graph._links = set()
+        graph._node_data = OrderedDict()
 
         for node_data in data['nodes']:
-            node_item = _PyGraphItem(self, node_data['expression'], node_data['kind'])
-            self._node_data[node_data['name']] = node_item
+            node_item = _PyGraphItem(graph, node_data['expression'], node_data['kind'])
+            graph._node_data[node_data['name']] = node_item
 
         for link_data in data['links']:
             edge_entry = link_data['source'], link_data['target'], 'out', link_data['inlet']
-            self._links.add( edge_entry )
+            graph._links.add( edge_entry )
 
 
-        self.modelReset.emit()
-        self.restartKernel(script=data['context'])
+        graph.modelReset.emit()
+        graph.restartKernel(script=data['context'])
 
-        return True
+        return graph
 
     def toData(self)->dict:
         data = dict({
@@ -383,11 +378,20 @@ class PyGraphModel(QObject):
 
         return data
 
-    def deserialize(self, text:str)->bool:
-        import yaml
-        data = yaml.load(text, Loader=yaml.SafeLoader)
-        return self.fromData(data)
+    # def deserialize(self, text:str)->bool:
+    #     import yaml
+    #     data = yaml.load(text, Loader=yaml.SafeLoader)
+    #     return self.fromData(data)
 
-    def serialize(self)->str:
-        import yaml
-        return yaml.dump(self.toData(), sort_keys=False)
+    # def serialize(self)->str:
+    #     import yaml
+    #     return yaml.dump(self.toData(), sort_keys=False)
+
+    # def fromFile(self, path:Path|str):
+    #     text = Path(path).read_text()
+    #     self.deserialize(text)
+
+    # def saveFile(self, path:Path|str):
+    #     text = self.serialize()
+    #     Path(path).write_text(text)
+

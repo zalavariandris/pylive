@@ -145,7 +145,7 @@ class PyGraphView(QGraphicsView):
         for node_key in node_keys:
             assert isinstance(node_key, str)
             if node_key not in self._node_widgets:
-                node_widget = NodeItem(key=node_key)
+                node_widget = NodeItem(model=self, key=node_key)
                 self._node_widgets[node_key] = node_widget
                 self.scene().addItem(node_widget)
                 node_widget._view = self
@@ -221,7 +221,7 @@ class PyGraphView(QGraphicsView):
         node_widget = self._node_widgets[node_key]
         for key in inlet_keys:
             if key not in node_widget._inlet_widgets:
-                widget = InletItem(key)
+                widget = InletItem(self, key)
                 node_key = node_key
                 node_widget._inlet_widgets[key] = widget
                 widget.setY(node_widget.boundingRect().top()-widget.boundingRect().bottom())
@@ -239,7 +239,7 @@ class PyGraphView(QGraphicsView):
         node_widget = self._node_widgets[node_key]
         for key in outlet_keys:
             if key not in node_widget._outlet_widgets.keys():
-                widget = OutletItem(key)
+                widget = OutletItem(self, key)
                 node_key = node_key
                 node_widget._outlet_widgets[key] = widget
                 widget.setY(node_widget.boundingRect().bottom()-widget.boundingRect().top())
@@ -478,21 +478,29 @@ class PyGraphView(QGraphicsView):
 
 
 class PortItem(QGraphicsItem):
-    def __init__(self, key:str, parent:QGraphicsItem|None=None):
+    def __init__(self, view:PyGraphView, key:str, parent:QGraphicsItem|None=None):
         super().__init__(parent=parent)
         self.key = key
         self.label = QGraphicsTextItem(f"{self.key}")
         self.label.setParentItem(self)
-        self.label.setPos(0,-20)
+        self.label.setPos(0,-25)
         self.label.hide()
         self.setAcceptHoverEvents(True)
         r = 3
         # self.setGeometry(QRectF(-r,-r,r*2,r*2))
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges, True)
-        self._view:PyGraphView|None = None
+        self._view = view
 
-    def view(self)->PyGraphView|None:
+    def view(self)->PyGraphView:
         return self._view
+
+    def hoverEnterEvent(self, event: QGraphicsSceneHoverEvent) -> None:
+        self.label.show()
+        super().hoverEnterEvent(event)
+
+    def hoverLeaveEvent(self, event: QGraphicsSceneHoverEvent, /) -> None:
+        self.label.hide()
+        super().hoverLeaveEvent(event)
 
     def itemChange(self, change: QGraphicsItem.GraphicsItemChange, value: Any) -> Any:
         if change == QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
@@ -530,8 +538,8 @@ class PortItem(QGraphicsItem):
 
 
 class InletItem(PortItem):
-    def __init__(self, key: str, parent: QGraphicsItem | None = None):
-        super().__init__(key, parent)
+    def __init__(self, view:PyGraphView, key: str, parent: QGraphicsItem | None = None):
+        super().__init__(view, key, parent)
         self.setAcceptHoverEvents(True)
         self.setAcceptDrops(True)
 
@@ -638,8 +646,8 @@ class InletItem(PortItem):
 
 
 class OutletItem(PortItem):
-    def __init__(self, key: str, parent: QGraphicsItem | None = None):
-        super().__init__(key, parent)
+    def __init__(self, view:PyGraphView, key: str, parent: QGraphicsItem | None = None):
+        super().__init__(view, key, parent)
         self.setAcceptHoverEvents(True)
         self.setAcceptDrops(True)
 
@@ -729,8 +737,9 @@ class OutletItem(PortItem):
 
 class NodeItem(QGraphicsWidget):
     # scenePositionChanged = Signal()
-    def __init__(self, key:str, parent:QGraphicsItem|None=None):
+    def __init__(self, model:PyGraphModel, key:str, parent:QGraphicsItem|None=None):
         super().__init__(parent=parent)
+        self._model = model
         self.key:str = key
         self._header_text = f"{self.key}"
 
@@ -755,9 +764,6 @@ class NodeItem(QGraphicsWidget):
         self._header_text = text
         self.prepareGeometryChange()
         self.update()
-
-    def view(self)->PyGraphView|None:
-        return self._view
 
     def font(self):
         if widget:=self.parentWidget():
@@ -817,9 +823,6 @@ class LinkItem(QGraphicsLineItem):
 
         self.setAcceptHoverEvents(True)
         self._view:PyGraphView|None = None
-
-    def view(self)->PyGraphView|None:
-        return self._view
 
     def move(self):
         assert self._view
