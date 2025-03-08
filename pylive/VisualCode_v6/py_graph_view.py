@@ -727,7 +727,7 @@ class OutletItem(PortItem):
         return super().dragMoveEvent(event)
 
 
-class NodeItem(QGraphicsItem):
+class NodeItem(QGraphicsWidget):
     # scenePositionChanged = Signal()
     def __init__(self, key:str, parent:QGraphicsItem|None=None):
         super().__init__(parent=parent)

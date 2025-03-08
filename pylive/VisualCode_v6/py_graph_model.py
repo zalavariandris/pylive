@@ -83,12 +83,12 @@ class _PyGraphItem:
             case 'operator':
                 return f"𝒇 {self._compile_cache.__name__ if self._compile_cache else "(not compiled)"}"
             case 'value':
-                return f"𝕀 {self._cache}"
+                return f"𝕍 {self._cache}"
             case 'expression':
                 return f"⅀ {self._expression}"
 
-import pathlib
 
+import pathlib
 from enum import StrEnum
 class GraphMimeData(StrEnum):
     OutletData = 'application/outlet'
@@ -272,11 +272,9 @@ class PyGraphModel(QObject):
                     value = self._node_data[node_key].evaluate(named_args)
                 except SyntaxError as err:
                     import traceback
-                    # traceback.print_exc()
                     return err, None
                 except Exception as err:
                     import traceback
-                    # traceback.print_exc()
                     return err, None
                 else:
                     return None, value
@@ -284,18 +282,23 @@ class PyGraphModel(QObject):
             case _:
                 return getattr(node_item, attr)
 
-    def invalidate(self, nodes:list[str], compilation=False):
-        for node in nodes:
-            self._node_data[node]._cache = None
-
+    def invalidate(self, nodes:list[str], compilation:bool=True):
+        # invalidate node results including ancestors.
+        # if compilation is true, invalidate nodes compile_cache
+        assert isinstance(nodes, list)
+        for node_key in nodes:
+            node_item = self._node_data[node_key]
             if compilation:
-                self._node_data[node]._compile_cache = None
-                self.inletsReset.emit([node])
-                self.outletsReset.emit([node])
-            
-            dependencies = [n for n in self.ancestors(node)]
-            dependencies.insert(0, node)
-            self.dataChanged.emit(dependencies.insert(0, node), ['result'])
+                node_item._compile_cache = None
+                self.inletsReset.emit([node_key])
+                self.outletsReset.emit([node_key])
+
+            dependents = [n for n in self.descendants(node_key)]
+            dependents.insert(0, node_key)
+
+            for dep in dependents:
+                self._node_data[dep]._cache = None
+            self.dataChanged.emit(dependents, ['result'])
 
     def setData(self, node:str, attr:str, value:str):
         node_item = self._node_data[node]
@@ -304,11 +307,13 @@ class PyGraphModel(QObject):
             case 'kind':
                 node_item.kind = value
                 self.dataChanged.emit([node], ['kind'])
-                self.invalidate([node], compilation=True)
 
+                # invalidate compilation and results including ancestors
+                self.invalidate([node], compilation=True)
 
             case 'expression':
                 node_item.expression = value
+                self.dataChanged.emit([node], ['expression'])
                 self.invalidate([node], compilation=True)
 
     ### Helpers
@@ -336,66 +341,45 @@ class PyGraphModel(QObject):
         self._links = set()
         self._node_data = OrderedDict()
 
-        for node_data in data['nodes']:        
-            if fields:=node_data.get('fields'):
-                for name, value in fields.items():
-                    if isinstance(value, str) and value.strip().startswith("->"):
-                        source = value.strip()[2:].strip()
-                        target = node_data['name'].strip()
-                        outlet = 'out'
-                        inlet = name.strip()
-                        assert isinstance(source, str)
-                        assert isinstance(target, str)
-                        assert isinstance(inlet, str)
-                        self._links.add( (source, target, outlet, inlet) )
-                    else:
-                        logger.warning("field values are not implemented yet!")
-        
-            node_item = _PyGraphItem(
-                self,
-                expression="print",
-                kind="operator"
-            )
-            self._node_data[node_data['name'].strip()] = node_item
+        for node_data in data['nodes']:
+            node_item = _PyGraphItem(self, node_data['expression'], node_data['kind'])
+            self._node_data[node_data['name']] = node_item
 
-        ### iterate explicit edges
-        def linkFromData(data:dict)->tuple[str,str,str,str]:
-            return (
-                data['source'],
-                data['target'],
-                'out',
-                data['inlet']
-            )
-
-        if data.get('edges', None):
-            edges_data:Sequence[dict[str, str]] = data.get('edges', [])
-            self._links |= set( map(linkFromData, edges_data ) )
+        for link_data in data['links']:
+            edge_entry = link_data['source'], link_data['target'], 'out', link_data['inlet']
+            self._links.add( edge_entry )
 
 
         self.modelReset.emit()
+        self.restartKernel(script=data['context'])
 
         return True
 
     def toData(self)->dict:
         data = dict({
-            'nodes': []
+            'context': "",
+            'nodes': [],
+            'links': []
         })
 
-        for node_name, node_item in self._node_data.items():
-            node_data:dict[Literal['name', 'source', 'fields'], Any] = {
-                'name': node_name,
-                'source':node_item.source
+        data['context'] = self.contextScript()
+
+        for node_key, node_item in self._node_data.items():
+            node_data:dict[Literal['name', 'kind', 'expression'], Any] = {
+                'name': node_key,
+                'kind':node_item.kind,
+                'expression': node_item.expression
             }
 
-            fields_data = dict()        
-            for source, target, outlet, inlet in self.inLinks(node_name):
-                assert target == node_name
-                fields_data[inlet] = f" -> {source}"
-
-            if len(fields_data)>0:
-                node_data['fields'] = fields_data
-
             data['nodes'].append(node_data)
+
+        for source, target, outlet, inlet in self._links:
+            edge_data = {
+                'source': source,
+                'target': target,
+                'inlet': inlet
+            }
+            data['links'].append(edge_data)
 
         return data
 
@@ -407,4 +391,3 @@ class PyGraphModel(QObject):
     def serialize(self)->str:
         import yaml
         return yaml.dump(self.toData(), sort_keys=False)
-

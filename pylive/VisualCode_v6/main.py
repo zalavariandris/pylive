@@ -80,9 +80,20 @@ class Window(QWidget):
         self.links_table_view.setModel(self.link_proxy_model)
         self.links_table_view.setSelectionModel(self.link_selection_model)
 
-        ### Inspector
+        ### Script editor
+        def set_script_editor():
+            if self.context_edit.toPlainText() != self.graph_model.contextScript():
+                self.context_edit.setPlainText(self.graph_model.contextScript())
+
+        def set_script_model():
+            if self.context_edit.toPlainText() != self.graph_model.contextScript():
+                self.graph_model.restartKernel(self.context_edit.toPlainText())
+
         self.context_edit = ScriptEdit()
-        self.context_edit.textChanged.connect(lambda: self.graph_model.restartKernel(self.context_edit.toPlainText()))
+        self.context_edit.textChanged.connect(set_script_model)
+        self.graph_model.contextScriptChanged.connect(set_script_editor)
+
+        ### Inspector
         self.kind_dropdown = QComboBox()
         self.kind_dropdown.insertItems(0, ['operator', 'value', 'expression'])
         self.kind_dropdown.setDisabled(True)
@@ -133,22 +144,32 @@ class Window(QWidget):
         viewmenu.addActions([self.layout_nodes_action, self.center_nodes_action])
 
         ### Layout
+        inspector_panel = qf.widget(qf.vboxlayout([
+            self.kind_dropdown,
+            self.expression_edit,
+        ]))
+        graphpanel = QWidget()
+        grid_layout = QGridLayout()
+        grid_layout.addWidget(self.graph_view, 0, 0)
+        inspector_panel.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
+        grid_layout.addWidget(inspector_panel, 0, 0, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignTop)
+        graphpanel.setLayout(grid_layout)
+
+        preview_panel = QScrollArea(alignment=Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignHCenter, widgetResizable=True)
+        self.preview_label.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
+        preview_panel.setWidget(self.preview_label)
+
         main_layout = qf.vboxlayout([
             qf.splitter(Qt.Orientation.Horizontal, [
-                qf.widget(qf.vboxlayout([
-                    self.context_edit,
-                    self.kind_dropdown,
-                    self.expression_edit,
-                    qf.spacer(0,500, wPolicy=QSizePolicy.Policy.Minimum, hPolicy=QSizePolicy.Policy.Minimum)
-                ])),
+                self.context_edit,
                 qf.tabwidget({
-                    'graph':self.graph_view,
+                    'graph': graphpanel,
                     'sheets':qf.widget(qf.vboxlayout([
                         self.nodes_table_view,
                         self.links_table_view,
                     ])),
-                }), 
-                self.preview_label
+                }),
+                preview_panel
             ]),
             self.statusbar
         ])
@@ -257,6 +278,7 @@ class Window(QWidget):
         for signal, slot in self.graph_view_connections:
             signal.connect(slot)
             
+
 
         menubar_connections = [
             (self.open_action.triggered, lambda: self.openFile()),
@@ -406,7 +428,7 @@ class Window(QWidget):
     def closeFile(self)->bool:
         """return False, if the user cancelled, otherwise true"""
         if self._is_modified:
-            match QMessageBox.question(self, "Save changes before closing?", f"{self._filepath or "unititled"}", QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel):
+            match QMessageBox.question(self, "Save changes before closing?", f"{self._filepath or "unititled"}", QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.No):
                 case QMessageBox.StandardButton.Yes:
                     self.saveFile()
                     return True
@@ -415,6 +437,10 @@ class Window(QWidget):
                 case QMessageBox.StandardButton.Cancel:
                     return False
         return True
+
+    def closeEvent(self, event: QCloseEvent, /) -> None:
+        if self.closeFile():
+            super().closeEvent(event)
 
     def filepath(self):
         return self._filepath
@@ -455,4 +481,4 @@ if __name__ == "__main__":
     window.setGeometry(QRect(QPoint(), app.primaryScreen().size()).adjusted(40,80,-30,-300))
     window.show()
     sys.exit(app.exec())
-# 
+    

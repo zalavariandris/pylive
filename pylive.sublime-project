@@ -18,6 +18,7 @@
             "name": "Python: Run File (CrossPlatform)",
             "windows": {
                 "cmd": ["${project_path}/.venv/Scripts/python.exe", "-u", "$file"],
+                "env": { "PYTHONIOENCODING": "utf-8" }
             },
             "osx": {
                 "cmd": ["${project_path}/.venv/bin/python3", "-u", "$file"],

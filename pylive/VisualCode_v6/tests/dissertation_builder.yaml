@@ -1,0 +1,46 @@
+context: "import pandoc\nfrom pathlib import Path\n\ndef root():\n    return Path(\"\
+  C:/Users/andris/iCloudDrive/iCloud~md~obsidian/DisszertacioNotes/WEB edition\")\n\
+  \    \ndef join(folder:Path, file:Path):\n    return folder / file\n    \ndef read_text(path:Path):\n\
+  \    return path.read_text(encoding=\"utf-8\")\n    \ndef markdown_to_html(text):\n\
+  \    return text"
+nodes:
+- name: MLWEYC
+  kind: operator
+  expression: root
+- name: GQBHCE
+  kind: operator
+  expression: read_text
+- name: PPLUWR
+  kind: operator
+  expression: read_text
+- name: WMMUVN
+  kind: value
+  expression: "\"1. Bevezet\u0151.md\""
+- name: PXAICH
+  kind: operator
+  expression: join
+- name: DVSFGX
+  kind: value
+  expression: '"ref.bib"'
+- name: KZQFCW
+  kind: operator
+  expression: join
+links:
+- source: WMMUVN
+  target: PXAICH
+  inlet: file
+- source: PXAICH
+  target: GQBHCE
+  inlet: path
+- source: KZQFCW
+  target: PPLUWR
+  inlet: path
+- source: DVSFGX
+  target: KZQFCW
+  inlet: file
+- source: MLWEYC
+  target: PXAICH
+  inlet: folder
+- source: MLWEYC
+  target: KZQFCW
+  inlet: folder
