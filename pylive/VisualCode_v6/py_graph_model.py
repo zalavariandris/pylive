@@ -81,7 +81,7 @@ class _PyGraphItem:
         from textwrap import shorten
         match self._kind:
             case 'operator':
-                return f"𝒇 {self._compile_cache.__name__ if self._compile_cache else "(not compiled)"}"
+                return f"𝒇 {self._compile_cache.__name__ if self._compile_cache else f"{self._expression}"}"
             case 'value':
                 return f"𝕍 {self._cache}"
             case 'expression':
@@ -97,6 +97,8 @@ class GraphMimeData(StrEnum):
     LinkTargetData = 'application/link/target'
 
 
+
+import importlib
 _NodeKey = str
 class PyGraphModel(QObject):
     modelAboutToBeReset = Signal()
@@ -114,7 +116,7 @@ class PyGraphModel(QObject):
     # Links
     nodesAboutToBeLinked = Signal(list) # list of edges: tuple[source, target, outlet, inlet]
     nodesLinked = Signal(list) # list[NodeKey,NodeKey,NodeKey, NodeKey]
-    nodesAboutToBeUnlinked = Signal(list) # list[NodeKey,NodeKey,NodeKey,NodeKey]
+    nodesAboutToBeUnlinked = Signal(list) # list[NodeKey,NodeK ey,NodeKey,NodeKey]
     nodesUnlinked = Signal(list) # list[NodeKey,NodeKey,NodeKey,NodeKey]
 
     # Inlets
@@ -135,45 +137,39 @@ class PyGraphModel(QObject):
         """TODO: store nodes and edges with networkx, 
         # but keep an eye on the proxy model implementation, which refers to nodes by index
         """
+
         self._node_data:OrderedDict[str, _PyGraphItem] = OrderedDict()
         self._links:set[tuple[str,str,str,str]] = set()
         self._auto_evaluate_filter = None
 
+        self._modules: list[str] = []
         self._context_script:str = ""
         self._context = {'__builtins__': __builtins__}
 
-    def restartKernel(self, script:str|None=None):
-        if script:
-            self.setContextScript(script)
+    def setModules(self, modules:list[str]):
+        assert isinstance(modules, list)
+        assert all(isinstance(m, str) for m in modules)
+        print("setModules", modules)
+        self._modules = modules
+        self.restartKernel()
 
+    def modules(self):
+        return self._modules
+
+    def restartKernel(self):
         import traceback
-        try:
-            context = {'__builtins__': __builtins__}
-            exec(self._context_script, context)
-        except SyntaxError as err:
-            traceback.print_exc()
-        except Exception as err:
-            traceback.print_exc()
-        else:
-            self._context = context
-            print("script successfully executed")
-        finally:
-            node_keys = [_ for _ in self.nodes()]
-            self.invalidate(node_keys, compilation=True)
-            # self.dataChanged.emit(node_keys, [])
-            # for node_key in node_keys:
-            #     self._node_data[node_key]._compile_cache = None
-            #     self._node_data[node_key].clearCache()
-                
-            # self.inletsReset.emit(node_keys)
-            # self.outletsReset.emit(node_keys)
 
-    def setContextScript(self, script:str):
-        self._context_script = script
-        self.contextScriptChanged.emit()
+        context = {
+            '__builtins__': __builtins__
+        }
+        for module_name in self._modules:
+            assert isinstance(module_name, str), "got: {module_name}"
+            context[module_name] = importlib.import_module(module_name)
 
-    def contextScript(self):
-        return self._context_script
+        self._context = context
+
+        node_keys = [_ for _ in self.nodes()]
+        self.invalidate(node_keys, compilation=True)
 
     ### Graph imlpementation
     def nodes(self)->Collection[str]:
@@ -230,7 +226,7 @@ class PyGraphModel(QObject):
         #     raise ValueError(f"graph has no node named: '{target}'")
         # parameter_names = set(map(lambda item:item.name, self._nodes[target].parameters))
 
-        # if inlet not in parameter_names:
+        # if inlet not in parameter_names
         #     raise ValueError(f"node '{target}' has no parameter named: '{inlet}'!")
 
         self.nodesAboutToBeLinked.emit( [(source, target, outlet, inlet)] )
@@ -346,7 +342,9 @@ class PyGraphModel(QObject):
 
 
         graph.modelReset.emit()
-        graph.restartKernel(script=data['context'])
+        if modules:=data.get('modules'):
+            graph.setModules(modules)
+        graph.restartKernel()
 
         return graph
 
@@ -357,7 +355,7 @@ class PyGraphModel(QObject):
             'links': []
         })
 
-        data['context'] = self.contextScript()
+        # data['context'] = self.contextScript()
 
         for node_key, node_item in self._node_data.items():
             node_data:dict[Literal['name', 'kind', 'expression'], Any] = {

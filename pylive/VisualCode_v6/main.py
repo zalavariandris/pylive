@@ -1,3 +1,4 @@
+from importlib.machinery import ModuleSpec
 from typing import *
 from PySide6.QtCore import *
 from PySide6.QtGui import *
@@ -23,6 +24,94 @@ from pylive.QtScriptEditor.script_edit import ScriptEdit
 from pylive.utils.unique import make_unique_id
 import pylive.utils.qtfactory as qf
 
+import sys
+class PyLocalModulesModel(QAbstractItemModel):
+    def __init__(self, parent:QObject|None=None):
+        super().__init__(parent=parent)
+        import pkgutil
+
+        self._root = Path().cwd()
+        self._enabled_modules:set[str] = set()
+
+    def setRoot(self, path:str|Path):
+        self.beginResetModel()
+        self._root = Path(path)
+        self.endResetModel()
+        
+    def _get_local_modules(self)->list[str]:
+        modules = [file.stem for file in self._root.iterdir() if file.is_file() and file.suffix==".py" and file.name!="__init__.py"]
+        return modules
+
+    def rowCount(self, /, parent: QModelIndex | QPersistentModelIndex = QModelIndex()) -> int:
+        modules = self._get_local_modules()
+        return len(modules)
+
+    def columnCount(self, /, parent: QModelIndex | QPersistentModelIndex = QModelIndex()) -> int:
+        return 2
+
+    def data(self, index: QModelIndex | QPersistentModelIndex, /, role: int = Qt.ItemDataRole.DisplayRole) -> Any:
+        modules = self._get_local_modules()
+        module_name = modules[index.row()]
+        if index.column() == 0: #name
+            if role == Qt.ItemDataRole.DisplayRole:
+                return module_name
+
+        if index.column() == 1: #name
+            if role == Qt.ItemDataRole.DisplayRole:
+                return module_name in self._enabled_modules
+            if role == Qt.ItemDataRole.EditRole:
+                return module_name in self._enabled_modules
+
+        return None
+
+    def setData(self, index: QModelIndex | QPersistentModelIndex, value: Any, /, role: int = Qt.ItemDataRole.EditRole) -> bool:
+        if index.column()==1:
+            if role == Qt.ItemDataRole.EditRole:
+                module_name = self._get_local_modules()[index.row()]
+                if value and module_name not in self._enabled_modules:
+                    self._enabled_modules.add(module_name)
+                    self.dataChanged.emit(index, index)
+                
+                if not value and module_name in self._enabled_modules:
+                    self._enabled_modules.remove(module_name)
+                    self.dataChanged.emit(index, index)
+        return super().setData(index, value, role)
+
+    def flags(self, index: QModelIndex | QPersistentModelIndex, /) -> Qt.ItemFlag:
+        flags = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
+        if index.column()==1:
+            flags |= Qt.ItemFlag.ItemIsEditable
+        return flags
+
+    def headerData(self, section: int, orientation: Qt.Orientation, /, role: int = Qt.ItemDataRole.DisplayRole) -> Any:
+        if orientation == Qt.Orientation.Horizontal:
+            return ["name", "loaded"][section]
+        return super().headerData(section, orientation, role)
+
+    def index(self, row: int, column: int, /, parent: QModelIndex | QPersistentModelIndex = QModelIndex()) -> QModelIndex:
+        return self.createIndex(row, column)
+
+    def parent(self, index):
+        return QModelIndex()
+
+
+class PyModulesPanel(QWidget):
+    def __init__(self, parent:QWidget|None=None):
+        super().__init__(parent=parent)
+        self.setWindowTitle("Modules")
+        self._model:PyLocalModulesModel|None = None
+        self.view = QTableView()
+        self.view.verticalHeader().setVisible(False)
+
+        layout = QVBoxLayout()
+        self.title_label = QLabel("<h1>Local Modules</h1>")
+        layout.addWidget(self.title_label)
+        layout.addWidget(self.view)
+        self.setLayout(layout)
+
+    def setModel(self, model:PyLocalModulesModel|None):
+        self.view.setModel(model)
+
 
 class Window(QWidget):
     def __init__(self, parent:QWidget|None=None):
@@ -37,12 +126,25 @@ class Window(QWidget):
 
         # MODEL
         self._model:PyGraphModel|None = None
+        def set_modules():
+            assert self._model
+            modules = []
+            for row in range(self._local_modules.rowCount()):
+                module_name = self._local_modules.index(row, 0).data(Qt.ItemDataRole.DisplayRole)
+                module_enabled = self._local_modules.index(row, 1).data(Qt.ItemDataRole.DisplayRole)
+                if module_enabled:
+                    modules.append(module_name)
+            self._model.setModules(modules)
+        self._local_modules = PyLocalModulesModel()
+        self._local_modules.modelReset.connect(lambda: set_modules())
+        self._local_modules.dataChanged.connect(lambda: set_modules())
+        self._local_modules.rowsInserted.connect(lambda: set_modules())
+        self._local_modules.rowsRemoved.connect(lambda: set_modules())
         
         ### bindings
         self._connections = []
         self._document_connections = []
         self._graph_view_connections = []
-
 
         # PROXY MODELS
         self.link_proxy_model = PyProxyLinkModel()
@@ -59,18 +161,15 @@ class Window(QWidget):
     def showEvent(self, event: QShowEvent) -> None:
         self.graph_view.centerNodes()
 
-    def set_script_editor(self):
-        if self.context_edit.toPlainText() != self._model.contextScript():
-            self.context_edit.setPlainText(self._model.contextScript())
-
-    def set_script_model(self):
-        if self.context_edit.toPlainText() != self._model.contextScript():
-            self._model.restartKernel(self.context_edit.toPlainText())
-
     def setupUI(self):
         ### GRAPH View
         self.graph_view = PyGraphView()
         self.graph_view.installEventFilter(self)
+
+        ### modules panel
+        self.modules_panel = PyModulesPanel()
+
+        self.modules_panel.setModel(self._local_modules)
 
         ### SheetsView
         self.nodes_table_view = QTableView()
@@ -84,15 +183,7 @@ class Window(QWidget):
         # self.links_table_view.verticalHeader().setVisible(False)s
         self.links_table_view.setModel(self.link_proxy_model)
         self.links_table_view.setSelectionModel(self.link_selection_model)
-
-
-
-        self.context_edit = ScriptEdit()
-
-
-        self.context_edit.textChanged.connect(self.set_script_model)
         
-
         ### Inspector
         self.kind_dropdown = QComboBox()
         self.kind_dropdown.insertItems(0, ['operator', 'value', 'expression'])
@@ -170,7 +261,7 @@ class Window(QWidget):
 
         main_layout = qf.vboxlayout([
             qf.splitter(Qt.Orientation.Horizontal, [
-                self.context_edit,
+                self.modules_panel,
                 qf.tabwidget({
                     'graph': graphpanel,
                     'sheets':qf.widget(qf.vboxlayout([
@@ -205,7 +296,6 @@ class Window(QWidget):
             ### node editors
 
             self._connections = [
-                (model.contextScriptChanged, self.set_script_editor),
                 (model.dataChanged, lambda nodes, hints: 
                     self.set_node_editors(self.node_proxy_model.mapToSource(self.node_selection_model.currentIndex()), hints) 
                     if self.node_proxy_model.mapToSource(self.node_selection_model.currentIndex()) in nodes
@@ -229,7 +319,6 @@ class Window(QWidget):
                 signal.connect(slot)
 
         self._model = model
-        self.set_script_editor()
 
     def set_node_editors(self, node:str, hints:list=[]):
         self.expression_edit.setEnabled(True)
@@ -418,13 +507,13 @@ class Window(QWidget):
             traceback.print_exc()
         except Exception as err:
             import traceback
-
             print(f"Error occured while opening {filepath}", err)
             traceback.print_exc()
         else:
             self._filepath = filepath
             print(f"Successfully opened '{filepath}'!")
             self.updateWindowTitle()
+            self._local_modules.setRoot( Path(filepath).parent )
 
     def saveFile(self):
         filepath = self._filepath

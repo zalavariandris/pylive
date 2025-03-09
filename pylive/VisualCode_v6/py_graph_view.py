@@ -199,6 +199,21 @@ class PyGraphView(QGraphicsView):
             inlet_keys = [_ for _ in self._model.inlets(node_key)]
             self.insertInletItems(node_key, 0, inlet_keys)
 
+        # make sure link has the ports to connect to,
+        # TODO: test it. when an edge connects to an unexistent port, create the port anyway.
+        # the port can display dimmed, to show that its only there, becous the current state of the model is inconsistent.
+        
+        unexistent_inlets = defaultdict(list)
+        for source, target, outlet, inlet in self._link_widgets.keys():
+            if target in node_keys:
+                if inlet not in self._model.inlets(target):
+                    unexistent_inlets[target].append(inlet)
+                    # self.insertOutletItems(node_key, inser_position, )
+
+        for target, inlets in unexistent_inlets.items():
+            insert_position = len(self._model.inlets(target))
+            self.insertInletItems(target, insert_position, inlets)
+
     def resetOutletItems(self, node_keys:list[str]):
         assert self._model
         for node_key in node_keys:
@@ -209,9 +224,24 @@ class PyGraphView(QGraphicsView):
                 self.scene().removeItem(item)
             node_widget._outlet_widgets.clear()
 
-            # insert all
+            # insert from node outlets
             outlet_keys = [_ for _ in self._model.outlets(node_key)]
             self.insertOutletItems(node_key, 0, outlet_keys)
+
+        # make sure link has the ports to connect to,
+        # TODO: test it. when an edge connects to an unexistent port, create the port anyway.
+        # the port can display dimmed, to show that its only there, becous the current state of the model is inconsistent.
+        
+        unexistent_outlets = defaultdict(list)
+        for source, target, outlet, inlet in self._link_widgets.keys():
+            if source in node_keys:
+                if outlet not in self._model.outlets(source):
+                    unexistent_outlets[source].append(outlet)
+                    # self.insertOutletItems(node_key, inser_position, )
+
+        for source, outlets in unexistent_outlets.items():
+            insert_position = len(self._model.outlets(source))
+            self.insertOutletItems(source, insert_position, outlets)
 
     def insertInletItems(self, node_key:str, index:int, inlet_keys:Iterable[str]):
         """insert inlet item for keys.
