@@ -307,6 +307,14 @@ class PyGraphModel(QObject):
         # if inlet not in parameter_names
         #     raise ValueError(f"node '{target}' has no parameter named: '{inlet}'!")
 
+        if 'multi' not in self.inletFlags(target, inlet) and self.isInletLinked(target, inlet):
+            links_to_remove = []
+            for u, v, o, i in self._links:
+                if v == target and i==inlet:
+                    links_to_remove.append( (u,v,o,i) )
+            for u, v, o, i in links_to_remove:
+                self.unlinkNodes(u, v, o, i)
+
         self.nodesAboutToBeLinked.emit( [(source, target, outlet, inlet)] )
         self._links.add( (source, target, outlet, inlet) )
         self.nodesLinked.emit([(source, target, outlet, inlet)])
