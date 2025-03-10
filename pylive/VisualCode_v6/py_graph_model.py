@@ -100,7 +100,6 @@ class GraphMimeData(StrEnum):
     LinkTargetData = 'application/link/target'
 
 
-
 import importlib
 _NodeKey = str
 class PyGraphModel(QObject):
@@ -126,7 +125,7 @@ class PyGraphModel(QObject):
     inletsReset = Signal(list) # list[_NodeKey]
     outletsReset = Signal(list) # list[_NodeKey]
 
-    contextScriptChanged = Signal()
+    importsReset = Signal()
 
     def __init__(self, parent:QObject|None=None):
         """
@@ -145,27 +144,20 @@ class PyGraphModel(QObject):
         self._links:set[tuple[str,str,str,str]] = set()
         self._auto_evaluate_filter = None
 
-        self._import_model = PyImportsModel()
-        self._modules: list[str] = []
+        self._imports: list[str] = []
         self._context_script:str = ""
         self._context:dict[str, ModuleType] = {'__builtins__': __builtins__}
 
+        self._module_watcher = QFileSystemWatcher()
+        self.module_watcher_connections = []
 
-        self._local_modules = PyImportsModel()
-        self._local_modules.modelReset.connect(lambda: self._on_imports_changed())
-        self._local_modules.dataChanged.connect(lambda: self._on_imports_changed())
-        self._local_modules.rowsInserted.connect(lambda: self._on_imports_changed())
-        self._local_modules.rowsRemoved.connect(lambda: self._on_imports_changed())
-
-    def _on_imports_changed(self):
-        modules = []
-        for row in range(self._local_modules.rowCount()):
-            module_name = self._local_modules.index(row, 0).data(Qt.ItemDataRole.DisplayRole)
-            module_enabled = self._local_modules.index(row, 1).data(Qt.ItemDataRole.DisplayRole)
-            if module_enabled:
-                modules.append(module_name)
-
+    def setImports(self, imports:list[str]):
+        self._imports = imports
+        self.importsReset.emit()
         self.restartKernel()
+
+    def imports(self):
+        return [_ for _ in self._imports]
 
     def restartKernel(self):
         import traceback
@@ -173,11 +165,46 @@ class PyGraphModel(QObject):
         context:dict[str, ModuleType] = {
             '__builtins__': __builtins__
         }
-        for row in range(self._import_model.rowCount()):
-            module_name = self._import_model.data(self._import_model.index(row, 0), Qt.ItemDataRole.DisplayRole)
-            context[module_name] = importlib.import_module(module_name)
+
+        for module_name in self._imports:
+            # try:
+            import os
+            from pathlib import Path
+            cwd = Path.cwd()
+            try:
+                spec = importlib.util.spec_from_file_location(module_name, cwd/f"{module_name}.py")
+                module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)
+            except FileNotFoundError:
+                module = importlib.import_module(module_name)
+
+
+            context[module_name] = module
 
         self._context = context
+
+        if self._module_watcher:
+            for signal, slot in self.module_watcher_connections:
+                signal.disconnect(slot)
+
+        module_watcher = QFileSystemWatcher()
+        for name, module in context.items():
+            
+            try:
+                print(f"watch module {name}")
+                module_watcher.addPaths(module.__file__)
+            except AttributeError:
+                print(f"dont watch module {name}")
+
+        if module_watcher:
+            self.module_watcher_connections = [
+                (module_watcher.fileChanged, lambda: 
+                    self.invalidate([_ for _ in self.nodes()], compilation=True)) #TODO: invalidate only nodes from this module
+            ]
+            for signal, slot in self.module_watcher_connections:
+                signal.connect(slot)
+
+        self._module_watcher = module_watcher
 
         node_keys = [_ for _ in self.nodes()]
         # TODO invalidate effected nodes only!
@@ -354,20 +381,20 @@ class PyGraphModel(QObject):
 
 
         graph.modelReset.emit()
-        if modules:=data.get('modules'):
-            graph.setModules(modules)
+        if imports:=data.get('imports'):
+            graph.setImports(imports)
         graph.restartKernel()
 
         return graph
 
     def toData(self)->dict:
-        data = dict({
-            'context': "",
+        data:dict[str, Any] = dict({
+            'imports': "",
             'nodes': [],
             'links': []
         })
 
-        # data['context'] = self.contextScript()
+        data['imports'] = self.imports()
 
         for node_key, node_item in self._node_data.items():
             node_data:dict[Literal['name', 'kind', 'expression'], Any] = {
@@ -387,21 +414,4 @@ class PyGraphModel(QObject):
             data['links'].append(edge_data)
 
         return data
-
-    # def deserialize(self, text:str)->bool:
-    #     import yaml
-    #     data = yaml.load(text, Loader=yaml.SafeLoader)
-    #     return self.fromData(data)
-
-    # def serialize(self)->str:
-    #     import yaml
-    #     return yaml.dump(self.toData(), sort_keys=False)
-
-    # def fromFile(self, path:Path|str):
-    #     text = Path(path).read_text()
-    #     self.deserialize(text)
-
-    # def saveFile(self, path:Path|str):
-    #     text = self.serialize()
-    #     Path(path).write_text(text)
 

@@ -1,45 +1,50 @@
-context: from tests.dissertation_builder import *
+imports:
+- utils
+- pandoc
 nodes:
 - name: MLWEYC
   kind: operator
-  expression: root
+  expression: utils.root
 - name: GQBHCE
   kind: operator
-  expression: read_text
+  expression: utils.read_text
 - name: PPLUWR
   kind: operator
-  expression: read_text
+  expression: utils.read_text
 - name: WMMUVN
   kind: value
   expression: "\"1. Bevezet\u0151.md\""
 - name: PXAICH
   kind: operator
-  expression: join
+  expression: utils.join
 - name: DVSFGX
   kind: value
   expression: '"ref.bib"'
 - name: KZQFCW
   kind: operator
-  expression: join
+  expression: utils.join
 - name: OJAJXV
   kind: operator
   expression: pandoc.read
 links:
+- source: KZQFCW
+  target: PPLUWR
+  inlet: path
 - source: MLWEYC
   target: PXAICH
   inlet: folder
+- source: MLWEYC
+  target: KZQFCW
+  inlet: folder
+- source: GQBHCE
+  target: OJAJXV
+  inlet: source
 - source: WMMUVN
   target: PXAICH
-  inlet: file
-- source: DVSFGX
-  target: KZQFCW
   inlet: file
 - source: PXAICH
   target: GQBHCE
   inlet: path
-- source: MLWEYC
+- source: DVSFGX
   target: KZQFCW
-  inlet: folder
-- source: KZQFCW
-  target: PPLUWR
-  inlet: path
+  inlet: file

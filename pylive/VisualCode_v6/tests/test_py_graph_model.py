@@ -1,3 +1,10 @@
+
+###
+### TODO
+### - test if modules can be loaded from the folder of the current pylive graph file
+###
+
+
 from typing import *
 
 from PySide6.QtCore import *

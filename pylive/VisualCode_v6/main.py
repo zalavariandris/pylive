@@ -25,23 +25,74 @@ from pylive.utils.unique import make_unique_id
 import pylive.utils.qtfactory as qf
 
 
-
-class PyModulesPanel(QWidget):
+class ImportsManager(QWidget):
     def __init__(self, parent:QWidget|None=None):
         super().__init__(parent=parent)
-        self.setWindowTitle("Modules")
-        self._model:PyImportsModel|None = None
-        self.view = QTableView()
-        self.view.verticalHeader().setVisible(False)
-
+        self.imports_list = QListWidget()
         layout = QVBoxLayout()
-        self.title_label = QLabel("<h1>Local Modules</h1>")
-        layout.addWidget(self.title_label)
-        layout.addWidget(self.view)
+        layout.addWidget(QLabel("<h1>Imports manager</h1>"))
+        self.new_import_edit = QLineEdit()
+        layout.addWidget(self.new_import_edit)
+        layout.addWidget(self.imports_list)
+        self.delete_button = QPushButton("remove")
+        layout.addWidget(self.delete_button)
         self.setLayout(layout)
 
-    def setModel(self, model:PyImportsModel|None):
-        self.view.setModel(model)
+        self._model:PyGraphModel|None = None
+
+        self.completer = QCompleter(self.new_import_edit)
+        packages = self._listAvailablePackages()
+        packages_modell = QStringListModel(packages)
+        self.completer.setModel(packages_modell)
+        self.new_import_edit.setCompleter(self.completer)
+
+        self._connections = []
+
+    def setModel(self, model:PyGraphModel|None):
+        if self._model:
+            for signal, slot in self._connections:
+                signal.disconnect(slot)
+
+        if model:
+            def appendImport(module_name):
+                assert self._model
+                self.new_import_edit.clear()
+                current_imports = [_ for _ in self._model.imports()]
+                current_imports.append(module_name)
+                self._model.setImports(current_imports)
+
+            def removeSelectedImports():
+                assert self._model
+                selected_packages = [item.text() for item in self.imports_list.selectedItems()]
+                current_imports = self._model.imports()
+                new_imports = [pkg for pkg in current_imports if pkg not in selected_packages]
+                self._model.setImports(new_imports)
+
+            self._connections = [
+                (model.importsReset, self.refreshImports),
+                (self.new_import_edit.returnPressed, lambda: appendImport(self.new_import_edit.text())),
+                (self.delete_button.pressed, lambda: removeSelectedImports())
+            ]
+            for signal, slot in self._connections:
+                signal.connect(slot)
+
+
+
+        self._model = model
+        self.refreshImports()
+
+    def _listAvailablePackages(self):
+        import pkgutil
+        return [module.name 
+            for module in pkgutil.iter_modules() 
+            if not module.name.startswith("_")
+        ]
+
+    def refreshImports(self):
+        assert self._model
+        self.imports_list.clear()
+        for row, module_name in enumerate(self._model.imports()):
+            self.imports_list.insertItem(row, QListWidgetItem(module_name))
 
 
 class Window(QWidget):
@@ -57,7 +108,6 @@ class Window(QWidget):
 
         # MODEL
         self._model:PyGraphModel|None = None
-
         
         ### bindings
         self._connections = []
@@ -84,8 +134,8 @@ class Window(QWidget):
         self.graph_view = PyGraphView()
         self.graph_view.installEventFilter(self)
 
-        ### modules panel
-        self.modules_panel = PyModulesPanel()
+        ### Imports manager
+        self.import_manager = ImportsManager()
 
         ### SheetsView
         self.nodes_table_view = QTableView()
@@ -179,7 +229,7 @@ class Window(QWidget):
 
         main_layout = qf.vboxlayout([
             qf.splitter(Qt.Orientation.Horizontal, [
-                self.modules_panel,
+                self.import_manager,
                 qf.tabwidget({
                     'graph': graphpanel,
                     'sheets':qf.widget(qf.vboxlayout([
@@ -210,21 +260,21 @@ class Window(QWidget):
             self.link_proxy_model.setSourceModel(model)
             self.node_proxy_model.setSourceModel(model)
             self.graph_view.setModel(model)
-            self.modules_panel.setModel(model._import_model)
 
-            ### node editors
+            self.import_manager.setModel(model)
 
+            ### Connections
             self._connections = [
                 (model.dataChanged, lambda nodes, hints: 
                     self.set_node_editors(self.node_proxy_model.mapToSource(self.node_selection_model.currentIndex()), hints) 
                     if self.node_proxy_model.mapToSource(self.node_selection_model.currentIndex()) in nodes
                     else 
-                    None)
+                    None),
+
             ]
+
             for signal, slot in self._connections:
                 signal.connect(slot)
-
-            ### graph view
 
             ### document
             self._document_connections = [
@@ -418,7 +468,9 @@ class Window(QWidget):
                 return
 
         # read and parse existing text file
+        filepath = Path(filepath)
         try:
+            self.setWorkingDirectory(filepath.parent)
             import yaml
             text = Path(filepath).read_text()
             data = yaml.load(text, Loader=yaml.SafeLoader)
@@ -436,7 +488,12 @@ class Window(QWidget):
             self._filepath = filepath
             print(f"Successfully opened '{filepath}'!")
             self.updateWindowTitle()
-            self._local_modules.setRoot( Path(filepath).parent )
+
+    def setWorkingDirectory(self, path:Path):
+        assert path.is_dir()
+        import os
+        os.chdir(path)
+        print("setWorkingDirectory:", Path.cwd())
 
     def saveFile(self):
         assert self._model
@@ -544,5 +601,6 @@ if __name__ == "__main__":
     window = Window()
     window.setGeometry(QRect(QPoint(), app.primaryScreen().size()).adjusted(40,80,-30,-300))
     window.show()
+    window.openFile(Path.cwd()/"./tests/dissertation_builder.yaml")
     sys.exit(app.exec())
     
