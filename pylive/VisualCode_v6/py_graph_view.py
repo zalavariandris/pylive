@@ -145,7 +145,7 @@ class PyGraphView(QGraphicsView):
         for node_key in node_keys:
             assert isinstance(node_key, str)
             if node_key not in self._node_widgets:
-                node_widget = NodeItem(model=self, key=node_key)
+                node_widget = NodeItem(model=self._model, key=node_key)
                 self._node_widgets[node_key] = node_widget
                 self.scene().addItem(node_widget)
                 node_widget._view = self
@@ -767,7 +767,7 @@ class OutletItem(PortItem):
 
 class NodeItem(QGraphicsWidget):
     # scenePositionChanged = Signal()
-    def __init__(self, model:PyGraphModel, key:str, parent:QGraphicsItem|None=None):
+    def __init__(self, model:PyGraphModel|None, key:str, parent:QGraphicsItem|None=None):
         super().__init__(parent=parent)
         self._model = model
         self.key:str = key
