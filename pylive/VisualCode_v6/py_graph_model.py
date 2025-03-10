@@ -69,6 +69,25 @@ class _PyGraphItem:
             case _:
                 return []
 
+    def inletFlags(self, inlet:str)->set:
+        match self._kind:
+            case 'operator':
+                try:
+                    func = self._compile()
+                except Exception:
+                    return []
+                else:
+                    sig = inspect.signature(func)
+                    param = sig.parameters[inlet]
+                    flags = set()
+                    if param.default is param.empty:
+                        flags.add('required')
+                    if param.kind is inspect.Parameter.VAR_POSITIONAL:
+                        flags.add('multi')
+                    return flags
+            case _:
+                return set(['required'])
+
     def evaluate(self, named_args:dict):
         if not self._cache:
             match self._kind:
@@ -235,6 +254,26 @@ class PyGraphModel(QObject):
 
     def inlets(self, node:str)->Collection[str]:
         return self._node_data[node].inlets()
+
+    def isInletLinked(self, node:str, inlet:str)->bool:
+        #TODO: use ap proper graph structure eg.: networkx because this as well
+        for u, v, o, i in self._links:
+            if v == node and i == inlet:
+                return True
+        return False
+
+    def isOutletLinked(self, node:str, outlet:str)->bool:
+        #TODO: use ap proper graph structure eg.: networkx because this as well
+        for u, v, o, i in self._links:
+            if u == node and o == outlet:
+                return True
+        return False
+
+    def inletFlags(self, node:str, inlet:str)->set:
+        return self._node_data[node].inletFlags(inlet)
+
+    def inletData(self, node:str, inlet:str):
+        return self._node_data[node].inletData(inlet)
 
     def outlets(self, node:str)->Collection[str]:
         return ['out']

@@ -100,6 +100,14 @@ class PyGraphView(QGraphicsView):
                 (model.nodesAboutToBeUnlinked, lambda links:
                     self.removeLinkItems([(source, target, outlet, inlet) for source, target, outlet, inlet in links])
                     ),
+
+                # Ports linked Links
+                (model.nodesLinked, lambda links:
+                    [self.updateInletItems(v, [i]) for u, v, o, i in links]
+                    ),
+                (model.nodesUnlinked, lambda links:
+                    [self.updateInletItems(v, [i]) for u, v, o, i in links]
+                    ),
                 
             ]
             for signal, slot in self._model_connections:
@@ -246,18 +254,19 @@ class PyGraphView(QGraphicsView):
     def insertInletItems(self, node_key:str, index:int, inlet_keys:Iterable[str]):
         """insert inlet item for keys.
         if the item already exist, update it!"""
+        assert self._model
         assert not isinstance(inlet_keys, str)
         #TODO: index is not yet supported
         node_widget = self._node_widgets[node_key]
         for key in inlet_keys:
             if key not in node_widget._inlet_widgets:
-                widget = InletItem(self, key)
+                widget = InletItem(model=self._model, node=node_key, key=key)
+                widget._view = self
                 node_key = node_key
                 node_widget._inlet_widgets[key] = widget
                 widget.setY(node_widget.boundingRect().top()-widget.boundingRect().bottom())
                 widget.setParentItem(node_widget)
-                widget._view = self
-
+                self.updateInletItems(node_key, [key])
             else:
                 self.updateInletItems(node_key, [key])
         distribute_items_horizontal([_ for _ in node_widget._inlet_widgets.values()], node_widget.boundingRect())
@@ -265,19 +274,21 @@ class PyGraphView(QGraphicsView):
     def insertOutletItems(self, node_key:str, index:int, outlet_keys:Iterable[str]):
         """insert outlet item for keys.
         if the item already exist, update it!"""
+        assert self._model
         assert not isinstance(outlet_keys, str)
         node_widget = self._node_widgets[node_key]
         for key in outlet_keys:
             if key not in node_widget._outlet_widgets.keys():
-                widget = OutletItem(self, key)
+                widget = OutletItem(self._model, node_key, key)
+                widget._view = self
                 node_key = node_key
                 node_widget._outlet_widgets[key] = widget
                 widget.setY(node_widget.boundingRect().bottom()-widget.boundingRect().top())
                 widget.setParentItem(node_widget)
                 widget._view = self
-
+                self.updateOutletItems(node_key, [key])
             else:
-                self.updateInletItems(node_key, [key])
+                self.updateOutletItems(node_key, [key])
         distribute_items_horizontal([_ for _ in node_widget._outlet_widgets.values()], node_widget.boundingRect())
 
     def updateInletItems(self, node_key:str, inlet_keys:Iterable[str], hints=[]):
@@ -287,7 +298,7 @@ class PyGraphView(QGraphicsView):
         node_widget = self._node_widgets[node_key]
         for key in inlet_keys:
             widget = node_widget._inlet_widgets[key]
-            widget.update()
+            widget.refresh()
 
     def updateOutletItems(self, node_key:str, outlet_keys:Iterable[str], hints=None):
         """update inlet item for keys.
@@ -296,11 +307,11 @@ class PyGraphView(QGraphicsView):
         node_widget = self._node_widgets[node_key]
         for key in outlet_keys:
             widget = node_widget._outlet_widgets[key]
-            widget.update()
+            widget.refresh()
             
             # move attached links
-            link_keys = [link.key for link in widget.links]
-            widget.scenePositionChanged.connect(self.updateLinkItems(link_keys))
+            # link_keys = [link.key for link in widget.links]
+            # widget.scenePositionChanged.connect(self.updateLinkItems(link_keys))
 
     def removeInletItem(self, node_key:str, inlet_keys:Iterable[str]):
         """remove inlet item for keys.
@@ -349,7 +360,7 @@ class PyGraphView(QGraphicsView):
             inlet_item = self._node_widgets[target_key]._inlet_widgets[inlet_key]
             outlet_item = self._node_widgets[source_key]._outlet_widgets[outlet_key]
 
-            link_widget = LinkItem(link_key)
+            link_widget = LinkItem(model=self, key=link_key)
             self._link_widgets[link_key] = link_widget
             self.scene().addItem(link_widget)
             link_widget._view = self
@@ -508,28 +519,24 @@ class PyGraphView(QGraphicsView):
 
 
 class PortItem(QGraphicsItem):
-    def __init__(self, view:PyGraphView, key:str, parent:QGraphicsItem|None=None):
+    def __init__(self, parent:QGraphicsItem|None=None):
         super().__init__(parent=parent)
-        self.key = key
-        self.label = QGraphicsTextItem(f"{self.key}")
-        self.label.setParentItem(self)
-        self.label.setPos(0,-25)
-        self.label.hide()
+        self._label = QGraphicsTextItem(f"-port-")
+        self._label.setParentItem(self)
+        self._label.setPos(0,-25)
+        self._label.hide()
         self.setAcceptHoverEvents(True)
         r = 3
         # self.setGeometry(QRectF(-r,-r,r*2,r*2))
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges, True)
-        self._view = view
-
-    def view(self)->PyGraphView:
-        return self._view
+        self._view:PyGraphView|None = None
 
     def hoverEnterEvent(self, event: QGraphicsSceneHoverEvent) -> None:
-        self.label.show()
+        self._label.show()
         super().hoverEnterEvent(event)
 
     def hoverLeaveEvent(self, event: QGraphicsSceneHoverEvent, /) -> None:
-        self.label.hide()
+        self._label.hide()
         super().hoverLeaveEvent(event)
 
     def itemChange(self, change: QGraphicsItem.GraphicsItemChange, value: Any) -> Any:
@@ -568,10 +575,13 @@ class PortItem(QGraphicsItem):
 
 
 class InletItem(PortItem):
-    def __init__(self, view:PyGraphView, key: str, parent: QGraphicsItem | None = None):
-        super().__init__(view, key, parent)
+    def __init__(self, model:PyGraphModel, node:str, key: str, parent: QGraphicsItem | None = None):
+        super().__init__(parent)
         self.setAcceptHoverEvents(True)
         self.setAcceptDrops(True)
+        self.model = model
+        self.node = node
+        self.key = key
 
     def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         # Setup new drag
@@ -674,12 +684,50 @@ class InletItem(PortItem):
 
         return super().dragMoveEvent(event)
 
+    def boundingRect(self) -> QRectF:
+        r = 6
+        return QRectF(-r,-r,r*2,r*2)
+
+    def shape(self):
+        r = 3
+        path = QPainterPath()
+        path.addEllipse(QRectF(-r,-r,r*2,r*2))
+        return path
+
+    def paint(self, painter:QPainter, option:QStyleOption, widget:QWidget|None=None):
+        flags = self.model.inletFlags(self.node, self.key)
+        palette = widget.palette() if widget else QApplication.palette()
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(palette.text())
+
+
+        if QStyle.StateFlag.State_MouseOver in option.state:
+            painter.setBrush(palette.accent())
+
+        if 'required' in flags and not self.model.isInletLinked(self.node, self.key):
+            painter.setBrush(QBrush("red"))
+
+        r = 3
+        if 'multi' in flags:
+            painter.drawRoundedRect(-r,-r, r*4, r*2, r, r)
+        else:
+            painter.drawEllipse(QRectF(-r,-r,r*2,r*2))
+
+    def refresh(self):
+        self._label.setPlainText(f"{self.key}")
+        self.prepareGeometryChange()
+        self.update()
+
 
 class OutletItem(PortItem):
-    def __init__(self, view:PyGraphView, key: str, parent: QGraphicsItem | None = None):
-        super().__init__(view, key, parent)
+    def __init__(self, model:PyGraphModel, node:str, key: str, parent: QGraphicsItem | None = None):
+        super().__init__(parent)
         self.setAcceptHoverEvents(True)
         self.setAcceptDrops(True)
+        self.model = model
+        self.node = node
+        self.key = key
+        self._view:PyGraphView|None = None
 
     def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         # Setup new drag
@@ -764,12 +812,16 @@ class OutletItem(PortItem):
 
         return super().dragMoveEvent(event)
 
+    def refresh(self):
+        self._label.setPlainText(f"{self.key}")
+        self.update()
+
 
 class NodeItem(QGraphicsWidget):
     # scenePositionChanged = Signal()
     def __init__(self, model:PyGraphModel|None, key:str, parent:QGraphicsItem|None=None):
         super().__init__(parent=parent)
-        self._model = model
+        self.model = model
         self.key:str = key
         self._header_text = f"{self.key}"
 
@@ -845,8 +897,9 @@ class NodeItem(QGraphicsWidget):
 
 
 class LinkItem(QGraphicsLineItem):
-    def __init__(self, key:tuple[str,str,str,str], parent:QGraphicsItem|None=None):
+    def __init__(self, model:PyGraphModel, key:tuple[str,str,str,str], parent:QGraphicsItem|None=None):
         super().__init__(parent=parent)
+        self.model = model
         self.key:tuple[str,str,str,str] = key
         self.setLine(0,0,10,10)
         self.setPen(QPen(self.palette().text(), 1))

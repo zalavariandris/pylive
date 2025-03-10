@@ -52,7 +52,6 @@ class ImportsManager(QWidget):
         if self._model:
             for signal, slot in self._connections:
                 signal.disconnect(slot)
-
         if model:
             def appendImport(module_name):
                 assert self._model
@@ -75,8 +74,6 @@ class ImportsManager(QWidget):
             ]
             for signal, slot in self._connections:
                 signal.connect(slot)
-
-
 
         self._model = model
         self.refreshImports()
