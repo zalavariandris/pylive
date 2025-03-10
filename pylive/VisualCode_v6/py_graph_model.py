@@ -1,3 +1,4 @@
+from types import ModuleType
 from typing import *
 from PySide6.QtCore import *
 from PySide6.QtGui import *
@@ -13,6 +14,8 @@ import logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
+
+from pylive.VisualCode_v6.py_import_model import PyImportsModel
 
 class _PyGraphItem:
     def __init__(self, model:'PyGraphModel', expression:str="print", kind:Literal["operator", 'value', 'expression']="operator"):
@@ -142,33 +145,42 @@ class PyGraphModel(QObject):
         self._links:set[tuple[str,str,str,str]] = set()
         self._auto_evaluate_filter = None
 
+        self._import_model = PyImportsModel()
         self._modules: list[str] = []
         self._context_script:str = ""
-        self._context = {'__builtins__': __builtins__}
+        self._context:dict[str, ModuleType] = {'__builtins__': __builtins__}
 
-    def setModules(self, modules:list[str]):
-        assert isinstance(modules, list)
-        assert all(isinstance(m, str) for m in modules)
-        print("setModules", modules)
-        self._modules = modules
+
+        self._local_modules = PyImportsModel()
+        self._local_modules.modelReset.connect(lambda: self._on_imports_changed())
+        self._local_modules.dataChanged.connect(lambda: self._on_imports_changed())
+        self._local_modules.rowsInserted.connect(lambda: self._on_imports_changed())
+        self._local_modules.rowsRemoved.connect(lambda: self._on_imports_changed())
+
+    def _on_imports_changed(self):
+        modules = []
+        for row in range(self._local_modules.rowCount()):
+            module_name = self._local_modules.index(row, 0).data(Qt.ItemDataRole.DisplayRole)
+            module_enabled = self._local_modules.index(row, 1).data(Qt.ItemDataRole.DisplayRole)
+            if module_enabled:
+                modules.append(module_name)
+
         self.restartKernel()
-
-    def modules(self):
-        return self._modules
 
     def restartKernel(self):
         import traceback
 
-        context = {
+        context:dict[str, ModuleType] = {
             '__builtins__': __builtins__
         }
-        for module_name in self._modules:
-            assert isinstance(module_name, str), "got: {module_name}"
+        for row in range(self._import_model.rowCount()):
+            module_name = self._import_model.data(self._import_model.index(row, 0), Qt.ItemDataRole.DisplayRole)
             context[module_name] = importlib.import_module(module_name)
 
         self._context = context
 
         node_keys = [_ for _ in self.nodes()]
+        # TODO invalidate effected nodes only!
         self.invalidate(node_keys, compilation=True)
 
     ### Graph imlpementation

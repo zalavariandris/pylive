@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 ### DATA ###
 # 
 # from pylive.QtGraphEditor.py_functions_model import PyFunctionsModel
-from pylive.VisualCode_v6.py_graph_model import PyGraphModel
+from pylive.VisualCode_v6.py_graph_model import PyImportsModel, PyGraphModel
 from pylive.VisualCode_v6.py_proxy_node_model import PyProxyNodeModel
 from pylive.VisualCode_v6.py_proxy_link_model import PyProxyLinkModel
 from pylive.VisualCode_v6.py_graph_view import PyGraphView
@@ -24,82 +24,13 @@ from pylive.QtScriptEditor.script_edit import ScriptEdit
 from pylive.utils.unique import make_unique_id
 import pylive.utils.qtfactory as qf
 
-import sys
-class PyLocalModulesModel(QAbstractItemModel):
-    def __init__(self, parent:QObject|None=None):
-        super().__init__(parent=parent)
-        import pkgutil
-
-        self._root = Path().cwd()
-        self._enabled_modules:set[str] = set()
-
-    def setRoot(self, path:str|Path):
-        self.beginResetModel()
-        self._root = Path(path)
-        self.endResetModel()
-        
-    def _get_local_modules(self)->list[str]:
-        modules = [file.stem for file in self._root.iterdir() if file.is_file() and file.suffix==".py" and file.name!="__init__.py"]
-        return modules
-
-    def rowCount(self, /, parent: QModelIndex | QPersistentModelIndex = QModelIndex()) -> int:
-        modules = self._get_local_modules()
-        return len(modules)
-
-    def columnCount(self, /, parent: QModelIndex | QPersistentModelIndex = QModelIndex()) -> int:
-        return 2
-
-    def data(self, index: QModelIndex | QPersistentModelIndex, /, role: int = Qt.ItemDataRole.DisplayRole) -> Any:
-        modules = self._get_local_modules()
-        module_name = modules[index.row()]
-        if index.column() == 0: #name
-            if role == Qt.ItemDataRole.DisplayRole:
-                return module_name
-
-        if index.column() == 1: #name
-            if role == Qt.ItemDataRole.DisplayRole:
-                return module_name in self._enabled_modules
-            if role == Qt.ItemDataRole.EditRole:
-                return module_name in self._enabled_modules
-
-        return None
-
-    def setData(self, index: QModelIndex | QPersistentModelIndex, value: Any, /, role: int = Qt.ItemDataRole.EditRole) -> bool:
-        if index.column()==1:
-            if role == Qt.ItemDataRole.EditRole:
-                module_name = self._get_local_modules()[index.row()]
-                if value and module_name not in self._enabled_modules:
-                    self._enabled_modules.add(module_name)
-                    self.dataChanged.emit(index, index)
-                
-                if not value and module_name in self._enabled_modules:
-                    self._enabled_modules.remove(module_name)
-                    self.dataChanged.emit(index, index)
-        return super().setData(index, value, role)
-
-    def flags(self, index: QModelIndex | QPersistentModelIndex, /) -> Qt.ItemFlag:
-        flags = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
-        if index.column()==1:
-            flags |= Qt.ItemFlag.ItemIsEditable
-        return flags
-
-    def headerData(self, section: int, orientation: Qt.Orientation, /, role: int = Qt.ItemDataRole.DisplayRole) -> Any:
-        if orientation == Qt.Orientation.Horizontal:
-            return ["name", "loaded"][section]
-        return super().headerData(section, orientation, role)
-
-    def index(self, row: int, column: int, /, parent: QModelIndex | QPersistentModelIndex = QModelIndex()) -> QModelIndex:
-        return self.createIndex(row, column)
-
-    def parent(self, index):
-        return QModelIndex()
 
 
 class PyModulesPanel(QWidget):
     def __init__(self, parent:QWidget|None=None):
         super().__init__(parent=parent)
         self.setWindowTitle("Modules")
-        self._model:PyLocalModulesModel|None = None
+        self._model:PyImportsModel|None = None
         self.view = QTableView()
         self.view.verticalHeader().setVisible(False)
 
@@ -109,7 +40,7 @@ class PyModulesPanel(QWidget):
         layout.addWidget(self.view)
         self.setLayout(layout)
 
-    def setModel(self, model:PyLocalModulesModel|None):
+    def setModel(self, model:PyImportsModel|None):
         self.view.setModel(model)
 
 
@@ -126,20 +57,7 @@ class Window(QWidget):
 
         # MODEL
         self._model:PyGraphModel|None = None
-        def set_modules():
-            assert self._model
-            modules = []
-            for row in range(self._local_modules.rowCount()):
-                module_name = self._local_modules.index(row, 0).data(Qt.ItemDataRole.DisplayRole)
-                module_enabled = self._local_modules.index(row, 1).data(Qt.ItemDataRole.DisplayRole)
-                if module_enabled:
-                    modules.append(module_name)
-            self._model.setModules(modules)
-        self._local_modules = PyLocalModulesModel()
-        self._local_modules.modelReset.connect(lambda: set_modules())
-        self._local_modules.dataChanged.connect(lambda: set_modules())
-        self._local_modules.rowsInserted.connect(lambda: set_modules())
-        self._local_modules.rowsRemoved.connect(lambda: set_modules())
+
         
         ### bindings
         self._connections = []
@@ -168,8 +86,6 @@ class Window(QWidget):
 
         ### modules panel
         self.modules_panel = PyModulesPanel()
-
-        self.modules_panel.setModel(self._local_modules)
 
         ### SheetsView
         self.nodes_table_view = QTableView()
@@ -255,7 +171,9 @@ class Window(QWidget):
         grid_layout.addWidget(inspector_panel, 0, 0, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignTop)
         graphpanel.setLayout(grid_layout)
 
-        preview_panel = QScrollArea(alignment=Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignHCenter, widgetResizable=True)
+        preview_panel = QScrollArea()
+        preview_panel.setAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignHCenter)
+        preview_panel.setWidgetResizable(True)
         self.preview_label.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
         preview_panel.setWidget(self.preview_label)
 
@@ -292,6 +210,7 @@ class Window(QWidget):
             self.link_proxy_model.setSourceModel(model)
             self.node_proxy_model.setSourceModel(model)
             self.graph_view.setModel(model)
+            self.modules_panel.setModel(model._import_model)
 
             ### node editors
 
@@ -321,6 +240,7 @@ class Window(QWidget):
         self._model = model
 
     def set_node_editors(self, node:str, hints:list=[]):
+        assert self._model
         self.expression_edit.setEnabled(True)
         self.kind_dropdown.setEnabled(True)
 
@@ -344,6 +264,7 @@ class Window(QWidget):
 
     def set_node_model(self, node:str, hints:list=[]):
         assert isinstance(node, str)
+        assert self._model
         current = self.node_selection_model.currentIndex()
         if current.isValid():
             node = self.node_proxy_model.mapToSource(current)
@@ -412,14 +333,14 @@ class Window(QWidget):
             signal.connect(slot)
 
         self._menubar_connections = [
-            (self.open_action.triggered, lambda: self.openFile()),
-            (self.save_action.triggered, lambda: self.saveFile()),
-            (self.save_as_action.triggered, lambda: self.saveAsFile()),
-            (self.add_node_action.triggered, lambda: self.create_new_node()),
-            (self.delete_selected_action.triggered, lambda: self.delete_selected()),
-            (self.layout_nodes_action.triggered, lambda: self.graph_view.layoutNodes()),
-            (self.center_nodes_action.triggered, lambda: self.graph_view.centerNodes()),
-            (self.restart_kernel_action.triggered, lambda: self._model.restartKernel())
+            (self.open_action.triggered, lambda checked: self.openFile()),
+            (self.save_action.triggered, lambda checked: self.saveFile()),
+            (self.save_as_action.triggered, lambda checked: self.saveAsFile()),
+            (self.add_node_action.triggered, lambda checked: self.create_new_node()),
+            (self.delete_selected_action.triggered, lambda checked: self.delete_selected()),
+            (self.layout_nodes_action.triggered, lambda checked: self.graph_view.layoutNodes()),
+            (self.center_nodes_action.triggered, lambda checked: self.graph_view.centerNodes()),
+            (self.restart_kernel_action.triggered, lambda checked, model=self._model: self._model.restartKernel() if self._model else None)
         ]
         for signal, slot in self._menubar_connections:
             signal.connect(slot)
@@ -429,6 +350,7 @@ class Window(QWidget):
 
     ### Commands
     def create_new_node(self, scenepos:QPointF=QPointF()):
+        assert self._model
         existing_names = list(self._model.nodes())
 
         func_name = make_unique_id(6)
@@ -455,6 +377,7 @@ class Window(QWidget):
             self._model.removeNode(node)
 
     def connect_nodes(self, source:str, target:str, inlet:str):
+        assert self._model
         self._model.linkNodes(source, target, "out", inlet)
 
     def eventFilter(self, watched, event):
@@ -516,6 +439,7 @@ class Window(QWidget):
             self._local_modules.setRoot( Path(filepath).parent )
 
     def saveFile(self):
+        assert self._model
         filepath = self._filepath
         if not filepath:
             filepath, filter_used = QFileDialog.getSaveFileName(self, 
@@ -545,6 +469,7 @@ class Window(QWidget):
         self.updateWindowTitle()
 
     def saveAsFile(self):
+        assert self._model
         filepath, filter_used = QFileDialog.getSaveFileName(self, 
             "SaveAs", self.fileFilter(), self.fileSelectFilter())
         if not filepath:
@@ -577,7 +502,7 @@ class Window(QWidget):
                     return False
         return True
 
-    def closeEvent(self, event: QCloseEvent, /) -> None:
+    def closeEvent(self, event: QCloseEvent) -> None:
         if self.closeFile():
             super().closeEvent(event)
 

@@ -11,6 +11,14 @@ import sys
 from pylive.VisualCode_v6.py_graph_model import PyGraphModel
 from textwrap import dedent
 
+class TestImportModel(unittest.TestCase):
+    def test_load_module(self):
+        ...
+
+    def test_unload_module(self):
+        ...
+
+
 class TestEvaluation(unittest.TestCase):
     def test_operator(self):
         model = PyGraphModel()
