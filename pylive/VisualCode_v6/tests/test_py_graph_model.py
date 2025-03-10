@@ -3,7 +3,8 @@
 ### TODO
 ### - test if modules can be loaded from the folder of the current pylive graph file
 ### - test single and multi input ports
-###   if inlet is not *multi*, remove previous link on new link
+###   non-multi inlets, when connected, should disconnect previous links
+###   
 ###
 
 
