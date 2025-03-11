@@ -3,7 +3,7 @@ from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
-
+from pathlib import Path
 class QPathEdit(QLineEdit):
 	def __init__(self, 
 		contents:str="", 
@@ -22,6 +22,12 @@ class QPathEdit(QLineEdit):
 		## todo: conider imlementing
 		# - validator
 		# - autocomplete
+
+	def path(self)->Path:
+		return Path(self.text())
+
+	def setPath(self, path:Path|str):
+		self.setText(str(path))
 
 if __name__ == "__main__":
 	app = QApplication()

@@ -1,5 +1,6 @@
 from contextlib import contextmanager
 from PySide6.QtCore import QAbstractItemModel, QObject, QRectF
+from PySide6.QtWidgets import QGraphicsItem
 
 @contextmanager
 def signalsBlocked(obj:QObject):
@@ -18,7 +19,7 @@ def modelReset(model:QAbstractItemModel):
     finally:
         model.endResetModel()
 
-def distribute_items_horizontal(items, rect:QRectF):
+def distribute_items_horizontal(items:list[QGraphicsItem], rect:QRectF, equal_spacing=True):
     num_items = len(items)
     
     if num_items < 1:
@@ -28,11 +29,22 @@ def distribute_items_horizontal(items, rect:QRectF):
         items[0].setX(rect.center().x())
         return
 
-    # Calculate horizontal spacing
-    spacing = rect.width() / (num_items - 1)
-    for i, item in enumerate(items):
-        x = rect.left() + i * spacing
-        item.setX(x)
+    if equal_spacing:
+        items_overal_width = 0
+        for item in items:
+            items_overal_width+=item.boundingRect().width() #TODO use reduce?
+
+        spacing = ( rect.width() - items_overal_width) / (num_items-1)
+        position = 0
+        for i, item in enumerate(items):
+            item.setX(position)
+            position+=item.boundingRect().width()+spacing
+
+    else:
+        distance = rect.width() / (num_items - 1)
+        for i, item in enumerate(items):
+            x = rect.left() + i * distance
+            item.setX(x)
 
 def logModelSignals(model:QAbstractItemModel, prefix:str=""):
     model.columnsAboutToBeInserted.connect(lambda *args: print(f"{prefix}, columnsAboutToBeInserted {args}"))

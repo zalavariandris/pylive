@@ -1,4 +1,5 @@
 from importlib.machinery import ModuleSpec
+import inspect
 from typing import *
 from PySide6.QtCore import *
 from PySide6.QtGui import *
@@ -92,6 +93,60 @@ class ImportsManager(QWidget):
             self.imports_list.insertItem(row, QListWidgetItem(module_name))
 
 
+class Inspector(QWidget):
+    def __init__(self, parent:QWidget|None=None):
+        super().__init__(parent=parent)
+
+        self.kind_dropdown = QComboBox()
+        self.kind_dropdown.insertItems(0, ['operator', 'value', 'expression'])
+        self.kind_dropdown.setDisabled(True)
+        self.expression_edit = QLineEdit()
+        self.expression_edit.setDisabled(True)
+        self._value_editor:QWidget|None=None
+        layout = QVBoxLayout()
+        layout.addWidget(self.kind_dropdown)
+        layout.addWidget(self.expression_edit)
+        self.setLayout(layout)
+
+    def setValueEditor(self, editor:QWidget):
+        layout = cast(QVBoxLayout, self.layout())
+
+
+        if self._value_editor and editor:
+            layout.replaceWidget(self._value_editor, editor)
+            self._value_editor.deleteLater()
+        else:
+            if self._value_editor:
+                layout.removeWidget(self._value_editor)
+                self._value_editor.deleteLater()
+            if editor:
+                layout.addWidget(editor)
+
+
+        self._value_editor = editor
+
+    def valueEditor(self)->QWidget|None:
+        return self._value_editor
+
+
+class Preview(QScrollArea):
+    def __init__(self, parent:QWidget|None=None):
+        super().__init__(parent=parent)
+        self.setAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignHCenter)
+        self.setWidgetResizable(True)
+        self._previous_parent:QObject|None = None
+
+    def widget(self):
+        return super().widget()
+
+    def setWidget(self, widget: QWidget) -> None:
+        if self._previous_parent:
+            previous_widget = self.takeWidget()
+            previous_widget.setParent(self._previous_parent)
+        self._previous_parent = widget.parent()
+        return super().setWidget(widget)
+
+
 class Window(QWidget):
     def __init__(self, parent:QWidget|None=None):
         super().__init__(parent=parent)
@@ -147,12 +202,10 @@ class Window(QWidget):
         self.links_table_view.setModel(self.link_proxy_model)
         self.links_table_view.setSelectionModel(self.link_selection_model)
         
-        ### Inspector
-        self.kind_dropdown = QComboBox()
-        self.kind_dropdown.insertItems(0, ['operator', 'value', 'expression'])
-        self.kind_dropdown.setDisabled(True)
-        self.expression_edit = QLineEdit()
-        self.expression_edit.setDisabled(True)
+        ### inspector
+        self.inspector = Inspector()
+
+        ### Prview
         self.preview_label = QLabel()
 
         ### STATUS BAR WIDGET
@@ -207,22 +260,17 @@ class Window(QWidget):
         viewmenu.addActions([self.layout_nodes_action, self.center_nodes_action])
 
         ### Layout
-        inspector_panel = qf.widget(qf.vboxlayout([
-            self.kind_dropdown,
-            self.expression_edit,
-        ]))
+        
         graphpanel = QWidget()
         grid_layout = QGridLayout()
         grid_layout.addWidget(self.graph_view, 0, 0)
-        inspector_panel.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
-        grid_layout.addWidget(inspector_panel, 0, 0, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignTop)
+        self.inspector.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
+        grid_layout.addWidget(self.inspector, 0, 0, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignTop)
         graphpanel.setLayout(grid_layout)
 
-        preview_panel = QScrollArea()
-        preview_panel.setAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignHCenter)
-        preview_panel.setWidgetResizable(True)
+        self.preview_panel = Preview()
         self.preview_label.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
-        preview_panel.setWidget(self.preview_label)
+        self.preview_panel.setWidget(self.preview_label)
 
         main_layout = qf.vboxlayout([
             qf.splitter(Qt.Orientation.Horizontal, [
@@ -234,7 +282,7 @@ class Window(QWidget):
                         self.links_table_view,
                     ])),
                 }),
-                preview_panel
+                self.preview_panel
             ]),
             self.statusbar
         ])
@@ -288,18 +336,51 @@ class Window(QWidget):
 
     def set_node_editors(self, node:str, hints:list=[]):
         assert self._model
-        self.expression_edit.setEnabled(True)
-        self.kind_dropdown.setEnabled(True)
+        self.inspector.expression_edit.setEnabled(True)
+        self.inspector.kind_dropdown.setEnabled(True)
 
         if 'kind' in hints or not hints:
             node_kind = self._model.data(node, 'kind')
-            if node_kind!=self.kind_dropdown.currentText():
-                self.kind_dropdown.setCurrentText(node_kind)
+            if node_kind!=self.inspector.kind_dropdown.currentText():
+                self.inspector.kind_dropdown.setCurrentText(node_kind)
 
         if 'expression' in hints or not hints:
             node_source = self._model.data(node, 'expression')
-            if node_source!=self.expression_edit.text():
-                self.expression_edit.setText(node_source)
+            if node_source!=self.inspector.expression_edit.text():
+                self.inspector.expression_edit.setText(node_source)
+
+        if 'result' in hints or not hints:
+            if self._model.data(node, 'kind') == 'value':
+
+                error, result = self._model.data(node, 'result')
+                if error:
+                    ...
+                else:
+                    match result:
+                        case Path():
+                            from pylive.qt_components.QPathEdit import QPathEdit
+                            editor = QPathEdit()
+                            editor.setPath(result)
+                            editor.textChanged.connect(lambda: 
+                                self._model.setData(node, 'expression', f'pathlib.Path("{editor.path()}")')
+                                )
+                        case str():
+                            editor = QLineEdit()
+                            editor.setText(result)
+                            editor.textChanged.connect(lambda: 
+                                self._model.setData(node, 'expression', f'"{editor.text()}"')
+                                )
+                        case float():
+                            editor = QLabel(f"TODO: float slider")
+                        case int():
+                            editor = QSlider()
+                            editor.setValue(result)
+                            editor.valueChanged.connect(lambda: 
+                                self._model.setData(node, 'expression', str(editor.value()) )
+                                )
+                        case _:
+                            editor = QLabel(f"node editor found for type: {type(result)}")
+                    self.inspector.setValueEditor(editor)
 
         if 'result' in hints or not hints:
             error, result = self._model.data(node, 'result')
@@ -307,7 +388,12 @@ class Window(QWidget):
             if error:
                 self.preview_label.setText(f"{error}")
             else:
-                self.preview_label.setText(f"{result}")
+                match result:
+                    case QWidget():
+                        self.preview_panel.setWidget(result)
+                    case _:
+                        self.preview_panel.setWidget(self.preview_label)
+                        self.preview_label.setText(f"{result}")
 
     def set_node_model(self, node:str, hints:list=[]):
         assert isinstance(node, str)
@@ -317,29 +403,29 @@ class Window(QWidget):
             node = self.node_proxy_model.mapToSource(current)
             if 'kind' in hints or not hints:
                 node_kind = self._model.data(node, 'kind')
-                if node_kind!=self.kind_dropdown.currentText():
-                    self._model.setData(node, 'kind', self.kind_dropdown.currentText())
+                if node_kind!=self.inspector.kind_dropdown.currentText():
+                    self._model.setData(node, 'kind', self.inspector.kind_dropdown.currentText())
 
             if 'expression' in hints or not hints:
                 node_source = self._model.data(node, 'expression')
-                if node_source!=self.expression_edit.text():
-                    self._model.setData(node, 'expression', self.expression_edit.text())
+                if node_source!=self.inspector.expression_edit.text():
+                    self._model.setData(node, 'expression', self.inspector.expression_edit.text())
 
     def clear_node_editors(self):
-        self.expression_edit.setText("")
-        self.expression_edit.setEnabled(False)
-        self.kind_dropdown.setEnabled(False)
+        self.inspector.expression_edit.setText("")
+        self.inspector.expression_edit.setEnabled(False)
+        self.inspector.kind_dropdown.setEnabled(False)
         self.preview_label.setText("")
 
     def bind_widgets_to_model(self):
         ### Bind widgets to model
-        self.expression_edit.editingFinished.connect(lambda: 
+        self.inspector.expression_edit.editingFinished.connect(lambda: 
             self.set_node_model(self.node_proxy_model.mapToSource(self.node_selection_model.currentIndex()), ["expression"])
             if self.node_selection_model.currentIndex().isValid() 
             else
             None)
 
-        self.kind_dropdown.currentIndexChanged.connect(lambda: 
+        self.inspector.kind_dropdown.currentIndexChanged.connect(lambda: 
             self.set_node_model(self.node_proxy_model.mapToSource(self.node_selection_model.currentIndex()), ["kind"])
             if self.node_selection_model.currentIndex().isValid() 
             else
@@ -520,7 +606,9 @@ class Window(QWidget):
             if filepath not in self._file_watcher.files():
                 self._file_watcher.addPath(str(filepath))
             self._filepath = filepath
+            self.setModified(False)
         self.updateWindowTitle()
+
 
     def saveAsFile(self):
         assert self._model
@@ -531,9 +619,11 @@ class Window(QWidget):
 
         try:
             with open(filepath, 'w') as file:
-                file_contents = self._model.serialize()
-                file.write(file_contents)
-                self.setModified(False)
+                import yaml
+                data = self._model.toData()
+                text = yaml.dump(self._model.toData(), sort_keys=False)
+                Path(filepath).write_text(text)
+                
         except FileNotFoundError as err:
             QMessageBox.warning(None, "Warning", f"{err}")
         else:
@@ -542,6 +632,9 @@ class Window(QWidget):
             if filepath not in self._file_watcher.files():
                 self._file_watcher.addPath(filepath)
             self._filepath = filepath
+            self.setModified(False)
+            self.setWorkingDirectory(Path(filepath).parent)
+        self.updateWindowTitle()
 
     def closeFile(self)->bool:
         """return False, if the user cancelled, otherwise true"""
@@ -598,6 +691,6 @@ if __name__ == "__main__":
     window = Window()
     window.setGeometry(QRect(QPoint(), app.primaryScreen().size()).adjusted(40,80,-30,-300))
     window.show()
-    window.openFile(Path.cwd()/"./tests/dissertation_builder.yaml")
+    # window.openFile(Path.cwd()/"./tests/dissertation_builder.yaml")
     sys.exit(app.exec())
     

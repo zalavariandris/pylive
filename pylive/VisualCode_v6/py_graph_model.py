@@ -64,8 +64,12 @@ class _PyGraphItem:
                 except Exception:
                     return []
                 else:
-                    sig = inspect.signature(func)
-                    return [name for name in sig.parameters.keys()]
+                    try:
+                        sig = inspect.signature(func)
+                    except ValueError:
+                        return []
+                    else:
+                        return [name for name in sig.parameters.keys()]
             case _:
                 return []
 
@@ -75,16 +79,23 @@ class _PyGraphItem:
                 try:
                     func = self._compile()
                 except Exception:
-                    return []
+                    return set()
                 else:
-                    sig = inspect.signature(func)
-                    param = sig.parameters[inlet]
-                    flags = set()
-                    if param.default is param.empty:
-                        flags.add('required')
-                    if param.kind is inspect.Parameter.VAR_POSITIONAL:
-                        flags.add('multi')
-                    return flags
+                    try:
+                        sig = inspect.signature(func)
+                    except ValueError:
+                        return set()
+                    else:
+                        parameters = {key:param for key, param in sig.parameters.items() }
+                        assert inlet in parameters.keys(), f"{inlet} not in {parameters}"
+                        param = parameters[inlet]
+                        flags = set()
+                        
+                        if param.kind is inspect.Parameter.VAR_POSITIONAL:
+                            flags.add('multi')
+                        elif param.default is param.empty:
+                            flags.add('required')
+                        return flags
             case _:
                 return set(['required'])
 

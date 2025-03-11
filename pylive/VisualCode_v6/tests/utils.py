@@ -15,7 +15,6 @@ def read_text(path:Path):
 def markdown_to_html(text):
     return text
 
-
 from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *

@@ -24,6 +24,7 @@ dependencies = [
     "qtawesome", # Spyder bindings for FontAwesome
     "qt-parameters",
     "qt-material-icons",
+    "pandoc",
     
 
     "rope ~= 1.13.0",

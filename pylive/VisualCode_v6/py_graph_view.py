@@ -555,8 +555,8 @@ class PortItem(QGraphicsItem):
         return super().itemChange(change, value)
 
     def boundingRect(self) -> QRectF:
-        r = 6
-        return QRectF(-r,-r,r*2,r*2)
+        r = 3
+        return QRectF(-r,-r,r*2,r*2).adjusted(-3,-3,3,3)
 
     def shape(self):
         r = 3
@@ -685,13 +685,22 @@ class InletItem(PortItem):
         return super().dragMoveEvent(event)
 
     def boundingRect(self) -> QRectF:
-        r = 6
-        return QRectF(-r,-r,r*2,r*2)
+        flags = self.model.inletFlags(self.node, self.key)
+        r = 3
+        if 'multi' in flags:
+            return QRectF(-r,-r, r*4, r*2).adjusted(-3,-3,3,3)
+        else:
+            return QRectF(-r,-r,r*2,r*2).adjusted(-3,-3,3,3)
 
     def shape(self):
-        r = 3
+        flags = self.model.inletFlags(self.node, self.key)
         path = QPainterPath()
-        path.addEllipse(QRectF(-r,-r,r*2,r*2))
+        r = 3
+        if 'multi' in flags:
+            path.addRoundedRect(-r,-r, r*4, r*2, r, r)
+        else:
+            path.addEllipse(QRectF(-r,-r,r*2,r*2))
+        
         return path
 
     def paint(self, painter:QPainter, option:QStyleOption, widget:QWidget|None=None):
@@ -874,7 +883,7 @@ class NodeItem(QGraphicsWidget):
         raise NotImplementedError()
 
     def boundingRect(self) -> QRectF:
-        # return QRectF(0,0,19,16)
+        # return QRectF(0,0,80,16)
         fm = QFontMetrics(self.font())
         bbox = fm.boundingRect(f"{self._header_text}")
         return bbox.adjusted(-6,-2,6,2)
