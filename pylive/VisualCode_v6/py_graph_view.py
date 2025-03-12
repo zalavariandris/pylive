@@ -720,7 +720,13 @@ class InletItem(PortItem):
         if 'multi' in flags:
             painter.drawRoundedRect(-r,-r, r*4, r*2, r, r)
         else:
-            painter.drawEllipse(QRectF(-r,-r,r*2,r*2))
+            
+            if 'extra' in flags:
+                painter.setPen(QPen(palette.text(), 1))
+                painter.setBrush(Qt.BrushStyle.NoBrush)
+                painter.drawText(QRectF(-r+2.45,-r-0.1,r,r).adjusted(-2,-2,2,2), "+", QTextOption(Qt.AlignmentFlag.AlignCenter))
+            else:
+                painter.drawEllipse(QRectF(-r,-r,r*2,r*2))
 
     def refresh(self):
         self._label.setPlainText(f"{self.key}")

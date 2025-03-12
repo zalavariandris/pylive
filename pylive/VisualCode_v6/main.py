@@ -16,11 +16,10 @@ logger = logging.getLogger(__name__)
 ### DATA ###
 # 
 # from pylive.QtGraphEditor.py_functions_model import PyFunctionsModel
-from pylive.VisualCode_v6.py_graph_model import PyImportsModel, PyGraphModel
+from pylive.VisualCode_v6.py_graph_model import PyGraphModel
 from pylive.VisualCode_v6.py_proxy_node_model import PyProxyNodeModel
 from pylive.VisualCode_v6.py_proxy_link_model import PyProxyLinkModel
 from pylive.VisualCode_v6.py_graph_view import PyGraphView
-from pylive.QtScriptEditor.script_edit import ScriptEdit
 
 from pylive.utils.unique import make_unique_id
 import pylive.utils.qtfactory as qf
@@ -93,58 +92,257 @@ class ImportsManager(QWidget):
             self.imports_list.insertItem(row, QListWidgetItem(module_name))
 
 
-class Inspector(QWidget):
+class InspectorView(QWidget):
     def __init__(self, parent:QWidget|None=None):
         super().__init__(parent=parent)
-
         self.kind_dropdown = QComboBox()
         self.kind_dropdown.insertItems(0, ['operator', 'value', 'expression'])
         self.kind_dropdown.setDisabled(True)
         self.expression_edit = QLineEdit()
         self.expression_edit.setDisabled(True)
-        self._value_editor:QWidget|None=None
         layout = QVBoxLayout()
         layout.addWidget(self.kind_dropdown)
         layout.addWidget(self.expression_edit)
+        self._value_editor:QWidget = QLabel("-ValueEditor-")
+        layout.addWidget(self._value_editor)
         self.setLayout(layout)
 
-    def setValueEditor(self, editor:QWidget):
-        layout = cast(QVBoxLayout, self.layout())
+        self._model:PyGraphModel|None=None
+        self.node_proxy_model:PyProxyNodeModel|None = None
+        self.node_selection_model:QItemSelectionModel|None=None
+        self._current:str|None=None
+        self._model_connections = []
+        self._selection_connections = []
 
+    def setModel(self, model:PyGraphModel|None):
+        if self._model:
+            for signal, slot in self._model_connections:
+                signal.disconnect(slot)
 
-        if self._value_editor and editor:
-            layout.replaceWidget(self._value_editor, editor)
-            self._value_editor.deleteLater()
+        if model:
+            self._model_connections = [
+                (model.dataChanged, 
+                    lambda nodes, hints: self._setEditorData(hints) 
+                    if self._current in nodes
+                    else 
+                    None),    
+
+                (self.expression_edit.editingFinished, 
+                    lambda: self._setModelData(self._current, ["expression"])
+                    if self._current
+                    else
+                    None),
+
+                (self.kind_dropdown.currentIndexChanged, 
+                    lambda: self._setModelData(self._current, ["kind"])
+                    if self._current
+                    else
+                    None)
+            ]
+        for signal, slot in self._model_connections:
+            signal.connect(slot)
+
+        self._model = model
+
+    def setSelectionModel(self, selection:QItemSelectionModel|None, proxy:PyProxyNodeModel|None):
+        assert all([selection is None, proxy is None]) or all([selection is not None, proxy is not None])
+        
+        if self.node_proxy_model and self.node_selection_model:
+            for signal, slot in self._selection_connections:
+                signal.disconnect(slot)
+
+        if selection and proxy:
+            self._selection_connections = [
+                (selection.currentChanged, 
+                    lambda current, previous: self._setCurrent(proxy.mapToSource(current)))
+            ]
+
+            for signal, slot in self._selection_connections:
+                signal.connect(slot)
+
+        self.node_proxy_model = proxy
+        self.node_selection_model = selection
+
+    def _setCurrent(self, node:str|None):
+        self._current = node
+
+        if node:
+            self._setEditorData()
         else:
-            if self._value_editor:
-                layout.removeWidget(self._value_editor)
-                self._value_editor.deleteLater()
-            if editor:
-                layout.addWidget(editor)
+            self._clearEditorData()
+
+    def _setEditorData(self, hints:list=[]):
+        assert self._model
+        assert self._current
+        self.expression_edit.setEnabled(True)
+        self.kind_dropdown.setEnabled(True)
+
+        if 'kind' in hints or not hints:
+            node_kind = self._model.data(self._current, 'kind')
+            if node_kind!=self.kind_dropdown.currentText():
+                self.kind_dropdown.setCurrentText(node_kind)
+
+        if 'expression' in hints or not hints:
+            node_source = self._model.data(self._current, 'expression')
+            if node_source!=self.expression_edit.text():
+                self.expression_edit.setText(node_source)
+
+        if 'result' in hints or not hints:
+            if self._model.data(self._current, 'kind') == 'value':
+
+                error, result = self._model.data(self._current, 'result')
+                if error:
+                    ...
+                else:
+                    match result:
+                        case Path():
+                            from pylive.qt_components.QPathEdit import QPathEdit
+                            editor = QPathEdit()
+                            editor.setPath(result)
+                            editor.textChanged.connect(lambda: 
+                                self._model.setData(self._current, 'expression', f'pathlib.Path("{editor.path()}")')
+                                )
+                        case str():
+                            editor = QLineEdit()
+                            editor.setText(result)
+                            editor.textChanged.connect(lambda: 
+                                self._model.setData(self._current, 'expression', f'"{editor.text()}"')
+                                )
+                        case float():
+                            editor = QLabel(f"TODO: float slider")
+                        case int():
+                            editor = QSlider()
+                            editor.setValue(result)
+                            editor.valueChanged.connect(lambda: 
+                                self._model.setData(self._current, 'expression', str(editor.value()) )
+                                )
+                        case _:
+                            editor = QLabel(f"node editor found for type: {type(result)}")
+
+                    layout = cast(QVBoxLayout, self.layout())
+                    layout.replaceWidget(self._value_editor, editor)
+                    self._value_editor.deleteLater()
+                    self._value_editor = editor
+
+    def _clearEditorData(self):
+        self.expression_edit.setText("")
+        self.expression_edit.setEnabled(False)
+        self.kind_dropdown.setEnabled(False)
+
+    def _setModelData(self, node:str, hints:list=[]):
+        assert isinstance(node, str)
+        assert self._model
+
+        if self._current:
+            node = self._current
+            if 'kind' in hints or not hints:
+                node_kind = self._model.data(node, 'kind')
+                if node_kind!=self.kind_dropdown.currentText():
+                    self._model.setData(node, 'kind', self.kind_dropdown.currentText())
+
+            if 'expression' in hints or not hints:
+                node_source = self._model.data(node, 'expression')
+                if node_source!=self.expression_edit.text():
+                    self._model.setData(node, 'expression', self.expression_edit.text())
+
+    # def setValueEditor(self, editor:QWidget):
+    #     layout = cast(QVBoxLayout, self.layout())
+
+    #     if self._value_editor and editor:
+    #         layout.replaceWidget(self._value_editor, editor)
+    #         self._value_editor.deleteLater()
+    #     else:
+    #         if self._value_editor:
+    #             layout.removeWidget(self._value_editor)
+    #             self._value_editor.deleteLater()
+    #         if editor:
+    #             layout.addWidget(editor)
 
 
-        self._value_editor = editor
-
-    def valueEditor(self)->QWidget|None:
-        return self._value_editor
+    #     self._value_editor = editor
 
 
-class Preview(QScrollArea):
+
+
+class PreView(QScrollArea):
     def __init__(self, parent:QWidget|None=None):
         super().__init__(parent=parent)
         self.setAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignHCenter)
         self.setWidgetResizable(True)
         self._previous_parent:QObject|None = None
 
-    def widget(self):
-        return super().widget()
+        self.preview_label = QLabel()
+        self.setWidget(self.preview_label)
 
-    def setWidget(self, widget: QWidget) -> None:
-        if self._previous_parent:
-            previous_widget = self.takeWidget()
-            previous_widget.setParent(self._previous_parent)
-        self._previous_parent = widget.parent()
-        return super().setWidget(widget)
+        self._model:PyGraphModel|None=None
+        self.node_proxy_model:PyProxyNodeModel|None = None
+        self.node_selection_model:QItemSelectionModel|None=None
+        self._current:str|None=None
+        self._model_connections = []
+        self._selection_connections = []
+        
+    def setModel(self, model:PyGraphModel|None):
+        if self._model:
+            for signal, slot in self._model_connections:
+                signal.disconnect(slot)
+
+        if model:
+            self._model_connections = [
+                (model.dataChanged, 
+                    lambda nodes, hints: self._setEditorData(hints) 
+                    if self._current in nodes
+                    else 
+                    None),
+            ]
+            for signal, slot in self._model_connections:
+                signal.connect(slot)
+        self._model = model
+
+    def setSelectionModel(self, selection:QItemSelectionModel|None, proxy:PyProxyNodeModel|None):
+        assert all([selection is None, proxy is None]) or all([selection is not None, proxy is not None])
+        
+        if self.node_proxy_model and self.node_selection_model:
+            for signal, slot in self._selection_connections:
+                signal.disconnect(slot)
+
+        if selection and proxy:
+            self._selection_connections = [
+                (selection.currentChanged, 
+                    lambda current, previous: self._setCurrent(proxy.mapToSource(current)))
+            ]
+
+            for signal, slot in self._selection_connections:
+                signal.connect(slot)
+
+        self.node_proxy_model = proxy
+        self.node_selection_model = selection
+
+    def _setCurrent(self, node:str|None):
+        self._current = node
+            
+        if node:
+            self._setEditorData()
+        else:
+            self._clearEditorData()
+
+    def _setEditorData(self, hints:list=[]):
+        assert self._model
+        assert self._current
+        ### Previews
+        if 'result' in hints or not hints:
+            error, result = self._model.data(self._current, 'result')
+
+            if error:
+                self.preview_label.setText(f"{error}")
+            else:
+                match result:
+                    case QWidget():
+                        raise NotImplementedError("QWidgets are not yet supported")
+                    case _:
+                        self.preview_label.setText(f"{result}")
+
+    def _clearEditorData(self):
+        self.preview_label.setText("")
 
 
 class Window(QWidget):
@@ -162,7 +360,8 @@ class Window(QWidget):
         self._model:PyGraphModel|None = None
         
         ### bindings
-        self._connections = []
+        self._menubar_connections = []
+        self._inspector_connections = []
         self._document_connections = []
         self._graph_view_connections = []
 
@@ -182,39 +381,61 @@ class Window(QWidget):
         self.graph_view.centerNodes()
 
     def setupUI(self):
-        ### GRAPH View
-        self.graph_view = PyGraphView()
-        self.graph_view.installEventFilter(self)
+        ### SheetsView
+        self.nodes_table_view = QTableView()
+        self.nodes_table_view.setModel(self.node_proxy_model)
+        self.nodes_table_view.setSelectionModel(self.node_selection_model)
+        self.links_table_view = QTableView()
+        self.links_table_view.setModel(self.link_proxy_model)
+        self.links_table_view.setSelectionModel(self.link_selection_model)
 
         ### Imports manager
         self.import_manager = ImportsManager()
 
-        ### SheetsView
-        self.nodes_table_view = QTableView()
-        # self.nodes_table_view.horizontalHeader().setVisible(True)
-        # self.nodes_table_view.verticalHeader().setVisible(False)
-        self.nodes_table_view.setModel(self.node_proxy_model)
-        self.nodes_table_view.setSelectionModel(self.node_selection_model)
-        
-        self.links_table_view = QTableView()
-        # self.links_table_view.horizontalHeader().setVisible(True)
-        # self.links_table_view.verticalHeader().setVisible(False)s
-        self.links_table_view.setModel(self.link_proxy_model)
-        self.links_table_view.setSelectionModel(self.link_selection_model)
+        self._setupGraphview()
         
         ### inspector
-        self.inspector = Inspector()
+        self._setupInspector()
 
-        ### Prview
-        self.preview_label = QLabel()
+        ### Preview
+        self._setupPreivewPanel()
+
+        self._setupMenubar()
 
         ### STATUS BAR WIDGET
         self.statusbar = QStatusBar()
         self.statusbar.showMessage("status bar")
 
-        ## MENUBAR
+        ### Layout
+        graphpanel = QWidget()
+        grid_layout = QGridLayout()
+        grid_layout.addWidget(self.graph_view, 0, 0)
+        self.inspector.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
+        grid_layout.addWidget(self.inspector, 0, 0, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignTop)
+        graphpanel.setLayout(grid_layout)
 
-        # Actions
+        main_layout = qf.vboxlayout([
+            qf.splitter(Qt.Orientation.Horizontal, [
+                self.import_manager,
+                qf.tabwidget({
+                    'graph': graphpanel,
+                    'sheets':qf.widget(qf.vboxlayout([
+                        self.nodes_table_view,
+                        self.links_table_view,
+                    ])),
+                }),
+                self.preview_panel
+            ]),
+            self.statusbar
+        ])
+        self.statusbar.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
+
+        main_layout.setMenuBar(self.menubar)
+        self.setLayout(main_layout)
+        self.updateWindowTitle()
+
+    def _setupMenubar(self):
+        ## MENUBAR
         self.open_action = QAction("Open", self)
         self.save_action = QAction("Save", self)
         self.save_as_action = QAction("Save As", self)
@@ -236,207 +457,63 @@ class Window(QWidget):
             self.center_nodes_action
         ])
 
-        menubar = QMenuBar(parent=self)
+        self.menubar = QMenuBar(parent=self)
 
-        filemenu = menubar.addMenu("File")
+        filemenu = self.menubar.addMenu("File")
         filemenu.addActions([
             self.open_action, 
             self.save_action,
             self.save_as_action
         ])
 
-        filemenu = menubar.addMenu("Kernel")
+        filemenu = self.menubar.addMenu("Kernel")
         filemenu.addActions([
             self.restart_kernel_action
         ])
 
-        editmenu = menubar.addMenu("Edit")
+        editmenu = self.menubar.addMenu("Edit")
         editmenu.addActions([
             self.add_node_action, 
             self.delete_selected_action, 
         ])
 
-        viewmenu = menubar.addMenu("View")
+        viewmenu = self.menubar.addMenu("View")
         viewmenu.addActions([self.layout_nodes_action, self.center_nodes_action])
 
-        ### Layout
-        
-        graphpanel = QWidget()
-        grid_layout = QGridLayout()
-        grid_layout.addWidget(self.graph_view, 0, 0)
-        self.inspector.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
-        grid_layout.addWidget(self.inspector, 0, 0, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignTop)
-        graphpanel.setLayout(grid_layout)
+    def _bindMenubar(self):
+        ### Bind Menubar
+        self._menubar_connections = [
+            (self.open_action.triggered, 
+                lambda checked: self.openFile()),
+            (self.save_action.triggered, 
+                lambda checked: self.saveFile()),
+            (self.save_as_action.triggered, 
+                lambda checked: self.saveAsFile()),
+            (self.add_node_action.triggered, 
+                lambda checked: self.create_new_node()),
+            (self.delete_selected_action.triggered, 
+                lambda checked: self.delete_selected()),
+            (self.layout_nodes_action.triggered, 
+                lambda checked: self.graph_view.layoutNodes()),
+            (self.center_nodes_action.triggered, 
+                lambda checked: self.graph_view.centerNodes()),
+            (self.restart_kernel_action.triggered, 
+                lambda checked, model=self._model: self._model.restartKernel() if self._model else None)
+        ]
+        for signal, slot in self._menubar_connections:
+            signal.connect(slot)
 
-        self.preview_panel = Preview()
-        self.preview_label.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
-        self.preview_panel.setWidget(self.preview_label)
-
-        main_layout = qf.vboxlayout([
-            qf.splitter(Qt.Orientation.Horizontal, [
-                self.import_manager,
-                qf.tabwidget({
-                    'graph': graphpanel,
-                    'sheets':qf.widget(qf.vboxlayout([
-                        self.nodes_table_view,
-                        self.links_table_view,
-                    ])),
-                }),
-                self.preview_panel
-            ]),
-            self.statusbar
-        ])
-        self.statusbar.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
-
-        main_layout.setMenuBar(menubar)
-        self.setLayout(main_layout)
-        self.updateWindowTitle()
-        self.bind_widgets_to_model()
-
-    def setModel(self, model:PyGraphModel|None):
-        if self._model:
-            for signal, slot in self._document_connections:
-                signal.disconnect(slot)
-            for signal, slot in self._connections:
+    def _unbindMenubar(self):
+        for signal, slot in self._menubar_connections:
                 signal.disconnect(slot)
 
-        if model:
-            ### subviews
-            self.link_proxy_model.setSourceModel(model)
-            self.node_proxy_model.setSourceModel(model)
-            self.graph_view.setModel(model)
+    def _setupGraphview(self):
+        ### GRAPH View
+        self.graph_view = PyGraphView()
+        self.graph_view.installEventFilter(self)
 
-            self.import_manager.setModel(model)
-
-            ### Connections
-            self._connections = [
-                (model.dataChanged, lambda nodes, hints: 
-                    self.set_node_editors(self.node_proxy_model.mapToSource(self.node_selection_model.currentIndex()), hints) 
-                    if self.node_proxy_model.mapToSource(self.node_selection_model.currentIndex()) in nodes
-                    else 
-                    None),
-
-            ]
-
-            for signal, slot in self._connections:
-                signal.connect(slot)
-
-            ### document
-            self._document_connections = [
-                (model.nodesAdded, lambda: self.setModified(True)),
-                (model.nodesRemoved, lambda: self.setModified(True)),
-                (model.dataChanged, lambda: self.setModified(True)),
-                (model.nodesLinked, lambda: self.setModified(True)),
-                (model.nodesUnlinked, lambda: self.setModified(True))
-            ]
-            for signal, slot in self._document_connections:
-                signal.connect(slot)
-
-        self._model = model
-
-    def set_node_editors(self, node:str, hints:list=[]):
-        assert self._model
-        self.inspector.expression_edit.setEnabled(True)
-        self.inspector.kind_dropdown.setEnabled(True)
-
-        if 'kind' in hints or not hints:
-            node_kind = self._model.data(node, 'kind')
-            if node_kind!=self.inspector.kind_dropdown.currentText():
-                self.inspector.kind_dropdown.setCurrentText(node_kind)
-
-        if 'expression' in hints or not hints:
-            node_source = self._model.data(node, 'expression')
-            if node_source!=self.inspector.expression_edit.text():
-                self.inspector.expression_edit.setText(node_source)
-
-        if 'result' in hints or not hints:
-            if self._model.data(node, 'kind') == 'value':
-
-                error, result = self._model.data(node, 'result')
-                if error:
-                    ...
-                else:
-                    match result:
-                        case Path():
-                            from pylive.qt_components.QPathEdit import QPathEdit
-                            editor = QPathEdit()
-                            editor.setPath(result)
-                            editor.textChanged.connect(lambda: 
-                                self._model.setData(node, 'expression', f'pathlib.Path("{editor.path()}")')
-                                )
-                        case str():
-                            editor = QLineEdit()
-                            editor.setText(result)
-                            editor.textChanged.connect(lambda: 
-                                self._model.setData(node, 'expression', f'"{editor.text()}"')
-                                )
-                        case float():
-                            editor = QLabel(f"TODO: float slider")
-                        case int():
-                            editor = QSlider()
-                            editor.setValue(result)
-                            editor.valueChanged.connect(lambda: 
-                                self._model.setData(node, 'expression', str(editor.value()) )
-                                )
-                        case _:
-                            editor = QLabel(f"node editor found for type: {type(result)}")
-                    self.inspector.setValueEditor(editor)
-
-        if 'result' in hints or not hints:
-            error, result = self._model.data(node, 'result')
-
-            if error:
-                self.preview_label.setText(f"{error}")
-            else:
-                match result:
-                    case QWidget():
-                        self.preview_panel.setWidget(result)
-                    case _:
-                        self.preview_panel.setWidget(self.preview_label)
-                        self.preview_label.setText(f"{result}")
-
-    def set_node_model(self, node:str, hints:list=[]):
-        assert isinstance(node, str)
-        assert self._model
-        current = self.node_selection_model.currentIndex()
-        if current.isValid():
-            node = self.node_proxy_model.mapToSource(current)
-            if 'kind' in hints or not hints:
-                node_kind = self._model.data(node, 'kind')
-                if node_kind!=self.inspector.kind_dropdown.currentText():
-                    self._model.setData(node, 'kind', self.inspector.kind_dropdown.currentText())
-
-            if 'expression' in hints or not hints:
-                node_source = self._model.data(node, 'expression')
-                if node_source!=self.inspector.expression_edit.text():
-                    self._model.setData(node, 'expression', self.inspector.expression_edit.text())
-
-    def clear_node_editors(self):
-        self.inspector.expression_edit.setText("")
-        self.inspector.expression_edit.setEnabled(False)
-        self.inspector.kind_dropdown.setEnabled(False)
-        self.preview_label.setText("")
-
-    def bind_widgets_to_model(self):
-        ### Bind widgets to model
-        self.inspector.expression_edit.editingFinished.connect(lambda: 
-            self.set_node_model(self.node_proxy_model.mapToSource(self.node_selection_model.currentIndex()), ["expression"])
-            if self.node_selection_model.currentIndex().isValid() 
-            else
-            None)
-
-        self.inspector.kind_dropdown.currentIndexChanged.connect(lambda: 
-            self.set_node_model(self.node_proxy_model.mapToSource(self.node_selection_model.currentIndex()), ["kind"])
-            if self.node_selection_model.currentIndex().isValid() 
-            else
-            None)
-
-        ### node selection
-        self.node_selection_model.currentChanged.connect(lambda current, previous: 
-            self.set_node_editors(self.node_proxy_model.mapToSource(current), []) 
-            if current.isValid() 
-            else 
-            self.clear_node_editors())
+    def _bindGraphView(self, model):
+        self.graph_view.setModel(model)
 
         def update_model_selection():
             selected_node_keys = self.graph_view.selectedNodes()
@@ -454,29 +531,83 @@ class Window(QWidget):
             selected_node_keys = self.node_proxy_model.mapSelectionToSource(model_selection)
             self.graph_view.selectNodes(selected_node_keys)
 
-        self.graph_view.scene().selectionChanged.connect(update_model_selection)
-        
-        self.node_selection_model.selectionChanged.connect(lambda selected, deselected:
-            update_graphview_selection)
+        self._graph_view_connections = [
+            (self.graph_view.scene().selectionChanged, 
+                update_model_selection),
 
-        self.graph_view.nodesLinked.connect(lambda source, target, outlet, inlet: 
-            self.connect_nodes(self.node_proxy_model.mapToSource(source), self.node_proxy_model.mapToSource(target), inlet))
+            (self.node_selection_model.selectionChanged, 
+                lambda selected, deselected:
+                update_graphview_selection),
+
+            (self.graph_view.nodesLinked, 
+                lambda source, target, outlet, inlet: 
+                self.connect_nodes(self.node_proxy_model.mapToSource(source), self.node_proxy_model.mapToSource(target), inlet))
+        ]
 
         for signal, slot in self._graph_view_connections:
             signal.connect(slot)
 
-        self._menubar_connections = [
-            (self.open_action.triggered, lambda checked: self.openFile()),
-            (self.save_action.triggered, lambda checked: self.saveFile()),
-            (self.save_as_action.triggered, lambda checked: self.saveAsFile()),
-            (self.add_node_action.triggered, lambda checked: self.create_new_node()),
-            (self.delete_selected_action.triggered, lambda checked: self.delete_selected()),
-            (self.layout_nodes_action.triggered, lambda checked: self.graph_view.layoutNodes()),
-            (self.center_nodes_action.triggered, lambda checked: self.graph_view.centerNodes()),
-            (self.restart_kernel_action.triggered, lambda checked, model=self._model: self._model.restartKernel() if self._model else None)
+    def _unbindGraphView(self):
+        for signal, slot in self._graph_view_connections:
+            signal.disconnect(slot)
+
+    def _setupInspector(self):
+        self.inspector = InspectorView()
+
+    def _bindInspector(self, model):
+        self.inspector.setModel(model)
+        self.inspector.setSelectionModel(self.node_selection_model, self.node_proxy_model)
+
+    def _setupPreivewPanel(self):
+        self.preview_panel = PreView()
+        self.preview_panel.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
+
+    def _bindPreviewPanel(self, model):
+        self.preview_panel.setModel(model)
+        self.preview_panel.setSelectionModel(self.node_selection_model, self.node_proxy_model)
+
+    def _bindDocument(self, model):
+        ### Bind Document
+        self._document_connections = [
+            (model.nodesAdded, 
+                lambda: self.setModified(True)),
+            (model.nodesRemoved, 
+                lambda: self.setModified(True)),
+            (model.dataChanged, 
+                lambda: self.setModified(True)),
+            (model.nodesLinked, 
+                lambda: self.setModified(True)),
+            (model.nodesUnlinked, 
+                lambda: self.setModified(True))
         ]
-        for signal, slot in self._menubar_connections:
+        for signal, slot in self._document_connections:
             signal.connect(slot)
+
+    def _unbindDocument(self):
+        for signal, slot in self._document_connections:
+            signal.disconnect(slot)
+
+    def setModel(self, model:PyGraphModel|None):
+        if self._model:
+            self._unbindGraphView()
+            self._unbindMenubar()
+            self._unbindDocument()
+            
+        if model:
+            ### proxy models
+            self.link_proxy_model.setSourceModel(model)
+            self.node_proxy_model.setSourceModel(model)
+
+            ### bind Import Manager
+            self.import_manager.setModel(model)
+
+            self._bindGraphView(model)
+            self._bindInspector(model)
+            self._bindPreviewPanel(model)
+            self._bindMenubar()
+            self._bindDocument(model)
+
+        self._model = model
 
     def sizeHint(self):
         return QSize(2048, 900) 
@@ -609,7 +740,6 @@ class Window(QWidget):
             self.setModified(False)
         self.updateWindowTitle()
 
-
     def saveAsFile(self):
         assert self._model
         filepath, filter_used = QFileDialog.getSaveFileName(self, 
@@ -651,6 +781,9 @@ class Window(QWidget):
 
     def closeEvent(self, event: QCloseEvent) -> None:
         if self.closeFile():
+            self._unbindGraphView()
+            self._unbindMenubar()
+            self._unbindDocument()
             super().closeEvent(event)
 
     def filepath(self):

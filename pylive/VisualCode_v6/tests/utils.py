@@ -19,6 +19,9 @@ from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
+def dummy(required: str, optional:str="hello", *args, **kwargs):
+    return f"inputs: {required}, {optional}, {args}, {kwargs}"
+
 def main():
     import sys
     from PySide6.QtWebView import QtWebView

@@ -90,11 +90,22 @@ class _PyGraphItem:
                         assert inlet in parameters.keys(), f"{inlet} not in {parameters}"
                         param = parameters[inlet]
                         flags = set()
-                        
-                        if param.kind is inspect.Parameter.VAR_POSITIONAL:
-                            flags.add('multi')
-                        elif param.default is param.empty:
-                            flags.add('required')
+
+                        match param.kind:
+                            case inspect.Parameter.POSITIONAL_ONLY:
+                                if param.default is param.empty:
+                                    flags.add('required')
+                            case inspect.Parameter.POSITIONAL_OR_KEYWORD:
+                                if param.default is param.empty:
+                                    flags.add('required')
+                            case inspect.Parameter.VAR_POSITIONAL:
+                                flags.add('multi')
+                            case inspect.Parameter.KEYWORD_ONLY:
+                                if param.default is param.empty:
+                                    flags.add('required')
+                            case inspect.Parameter.VAR_KEYWORD:
+                                flags.add('extra')
+
                         return flags
             case _:
                 return set(['required'])
