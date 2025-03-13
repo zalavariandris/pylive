@@ -66,12 +66,84 @@ def compile_python_function(code:str)->Callable:
     raise ValueError("no functions found in script")
 
 import re
-
-
 def get_function_name(code_string:str)->str:
     match = re.search(r'def\s+(\w+)\s*\(', code_string)
-    return match.group(1) if match else None
+    if not match:
+        raise ValueError()
+    return match.group(1)
 
+import ast
+
+
+class UnboundedNameFinder(ast.NodeVisitor):
+    def __init__(self):
+        self.unbounded_names = list()
+        self.defined_names = set()
+        self.comprehension_names = set()  # Tracks variables bound in comprehensions
+
+    def visit_Name(self, node):
+        if isinstance(node.ctx, ast.Load):  # Variable is being used
+            if node.id not in self.defined_names and node.id not in self.comprehension_names:
+                if node.id not in self.unbounded_names:
+                    self.unbounded_names.append(node.id)
+        elif isinstance(node.ctx, ast.Store):  # Variable is being assigned
+            self.defined_names.add(node.id)
+        self.generic_visit(node)
+
+    def visit_Assign(self, node):
+        # Process assigned variables before visiting right-hand side
+        for target in node.targets:
+            if isinstance(target, ast.Name):
+                self.defined_names.add(target.id)
+        self.generic_visit(node)
+
+    def visit_FunctionDef(self, node):
+        # Function names should be considered defined
+        self.defined_names.add(node.name)
+        self.generic_visit(node)
+
+    def visit_ListComp(self, node):
+        # Handle comprehensions correctly
+        for generator in node.generators:
+            if isinstance(generator.target, ast.Name):
+                self.comprehension_names.add(generator.target.id)
+            elif isinstance(generator.target, (ast.Tuple, ast.List)):  # Handles tuple unpacking
+                for elt in generator.target.elts:
+                    if isinstance(elt, ast.Name):
+                        self.comprehension_names.add(elt.id)
+        self.generic_visit(node)
+
+    def visit_DictComp(self, node):
+        for generator in node.generators:
+            if isinstance(generator.target, ast.Name):
+                self.comprehension_names.add(generator.target.id)
+            elif isinstance(generator.target, (ast.Tuple, ast.List)):  # Handles tuple unpacking
+                for elt in generator.target.elts:
+                    if isinstance(elt, ast.Name):
+                        self.comprehension_names.add(elt.id)
+        self.generic_visit(node)
+
+    def visit_SetComp(self, node):
+        for generator in node.generators:
+            if isinstance(generator.target, ast.Name):
+                self.comprehension_names.add(generator.target.id)
+        self.generic_visit(node)
+
+    def visit_GeneratorExp(self, node):
+        for generator in node.generators:
+            if isinstance(generator.target, ast.Name):
+                self.comprehension_names.add(generator.target.id)
+            elif isinstance(generator.target, (ast.Tuple, ast.List)):  # Handles tuple unpacking
+                for elt in generator.target.elts:
+                    if isinstance(elt, ast.Name):
+                        self.comprehension_names.add(elt.id)
+        self.generic_visit(node)
+
+def find_unbounded_names(expr):
+    tree = ast.parse(expr, mode='eval')
+    finder = UnboundedNameFinder()
+    finder.visit(tree)
+    return finder.unbounded_names
 import traceback
 def format_exception(err:Exception)->str:
     formatted_traceback = ''.join(traceback.TracebackException.from_exception(err).format())

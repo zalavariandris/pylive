@@ -8,6 +8,10 @@ from PySide6.QtWidgets import *
 from pathlib import Path
 
 import logging
+
+from networkx import reverse
+
+from pylive.qt_components.QPathEdit import QPathEdit
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
@@ -23,96 +27,43 @@ from pylive.VisualCode_v6.py_graph_view import PyGraphView
 
 from pylive.utils.unique import make_unique_id
 import pylive.utils.qtfactory as qf
-
-
-class ImportsManager(QWidget):
-    def __init__(self, parent:QWidget|None=None):
-        super().__init__(parent=parent)
-        self.imports_list = QListWidget()
-        layout = QVBoxLayout()
-        layout.addWidget(QLabel("<h1>Imports manager</h1>"))
-        self.new_import_edit = QLineEdit()
-        layout.addWidget(self.new_import_edit)
-        layout.addWidget(self.imports_list)
-        self.delete_button = QPushButton("remove")
-        layout.addWidget(self.delete_button)
-        self.setLayout(layout)
-
-        self._model:PyGraphModel|None = None
-
-        self.completer = QCompleter(self.new_import_edit)
-        packages = self._listAvailablePackages()
-        packages_modell = QStringListModel(packages)
-        self.completer.setModel(packages_modell)
-        self.new_import_edit.setCompleter(self.completer)
-
-        self._connections = []
-
-    def setModel(self, model:PyGraphModel|None):
-        if self._model:
-            for signal, slot in self._connections:
-                signal.disconnect(slot)
-        if model:
-            def appendImport(module_name):
-                assert self._model
-                self.new_import_edit.clear()
-                current_imports = [_ for _ in self._model.imports()]
-                current_imports.append(module_name)
-                self._model.setImports(current_imports)
-
-            def removeSelectedImports():
-                assert self._model
-                selected_packages = [item.text() for item in self.imports_list.selectedItems()]
-                current_imports = self._model.imports()
-                new_imports = [pkg for pkg in current_imports if pkg not in selected_packages]
-                self._model.setImports(new_imports)
-
-            self._connections = [
-                (model.importsReset, self.refreshImports),
-                (self.new_import_edit.returnPressed, lambda: appendImport(self.new_import_edit.text())),
-                (self.delete_button.pressed, lambda: removeSelectedImports())
-            ]
-            for signal, slot in self._connections:
-                signal.connect(slot)
-
-        self._model = model
-        self.refreshImports()
-
-    def _listAvailablePackages(self):
-        import pkgutil
-        return [module.name 
-            for module in pkgutil.iter_modules() 
-            if not module.name.startswith("_")
-        ]
-
-    def refreshImports(self):
-        assert self._model
-        self.imports_list.clear()
-        for row, module_name in enumerate(self._model.imports()):
-            self.imports_list.insertItem(row, QListWidgetItem(module_name))
+from pylive.VisualCode_v6.imports_manger import ImportsManager
 
 
 class InspectorView(QWidget):
     def __init__(self, parent:QWidget|None=None):
         super().__init__(parent=parent)
-        self.kind_dropdown = QComboBox()
-        self.kind_dropdown.insertItems(0, ['operator', 'value', 'expression'])
-        self.kind_dropdown.setDisabled(True)
-        self.expression_edit = QLineEdit()
-        self.expression_edit.setDisabled(True)
-        layout = QVBoxLayout()
-        layout.addWidget(self.kind_dropdown)
-        layout.addWidget(self.expression_edit)
-        self._value_editor:QWidget = QLabel("-ValueEditor-")
-        layout.addWidget(self._value_editor)
-        self.setLayout(layout)
-
+        # private
         self._model:PyGraphModel|None=None
         self.node_proxy_model:PyProxyNodeModel|None = None
         self.node_selection_model:QItemSelectionModel|None=None
         self._current:str|None=None
         self._model_connections = []
         self._selection_connections = []
+
+        # setup UI
+        self.kind_dropdown = QComboBox()
+        self.kind_dropdown.insertItems(0, ['operator', 'value', 'expression'])
+        self.kind_dropdown.setDisabled(True)
+        self.expression_edit = QLineEdit()
+        self.expression_edit.setDisabled(True)
+
+        main_layout = QVBoxLayout()
+        header_layout = QFormLayout()
+        inlets_layout = QFormLayout()
+        main_layout.addWidget(QLabel("<h2>Node</h2>"))
+        main_layout.addLayout(header_layout)
+        main_layout.addWidget(QLabel("<h2>Inlets</h2>"))
+        main_layout.addLayout(inlets_layout)
+        header_layout.addRow("kind", self.kind_dropdown)
+        header_layout.addRow("expression", self.expression_edit)
+        main_layout.addWidget(QLabel("<h2>Help</h2>"))
+        self.help_label = QTextEdit()
+        self.help_label.setReadOnly(True)
+        main_layout.addWidget(self.help_label)
+        self.setLayout(main_layout)
+
+        self.inlets_layout = inlets_layout
 
     def setModel(self, model:PyGraphModel|None):
         if self._model:
@@ -121,6 +72,8 @@ class InspectorView(QWidget):
 
         if model:
             self._model_connections = [
+                (model.inletsReset,
+                    lambda nodes: self._refreshInlets()),
                 (model.dataChanged, 
                     lambda nodes, hints: self._setEditorData(hints) 
                     if self._current in nodes
@@ -164,12 +117,55 @@ class InspectorView(QWidget):
         self.node_selection_model = selection
 
     def _setCurrent(self, node:str|None):
+        assert self._model
         self._current = node
-
-        if node:
+        if self._current:
             self._setEditorData()
+            self._refreshInlets()
+            self.help_label.setPlainText( self._model.data(self._current, 'help') )
         else:
             self._clearEditorData()
+
+    def _refreshInlets(self):
+        assert self._model
+        for i in reversed(range(self.inlets_layout.count())):
+            item = self.inlets_layout.takeAt(i)
+            if widget:=item.widget():
+                widget.deleteLater()
+
+        if self._current:
+            for inlet_key in self._model.inlets(self._current):
+                ### create label
+                annotation = self._model.inletData(self._current, inlet_key, 'annotation')
+                label_text = f"{inlet_key}"
+
+                if annotation==inspect.Parameter.empty:
+                    label_text = f"{inlet_key}"
+                elif isinstance(annotation, type):
+                    label_text = f"{inlet_key}({annotation.__name__})"
+                elif isinstance(annotation, str):
+                    label_text = f"{inlet_key}({annotation})"
+                else:
+                    label_text = f"{inlet_key}({annotation})"
+
+                ### create editor
+                annotation = self._model.inletData(self._current, inlet_key, 'annotation')
+                if self._model.isInletLinked(self._current, inlet_key):
+                    editor = QLineEdit("linked")
+                else:
+                    if annotation == str:
+                        editor = QLineEdit(f":{annotation!r}")
+                    if annotation == Path:
+                        editor = QPathEdit()
+                    else:
+                        editor = QLabel(f"{annotation!r}")
+
+
+                
+
+                self.inlets_layout.addRow(label_text, editor)
+
+
 
     def _setEditorData(self, hints:list=[]):
         assert self._model
@@ -187,47 +183,10 @@ class InspectorView(QWidget):
             if node_source!=self.expression_edit.text():
                 self.expression_edit.setText(node_source)
 
-        if 'result' in hints or not hints:
-            if self._model.data(self._current, 'kind') == 'value':
-
-                error, result = self._model.data(self._current, 'result')
-                if error:
-                    ...
-                else:
-                    match result:
-                        case Path():
-                            from pylive.qt_components.QPathEdit import QPathEdit
-                            editor = QPathEdit()
-                            editor.setPath(result)
-                            editor.textChanged.connect(lambda: 
-                                self._model.setData(self._current, 'expression', f'pathlib.Path("{editor.path()}")')
-                                )
-                        case str():
-                            editor = QLineEdit()
-                            editor.setText(result)
-                            editor.textChanged.connect(lambda: 
-                                self._model.setData(self._current, 'expression', f'"{editor.text()}"')
-                                )
-                        case float():
-                            editor = QLabel(f"TODO: float slider")
-                        case int():
-                            editor = QSlider()
-                            editor.setValue(result)
-                            editor.valueChanged.connect(lambda: 
-                                self._model.setData(self._current, 'expression', str(editor.value()) )
-                                )
-                        case _:
-                            editor = QLabel(f"node editor found for type: {type(result)}")
-
-                    layout = cast(QVBoxLayout, self.layout())
-                    layout.replaceWidget(self._value_editor, editor)
-                    self._value_editor.deleteLater()
-                    self._value_editor = editor
-
     def _clearEditorData(self):
+        self.kind_dropdown.setEnabled(False)
         self.expression_edit.setText("")
         self.expression_edit.setEnabled(False)
-        self.kind_dropdown.setEnabled(False)
 
     def _setModelData(self, node:str, hints:list=[]):
         assert isinstance(node, str)
@@ -244,24 +203,6 @@ class InspectorView(QWidget):
                 node_source = self._model.data(node, 'expression')
                 if node_source!=self.expression_edit.text():
                     self._model.setData(node, 'expression', self.expression_edit.text())
-
-    # def setValueEditor(self, editor:QWidget):
-    #     layout = cast(QVBoxLayout, self.layout())
-
-    #     if self._value_editor and editor:
-    #         layout.replaceWidget(self._value_editor, editor)
-    #         self._value_editor.deleteLater()
-    #     else:
-    #         if self._value_editor:
-    #             layout.removeWidget(self._value_editor)
-    #             self._value_editor.deleteLater()
-    #         if editor:
-    #             layout.addWidget(editor)
-
-
-    #     self._value_editor = editor
-
-
 
 
 class PreView(QScrollArea):
@@ -618,7 +559,7 @@ class Window(QWidget):
         existing_names = list(self._model.nodes())
 
         func_name = make_unique_id(6)
-        self._model.addNode(func_name, "print", kind='operator')
+        self._model.addNode(func_name, "None", kind='expression')
 
         ### position node widget
         node_graphics_item = self.graph_view.nodeItem(func_name)

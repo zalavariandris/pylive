@@ -16,19 +16,43 @@ logger = logging.getLogger(__name__)
 
 
 from pylive.VisualCode_v6.py_import_model import PyImportsModel
+from pylive.utils.evaluate_python import find_unbounded_names
+import pydoc
 
 class _PyGraphItem:
     def __init__(self, model:'PyGraphModel', expression:str="print", kind:Literal["operator", 'value', 'expression']="operator"):
         assert isinstance(expression, str)
-        assert kind in ("operator", 'value')
+        assert kind in ("operator", 'value', 'expression')
         self._model = model
         self._kind:Literal["operator", 'value', 'expression'] = kind
         self._expression = expression
         self._compile_cache = None
         self._cache = None
+        self._fields:list[Any] = []
 
     def clearCache(self):
         self._cache = None
+
+    @property
+    def help(self)->str:
+        match self._kind:
+            case 'operator':
+                try:
+                    func = self._compile()
+                except Exception:
+                    return ""
+                else:
+                    return pydoc.render_doc(func)
+            case _:
+                return ""
+
+    @property
+    def fields(self)->list[Any]:
+        return self._fields
+
+    @fields.setter
+    def fields(self, value:list[Any]):
+        self._fields = value
 
     @property
     def expression(self)->str:
@@ -66,10 +90,13 @@ class _PyGraphItem:
                 else:
                     try:
                         sig = inspect.signature(func)
-                    except ValueError:
+                    except (ValueError, TypeError):
                         return []
                     else:
                         return [name for name in sig.parameters.keys()]
+            case 'expression':
+                unbound_names = find_unbounded_names(self._expression)
+                return [name for name in unbound_names]
             case _:
                 return []
 
@@ -110,6 +137,30 @@ class _PyGraphItem:
             case _:
                 return set(['required'])
 
+    def inletData(self, inlet:str, attr:Literal['annotation', 'default'])->Any:
+        match self._kind:
+            case 'operator':
+                try:
+                    func = self._compile()
+                except Exception:
+                    return set()
+                else:
+                    try:
+                        sig = inspect.signature(func)
+                    except ValueError:
+                        return None
+                    else:
+                        parameters = {key:param for key, param in sig.parameters.items() }
+                        assert inlet in parameters.keys(), f"{inlet} not in {parameters}"
+                        param = parameters[inlet]
+                        match attr:
+                            case 'annotation':
+                                return param.annotation
+                            case 'default':
+                                return param.default
+
+        return None
+
     def evaluate(self, named_args:dict):
         if not self._cache:
             match self._kind:
@@ -118,6 +169,10 @@ class _PyGraphItem:
                 case 'operator':
                     func = self._compile()
                     self._cache = call_function_with_named_args(func, named_args)
+                case 'expression':
+                    ctx = {key: value for key, value in self._model._context.items()}
+                    ctx.update(named_args)
+                    self._cache = eval(self._expression, ctx)
 
         return self._cache
 
@@ -147,13 +202,14 @@ class PyGraphModel(QObject):
     modelAboutToBeReset = Signal()
     modelReset = Signal()
 
+    # Imports
+    importsReset = Signal()
+
     # Nodes
     nodesAboutToBeAdded = Signal(list) # list of NodeKey
     nodesAdded = Signal(list) # list of NodeKey
     nodesAboutToBeRemoved = Signal(list) # list of NodeKey
     nodesRemoved = Signal(list) # list of NodeKey
-
-    # 
     dataChanged = Signal(list, list) # keys:list[str], hints:list[str], node key and list of data name hints. if hints is empty consider all data changed
 
     # Links
@@ -165,8 +221,6 @@ class PyGraphModel(QObject):
     # Inlets
     inletsReset = Signal(list) # list[_NodeKey]
     outletsReset = Signal(list) # list[_NodeKey]
-
-    importsReset = Signal()
 
     def __init__(self, parent:QObject|None=None):
         """
@@ -230,12 +284,8 @@ class PyGraphModel(QObject):
 
         module_watcher = QFileSystemWatcher()
         for name, module in context.items():
-            
-            try:
-                print(f"watch module {name}")
-                module_watcher.addPaths(module.__file__)
-            except AttributeError:
-                print(f"dont watch module {name}")
+            if isinstance(module, ModuleType) and module.__file__:
+                module_watcher.addPath(module.__file__)
 
         if module_watcher:
             self.module_watcher_connections = [
@@ -294,8 +344,8 @@ class PyGraphModel(QObject):
     def inletFlags(self, node:str, inlet:str)->set:
         return self._node_data[node].inletFlags(inlet)
 
-    def inletData(self, node:str, inlet:str):
-        return self._node_data[node].inletData(inlet)
+    def inletData(self, node:str, inlet:str, attr:str):
+        return self._node_data[node].inletData(inlet, attr)
 
     def outlets(self, node:str)->Collection[str]:
         return ['out']
@@ -382,6 +432,12 @@ class PyGraphModel(QObject):
                     return err, None
                 else:
                     return None, value
+
+            case 'fields':
+                return node_item.fields
+
+            case 'help':
+                return node_item.help
 
             case _:
                 return getattr(node_item, attr)
