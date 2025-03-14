@@ -20,12 +20,12 @@ from pylive.utils.evaluate_python import find_unbounded_names
 import pydoc
 
 class _PyGraphItem:
-    def __init__(self, model:'PyGraphModel', expression:str="print", kind:Literal["operator", 'value', 'expression']="operator"):
-        assert isinstance(expression, str)
-        assert kind in ("operator", 'value', 'expression')
+    def __init__(self, model:'PyGraphModel', data:str="print", kind:Literal["operator", 'value-int', 'value-float', 'value-str', 'value-path', 'expression']="operator"):
+        assert isinstance(data, str)
+        assert kind in ("operator", 'value-int', 'value-float', 'value-str', 'value-path', 'expression')
         self._model = model
-        self._kind:Literal["operator", 'value', 'expression'] = kind
-        self._expression = expression
+        self._kind:Literal["operator", 'value-int', 'value-float', 'value-str', 'value-path', 'expression'] = kind
+        self._data = data
         self._compile_cache = None
         self._cache = None
         self._fields:list[Any] = []
@@ -55,28 +55,28 @@ class _PyGraphItem:
         self._fields = value
 
     @property
-    def expression(self)->str:
-        return self._expression
+    def data(self)->str:
+        return self._data
 
-    @expression.setter
+    @data.setter
     def expression(self, value:str):
-        self._expression = value
+        self._data = value
         self._compile_cache = None
         self._cache = None
 
     @property
-    def kind(self)->Literal["operator", 'value', 'expression']:
+    def kind(self)->Literal["operator", 'value-int', 'value-float', 'value-str', 'value-path', 'expression']:
         return self._kind
 
     @kind.setter
-    def kind(self, value:Literal["operator", 'value', 'expression']="operator"):
+    def kind(self, value:Literal["operator", 'value-int', 'value-float', 'value-str', 'value-path', 'expression']="operator"):
         self._kind = value
         self._compile_cache = None
         self._cache = None
 
     def _compile(self,):
         if not self._compile_cache:
-            self._compile_cache = eval(self._expression, self._model._context)
+            self._compile_cache = eval(self._data, self._model._context)
 
         return self._compile_cache
 
@@ -95,10 +95,12 @@ class _PyGraphItem:
                     else:
                         return [name for name in sig.parameters.keys()]
             case 'expression':
-                unbound_names = find_unbounded_names(self._expression)
+                unbound_names = find_unbounded_names(self._data)
                 return [name for name in unbound_names]
-            case _:
+            case "operator" | 'value-int' | 'value-float' | 'value-str' | 'value-path' | 'expression':
                 return []
+            case _:
+                raise ValueError()
 
     def inletFlags(self, inlet:str)->set:
         match self._kind:
@@ -164,15 +166,17 @@ class _PyGraphItem:
     def evaluate(self, named_args:dict):
         if not self._cache:
             match self._kind:
-                case 'value':
+                case 'value-int' | 'value-float'| 'value-str'| 'value-path':
                     self._cache = self._compile()
+
                 case 'operator':
                     func = self._compile()
                     self._cache = call_function_with_named_args(func, named_args)
+
                 case 'expression':
                     ctx = {key: value for key, value in self._model._context.items()}
                     ctx.update(named_args)
-                    self._cache = eval(self._expression, ctx)
+                    self._cache = eval(self._data, ctx)
 
         return self._cache
 
@@ -180,11 +184,13 @@ class _PyGraphItem:
         from textwrap import shorten
         match self._kind:
             case 'operator':
-                return f"𝒇 {self._compile_cache.__name__ if self._compile_cache else f"{self._expression}"}"
-            case 'value':
-                return f"𝕍 {self._cache}"
+                return f"𝒇 {self._compile_cache.__name__ if self._compile_cache else f"{self._data}"}"
+            case 'value-int' | 'value-float' | 'value-str' | 'value-path':
+                return f"𝕍 {self._cache!r}"
             case 'expression':
-                return f"⅀ {self._expression}"
+                return f"⅀ {self._data}"
+            case _:
+                raise ValueError()
 
 
 import pathlib
@@ -350,11 +356,11 @@ class PyGraphModel(QObject):
     def outlets(self, node:str)->Collection[str]:
         return ['out']
 
-    def addNode(self, name:str, expression:str, kind:Literal['operator', 'value', 'expression']='operator'):
+    def addNode(self, name:str, data:str, kind:Literal['operator', 'value-int', 'value-float', 'value-str', 'value-path', 'expression']='operator'):
         if name in self._node_data:
             raise ValueError("nodes must have a unique name")
         self.nodesAboutToBeAdded.emit([name])
-        self._node_data[name] = _PyGraphItem(self, expression, kind)
+        self._node_data[name] = _PyGraphItem(self, data, kind)
         self.nodesAdded.emit([name])
 
     def removeNode(self, name:str):
@@ -407,29 +413,30 @@ class PyGraphModel(QObject):
             case 'name':
                 return f"{node_item}"
 
-            case 'expression':
-                return f"{node_item.expression}"
+            case 'data':
+                return f"{node_item.data}"
 
             case 'kind':
                 return f"{node_item.kind}"
 
             case 'result':
                 ### GET FUNCTION ARGUMENTS
-                ### from links
                 named_args = dict()
                 for source_node, target, outlet, inlet in self.inLinks(node_key):
                     error, value = self.data(source_node, 'result')
                     if error:
                         return error, None
                     named_args[inlet] = value
+
+                ### Evaluate node with arguments
                 try:
                     value = self._node_data[node_key].evaluate(named_args)
+
                 except SyntaxError as err:
-                    import traceback
                     return err, None
                 except Exception as err:
-                    import traceback
                     return err, None
+
                 else:
                     return None, value
 
@@ -465,16 +472,42 @@ class PyGraphModel(QObject):
 
         match attr:
             case 'kind':
+                assert value in ('operator', 'expression', 'value-int', 'value-float', 'value-str', 'value-path')
                 node_item.kind = value
                 self.dataChanged.emit([node], ['kind'])
-
-                # invalidate compilation and results including ancestors
                 self.invalidate([node], compilation=True)
 
-            case 'expression':
-                node_item.expression = value
-                self.dataChanged.emit([node], ['expression'])
-                self.invalidate([node], compilation=True)
+            case 'data':
+                match node_item.kind:
+                    case 'operator':
+                        node_item._data = value
+                        self.dataChanged.emit([node], ['data'])
+                        self.invalidate([node], compilation=True)
+                    case 'expression':
+                        node_item._data = value
+                        self.dataChanged.emit([node], ['data'])
+                        self.invalidate([node], compilation=True)
+                    case 'value-int':
+                        node_item._data = value
+                        self.dataChanged.emit([node], ['data'])
+                        self.invalidate([node], compilation=True)
+                    case 'value-float':
+                        node_item._data = value
+                        self.dataChanged.emit([node], ['data'])
+                        self.invalidate([node], compilation=True)
+                    case 'value-str':
+                        node_item._data = value
+                        self.dataChanged.emit([node], ['data'])
+                        self.invalidate([node], compilation=True)
+                    case 'value-path':
+                        node_item._data = value
+                        self.dataChanged.emit([node], ['data'])
+                        self.invalidate([node], compilation=True)
+                    case _:
+                        raise ValueError()
+
+            case _:
+                raise ValueError()
 
     ### Helpers
     def _toNetworkX(self)->nx.MultiDiGraph:
@@ -497,7 +530,7 @@ class PyGraphModel(QObject):
         graph._node_data = OrderedDict()
 
         for node_data in data['nodes']:
-            node_item = _PyGraphItem(graph, node_data['expression'], node_data['kind'])
+            node_item = _PyGraphItem(graph, node_data['data'], node_data['kind'])
             graph._node_data[node_data['name']] = node_item
 
         for link_data in data['links']:
@@ -522,10 +555,10 @@ class PyGraphModel(QObject):
         data['imports'] = self.imports()
 
         for node_key, node_item in self._node_data.items():
-            node_data:dict[Literal['name', 'kind', 'expression'], Any] = {
+            node_data:dict[Literal['name', 'kind', 'data'], Any] = {
                 'name': node_key,
                 'kind':node_item.kind,
-                'expression': node_item.expression
+                'data': node_item.data
             }
 
             data['nodes'].append(node_data)

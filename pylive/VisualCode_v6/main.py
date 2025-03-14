@@ -5,11 +5,12 @@ from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
+
+
 from pathlib import Path
 
 import logging
 
-from networkx import reverse
 
 from pylive.qt_components.QPathEdit import QPathEdit
 logging.basicConfig(level=logging.DEBUG)
@@ -30,6 +31,7 @@ import pylive.utils.qtfactory as qf
 from pylive.VisualCode_v6.imports_manger import ImportsManager
 
 
+
 class InspectorView(QWidget):
     def __init__(self, parent:QWidget|None=None):
         super().__init__(parent=parent)
@@ -43,27 +45,33 @@ class InspectorView(QWidget):
 
         # setup UI
         self.kind_dropdown = QComboBox()
-        self.kind_dropdown.insertItems(0, ['operator', 'value', 'expression'])
+        self.kind_dropdown.insertItems(0, ['operator', 'value-int', 'value-float', 'value-str', 'value-path', 'expression'])
         self.kind_dropdown.setDisabled(True)
-        self.expression_edit = QLineEdit()
-        self.expression_edit.setDisabled(True)
+
+        self.data_editor = QLabel("-data editor -")
 
         main_layout = QVBoxLayout()
-        header_layout = QFormLayout()
-        inlets_layout = QFormLayout()
-        main_layout.addWidget(QLabel("<h2>Node</h2>"))
-        main_layout.addLayout(header_layout)
-        main_layout.addWidget(QLabel("<h2>Inlets</h2>"))
-        main_layout.addLayout(inlets_layout)
-        header_layout.addRow("kind", self.kind_dropdown)
-        header_layout.addRow("expression", self.expression_edit)
-        main_layout.addWidget(QLabel("<h2>Help</h2>"))
-        self.help_label = QTextEdit()
-        self.help_label.setReadOnly(True)
-        main_layout.addWidget(self.help_label)
+        main_layout.addWidget(self.kind_dropdown)
+        main_layout.addWidget(self.data_editor)
         self.setLayout(main_layout)
 
-        self.inlets_layout = inlets_layout
+
+        # header_layout = QFormLayout()
+        # parameters_layout = QFormLayout()
+        # main_layout.addWidget(QLabel("<h2>Node</h2>"))
+        # main_layout.addLayout(header_layout)
+        # main_layout.addWidget(QLabel("<h2>Parameters</h2>"))
+        # main_layout.addLayout(parameters_layout)
+        # header_layout.addRow("kind", self.kind_dropdown)
+        # header_layout.addRow("data", self.data_editor)
+        # main_layout.addWidget(QLabel("<h2>Help</h2>"))
+        # self.help_label = QTextEdit()
+        # self.help_label.setReadOnly(True)
+        # main_layout.addWidget(self.help_label)
+        # self.setLayout(main_layout)
+
+        # self.parameters_layout = parameters_layout
+
 
     def setModel(self, model:PyGraphModel|None):
         if self._model:
@@ -72,18 +80,10 @@ class InspectorView(QWidget):
 
         if model:
             self._model_connections = [
-                (model.inletsReset,
-                    lambda nodes: self._refreshInlets()),
                 (model.dataChanged, 
                     lambda nodes, hints: self._setEditorData(hints) 
                     if self._current in nodes
                     else 
-                    None),    
-
-                (self.expression_edit.editingFinished, 
-                    lambda: self._setModelData(self._current, ["expression"])
-                    if self._current
-                    else
                     None),
 
                 (self.kind_dropdown.currentIndexChanged, 
@@ -119,74 +119,105 @@ class InspectorView(QWidget):
     def _setCurrent(self, node:str|None):
         assert self._model
         self._current = node
-        if self._current:
-            self._setEditorData()
-            self._refreshInlets()
-            self.help_label.setPlainText( self._model.data(self._current, 'help') )
-        else:
-            self._clearEditorData()
 
-    def _refreshInlets(self):
-        assert self._model
-        for i in reversed(range(self.inlets_layout.count())):
-            item = self.inlets_layout.takeAt(i)
-            if widget:=item.widget():
-                widget.deleteLater()
+        layout = cast(QVBoxLayout, self.layout())
 
-        if self._current:
-            for inlet_key in self._model.inlets(self._current):
-                ### create label
-                annotation = self._model.inletData(self._current, inlet_key, 'annotation')
-                label_text = f"{inlet_key}"
+        ### create editor
+        if not self._current:
+            self.kind_dropdown.setEnabled(False)
+            editor = QLabel("-no editor-")
+            item = layout.replaceWidget(self.data_editor, editor)
+            self.data_editor.deleteLater()
+            self.data_editor = editor
+            return
 
-                if annotation==inspect.Parameter.empty:
-                    label_text = f"{inlet_key}"
-                elif isinstance(annotation, type):
-                    label_text = f"{inlet_key}({annotation.__name__})"
-                elif isinstance(annotation, str):
-                    label_text = f"{inlet_key}({annotation})"
-                else:
-                    label_text = f"{inlet_key}({annotation})"
+        kind = self._model.data(self._current, 'kind')
 
-                ### create editor
-                annotation = self._model.inletData(self._current, inlet_key, 'annotation')
-                if self._model.isInletLinked(self._current, inlet_key):
-                    editor = QLineEdit("linked")
-                else:
-                    if annotation == str:
-                        editor = QLineEdit(f":{annotation!r}")
-                    if annotation == Path:
-                        editor = QPathEdit()
-                    else:
-                        editor = QLabel(f"{annotation!r}")
+        match kind:
+            case 'operator':
+                editor = QLineEdit()
+                editor.editingFinished.connect(lambda model=self._model, node=self._current, editor=editor: 
+                    model.setData(node, 'data', editor.text()))
+            case 'expression':
+                editor = QLineEdit()
+                editor.editingFinished.connect(lambda model=self._model, node=self._current, editor=editor: 
+                    model.setData(node, 'data', editor.text()))
+            case 'value-int':
+                editor = QSlider(Qt.Orientation.Horizontal)
+                editor.valueChanged.connect(lambda model=self._model, node=self._current, editor=editor: 
+                    model.setData(node, 'data', editor.value())
+            case 'value-float':
+                editor = QLabel("-no editor-")
+            case 'value-str':
+                editor = QLabel("-no editor-")
+            case 'value-path':
+                editor = QLabel("-no editor-")
+            case _:
+                editor = QLabel("-no editor-")
 
-
-                
-
-                self.inlets_layout.addRow(label_text, editor)
+        layout.replaceWidget(self.data_editor, editor)
+        self.data_editor.deleteLater()
+        self.data_editor = editor
+        self._setEditorData()
 
 
+    # def _refreshParameters(self):
+    #     assert self._model
+    #     for i in reversed(range(self.parameters_layout.count())):
+    #         item = self.parameters_layout.takeAt(i)
+    #         if widget:=item.widget():
+    #             widget.deleteLater()
+
+    #     if self._current:
+    #         for inlet_key in self._model.inlets(self._current):
+    #             ### create label
+    #             annotation = self._model.inletData(self._current, inlet_key, 'annotation')
+    #             label_text = f"{inlet_key}"
+
+    #             if annotation==inspect.Parameter.empty:
+    #                 label_text = f"{inlet_key}"
+    #             elif isinstance(annotation, type):
+    #                 label_text = f"{inlet_key}({annotation.__name__})"
+    #             elif isinstance(annotation, str):
+    #                 label_text = f"{inlet_key}({annotation})"
+    #             else:
+    #                 label_text = f"{inlet_key}({annotation})"
+
+    #             ### create editor
+    #             annotation = self._model.inletData(self._current, inlet_key, 'annotation')
+    #             if self._model.isInletLinked(self._current, inlet_key):
+    #                 editor = QLineEdit("linked")
+    #             else:
+    #                 if annotation == str:
+    #                     editor = QLineEdit(f"{annotation!r}")
+    #                 if annotation == Path:
+    #                     editor = QPathEdit()
+    #                 else:
+    #                     editor = QLabel(f"{annotation!r}")
+
+    #             self.parameters_layout.addRow(label_text, editor)
 
     def _setEditorData(self, hints:list=[]):
         assert self._model
         assert self._current
-        self.expression_edit.setEnabled(True)
-        self.kind_dropdown.setEnabled(True)
 
+
+        self.kind_dropdown.setEnabled(True)
         if 'kind' in hints or not hints:
             node_kind = self._model.data(self._current, 'kind')
             if node_kind!=self.kind_dropdown.currentText():
                 self.kind_dropdown.setCurrentText(node_kind)
+            # self._refreshParameters()
 
-        if 'expression' in hints or not hints:
-            node_source = self._model.data(self._current, 'expression')
-            if node_source!=self.expression_edit.text():
-                self.expression_edit.setText(node_source)
 
-    def _clearEditorData(self):
-        self.kind_dropdown.setEnabled(False)
-        self.expression_edit.setText("")
-        self.expression_edit.setEnabled(False)
+        self.data_editor.setEnabled(True)
+
+
+        if 'data' in hints or not hints:
+            node_source = self._model.data(self._current, 'data')
+            if node_source!=self.data_editor.text():
+                self.data_editor.setText(node_source)
+            # self._refreshParameters()
 
     def _setModelData(self, node:str, hints:list=[]):
         assert isinstance(node, str)
@@ -199,10 +230,10 @@ class InspectorView(QWidget):
                 if node_kind!=self.kind_dropdown.currentText():
                     self._model.setData(node, 'kind', self.kind_dropdown.currentText())
 
-            if 'expression' in hints or not hints:
-                node_source = self._model.data(node, 'expression')
-                if node_source!=self.expression_edit.text():
-                    self._model.setData(node, 'expression', self.expression_edit.text())
+            # if 'data' in hints or not hints:
+            #     node_source = self._model.data(node, 'data')
+            #     if node_source!=self.data_editor.text():
+            #         self._model.setData(node, 'data', self.data_editor.text())
 
 
 class PreView(QScrollArea):
@@ -286,7 +317,7 @@ class PreView(QScrollArea):
         self.preview_label.setText("")
 
 
-class Window(QWidget):
+class MainWindow(QWidget):
     def __init__(self, parent:QWidget|None=None):
         super().__init__(parent=parent)
 
@@ -761,10 +792,12 @@ if __name__ == "__main__":
     parent_folder = pathlib.Path(__file__).parent.resolve()
     print("Python Visual Editor starting...\n  working directory:", Path.cwd())
 
-    app = QApplication()
-    window = Window()
+    app = QApplication([])
+
+    window = MainWindow()
     window.setGeometry(QRect(QPoint(), app.primaryScreen().size()).adjusted(40,80,-30,-300))
     window.show()
+    app.exec()
     # window.openFile(Path.cwd()/"./tests/dissertation_builder.yaml")
-    sys.exit(app.exec())
+
     
