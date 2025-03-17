@@ -20,12 +20,12 @@ from pylive.utils.evaluate_python import find_unbounded_names
 import pydoc
 
 class _PyGraphItem:
-    def __init__(self, model:'PyGraphModel', data:str="print", kind:Literal["operator", 'value-int', 'value-float', 'value-str', 'value-path', 'expression']="operator"):
-        assert isinstance(data, str)
+    def __init__(self, model:'PyGraphModel', content:str="print", kind:Literal["operator", 'value-int', 'value-float', 'value-str', 'value-path', 'expression']="operator"):
+        assert isinstance(content, str)
         assert kind in ("operator", 'value-int', 'value-float', 'value-str', 'value-path', 'expression')
         self._model = model
         self._kind:Literal["operator", 'value-int', 'value-float', 'value-str', 'value-path', 'expression'] = kind
-        self._data = data
+        self.content = content
         self._compile_cache = None
         self._cache = None
         self._fields:list[Any] = []
@@ -56,11 +56,11 @@ class _PyGraphItem:
 
     @property
     def data(self)->str:
-        return self._data
+        return self.content
 
     @data.setter
     def expression(self, value:str):
-        self._data = value
+        self.content = value
         self._compile_cache = None
         self._cache = None
 
@@ -76,7 +76,7 @@ class _PyGraphItem:
 
     def _compile(self,):
         if not self._compile_cache:
-            self._compile_cache = eval(self._data, self._model._context)
+            self._compile_cache = eval(self.content, self._model._context)
 
         return self._compile_cache
 
@@ -95,7 +95,7 @@ class _PyGraphItem:
                     else:
                         return [name for name in sig.parameters.keys()]
             case 'expression':
-                unbound_names = find_unbounded_names(self._data)
+                unbound_names = find_unbounded_names(self.content)
                 return [name for name in unbound_names]
             case "operator" | 'value-int' | 'value-float' | 'value-str' | 'value-path' | 'expression':
                 return []
@@ -176,7 +176,7 @@ class _PyGraphItem:
                 case 'expression':
                     ctx = {key: value for key, value in self._model._context.items()}
                     ctx.update(named_args)
-                    self._cache = eval(self._data, ctx)
+                    self._cache = eval(self.content, ctx)
 
         return self._cache
 
@@ -184,11 +184,11 @@ class _PyGraphItem:
         from textwrap import shorten
         match self._kind:
             case 'operator':
-                return f"𝒇 {self._compile_cache.__name__ if self._compile_cache else f"{self._data}"}"
+                return f"𝒇 {self._compile_cache.__name__ if self._compile_cache else f"{self.content}"}"
             case 'value-int' | 'value-float' | 'value-str' | 'value-path':
                 return f"𝕍 {self._cache!r}"
             case 'expression':
-                return f"⅀ {self._data}"
+                return f"⅀ {self.content}"
             case _:
                 raise ValueError()
 
@@ -203,6 +203,7 @@ class GraphMimeData(StrEnum):
 
 
 import importlib
+import importlib.util
 _NodeKey = str
 class PyGraphModel(QObject):
     modelAboutToBeReset = Signal()
@@ -350,7 +351,7 @@ class PyGraphModel(QObject):
     def inletFlags(self, node:str, inlet:str)->set:
         return self._node_data[node].inletFlags(inlet)
 
-    def inletData(self, node:str, inlet:str, attr:str):
+    def inletData(self, node:str, inlet:str, attr:Literal['annotation', 'default']):
         return self._node_data[node].inletData(inlet, attr)
 
     def outlets(self, node:str)->Collection[str]:
@@ -413,7 +414,7 @@ class PyGraphModel(QObject):
             case 'name':
                 return f"{node_item}"
 
-            case 'data':
+            case 'content':
                 return f"{node_item.data}"
 
             case 'kind':
@@ -467,7 +468,7 @@ class PyGraphModel(QObject):
                 self._node_data[dep]._cache = None
             self.dataChanged.emit(dependents, ['result'])
 
-    def setData(self, node:str, attr:str, value:str):
+    def setData(self, node:str, attr:str, value:Any):
         node_item = self._node_data[node]
 
         match attr:
@@ -477,31 +478,31 @@ class PyGraphModel(QObject):
                 self.dataChanged.emit([node], ['kind'])
                 self.invalidate([node], compilation=True)
 
-            case 'data':
+            case 'content':
                 match node_item.kind:
                     case 'operator':
-                        node_item._data = value
-                        self.dataChanged.emit([node], ['data'])
+                        node_item.content = value
+                        self.dataChanged.emit([node], ['content'])
                         self.invalidate([node], compilation=True)
                     case 'expression':
-                        node_item._data = value
-                        self.dataChanged.emit([node], ['data'])
+                        node_item.content = value
+                        self.dataChanged.emit([node], ['content'])
                         self.invalidate([node], compilation=True)
                     case 'value-int':
-                        node_item._data = value
-                        self.dataChanged.emit([node], ['data'])
+                        node_item.content = value
+                        self.dataChanged.emit([node], ['content'])
                         self.invalidate([node], compilation=True)
                     case 'value-float':
-                        node_item._data = value
-                        self.dataChanged.emit([node], ['data'])
+                        node_item.content = value
+                        self.dataChanged.emit([node], ['content'])
                         self.invalidate([node], compilation=True)
                     case 'value-str':
-                        node_item._data = value
-                        self.dataChanged.emit([node], ['data'])
+                        node_item.content = value
+                        self.dataChanged.emit([node], ['content'])
                         self.invalidate([node], compilation=True)
                     case 'value-path':
-                        node_item._data = value
-                        self.dataChanged.emit([node], ['data'])
+                        node_item.content = value
+                        self.dataChanged.emit([node], ['content'])
                         self.invalidate([node], compilation=True)
                     case _:
                         raise ValueError()
@@ -530,7 +531,7 @@ class PyGraphModel(QObject):
         graph._node_data = OrderedDict()
 
         for node_data in data['nodes']:
-            node_item = _PyGraphItem(graph, node_data['data'], node_data['kind'])
+            node_item = _PyGraphItem(graph, node_data['content'], node_data['kind'])
             graph._node_data[node_data['name']] = node_item
 
         for link_data in data['links']:
@@ -555,10 +556,10 @@ class PyGraphModel(QObject):
         data['imports'] = self.imports()
 
         for node_key, node_item in self._node_data.items():
-            node_data:dict[Literal['name', 'kind', 'data'], Any] = {
+            node_data:dict[Literal['name', 'kind', 'content'], Any] = {
                 'name': node_key,
                 'kind':node_item.kind,
-                'data': node_item.data
+                'content': node_item.content
             }
 
             data['nodes'].append(node_data)

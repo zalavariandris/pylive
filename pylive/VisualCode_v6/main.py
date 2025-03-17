@@ -136,22 +136,35 @@ class InspectorView(QWidget):
         match kind:
             case 'operator':
                 editor = QLineEdit()
-                editor.editingFinished.connect(lambda model=self._model, node=self._current, editor=editor: 
-                    model.setData(node, 'data', editor.text()))
+                editor.setText(self._model.data(self._current, 'content'))
+                editor.editingFinished.connect(lambda model=self._model, node=self._current, editor=editor:
+                    model.setData(node, 'content', editor.text()))
             case 'expression':
                 editor = QLineEdit()
+                editor.setText(self._model.data(self._current, 'content'))
                 editor.editingFinished.connect(lambda model=self._model, node=self._current, editor=editor: 
-                    model.setData(node, 'data', editor.text()))
+                    model.setData(node, 'content', editor.text()))
             case 'value-int':
-                editor = QSlider(Qt.Orientation.Horizontal)
+                editor = QSpinBox()
+                editor.setValue(int(self._model.data(self._current, 'content')))
                 editor.valueChanged.connect(lambda model=self._model, node=self._current, editor=editor: 
-                    model.setData(node, 'data', editor.value())
+                    model.setData(node, 'content', editor.value()))
             case 'value-float':
-                editor = QLabel("-no editor-")
+                editor = QDoubleSpinBox()
+                editor.setValue(float(self._model.data(self._current, 'content')))
+
+                editor.valueChanged.connect(lambda model=self._model, node=self._current, editor=editor:
+                    model.setData(node, 'content', editor.value))
             case 'value-str':
-                editor = QLabel("-no editor-")
+                editor = QLineEdit()
+                editor.setText(self._model.data(self._current, 'content'))
+                editor.editingFinished.connect(lambda model=self._model, node=self._current, editor=editor:
+                    model.setData(node, 'content', editor.text()))
             case 'value-path':
-                editor = QLabel("-no editor-")
+                editor = QPathEdit()
+                editor.setPath(str(self._model.data(self._current, 'content')))
+                editor.editingFinished.connect(lambda model=self._model, node=self._current, editor=editor:
+                    model.setData(node, 'content', pathlib.Path(editor.text())))
             case _:
                 editor = QLabel("-no editor-")
 
@@ -213,8 +226,8 @@ class InspectorView(QWidget):
         self.data_editor.setEnabled(True)
 
 
-        if 'data' in hints or not hints:
-            node_source = self._model.data(self._current, 'data')
+        if 'content' in hints or not hints:
+            node_source = self._model.data(self._current, 'content')
             if node_source!=self.data_editor.text():
                 self.data_editor.setText(node_source)
             # self._refreshParameters()
