@@ -4,6 +4,7 @@ from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
+from pylive.VisualCode_v4._ARCHIVE import node_tree_model
 from pylive.VisualCode_v5.abstract_graph_model import AbstractGraphModel
 from pylive.utils.evaluate_python import call_function_with_named_args, compile_python_function
 import inspect
@@ -19,13 +20,18 @@ from pylive.VisualCode_v6.py_import_model import PyImportsModel
 from pylive.utils.evaluate_python import find_unbounded_names
 import pydoc
 
+KindType = Literal["operator", 'value-int', 'value-float', 'value-str', 'value-path', 'expression']
+
 class _PyGraphItem:
-    def __init__(self, model:'PyGraphModel', content:str="print", kind:Literal["operator", 'value-int', 'value-float', 'value-str', 'value-path', 'expression']="operator"):
+    def __init__(self, model:'PyGraphModel',
+        content:str="print", 
+        kind:KindType="operator"
+    ):
         assert isinstance(content, str)
         assert kind in ("operator", 'value-int', 'value-float', 'value-str', 'value-path', 'expression')
         self._model = model
-        self._kind:Literal["operator", 'value-int', 'value-float', 'value-str', 'value-path', 'expression'] = kind
-        self.content = content
+        self._kind:KindType = kind
+        self._content:str = content
         self._compile_cache = None
         self._cache = None
         self._fields:list[Any] = []
@@ -55,12 +61,12 @@ class _PyGraphItem:
         self._fields = value
 
     @property
-    def data(self)->str:
-        return self.content
+    def content(self)->str:
+        return self._content
 
-    @data.setter
+    @content.setter
     def expression(self, value:str):
-        self.content = value
+        self._content = value
         self._compile_cache = None
         self._cache = None
 
@@ -76,7 +82,7 @@ class _PyGraphItem:
 
     def _compile(self,):
         if not self._compile_cache:
-            self._compile_cache = eval(self.content, self._model._context)
+            self._compile_cache = eval(self._content, self._model._context)
 
         return self._compile_cache
 
@@ -95,7 +101,7 @@ class _PyGraphItem:
                     else:
                         return [name for name in sig.parameters.keys()]
             case 'expression':
-                unbound_names = find_unbounded_names(self.content)
+                unbound_names = find_unbounded_names(self._content)
                 return [name for name in unbound_names]
             case "operator" | 'value-int' | 'value-float' | 'value-str' | 'value-path' | 'expression':
                 return []
@@ -176,7 +182,7 @@ class _PyGraphItem:
                 case 'expression':
                     ctx = {key: value for key, value in self._model._context.items()}
                     ctx.update(named_args)
-                    self._cache = eval(self.content, ctx)
+                    self._cache = eval(self._content, ctx)
 
         return self._cache
 
@@ -184,11 +190,11 @@ class _PyGraphItem:
         from textwrap import shorten
         match self._kind:
             case 'operator':
-                return f"𝒇 {self._compile_cache.__name__ if self._compile_cache else f"{self.content}"}"
+                return f"𝒇 {self._compile_cache.__name__ if self._compile_cache else f"{self._content}"}"
             case 'value-int' | 'value-float' | 'value-str' | 'value-path':
                 return f"𝕍 {self._cache!r}"
             case 'expression':
-                return f"⅀ {self.content}"
+                return f"⅀ {self._content}"
             case _:
                 raise ValueError()
 
@@ -408,17 +414,21 @@ class PyGraphModel(QObject):
         self.dataChanged.emit([target], ['result'])
         
     ### Node Data
-    def data(self, node_key:str, attr:str)->Any:
+    def data(self, node_key:str, attr:str, role:int=Qt.ItemDataRole.DisplayRole)->Any:
         node_item = self._node_data[node_key]
         match attr:
             case 'name':
-                return f"{node_item}"
-
+                if role == Qt.ItemDataRole.DisplayRole:
+                    return f"{node_item}"
             case 'content':
-                return f"{node_item.data}"
+                if role == Qt.ItemDataRole.EditRole:
+                    return node_item.content
+
+                if role == Qt.ItemDataRole.DisplayRole:
+                    return f"{node_item.content}"
 
             case 'kind':
-                return f"{node_item.kind}"
+                return node_item.kind
 
             case 'result':
                 ### GET FUNCTION ARGUMENTS
@@ -450,6 +460,63 @@ class PyGraphModel(QObject):
             case _:
                 return getattr(node_item, attr)
 
+    def setData(self, node:str, attr:str, value:Any, role:int=Qt.ItemDataRole.EditRole):
+        node_item = self._node_data[node]
+
+        match attr:
+            case 'kind':
+                assert value in ('operator', 'expression', 'value-int', 'value-float', 'value-str', 'value-path')
+                node_item.kind = value
+                match node_item.kind:
+                    case 'operator':
+                        node_item._content = "print"
+                    case 'expression':
+                        node_item._content = "x"
+                    case 'value-int':
+                        node_item._content = "0"
+                    case 'value-float':
+                        node_item._content = "0.0"
+                    case 'value-str':
+                        node_item._content = "text"
+                    case 'value-path':
+                        node_item._content = str(Path.cwd())
+                node_item._content
+                self.dataChanged.emit([node], ['kind', 'content'])
+                self.invalidate([node], compilation=True)
+
+            case 'content':
+                match node_item.kind:
+                    case 'operator':
+                        node_item._content = value
+                        self.dataChanged.emit([node], ['content'])
+                        self.invalidate([node], compilation=True)
+                    case 'expression':
+                        node_item._content = value
+                        self.dataChanged.emit([node], ['content'])
+                        self.invalidate([node], compilation=True)
+                    case 'value-int':
+                        node_item._content = value
+                        self.dataChanged.emit([node], ['content'])
+                        self.invalidate([node], compilation=True)
+                    case 'value-float':
+                        node_item._content = value
+                        self.dataChanged.emit([node], ['content'])
+                        self.invalidate([node], compilation=True)
+                    case 'value-str':
+                        node_item._content = value
+                        self.dataChanged.emit([node], ['content'])
+                        self.invalidate([node], compilation=True)
+                    case 'value-path':
+                        node_item._content = value
+                        self.dataChanged.emit([node], ['content'])
+                        self.invalidate([node], compilation=True)
+                    case _:
+                        raise ValueError()
+
+            case _:
+                raise ValueError()
+
+
     def invalidate(self, nodes:list[str], compilation:bool=True):
         # invalidate node results including ancestors.
         # if compilation is true, invalidate nodes compile_cache
@@ -468,47 +535,6 @@ class PyGraphModel(QObject):
                 self._node_data[dep]._cache = None
             self.dataChanged.emit(dependents, ['result'])
 
-    def setData(self, node:str, attr:str, value:Any):
-        node_item = self._node_data[node]
-
-        match attr:
-            case 'kind':
-                assert value in ('operator', 'expression', 'value-int', 'value-float', 'value-str', 'value-path')
-                node_item.kind = value
-                self.dataChanged.emit([node], ['kind'])
-                self.invalidate([node], compilation=True)
-
-            case 'content':
-                match node_item.kind:
-                    case 'operator':
-                        node_item.content = value
-                        self.dataChanged.emit([node], ['content'])
-                        self.invalidate([node], compilation=True)
-                    case 'expression':
-                        node_item.content = value
-                        self.dataChanged.emit([node], ['content'])
-                        self.invalidate([node], compilation=True)
-                    case 'value-int':
-                        node_item.content = value
-                        self.dataChanged.emit([node], ['content'])
-                        self.invalidate([node], compilation=True)
-                    case 'value-float':
-                        node_item.content = value
-                        self.dataChanged.emit([node], ['content'])
-                        self.invalidate([node], compilation=True)
-                    case 'value-str':
-                        node_item.content = value
-                        self.dataChanged.emit([node], ['content'])
-                        self.invalidate([node], compilation=True)
-                    case 'value-path':
-                        node_item.content = value
-                        self.dataChanged.emit([node], ['content'])
-                        self.invalidate([node], compilation=True)
-                    case _:
-                        raise ValueError()
-
-            case _:
-                raise ValueError()
 
     ### Helpers
     def _toNetworkX(self)->nx.MultiDiGraph:
@@ -559,7 +585,7 @@ class PyGraphModel(QObject):
             node_data:dict[Literal['name', 'kind', 'content'], Any] = {
                 'name': node_key,
                 'kind':node_item.kind,
-                'content': node_item.content
+                'content': node_item._content
             }
 
             data['nodes'].append(node_data)

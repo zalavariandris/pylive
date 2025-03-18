@@ -11,6 +11,8 @@ from pathlib import Path
 
 import logging
 
+from numpy import isin
+
 
 from pylive.qt_components.QPathEdit import QPathEdit
 logging.basicConfig(level=logging.DEBUG)
@@ -47,31 +49,13 @@ class InspectorView(QWidget):
         self.kind_dropdown = QComboBox()
         self.kind_dropdown.insertItems(0, ['operator', 'value-int', 'value-float', 'value-str', 'value-path', 'expression'])
         self.kind_dropdown.setDisabled(True)
+        self.content_editor = QLabel("-data editor -")
 
-        self.data_editor = QLabel("-data editor -")
-
+        # Layout
         main_layout = QVBoxLayout()
         main_layout.addWidget(self.kind_dropdown)
-        main_layout.addWidget(self.data_editor)
+        main_layout.addWidget(self.content_editor)
         self.setLayout(main_layout)
-
-
-        # header_layout = QFormLayout()
-        # parameters_layout = QFormLayout()
-        # main_layout.addWidget(QLabel("<h2>Node</h2>"))
-        # main_layout.addLayout(header_layout)
-        # main_layout.addWidget(QLabel("<h2>Parameters</h2>"))
-        # main_layout.addLayout(parameters_layout)
-        # header_layout.addRow("kind", self.kind_dropdown)
-        # header_layout.addRow("data", self.data_editor)
-        # main_layout.addWidget(QLabel("<h2>Help</h2>"))
-        # self.help_label = QTextEdit()
-        # self.help_label.setReadOnly(True)
-        # main_layout.addWidget(self.help_label)
-        # self.setLayout(main_layout)
-
-        # self.parameters_layout = parameters_layout
-
 
     def setModel(self, model:PyGraphModel|None):
         if self._model:
@@ -79,23 +63,19 @@ class InspectorView(QWidget):
                 signal.disconnect(slot)
 
         if model:
+            assert isinstance(model, PyGraphModel)
             self._model_connections = [
                 (model.dataChanged, 
                     lambda nodes, hints: self._setEditorData(hints) 
                     if self._current in nodes
                     else 
-                    None),
-
-                (self.kind_dropdown.currentIndexChanged, 
-                    lambda: self._setModelData(self._current, ["kind"])
-                    if self._current
-                    else
                     None)
             ]
         for signal, slot in self._model_connections:
             signal.connect(slot)
 
         self._model = model
+        self._setCurrent(None)
 
     def setSelectionModel(self, selection:QItemSelectionModel|None, proxy:PyProxyNodeModel|None):
         assert all([selection is None, proxy is None]) or all([selection is not None, proxy is not None])
@@ -116,6 +96,7 @@ class InspectorView(QWidget):
         self.node_proxy_model = proxy
         self.node_selection_model = selection
 
+
     def _setCurrent(self, node:str|None):
         assert self._model
         self._current = node
@@ -123,118 +104,114 @@ class InspectorView(QWidget):
         layout = cast(QVBoxLayout, self.layout())
 
         ### create editor
-        if not self._current:
+        if self._current:
+            # update kind dropdown
+            self.kind_dropdown.setEnabled(True)
+
+            # update content editor
+            new_content_editor = self._createContentEditor(self._model, self._current)
+            item = layout.replaceWidget(self.content_editor, new_content_editor)
+            self.content_editor.deleteLater()
+            self.content_editor = new_content_editor
+            self._setEditorData(self.content_editor, self._model, self._current, hints=[])
+        else:
             self.kind_dropdown.setEnabled(False)
-            editor = QLabel("-no editor-")
-            item = layout.replaceWidget(self.data_editor, editor)
-            self.data_editor.deleteLater()
-            self.data_editor = editor
-            return
+            new_content_editor = QLabel("-no editor-")
+            item = layout.replaceWidget(self.content_editor, new_content_editor)
+            self.content_editor.deleteLater()
+            self.content_editor = new_content_editor
 
-        kind = self._model.data(self._current, 'kind')
-
+        
+    def _createContentEditor(self, model:PyGraphModel, node:str)->QWidget:
+        kind = model.data(node, 'kind')
         match kind:
             case 'operator':
                 editor = QLineEdit()
-                editor.setText(self._model.data(self._current, 'content'))
-                editor.editingFinished.connect(lambda model=self._model, node=self._current, editor=editor:
-                    model.setData(node, 'content', editor.text()))
+                editor.setText(model.data(node, 'content'))
+                editor.editingFinished.connect(lambda editor=editor, model=model, node=node:
+                    self._setModelData(editor, model, node, ['content']))
+
             case 'expression':
                 editor = QLineEdit()
-                editor.setText(self._model.data(self._current, 'content'))
-                editor.editingFinished.connect(lambda model=self._model, node=self._current, editor=editor: 
-                    model.setData(node, 'content', editor.text()))
+                editor.setText(model.data(node, 'content'))
+                editor.editingFinished.connect(lambda editor=editor, model=model, node=node:
+                    self._setModelData(editor, model, node, ['content']))
+
             case 'value-int':
                 editor = QSpinBox()
-                editor.setValue(int(self._model.data(self._current, 'content')))
-                editor.valueChanged.connect(lambda model=self._model, node=self._current, editor=editor: 
-                    model.setData(node, 'content', editor.value()))
+                editor.setValue(int(model.data(node, 'content')))
+                editor.valueChanged.connect(lambda editor=editor, model=model, node=node:
+                    self._setModelData(editor, model, node, ['content']))
+
             case 'value-float':
                 editor = QDoubleSpinBox()
-                editor.setValue(float(self._model.data(self._current, 'content')))
+                editor.setValue(float(model.data(node, 'content')))
 
-                editor.valueChanged.connect(lambda model=self._model, node=self._current, editor=editor:
-                    model.setData(node, 'content', editor.value))
+                editor.valueChanged.connect(lambda editor=editor, model=model, node=node:
+                    self._setModelData(editor, model, node, ['content']))
+
             case 'value-str':
                 editor = QLineEdit()
-                editor.setText(self._model.data(self._current, 'content'))
-                editor.editingFinished.connect(lambda model=self._model, node=self._current, editor=editor:
-                    model.setData(node, 'content', editor.text()))
+                editor.setText(model.data(node, 'content'))
+                editor.editingFinished.connect(lambda editor=editor, model=model, node=node:
+                    self._setModelData(editor, model, node, ['content']))
+
             case 'value-path':
                 editor = QPathEdit()
-                editor.setPath(str(self._model.data(self._current, 'content')))
-                editor.editingFinished.connect(lambda model=self._model, node=self._current, editor=editor:
-                    model.setData(node, 'content', pathlib.Path(editor.text())))
+                editor.setPath(str(model.data(node, 'content')))
+                editor.editingFinished.connect(lambda editor=editor, model=model, node=node:
+                    self._setModelData(editor, model, node, ['content']))
             case _:
-                editor = QLabel("-no editor-")
+                raise ValueError()
 
-        layout.replaceWidget(self.data_editor, editor)
-        self.data_editor.deleteLater()
-        self.data_editor = editor
-        self._setEditorData()
+        return editor
 
-
-    # def _refreshParameters(self):
-    #     assert self._model
-    #     for i in reversed(range(self.parameters_layout.count())):
-    #         item = self.parameters_layout.takeAt(i)
-    #         if widget:=item.widget():
-    #             widget.deleteLater()
-
-    #     if self._current:
-    #         for inlet_key in self._model.inlets(self._current):
-    #             ### create label
-    #             annotation = self._model.inletData(self._current, inlet_key, 'annotation')
-    #             label_text = f"{inlet_key}"
-
-    #             if annotation==inspect.Parameter.empty:
-    #                 label_text = f"{inlet_key}"
-    #             elif isinstance(annotation, type):
-    #                 label_text = f"{inlet_key}({annotation.__name__})"
-    #             elif isinstance(annotation, str):
-    #                 label_text = f"{inlet_key}({annotation})"
-    #             else:
-    #                 label_text = f"{inlet_key}({annotation})"
-
-    #             ### create editor
-    #             annotation = self._model.inletData(self._current, inlet_key, 'annotation')
-    #             if self._model.isInletLinked(self._current, inlet_key):
-    #                 editor = QLineEdit("linked")
-    #             else:
-    #                 if annotation == str:
-    #                     editor = QLineEdit(f"{annotation!r}")
-    #                 if annotation == Path:
-    #                     editor = QPathEdit()
-    #                 else:
-    #                     editor = QLabel(f"{annotation!r}")
-
-    #             self.parameters_layout.addRow(label_text, editor)
-
-    def _setEditorData(self, hints:list=[]):
-        assert self._model
-        assert self._current
-
+    def _setEditorData(self, editor:QWidget, model:PyGraphModel, node:str, hints:list=[]):
+        if not self._model or not self._current:
+            self.kind_dropdown.setEnabled(False)
+            self.content_editor.setEnabled(False)
+            return
 
         self.kind_dropdown.setEnabled(True)
+        node = self._current
         if 'kind' in hints or not hints:
-            node_kind = self._model.data(self._current, 'kind')
+            node_kind = self._model.data(node, 'kind')
             if node_kind!=self.kind_dropdown.currentText():
                 self.kind_dropdown.setCurrentText(node_kind)
-            # self._refreshParameters()
 
-
-        self.data_editor.setEnabled(True)
-
-
+        self.content_editor.setEnabled(True)
         if 'content' in hints or not hints:
-            node_source = self._model.data(self._current, 'content')
-            if node_source!=self.data_editor.text():
-                self.data_editor.setText(node_source)
-            # self._refreshParameters()
+            kind = self._model.data(node, 'kind')
+            content = self._model.data(node, 'content')
+            match kind:
+                case 'operator':
+                    editor = cast(QLineEdit, self.content_editor)
+                    editor.setText(self._model.data(node, 'content', Qt.ItemDataRole.DisplayRole))
+                case 'expression':
+                    editor = cast(QLineEdit, self.content_editor)
+                    editor.setText(self._model.data(node, 'content', Qt.ItemDataRole.DisplayRole))
+                case 'value-int':
+                    editor = cast(QSpinBox, self.content_editor)
+                    editor.setValue(self._model.data(node, 'content', Qt.ItemDataRole.EditRole))
+                case 'value-float':
+                    editor = cast(QDoubleSpinBox, self.content_editor)
+                    editor.setValue(self._model.data(node, 'content', Qt.ItemDataRole.EditRole))
+                case 'value-str':
+                    editor = cast(QLineEdit, self.content_editor)
+                    editor.setText(self._model.data(node, 'content', Qt.ItemDataRole.EditRole))
+                case 'value-path':
+                    editor = cast(QPathEdit, self.content_editor)
+                    editor.setText(self._model.data(node, 'content', Qt.ItemDataRole.EditRole))
+                case _:
+                    pass
 
-    def _setModelData(self, node:str, hints:list=[]):
+    def _setModelData(self, editor:QWidget, model:PyGraphModel, node:str, hints:list=[]):
         assert isinstance(node, str)
-        assert self._model
+        if not self._model:
+            return
+
+        if not self._current:
+            return
 
         if self._current:
             node = self._current
@@ -243,10 +220,30 @@ class InspectorView(QWidget):
                 if node_kind!=self.kind_dropdown.currentText():
                     self._model.setData(node, 'kind', self.kind_dropdown.currentText())
 
-            # if 'data' in hints or not hints:
-            #     node_source = self._model.data(node, 'data')
-            #     if node_source!=self.data_editor.text():
-            #         self._model.setData(node, 'data', self.data_editor.text())
+            if 'content' in hints or not hints:
+                kind = self._model.data(node, 'kind')
+                content = self._model.data(node, 'content')
+                match kind:
+                    case 'operator':
+                        editor = cast(QLineEdit, self.content_editor)
+                        self._model.setData(node, 'content', editor.text())
+                    case 'expression':
+                        editor = cast(QLineEdit, self.content_editor)
+                        self._model.setData(node, 'content', editor.text())
+                    case 'value-int':
+                        editor = cast(QSpinBox, self.content_editor)
+                        self._model.setData(node, 'content', str(editor.value()))
+                    case 'value-float':
+                        editor = cast(QDoubleSpinBox, self.content_editor)
+                        self._model.setData(node, 'content', str(editor.value()))
+                    case 'value-str':
+                        editor = cast(QLineEdit, self.content_editor)
+                        self._model.setData(node, 'content', editor.text())
+                    case 'value-path':
+                        editor = cast(QPathEdit, self.content_editor)
+                        self._model.setData(node, 'content', editor.text())
+                    case _:
+                        pass
 
 
 class PreView(QScrollArea):

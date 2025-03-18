@@ -9,7 +9,7 @@ from pylive.utils import group_consecutive_numbers
 
 
 class PyProxyNodeModel(QAbstractItemModel):
-    _headers = ['header', 'inlets', 'outlets', 'kind', 'data', 'result']
+    _headers = ['header', 'inlets', 'outlets', 'kind', 'content', 'result']
     def __init__(self, source_model:PyGraphModel|None=None, parent:QObject|None=None):
         super().__init__(parent=parent)
         self._nodes:list[str] = list()
@@ -174,14 +174,15 @@ class PyProxyNodeModel(QAbstractItemModel):
         node_name = self.mapToSource(index)
         column_name = self._headers[index.column()]
 
+
         match column_name:
             case 'name':
                 if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
                     return node_name
 
-            case 'source':
+            case 'content':
                 if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
-                    return self._source_model.source(node_name)
+                    return self._source_model.data(node_name, 'content')
 
             case 'inlets':
                 if role == Qt.ItemDataRole.DisplayRole:
