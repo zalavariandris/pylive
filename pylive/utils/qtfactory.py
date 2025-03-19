@@ -12,13 +12,107 @@ def label(text:str)->QLabel:
     label.setText(text)
     return label
 
+def patch_label(label:QLabel, text:str):
+    if label.text() != text:
+        label.setText(text)
+
 def scrollarea(widget:QWidget):
     area = QScrollArea()
     area.setWidget(widget)
     return area
 
+""" WIDGETS """
+def combobox(*, items:list[str], current_index:int=0, on_current_index_changed:Callable|None=None)->QComboBox:
+    widget = QComboBox()
+    widget.insertItems(0, items)
+    if on_current_index_changed:
+        widget.currentIndexChanged.connect(on_current_index_changed)
+    return widget
+
+def patch(widget, **kwargs):
+    ...
+
+def patch_combobox(widget:QComboBox, *, items:list[str], current_index:int=0,  on_current_index_changed:Callable|None=None):
+    ### IMPLEMENT THIS
+    widget.blockSignals(True)
+
+    # udate items
+    widget.clear()
+    widget.insertItems(0, items)
+
+    # patch current index
+    widget.setCurrentIndex(current_index)
+
+    # patch signals
+    widget.currentIndexChanged.disconnect()
+    if on_current_index_changed:
+        widget.currentIndexChanged.connect(on_current_index_changed)
+
+    widget.blockSignals(False)
+
+def spinbox(*, value:int=0, on_value_changed:Callable|None=None)->QSpinBox:
+    widget = QSpinBox()
+    widget.setValue(value)
+    if on_value_changed:
+        widget.valueChanged.connect(on_value_changed)
+    return widget
+
+def patch_spinbox(widget:QSpinBox, *, value:int=0, on_value_changed:Callable|None=None):
+    if widget.value() != value:
+        widget.setValue(value)
+
+    widget.valueChanged.disconnect()
+
+    if on_value_changed:
+        widget.valueChanged.connect(on_value_changed)
+
+def lineedit(*, text="", /, placeholder="", on_text_changed:Callable|None=None)->QLineEdit:
+    lineedit = QLineEdit(text)
+    lineedit.setPlaceholderText(placeholder)
+    if on_text_changed:
+        lineedit.textChanged.connect(on_text_changed)
+
+    return lineedit
+
+def patch_lineedit(widget:QLineEdit, *, text="", /, placeholder="", onTextChanged:Callable|None=None):
+    if widget.text() != text:
+        widget.setText(text)
+    if widget.placeholderText() != placeholder:
+        widget.setPlaceholderText(placeholder)
+
+    widget.textChanged.disconnect()
+    if onTextChanged:
+        widget.textChanged.connect(onTextChanged)
+
+from pylive.qt_components.QPathEdit import QPathEdit
+import pathlib
+def pathedit(path:pathlib.Path=pathlib.Path.cwd(), *,  placeholder="", on_path_changed:Callable|None=None)->QLineEdit:
+    pathedit = QPathEdit(path)
+    pathedit.setPlaceholderText(placeholder)
+    if on_path_changed:
+        pathedit.pathChanged.connect(on_path_changed)
+
+    return pathedit
+
+def patch_pathedit(widget:QPathEdit, *, path:pathlib.Path=pathlib.Path.cwd(), /, placeholder="", on_path_changed:Callable|None=None):
+    if widget.path() != path:
+        widget.setPath(path)
+
+    if widget.placeholderText() != placeholder:
+        widget.setPlaceholderText(placeholder)
+
+    widget.pathChanged.disconnect()
+    if on_path_changed:
+        widget.pathChanged.connect(on_path_changed)
+
+def menubar(*, actions:Sequence[QAction])->QMenuBar:
+    menubar = QMenuBar()
+    for action in actions:
+        menubar.addAction(action)
+    return menubar
+
 """ LAYOUTS """
-def boxlayout(direction:QBoxLayout.Direction, children:Sequence[QWidget|QLayout|QLayoutItem], stretch:Sequence[int]=[])->QBoxLayout:
+def boxlayout(*, direction:QBoxLayout.Direction, children:Sequence[QWidget|QLayout|QLayoutItem], stretch:Sequence[int]=[])->QBoxLayout:
     layout = QBoxLayout(direction)
     layout.setSpacing(0)
     layout.setContentsMargins(0,0,0,0)
@@ -35,7 +129,6 @@ def boxlayout(direction:QBoxLayout.Direction, children:Sequence[QWidget|QLayout|
 
 def vboxlayout(children:Sequence[QWidget|QLayout|QLayoutItem], stretch:Sequence[int]=[])->QVBoxLayout:
     layout = QVBoxLayout()
-    layout.addStretch()
     layout.setSpacing(0)
     layout.setContentsMargins(0,0,0,0)
     for child in children:
@@ -51,6 +144,29 @@ def vboxlayout(children:Sequence[QWidget|QLayout|QLayoutItem], stretch:Sequence[
         layout.setStretch(i, value)
 
     return layout
+
+def patch_vboxlayout(layout:QVBoxLayout, children:Sequence[QWidget|QLayout|QLayoutItem], stretch:Sequence[int]=[]):
+    count = layout.count()
+    for i, child in enumerate(children):
+        if i<count:
+            if type(child) == type(layout.itemAt(i)):
+                match child:
+                    case QWidget():
+                        ...
+                    case QLayout():
+                        ...
+                    case QLayoutItem():
+                        ...
+        else:
+            match child:
+                case QWidget():
+                    layout.addWidget(child)
+                case QLayout():
+                    layout.addLayout(child)
+                case QLayoutItem():
+                    layout.addItem(child)
+
+        layout.itemAt(i)
 
 def widgetitem(widget: QWidget, alignment:Qt.AlignmentFlag=0):
     layout_item = QWidgetItem(widget)
@@ -117,21 +233,6 @@ def gridlayout(cells:dict[tuple[int, int]|tuple[int,int,int]|tuple[int,int,int,i
     return layout
 
 
-# # def addItem  (item: QLayoutItem, row:int, column:int, rowSpan:int = 1, columnSpan:int = 1, alignment:Qt.AlignmentFlag.Alignment = Qt.Alignment())
-
-# def addLayout(layout, row:int,     column:int, alignment:Qt.AlignmentFlag = 0):
-#     ...
-# def addWidget(widget, row:int,     column:int, alignment:Qt.AlignmentFlag = 0):
-#     ...
-
-# def addLayout(layout, row:int,     column:int,     rowSpan:int, columnSpan:int, Qt::Alignment alignment = 0)
-# def addWidget(widget, fromRow:int, fromColumn:int, rowSpan:int, columnSpan:int, Qt::Alignment alignment = 0)
-
-
-# gridlayout([
-#     ()
-# ])
-
 type FormRowType=tuple[QWidget, QWidget]\
     | QLayout\
     | QWidget\
@@ -166,19 +267,3 @@ def formlayout(*rows:FormRowType):
                 raise NotImplementedError
     return layout
 
-def lineedit(contents="", /, placeholder="", onTextChanged:Callable|None=None)->QLineEdit:
-    lineedit = QLineEdit(contents)
-    lineedit.setPlaceholderText(placeholder)
-    if onTextChanged:
-        print("connect textChanged")
-        lineedit.textChanged.connect(onTextChanged)
-
-    return lineedit
-
-
-
-def menubar(actions:Sequence[QAction])->QMenuBar:
-    menubar = QMenuBar()
-    for action in actions:
-        menubar.addAction(action)
-    return menubar

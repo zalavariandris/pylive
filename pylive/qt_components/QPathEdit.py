@@ -3,13 +3,14 @@ from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
-from pathlib import Path
+import pathlib
 class QPathEdit(QLineEdit):
+	pathChanged = Signal(str)
 	def __init__(self, 
-		contents:str="", 
+		path:pathlib.Path=pathlib.Path.cwd(), 
 		parent:QWidget|None=None
 	):
-		super().__init__(contents, parent=parent)
+		super().__init__(str(path), parent=parent)
 		self.setClearButtonEnabled(True)
 		dir_pixmap = self.style().standardIcon(QStyle.StandardPixmap.SP_DirIcon)
 		action = self.addAction(dir_pixmap, QLineEdit.ActionPosition.TrailingPosition)
@@ -19,15 +20,20 @@ class QPathEdit(QLineEdit):
 		selected, selected_filter = QFileDialog.getOpenFileName(self)
 		self.setText(str(selected))
 
-		## todo: conider imlementing
+		## todo: cosnider imlementing
 		# - validator
 		# - autocomplete
 
-	def path(self)->Path:
-		return Path(self.text())
+	def setText(self, text: str) -> None:
+		super().setText(text)
+		self.pathChanged.emit(self.path())
 
-	def setPath(self, path:Path|str):
+	def path(self)->pathlib.Path:
+		return pathlib.Path(self.text())
+
+	def setPath(self, path:pathlib.Path|str):
 		self.setText(str(path))
+
 
 if __name__ == "__main__":
 	app = QApplication()
