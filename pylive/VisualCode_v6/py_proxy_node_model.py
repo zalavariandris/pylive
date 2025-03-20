@@ -1,3 +1,4 @@
+from ast import Expression
 from typing import *
 from PySide6.QtCore import *
 from PySide6.QtGui import *
@@ -9,7 +10,7 @@ from pylive.utils import group_consecutive_numbers
 
 
 class PyProxyNodeModel(QAbstractItemModel):
-    _headers = ['header', 'inlets', 'outlets', 'kind', 'content', 'result']
+    _headers = ['name', 'kind', 'content', 'inlets', 'outlets', 'result']
     def __init__(self, source_model:PyGraphModel|None=None, parent:QObject|None=None):
         super().__init__(parent=parent)
         self._nodes:list[str] = list()
@@ -180,9 +181,33 @@ class PyProxyNodeModel(QAbstractItemModel):
                 if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
                     return node_name
 
-            case 'content':
+            case 'kind':
                 if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
-                    return self._source_model.data(node_name, 'content')
+                    return self._source_model.data(node_name, 'kind')
+
+            case 'content':
+                kind = self._source_model.data(node_name, 'kind', Qt.ItemDataRole.EditRole)
+                value = self._source_model.data(node_name, 'content', Qt.ItemDataRole.EditRole)
+                match kind:
+                    case 'operator':
+                        assert callable(value), f"got: {value!r}"
+                    case 'expression':
+                        assert isinstance(value, str), f"got: {value!r}"
+                    case 'value-int':
+                        assert isinstance(value, int), f"got: {value!r}"
+                    case 'value-float':
+                        assert isinstance(value, float), f"got: {value!r}"
+                    case 'value-str':
+                        assert isinstance(value, str), f"got: {value!r}"
+                    case 'value-path':
+                        import pathlib
+                        assert isinstance(value, pathlib.Path), f"got: {value!r}"
+
+                if role == Qt.ItemDataRole.DisplayRole:
+                    return f"{value}"
+
+                if role == Qt.ItemDataRole.EditRole:
+                    return value
 
             case 'inlets':
                 if role == Qt.ItemDataRole.DisplayRole:
@@ -199,10 +224,62 @@ class PyProxyNodeModel(QAbstractItemModel):
                     return self._source_model.outlets(node_name)
 
             case 'result':
-                if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
-                    return f"{self._source_model.result(node_name)}"
+                if role == Qt.ItemDataRole.DisplayRole:
+                    return f"{self._source_model.data(node_name, 'result')}"
+                if role == Qt.ItemDataRole.EditRole:
+                    return self._source_model.data(node_name, 'result', Qt.ItemDataRole.EditRole)
 
             case _:
                 raise ValueError(f"column {index.column()} is not in headers: {self._headers}")
 
         return None
+
+    def flags(self, index: QModelIndex | QPersistentModelIndex) -> Qt.ItemFlag:
+        flags = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
+
+        if index.column()==self._headers.index('kind'):
+            flags|=Qt.ItemFlag.ItemIsEditable
+
+        if index.column()==self._headers.index('content'):
+            flags|=Qt.ItemFlag.ItemIsEditable
+            
+        return flags
+
+    def setData(self, index: QModelIndex | QPersistentModelIndex, value: Any, role: int = Qt.ItemDataRole.EditRole) -> bool:
+        if not self._source_model:
+            return None
+
+        node_name = self.mapToSource(index)
+        column_name = self._headers[index.column()]
+
+
+        match column_name:
+            case 'kind':
+                if role == Qt.ItemDataRole.EditRole:
+                    self._source_model.setData(node_name, 'kind', value)
+                    return True
+
+            case 'content':
+                if role == Qt.ItemDataRole.EditRole:
+                    kind = self._source_model.data(node_name, 'kind')
+                    match kind:
+                        case 'operator':
+                            assert callable(value)
+                        case 'expression':
+                            assert isinstance(value, str)
+                        case 'value-int':
+                            assert isinstance(value, int)
+                        case 'value-float':
+                            assert isinstance(value, float)
+                        case 'value-str':
+                            assert isinstance(value, str)
+                        case 'value-path':
+                            import pathlib
+                            assert isinstance(value, pathlib.Path)
+                    self._source_model.setData(node_name, 'content', value)
+                    return True
+
+            case _:
+                raise ValueError(f"column {index.column()} is not editable")
+
+        return False

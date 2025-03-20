@@ -30,8 +30,8 @@ class _PyGraphItem:
         assert isinstance(content, str)
         assert kind in ("operator", 'value-int', 'value-float', 'value-str', 'value-path', 'expression')
         self._model = model
-        self._kind:KindType = kind
-        self._content:str = content
+        self.kind:KindType = kind
+        self.content:Callable|str|int|float|pathlib.Path = content
         self._compile_cache = None
         self._cache = None
         self._fields:list[Any] = []
@@ -39,164 +39,114 @@ class _PyGraphItem:
     def clearCache(self):
         self._cache = None
 
-    @property
-    def help(self)->str:
-        match self._kind:
-            case 'operator':
-                try:
-                    func = self._compile()
-                except Exception:
-                    return ""
-                else:
-                    return pydoc.render_doc(func)
-            case _:
-                return ""
+    # @property
+    # def fields(self)->list[Any]:
+    #     return self._fields
 
-    @property
-    def fields(self)->list[Any]:
-        return self._fields
+    # @fields.setter
+    # def fields(self, value:list[Any]):
+    #     self._fields = value
 
-    @fields.setter
-    def fields(self, value:list[Any]):
-        self._fields = value
+    # @content.setter
+    # def expression(self, value:str):
+    #     self._content = value
+    #     self._compile_cache = None
+    #     self._cache = None
 
-    @property
-    def content(self)->str:
-        return self._content
+    # @property
+    # def kind(self)->Literal["operator", 'value-int', 'value-float', 'value-str', 'value-path', 'expression']:
+    #     return self._kind
 
-    @content.setter
-    def expression(self, value:str):
-        self._content = value
-        self._compile_cache = None
-        self._cache = None
+    # @kind.setter
+    # def kind(self, value:Literal["operator", 'value-int', 'value-float', 'value-str', 'value-path', 'expression']="operator"):
+    #     self._kind = value
+    #     self._compile_cache = None
+    #     self._cache = None
 
-    @property
-    def kind(self)->Literal["operator", 'value-int', 'value-float', 'value-str', 'value-path', 'expression']:
-        return self._kind
+    # def _compile(self,):
+    #     if not self._compile_cache:
+    #         self._compile_cache = eval(self._content, self._model._context)
 
-    @kind.setter
-    def kind(self, value:Literal["operator", 'value-int', 'value-float', 'value-str', 'value-path', 'expression']="operator"):
-        self._kind = value
-        self._compile_cache = None
-        self._cache = None
+    #     return self._compile_cache
 
-    def _compile(self,):
-        if not self._compile_cache:
-            self._compile_cache = eval(self._content, self._model._context)
+    # def inlets(self)->list[str]:
+    #     match self._kind:
+    #         case 'operator':
+    #             try:
+    #                 func = self._compile()
+    #             except Exception:
+    #                 return []
+    #             else:
+    #                 try:
+    #                     sig = inspect.signature(func)
+    #                 except (ValueError, TypeError):
+    #                     return []
+    #                 else:
+    #                     return [name for name in sig.parameters.keys()]
+    #         case 'expression':
+    #             unbound_names = find_unbounded_names(self._content)
+    #             return [name for name in unbound_names]
+    #         case "operator" | 'value-int' | 'value-float' | 'value-str' | 'value-path' | 'expression':
+    #             return []
+    #         case _:
+    #             raise ValueError()
 
-        return self._compile_cache
 
-    def inlets(self)->list[str]:
-        match self._kind:
-            case 'operator':
-                try:
-                    func = self._compile()
-                except Exception:
-                    return []
-                else:
-                    try:
-                        sig = inspect.signature(func)
-                    except (ValueError, TypeError):
-                        return []
-                    else:
-                        return [name for name in sig.parameters.keys()]
-            case 'expression':
-                unbound_names = find_unbounded_names(self._content)
-                return [name for name in unbound_names]
-            case "operator" | 'value-int' | 'value-float' | 'value-str' | 'value-path' | 'expression':
-                return []
-            case _:
-                raise ValueError()
 
-    def inletFlags(self, inlet:str)->set:
-        match self._kind:
-            case 'operator':
-                try:
-                    func = self._compile()
-                except Exception:
-                    return set()
-                else:
-                    try:
-                        sig = inspect.signature(func)
-                    except ValueError:
-                        return set()
-                    else:
-                        parameters = {key:param for key, param in sig.parameters.items() }
-                        assert inlet in parameters.keys(), f"{inlet} not in {parameters}"
-                        param = parameters[inlet]
-                        flags = set()
+    # def inletData(self, inlet:str, attr:Literal['annotation', 'default'])->Any:
+    #     match self.kind:
+    #         case 'operator':
+    #             try:
+    #                 func = self.content
+    #             except Exception:
+    #                 return set()
+    #             else:
+    #                 try:
+    #                     sig = inspect.signature(func)
+    #                 except ValueError:
+    #                     return None
+    #                 else:
+    #                     parameters = {key:param for key, param in sig.parameters.items() }
+    #                     assert inlet in parameters.keys(), f"{inlet} not in {parameters}"
+    #                     param = parameters[inlet]
+    #                     match attr:
+    #                         case 'annotation':
+    #                             return param.annotation
+    #                         case 'default':
+    #                             return param.default
 
-                        match param.kind:
-                            case inspect.Parameter.POSITIONAL_ONLY:
-                                if param.default is param.empty:
-                                    flags.add('required')
-                            case inspect.Parameter.POSITIONAL_OR_KEYWORD:
-                                if param.default is param.empty:
-                                    flags.add('required')
-                            case inspect.Parameter.VAR_POSITIONAL:
-                                flags.add('multi')
-                            case inspect.Parameter.KEYWORD_ONLY:
-                                if param.default is param.empty:
-                                    flags.add('required')
-                            case inspect.Parameter.VAR_KEYWORD:
-                                flags.add('extra')
+    #     return None
 
-                        return flags
-            case _:
-                return set(['required'])
+    # def evaluate(self, named_args:dict):
+    #     if not self._cache:
+    #         match self.kind:
+    #             case 'value-int' | 'value-float'| 'value-str'| 'value-path':
+    #                 self._cache = self.content
 
-    def inletData(self, inlet:str, attr:Literal['annotation', 'default'])->Any:
-        match self._kind:
-            case 'operator':
-                try:
-                    func = self._compile()
-                except Exception:
-                    return set()
-                else:
-                    try:
-                        sig = inspect.signature(func)
-                    except ValueError:
-                        return None
-                    else:
-                        parameters = {key:param for key, param in sig.parameters.items() }
-                        assert inlet in parameters.keys(), f"{inlet} not in {parameters}"
-                        param = parameters[inlet]
-                        match attr:
-                            case 'annotation':
-                                return param.annotation
-                            case 'default':
-                                return param.default
+    #             case 'operator':
+    #                 func = self.content
+    #                 assert callable(func)
+    #                 self._cache = call_function_with_named_args(func, named_args)
 
-        return None
+    #             case 'expression':
+    #                 assert isinstance(self.content, str)
+    #                 ctx = {key: value for key, value in self._model._context.items()}
+    #                 ctx.update(named_args)
+    #                 self._cache = eval(self.content, ctx)
 
-    def evaluate(self, named_args:dict):
-        if not self._cache:
-            match self._kind:
-                case 'value-int' | 'value-float'| 'value-str'| 'value-path':
-                    self._cache = self._compile()
+    #     return self._cache
 
-                case 'operator':
-                    func = self._compile()
-                    self._cache = call_function_with_named_args(func, named_args)
-
-                case 'expression':
-                    ctx = {key: value for key, value in self._model._context.items()}
-                    ctx.update(named_args)
-                    self._cache = eval(self._content, ctx)
-
-        return self._cache
-
-    def __str__(self):
-        from textwrap import shorten
-        match self._kind:
-            case 'operator':
-                return f"𝒇 {self._compile_cache.__name__ if self._compile_cache else f"{self._content}"}"
-            case 'value-int' | 'value-float' | 'value-str' | 'value-path':
-                return f"𝕍 {self._cache!r}"
-            case 'expression':
-                return f"⅀ {self._content}"
-            case _:
-                raise ValueError()
+    # def __str__(self):
+    #     from textwrap import shorten
+    #     match self.kind:
+    #         case 'operator':
+    #             return f"𝒇 {self._compile_cache.__name__ if self._compile_cache else f"{self._content}"}"
+    #         case 'value-int' | 'value-float' | 'value-str' | 'value-path':
+    #             return f"𝕍 {self._cache!r}"
+    #         case 'expression':
+    #             return f"⅀ {self._content}"
+    #         case _:
+    #             raise ValueError()
 
 
 import pathlib
@@ -249,11 +199,11 @@ class PyGraphModel(QObject):
         """
 
         self._node_data:OrderedDict[str, _PyGraphItem] = OrderedDict()
+        self._result_cache:dict[str, Any] = dict()
+
         self._links:set[tuple[str,str,str,str]] = set()
-        self._auto_evaluate_filter = None
 
         self._imports: list[str] = []
-        self._context_script:str = ""
         self._context:dict[str, ModuleType] = {'__builtins__': __builtins__}
 
         self._module_watcher = QFileSystemWatcher()
@@ -303,7 +253,7 @@ class PyGraphModel(QObject):
         if module_watcher:
             self.module_watcher_connections = [
                 (module_watcher.fileChanged, lambda: 
-                    self.invalidate([_ for _ in self.nodes()], compilation=True)) #TODO: invalidate only nodes from this module
+                    self.invalidate([_ for _ in self.nodes()])) #TODO: invalidate only nodes from this module
             ]
             for signal, slot in self.module_watcher_connections:
                 signal.connect(slot)
@@ -312,7 +262,7 @@ class PyGraphModel(QObject):
 
         node_keys = [_ for _ in self.nodes()]
         # TODO invalidate effected nodes only!
-        self.invalidate(node_keys, compilation=True)
+        self.invalidate(node_keys)
 
     ### Graph imlpementation
     def nodes(self)->Collection[str]:
@@ -337,8 +287,32 @@ class PyGraphModel(QObject):
         G = self._toNetworkX()
         return nx.descendants(G, source) # | {node} # source 
 
-    def inlets(self, node:str)->Collection[str]:
-        return self._node_data[node].inlets()
+    def inlets(self, node:str)->List[str]:
+        node_item = self._node_data[node]
+        match node_item.kind:
+            case 'operator':
+                try:
+                    func = node_item.content
+                    assert callable(func)
+                except Exception:
+                    return []
+                else:
+                    try:
+                        sig = inspect.signature(func)
+                    except (ValueError, TypeError):
+                        return []
+                    else:
+                        return [name for name in sig.parameters.keys()]
+            case 'expression':
+                try:
+                    unbound_names = find_unbounded_names(node_item.content)
+                    return [name for name in unbound_names]
+                except SyntaxError:
+                    return []
+            case 'value-int' | 'value-float' | 'value-str' | 'value-path':
+                return []
+            case _:
+                raise ValueError()
 
     def isInletLinked(self, node:str, inlet:str)->bool:
         #TODO: use ap proper graph structure eg.: networkx because this as well
@@ -355,10 +329,69 @@ class PyGraphModel(QObject):
         return False
 
     def inletFlags(self, node:str, inlet:str)->set:
-        return self._node_data[node].inletFlags(inlet)
+        node_item = self._node_data[node]
+        match node_item.kind:
+            case 'operator':
+                try:
+                    func = node_item.content
+                    assert callable(func)
+                except Exception:
+                    return set()
+                else:
+                    try:
+                        sig = inspect.signature(func)
+                    except ValueError:
+                        return set()
+                    else:
+                        parameters = {key:param for key, param in sig.parameters.items() }
+                        assert inlet in parameters.keys(), f"{inlet} not in {parameters}"
+                        param = parameters[inlet]
+                        flags = set()
+
+                        match param.kind:
+                            case inspect.Parameter.POSITIONAL_ONLY:
+                                if param.default is param.empty:
+                                    flags.add('required')
+                            case inspect.Parameter.POSITIONAL_OR_KEYWORD:
+                                if param.default is param.empty:
+                                    flags.add('required')
+                            case inspect.Parameter.VAR_POSITIONAL:
+                                flags.add('multi')
+                            case inspect.Parameter.KEYWORD_ONLY:
+                                if param.default is param.empty:
+                                    flags.add('required')
+                            case inspect.Parameter.VAR_KEYWORD:
+                                flags.add('extra')
+
+                        return flags
+            case _:
+                return set(['required'])
 
     def inletData(self, node:str, inlet:str, attr:Literal['annotation', 'default']):
-        return self._node_data[node].inletData(inlet, attr)
+        node_item = self._node_data[node]
+        match node_item.kind:
+            case 'operator':
+                try:
+                    func = node_item.content
+                    assert callable(func)
+                except Exception:
+                    return set()
+                else:
+                    try:
+                        sig = inspect.signature(func)
+                    except ValueError:
+                        return None
+                    else:
+                        parameters = {key:param for key, param in sig.parameters.items() }
+                        assert inlet in parameters.keys(), f"{inlet} not in {parameters}"
+                        param = parameters[inlet]
+                        match attr:
+                            case 'annotation':
+                                return param.annotation
+                            case 'default':
+                                return param.default
+
+        return None
 
     def outlets(self, node:str)->Collection[str]:
         return ['out']
@@ -412,6 +445,26 @@ class PyGraphModel(QObject):
         self.nodesUnlinked.emit([(source, target, outlet, inlet)])
         self._node_data[target].clearCache()
         self.dataChanged.emit([target], ['result'])
+
+    def _evaluate_node(self, node, named_args:dict):
+        if node not in self._result_cache:
+            node_item = self._node_data[node]
+            match node_item.kind:
+                case 'value-int' | 'value-float'| 'value-str'| 'value-path':
+                    self._result_cache[node] = node_item.content
+
+                case 'operator':
+                    func = node_item.content
+                    assert callable(func)
+                    self._result_cache[node] = call_function_with_named_args(func, named_args)
+
+                case 'expression':
+                    assert isinstance(node_item.content, str)
+                    ctx = {key: value for key, value in self._context.items()}
+                    ctx.update(named_args)
+                    self._result_cache[node] = eval(node_item.content, ctx)
+
+        return self._result_cache[node]
         
     ### Node Data
     def data(self, node_key:str, attr:str, role:int=Qt.ItemDataRole.DisplayRole)->Any:
@@ -419,16 +472,33 @@ class PyGraphModel(QObject):
         match attr:
             case 'name':
                 if role == Qt.ItemDataRole.DisplayRole:
-                    return f"{node_item}"
+                    return f"{node_key}"
+
+            case 'label':
+                if role == Qt.ItemDataRole.DisplayRole:
+
+                    match node_item.kind:
+                        case 'operator':
+                            func = node_item.content
+                            assert callable(func)
+                            return f"𝒇 {func.__name__}"
+                        case 'expression':
+                            return f"⅀ {node_item.content}"
+                        case 'value-float' | 'value-int' | 'value-str' | 'value-path':
+                            return f"𝕍 {node_item.content}"
+                        case _:
+                            return f"{node_key}"
+
+
+            case 'kind':
+                return node_item.kind
+
             case 'content':
                 if role == Qt.ItemDataRole.EditRole:
                     return node_item.content
 
                 if role == Qt.ItemDataRole.DisplayRole:
                     return f"{node_item.content}"
-
-            case 'kind':
-                return node_item.kind
 
             case 'result':
                 ### GET FUNCTION ARGUMENTS
@@ -441,24 +511,47 @@ class PyGraphModel(QObject):
 
                 ### Evaluate node with arguments
                 try:
-                    value = self._node_data[node_key].evaluate(named_args)
+                    value = self._evaluate_node(node_key, named_args)
 
                 except SyntaxError as err:
                     return err, None
                 except Exception as err:
                     return err, None
-
                 else:
                     return None, value
 
-            case 'fields':
-                return node_item.fields
-
             case 'help':
-                return node_item.help
+                match node_item.kind:
+                    case 'operator':
+                        try:
+                            func = node_item.content
+                            assert callable(func)
+                        except Exception:
+                            return ""
+                        else:
+                            return pydoc.render_doc(func)
+                    case _:
+                        return ""
 
             case _:
-                return getattr(node_item, attr)
+                raise ValueError()
+
+    def invalidate(self, nodes:list[str]):
+        assert isinstance(nodes, list)
+        for node in nodes:  # this will rigger multiple times for when multiple nodes invalidated at  once: handle overlapping depednencies
+            self.inletsReset.emit([node])
+            self.outletsReset.emit([node])
+
+
+            ## invalidate node and dependent cache
+            if node in self._result_cache:
+                del self._result_cache[node]
+            dependents = [_ for _ in self.descendants(node)]
+            for dep in dependents:
+                del self._result_cache[dep]
+
+            self.dataChanged.emit([node] + dependents, ['result'])
+
 
     def setData(self, node:str, attr:str, value:Any, role:int=Qt.ItemDataRole.EditRole):
         node_item = self._node_data[node]
@@ -469,72 +562,49 @@ class PyGraphModel(QObject):
                 node_item.kind = value
                 match node_item.kind:
                     case 'operator':
-                        node_item._content = "print"
+                        node_item.content = print
                     case 'expression':
-                        node_item._content = "x"
+                        node_item.content = "x"
                     case 'value-int':
-                        node_item._content = "0"
+                        node_item.content = 0
                     case 'value-float':
-                        node_item._content = "0.0"
+                        node_item.content = 0.0
                     case 'value-str':
-                        node_item._content = "text"
+                        node_item.content = "text"
                     case 'value-path':
-                        node_item._content = str(Path.cwd())
-                node_item._content
+                        node_item.content = Path.cwd()
+
                 self.dataChanged.emit([node], ['kind', 'content'])
-                self.invalidate([node], compilation=True)
+                self.invalidate([node])
 
             case 'content':
                 match node_item.kind:
                     case 'operator':
-                        node_item._content = value
-                        self.dataChanged.emit([node], ['content'])
-                        self.invalidate([node], compilation=True)
+                        assert callable(value)
+                        node_item.content = value
                     case 'expression':
-                        node_item._content = value
-                        self.dataChanged.emit([node], ['content'])
-                        self.invalidate([node], compilation=True)
+                        assert isinstance(value, str)
+                        node_item.content = value
                     case 'value-int':
-                        node_item._content = value
-                        self.dataChanged.emit([node], ['content'])
-                        self.invalidate([node], compilation=True)
+                        assert isinstance(value, int)
+                        node_item.content = value
                     case 'value-float':
-                        node_item._content = value
-                        self.dataChanged.emit([node], ['content'])
-                        self.invalidate([node], compilation=True)
+                        assert isinstance(value, float)
+                        node_item.content = value
                     case 'value-str':
-                        node_item._content = value
-                        self.dataChanged.emit([node], ['content'])
-                        self.invalidate([node], compilation=True)
+                        assert isinstance(value, str)
+                        node_item.content = value
                     case 'value-path':
-                        node_item._content = value
-                        self.dataChanged.emit([node], ['content'])
-                        self.invalidate([node], compilation=True)
+                        assert isinstance(value, pathlib.Path)
+                        node_item.content = value
                     case _:
                         raise ValueError()
 
+                self.dataChanged.emit([node], ['content'])
+                self.invalidate([node])
+
             case _:
                 raise ValueError()
-
-
-    def invalidate(self, nodes:list[str], compilation:bool=True):
-        # invalidate node results including ancestors.
-        # if compilation is true, invalidate nodes compile_cache
-        assert isinstance(nodes, list)
-        for node_key in nodes:
-            node_item = self._node_data[node_key]
-            if compilation:
-                node_item._compile_cache = None
-                self.inletsReset.emit([node_key])
-                self.outletsReset.emit([node_key])
-
-            dependents = [n for n in self.descendants(node_key)]
-            dependents.insert(0, node_key)
-
-            for dep in dependents:
-                self._node_data[dep]._cache = None
-            self.dataChanged.emit(dependents, ['result'])
-
 
     ### Helpers
     def _toNetworkX(self)->nx.MultiDiGraph:

@@ -181,8 +181,8 @@ class PyGraphView(QGraphicsView):
             </div>
             """))
             assert self._model
-            name_text = self._model.data(node_key, 'name')
-            node_widget.setHeaderText(name_text)
+            label_text = self._model.data(node_key, 'label')
+            node_widget.setHeaderText(label_text)
 
     def removeNodeItems(self, node_keys:list[str]):
         for key in node_keys:

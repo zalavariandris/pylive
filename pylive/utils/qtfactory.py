@@ -66,7 +66,7 @@ def patch_spinbox(widget:QSpinBox, *, value:int=0, on_value_changed:Callable|Non
     if on_value_changed:
         widget.valueChanged.connect(on_value_changed)
 
-def lineedit(*, text="", /, placeholder="", on_text_changed:Callable|None=None)->QLineEdit:
+def lineedit(*, text="", placeholder="", on_text_changed:Callable|None=None)->QLineEdit:
     lineedit = QLineEdit(text)
     lineedit.setPlaceholderText(placeholder)
     if on_text_changed:
@@ -74,7 +74,7 @@ def lineedit(*, text="", /, placeholder="", on_text_changed:Callable|None=None)-
 
     return lineedit
 
-def patch_lineedit(widget:QLineEdit, *, text="", /, placeholder="", onTextChanged:Callable|None=None):
+def patch_lineedit(widget:QLineEdit, /, text="", placeholder="", onTextChanged:Callable|None=None):
     if widget.text() != text:
         widget.setText(text)
     if widget.placeholderText() != placeholder:
@@ -86,7 +86,7 @@ def patch_lineedit(widget:QLineEdit, *, text="", /, placeholder="", onTextChange
 
 from pylive.qt_components.QPathEdit import QPathEdit
 import pathlib
-def pathedit(path:pathlib.Path=pathlib.Path.cwd(), *,  placeholder="", on_path_changed:Callable|None=None)->QLineEdit:
+def pathedit(*, path:pathlib.Path=pathlib.Path.cwd(),  placeholder="", on_path_changed:Callable|None=None)->QLineEdit:
     pathedit = QPathEdit(path)
     pathedit.setPlaceholderText(placeholder)
     if on_path_changed:
@@ -94,7 +94,7 @@ def pathedit(path:pathlib.Path=pathlib.Path.cwd(), *,  placeholder="", on_path_c
 
     return pathedit
 
-def patch_pathedit(widget:QPathEdit, *, path:pathlib.Path=pathlib.Path.cwd(), /, placeholder="", on_path_changed:Callable|None=None):
+def patch_pathedit(widget:QPathEdit, /, path:pathlib.Path=pathlib.Path.cwd(), placeholder="", on_path_changed:Callable|None=None):
     if widget.path() != path:
         widget.setPath(path)
 
