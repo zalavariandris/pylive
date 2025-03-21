@@ -70,3 +70,10 @@ class ImportsManager(QWidget):
         self.imports_list.clear()
         for row, module_name in enumerate(self._model.imports()):
             self.imports_list.insertItem(row, QListWidgetItem(module_name))
+
+
+if __name__ == "__main__":
+    app = QApplication([])
+    window = ImportsManager()
+    window.show()
+    app.exec()

@@ -15,7 +15,7 @@ class QPathEdit(QLineEdit):
         parent:QWidget|None=None
     ):
         super().__init__(str(path), parent=parent)
-        self.setClearButtonEnabled(True)
+        # self.setClearButtonEnabled(True)
         dir_pixmap = self.style().standardIcon(QStyle.StandardPixmap.SP_DirIcon)
         action = self.addAction(dir_pixmap, QLineEdit.ActionPosition.TrailingPosition)
         action.triggered.connect(self.open)
@@ -25,22 +25,9 @@ class QPathEdit(QLineEdit):
         
     def open(self):
         # Create a non-modal dialog
-        self._file_dialog = QFileDialog(self.parent())
-        self._file_dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
-        self._file_dialog.setWindowModality(Qt.WindowModality.NonModal)
-        
-        # Connect to the fileSelected signal
-        self._file_dialog.fileSelected.connect(self._handle_file_selected)
-        
-        # Show the dialog
-        self._file_dialog.show()
-        
-    def _handle_file_selected(self, file_path):
-        print("_handle_file_selected", file_path)
-        if file_path:
-            self.setText(file_path)
-        # Clear reference to dialog to avoid memory leaks
-        self._file_dialog = None
+        filename, selectedFilter = QFileDialog.getOpenFileName(self)
+        if filename:
+            self.setText(filename)
         
     def setText(self, text: str) -> None:
         super().setText(text)

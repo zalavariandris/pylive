@@ -11,7 +11,6 @@ from pathlib import Path
 
 import logging
 
-from numpy import isin
 
 
 from pylive.qt_components.QPathEdit import QPathEdit
@@ -452,6 +451,22 @@ class NodeContentDelegate(QStyledItemDelegate):
             case _:
                 super().setEditorData(editor, index)
 
+    # This is critical - it prevents the editor from closing when focus is lost
+    def eventFilter(self, obj, event):
+        # Skip closing the editor for certain event types (like FocusOut)
+        if event.type() in [QEvent.Type.FocusOut] and isinstance(obj, QPathEdit):
+            # Check if there's a modal dialog open
+            for widget in QApplication.topLevelWidgets():
+                if isinstance(widget, QFileDialog) and widget.isModal():
+                    return True  # Block the event
+                    
+        return super().eventFilter(obj, event)
+
+    def initStyleOption(self, option:QStyleOptionViewItem, index:QModelIndex|QPersistentModelIndex):
+        super().initStyleOption(option, index);
+        option.textElideMode = Qt.TextElideMode.ElideLeft;
+    
+
 
 class MainWindow(QWidget):
     def __init__(self, parent:QWidget|None=None):
@@ -494,6 +509,8 @@ class MainWindow(QWidget):
         self.nodes_table_view.setModel(self.node_proxy_model)
         self.nodes_table_view.setSelectionModel(self.node_selection_model)
         self.nodes_table_view.setEditTriggers(QAbstractItemView.EditTrigger.AllEditTriggers)
+        self.nodes_table_view.setTextElideMode(Qt.TextElideMode.ElideLeft)
+        self.nodes_table_view.setWordWrap(False)
         self.kind_delegate = NodeKindDelegate(parent=self)
         self.nodes_table_view.setItemDelegateForColumn(1, self.kind_delegate)
         self.content_delegate = NodeContentDelegate(parent=self)
@@ -509,6 +526,7 @@ class MainWindow(QWidget):
         
         ### inspector
         # self._setupInspector()
+        QDataWidgetMapper()
 
         ### Preview
         self._setupPreivewPanel()
