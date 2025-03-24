@@ -525,12 +525,61 @@ class MainWindow(QWidget):
         self._setupGraphview()
         
         ### inspector
-        # self._setupInspector()
-        QDataWidgetMapper()
+        self.inspector = QWidget()
+        self.inspector_layout = QFormLayout()
+        self.kind_dropdown = QComboBox()
+        self.kind_dropdown.insertItems(0, ['operator', 'value-int', 'value-float', 'value-str', 'value-path', 'expression'])
+        self.kind_dropdown.setDisabled(True)
+        self.content_editor = QLabel("-data editor -")
+        mapper = QDataWidgetMapper()
+        operator_editor = QLineEdit() #operator
+        expression_editor = QLineEdit() #expression   
+        int_editor = QSpinBox() #value-int
+        float_editor = QDoubleSpinBox() #value-float
+        str_editor = QLineEdit() #value-str
+        path_editor = QPathEdit() #value-path100100
+        self.stacked_widget = QStackedWidget()
+        self.stacked_widget.addWidget(operator_editor)
+        self.stacked_widget.addWidget(expression_editor)
+        self.stacked_widget.addWidget(int_editor)
+        self.stacked_widget.addWidget(float_editor)
+        self.stacked_widget.addWidget(str_editor)
+        self.stacked_widget.addWidget(path_editor)
+        
+        # content editors for different node type
+        def update_detail_view(current:QModelIndex, previous):
+            kind = self.node_proxy_model.index(current.row(), 1).data(Qt.ItemDataRole.DisplayRole)
+            match kind:
+                case 'operator':
+                    self.stacked_widget.setCurrentWidget(operator_editor)
+                    mapper.addMapping(operator_editor, 2)
+                    operator_editor.setText(...)
+                case 'expression':
+                    self.stacked_widget.setCurrentWidget(expression_editor)
+                    mapper.addMapping(expression_editor, 2)
+                    expression_editor.setText(...)
+                case 'value-int':
+                    self.stacked_widget.setCurrentWidget(int_editor)
+                    mapper.addMapping(int_editor, 2)
+                    int_editor.setValue(...)
+                case 'value-float':
+                    self.stacked_widget.setCurrentWidget(float_editor)
+                    mapper.addMapping(float_editor, 2)
+                    float_editor.setValue(...)
+                case 'value-str':
+                    self.stacked_widget.setCurrentWidget(str_editor)
+                    mapper.addMapping(str_editor, 2)
+                    str_editor.setText(...)
+                case 'value-path':
+                    self.stacked_widget.setCurrentWidget(path_editor)
+                    mapper.addMapping(path_editor, 2)
+                    path_editor.setPath(...)
 
+
+
+        self.node_selection_model.currentRowChanged.connect(update_detail_view)
         ### Preview
         self._setupPreivewPanel()
-
         self._setupMenubar()
 
         ### STATUS BAR WIDGET
@@ -863,7 +912,7 @@ class MainWindow(QWidget):
                 Path(filepath).write_text(text)
                 self.setModified(False)
         except FileNotFoundError as err:
-            QMessageBox.warning(None, "Warning", f"{err}")
+            QMessageBox.warning(self, "Warning", f"{err}")
         else:
             if filepath not in self._file_watcher.files():
                 self._file_watcher.addPath(str(filepath))
@@ -886,7 +935,7 @@ class MainWindow(QWidget):
                 Path(filepath).write_text(text)
                 
         except FileNotFoundError as err:
-            QMessageBox.warning(None, "Warning", f"{err}")
+            QMessageBox.warning(self, "Warning", f"{err}")
         else:
             if self._filepath:
                 self._file_watcher.removePath(str(self._filepath))
