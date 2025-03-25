@@ -40,7 +40,6 @@ class GraphMimeData(StrEnum):
     LinkSourceData = 'application/link/source'
     LinkTargetData = 'application/link/target'
 
-
 import importlib
 import importlib.util
 _NodeKey = str
@@ -119,7 +118,6 @@ class PyGraphModel(QObject):
                 spec.loader.exec_module(module)
             except FileNotFoundError:
                 module = importlib.import_module(module_name)
-
 
             context[module_name] = module
 
