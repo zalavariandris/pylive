@@ -148,7 +148,7 @@ class PyProxyNodeModel(QAbstractItemModel):
             return QModelIndex()
         node = self._nodes[row]
         index = self.createIndex(row, column, node) # consider storing the index of the node
-        assert index.isValid()
+        # assert index.isValid()
         return index
 
     def parent(self, index:QModelIndex)->QModelIndex:
@@ -190,7 +190,7 @@ class PyProxyNodeModel(QAbstractItemModel):
                 value = self._source_model.data(node_name, 'content', Qt.ItemDataRole.EditRole)
                 match kind:
                     case 'operator':
-                        assert callable(value), f"got: {value!r}"
+                        assert isinstance(value, str), f"got: {value!r}"
                     case 'expression':
                         assert isinstance(value, str), f"got: {value!r}"
                     case 'value-int':
@@ -264,7 +264,7 @@ class PyProxyNodeModel(QAbstractItemModel):
                     kind = self._source_model.data(node_name, 'kind')
                     match kind:
                         case 'operator':
-                            assert callable(value)
+                            assert isinstance(value, str)
                         case 'expression':
                             assert isinstance(value, str)
                         case 'value-int':

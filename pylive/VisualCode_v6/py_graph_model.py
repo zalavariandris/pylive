@@ -22,6 +22,7 @@ import pydoc
 
 KindType = Literal["operator", 'value-int', 'value-float', 'value-str', 'value-path', 'expression']
 
+
 class _PyGraphItem:
     def __init__(self, model:'PyGraphModel',
         content:str="print", 
@@ -31,7 +32,8 @@ class _PyGraphItem:
         assert kind in ("operator", 'value-int', 'value-float', 'value-str', 'value-path', 'expression')
         self.kind:KindType = kind
         self.content:Callable|str|int|float|pathlib.Path = content
-       
+
+
 import pathlib
 from enum import StrEnum
 class GraphMimeData(StrEnum):
@@ -39,6 +41,7 @@ class GraphMimeData(StrEnum):
     InletData = 'application/inlet'
     LinkSourceData = 'application/link/source'
     LinkTargetData = 'application/link/target'
+
 
 import importlib
 import importlib.util
@@ -81,7 +84,7 @@ class PyGraphModel(QObject):
         """
 
         self._node_data:OrderedDict[str, _PyGraphItem] = OrderedDict()
-        self._compile_cache:dict[str, Any] = dict()
+        self._compile_cache:dict[str, Callable] = dict()
         self._result_cache:dict[str, Any] = dict()
 
         self._links:set[tuple[str,str,str,str]] = set()
@@ -318,35 +321,15 @@ class PyGraphModel(QObject):
         self.nodesAboutToBeLinked.emit( [(source, target, outlet, inlet)] )
         self._links.add( (source, target, outlet, inlet) )
         self.nodesLinked.emit([(source, target, outlet, inlet)])
-        self._node_data[target].clearCache()
+        self.invalidate([target])
         self.dataChanged.emit([target], ['result'])
         
     def unlinkNodes(self, source:str, target:str, outlet:str, inlet:str):
         self.nodesAboutToBeUnlinked.emit([(source, target, outlet, inlet)])
         self._links.remove( (source, target, outlet, inlet) )
         self.nodesUnlinked.emit([(source, target, outlet, inlet)])
-        self._node_data[target].clearCache()
+        self.invalidate([target])
         self.dataChanged.emit([target], ['result'])
-
-    def _evaluate_node(self, node, named_args:dict):
-        if node not in self._result_cache:
-            node_item = self._node_data[node]
-            match node_item.kind:
-                case 'value-int' | 'value-float'| 'value-str'| 'value-path':
-                    self._result_cache[node] = node_item.content
-
-                case 'operator':
-                    func = node_item.content
-                    assert callable(func)
-                    self._result_cache[node] = call_function_with_named_args(func, named_args)
-
-                case 'expression':
-                    assert isinstance(node_item.content, str)
-                    ctx = {key: value for key, value in self._context.items()}
-                    ctx.update(named_args)
-                    self._result_cache[node] = eval(node_item.content, ctx)
-
-        return self._result_cache[node]
         
     ### Node Data
     def data(self, node_key:str, attr:str, role:int=Qt.ItemDataRole.DisplayRole)->Any:
@@ -361,9 +344,8 @@ class PyGraphModel(QObject):
 
                     match node_item.kind:
                         case 'operator':
-                            func = node_item.content
-                            assert callable(func)
-                            return f"𝒇 {func.__name__}"
+                            assert isinstance(node_item.content, str)
+                            return f"𝒇 {node_item.content}"
                         case 'expression':
                             return f"⅀ {node_item.content}"
                         case 'value-float' | 'value-int' | 'value-str' | 'value-path':
@@ -382,8 +364,9 @@ class PyGraphModel(QObject):
                 if role == Qt.ItemDataRole.DisplayRole:
                     match node_item.kind:
                         case 'operator':
-                            assert callable(node_item.content)
-                            return node_item.content.__name__
+                            assert isinstance(node_item.content, str)
+
+                            return node_item.content
                         case _:
                             return f"{node_item.content}"
 
@@ -398,7 +381,31 @@ class PyGraphModel(QObject):
 
                 ### Evaluate node with arguments
                 try:
-                    value = self._evaluate_node(node_key, named_args)
+                    def evaluate_node(node, named_args:dict):
+                        if node not in self._result_cache:
+                            node_item = self._node_data[node]
+                            match node_item.kind:
+                                case 'value-int' | 'value-float'| 'value-str'| 'value-path':
+                                    self._result_cache[node] = node_item.content
+
+                                case 'operator':
+                                    assert isinstance(node_item.content, str)
+                                    if node not in self._compile_cache:
+                                        function_path = node_item.content
+                                        assert isinstance(function_path, str)
+                                        func = eval(function_path, self._context)
+                                        self._compile_cache[node] = func
+                                    assert callable(self._compile_cache[node])
+                                    self._result_cache[node] = call_function_with_named_args(self._compile_cache[node], named_args)
+
+                                case 'expression':
+                                    assert isinstance(node_item.content, str)
+                                    ctx = {key: value for key, value in self._context.items()}
+                                    ctx.update(named_args)
+                                    self._result_cache[node] = eval(node_item.content, ctx)
+
+                        return self._result_cache[node]
+                    value = evaluate_node(node_key, named_args)
 
                 except SyntaxError as err:
                     return err, None
@@ -424,6 +431,9 @@ class PyGraphModel(QObject):
                 raise ValueError()
 
     def invalidate(self, nodes:list[str]):
+        """invalidate nodes results
+        adn all of their dependents
+        """
         assert isinstance(nodes, list)
         for node in nodes:  # this will rigger multiple times for when multiple nodes invalidated at  once: handle overlapping depednencies
             self.inletsReset.emit([node])
@@ -434,11 +444,11 @@ class PyGraphModel(QObject):
             if node in self._result_cache:
                 del self._result_cache[node]
             dependents = [_ for _ in self.descendants(node)]
+
             for dep in dependents:
                 del self._result_cache[dep]
 
             self.dataChanged.emit([node] + dependents, ['result'])
-
 
     def setData(self, node:str, attr:str, value:Any, role:int=Qt.ItemDataRole.EditRole):
         node_item = self._node_data[node]
@@ -450,7 +460,7 @@ class PyGraphModel(QObject):
                     node_item.kind = value
                     match node_item.kind:
                         case 'operator':
-                            node_item.content = print
+                            node_item.content = "print"
                         case 'expression':
                             node_item.content = "x"
                         case 'value-int':
@@ -469,7 +479,7 @@ class PyGraphModel(QObject):
                 if value != node_item.content:
                     match node_item.kind:
                         case 'operator':
-                            assert callable(value)
+                            assert isinstance(value, str)
                             node_item.content = value
                         case 'expression':
                             assert isinstance(value, str)
@@ -544,7 +554,7 @@ class PyGraphModel(QObject):
             node_data:dict[Literal['name', 'kind', 'content'], Any] = {
                 'name': node_key,
                 'kind':node_item.kind,
-                'content': node_item._content
+                'content': node_item.content
             }
 
             data['nodes'].append(node_data)

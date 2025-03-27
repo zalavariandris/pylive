@@ -547,42 +547,42 @@ class MainWindow(QWidget):
         self.stacked_widget.addWidget(path_editor)
         
         # content editors for different node type
-        def update_detail_view(current:QModelIndex, previous):
-            kind = self.node_proxy_model.index(current.row(), 1).data(Qt.ItemDataRole.DisplayRole)
-            content = self.node_proxy_model.index(current.row(), 2).data(Qt.ItemDataRole.EditRole)
-            match kind:
-                case 'operator':
-                    assert isinstance(content, str)
-                    self.stacked_widget.setCurrentWidget(operator_editor)
-                    mapper.addMapping(operator_editor, 2)
-                    operator_editor.setText(content)
-                case 'expression':
-                    assert isinstance(content, str)
-                    self.stacked_widget.setCurrentWidget(expression_editor)
-                    mapper.addMapping(expression_editor, 2)
-                    expression_editor.setText(content)
-                case 'value-int':
-                    assert isinstance(content, int)
-                    self.stacked_widget.setCurrentWidget(int_editor)
-                    mapper.addMapping(int_editor, 2)
-                    int_editor.setValue(content)
-                case 'value-float':
-                    assert isinstance(content, float)
-                    self.stacked_widget.setCurrentWidget(float_editor)
-                    mapper.addMapping(float_editor, 2)
-                    float_editor.setValue(...)
-                case 'value-str':
-                    assert isinstance(content, str)
-                    self.stacked_widget.setCurrentWidget(str_editor)
-                    mapper.addMapping(str_editor, 2)
-                    str_editor.setText(...)
-                case 'value-path':
-                    assert isinstance(content, pathlib.Path)
-                    self.stacked_widget.setCurrentWidget(path_editor)
-                    mapper.addMapping(path_editor, 2)
-                    path_editor.setPath(content)
+        # def update_detail_view(current:QModelIndex, previous):
+        #     kind = self.node_proxy_model.index(current.row(), 1).data(Qt.ItemDataRole.DisplayRole)
+        #     content = self.node_proxy_model.index(current.row(), 2).data(Qt.ItemDataRole.EditRole)
+        #     match kind:
+        #         case 'operator':
+        #             assert isinstance(content, str)
+        #             self.stacked_widget.setCurrentWidget(operator_editor)
+        #             mapper.addMapping(operator_editor, 2)
+        #             operator_editor.setText(content)
+        #         case 'expression':
+        #             assert isinstance(content, str)
+        #             self.stacked_widget.setCurrentWidget(expression_editor)
+        #             mapper.addMapping(expression_editor, 2)
+        #             expression_editor.setText(content)
+        #         case 'value-int':
+        #             assert isinstance(content, int)
+        #             self.stacked_widget.setCurrentWidget(int_editor)
+        #             mapper.addMapping(int_editor, 2)
+        #             int_editor.setValue(content)
+        #         case 'value-float':
+        #             assert isinstance(content, float)
+        #             self.stacked_widget.setCurrentWidget(float_editor)
+        #             mapper.addMapping(float_editor, 2)
+        #             float_editor.setValue(...)
+        #         case 'value-str':
+        #             assert isinstance(content, str)
+        #             self.stacked_widget.setCurrentWidget(str_editor)
+        #             mapper.addMapping(str_editor, 2)
+        #             str_editor.setText(...)
+        #         case 'value-path':
+        #             assert isinstance(content, pathlib.Path)
+        #             self.stacked_widget.setCurrentWidget(path_editor)
+        #             mapper.addMapping(path_editor, 2)
+        #             path_editor.setPath(content)
 
-        self.node_selection_model.currentRowChanged.connect(update_detail_view)
+        # self.node_selection_model.currentRowChanged.connect(update_detail_view)
         ### Preview
         self._setupPreivewPanel()
         self._setupMenubar()
