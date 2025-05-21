@@ -6,13 +6,15 @@ from pylive.VisualCode_v6.py_graph_model import PyGraphModel
 from pylive.VisualCode_v6.py_proxy_node_model import PyProxyNodeModel
 from pylive.VisualCode_v6.py_proxy_link_model import PyProxyLinkModel
 
+PropsDict = dict[str, Any]
+PropsDiff = dict[str, tuple[Any, Any]]
+
 class InspectorView(QWidget):
     def __init__(self, parent:QWidget|None=None):
         super().__init__(parent=parent)
 
-        self._model:PyGraphModel|None=None
-        self.node_proxy_model:PyProxyNodeModel|None = None
-        self.node_selection_model:QItemSelectionModel|None=None
+        self._model:PyProxyNodeModel|None=None
+        self._node_selection_model:QItemSelectionModel|None=None
         self._current:str|None=None
         self._model_connections = []
         self._selection_connections = []
@@ -24,10 +26,6 @@ class InspectorView(QWidget):
         layout.addWidget(self.kind_dropdown)
 
         self.setLayout(layout)
-
-
-    
-
 
         # self.content_editor = QLabel("-data editor -")
         # mapper = QDataWidgetMapper()
@@ -46,42 +44,71 @@ class InspectorView(QWidget):
         # self.stacked_widget.addWidget(path_editor)
         
     def setModel(self, model:PyProxyNodeModel|None):
-    	pass
-        # if self._model:
-        #     for signal, slot in self._model_connections:
-        #         signal.disconnect(slot)
+        if self._model:
+            for signal, slot in self._model_connections:
+                signal.disconnect(slot)
 
-        # if model:
-        #     self._model_connections = [
-        #         (model.dataChanged, 
-        #             lambda nodes, hints: self._setEditorData(hints) 
-        #             if self._current in nodes
-        #             else 
-        #             None),
-        #     ]
-        #     for signal, slot in self._model_connections:
-        #         signal.connect(slot)
-        # self._model = model
+        if model:
+            self._model_connections = [
+                (model.dataChanged, self.updateWidget),
+            ]
+            for signal, slot in self._model_connections:
+                signal.connect(slot)
+        self._model = model
 
-    def setSelectionModel(self, selection:QItemSelectionModel|None):
-    	pass
-        # assert all([selection is None, proxy is None]) or all([selection is not None, proxy is not None])
+    def setSelectionModel(self, selection:QItemSelectionModel):
+        assert self._model is not None, "cant set selection model without a model"
+
+        if self._node_selection_model:
+            for signal, slot in self._selection_connections:
+                signal.disconnect(slot)
+
+        if selection:
+            self._selection_connections = [
+                (selection.currentChanged, self.updateWidget)
+            ]
+
+            for signal, slot in self._selection_connections:
+                signal.connect(slot)
+
+        self._node_selection_model = selection
+
+    def updateWidget(self):
+        assert self._model
+        assert self._node_selection_model
+        # compare widget state to model state
+
+        new_props = {
+            "name": self._model.data(self._node_selection_model.currentIndex()),
+            "kind": None,
+            "parameters": []
+        }
+
+        old_props = {
+            "name":None,
+            "kind": None,
+            "parameters": []
+        }
+
+        # compare widget state to model state
+        diff = {
+            "name": ("OLDNODE", "NEWNODE"),
+            "kind": ("OLD_KIND", "NEW_KIND")
+        }
+        print("update widget")
         
-        # if self.node_proxy_model and self.node_selection_model:
-        #     for signal, slot in self._selection_connections:
-        #         signal.disconnect(slot)
+        match diff:
+            case {"name": (old_node, new_node)}:
+                print("node changed")
 
-        # if selection and proxy:
-        #     self._selection_connections = [
-        #         (selection.currentChanged, 
-        #             lambda current, previous: self._setCurrent(proxy.mapToSource(current)))
-        #     ]
+        match diff:
+            case {"kind": (old_kind, new_kind)}:
+                print("kind changed")
 
-        #     for signal, slot in self._selection_connections:
-        #         signal.connect(slot)
+        match diff:
+            case {"parameters": (old_params, new_params)}:
+                print("parameters changed")
 
-        # self.node_proxy_model = proxy
-        # self.node_selection_model = selection
 
     # def _setCurrent(self, node:str|None):
     #     self._current = node

@@ -53,7 +53,6 @@ class PyProxyNodeModel(QAbstractItemModel):
         for node in nodes:
             row = self.mapFromSource(node).row()
             if not hints:
-                
                 self.dataChanged.emit(self.index(row, 0), self.index(row, self.columnCount()-1), [])
             else:
                 columns = []
