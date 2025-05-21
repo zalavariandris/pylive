@@ -338,10 +338,10 @@ class PyGraphModel(QObject):
             case 'name':
                 if role == Qt.ItemDataRole.DisplayRole:
                     return f"{node_key}"
+                return None
 
             case 'label':
                 if role == Qt.ItemDataRole.DisplayRole:
-
                     match node_item.kind:
                         case 'operator':
                             assert isinstance(node_item.content, str)
@@ -352,7 +352,6 @@ class PyGraphModel(QObject):
                             return f"𝕍 {node_item.content}"
                         case _:
                             return f"{node_key}"
-
 
             case 'kind':
                 return node_item.kind
@@ -365,10 +364,10 @@ class PyGraphModel(QObject):
                     match node_item.kind:
                         case 'operator':
                             assert isinstance(node_item.content, str)
-
                             return node_item.content
                         case _:
                             return f"{node_item.content}"
+                return None
 
             case 'result':
                 ### GET FUNCTION ARGUMENTS
@@ -450,7 +449,7 @@ class PyGraphModel(QObject):
 
             self.dataChanged.emit([node] + dependents, ['result'])
 
-    def setData(self, node:str, attr:str, value:Any, role:int=Qt.ItemDataRole.EditRole):
+    def setData(self, node:str, attr:str, value:Any, role:int=Qt.ItemDataRole.EditRole)->bool:
         node_item = self._node_data[node]
 
         match attr:
@@ -474,6 +473,7 @@ class PyGraphModel(QObject):
 
                     self.dataChanged.emit([node], ['kind', 'content'])
                     self.invalidate([node])
+                    return True
 
             case 'content':
                 if value != node_item.content:
@@ -501,9 +501,11 @@ class PyGraphModel(QObject):
 
                     self.dataChanged.emit([node], ['content'])
                     self.invalidate([node])
+                    return True
 
             case _:
                 raise ValueError()
+                return False
 
     ### Helpers
     def _toNetworkX(self)->nx.MultiDiGraph:

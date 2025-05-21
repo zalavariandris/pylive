@@ -5,13 +5,9 @@ from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
-
-
 from pathlib import Path
 
 import logging
-
-
 
 from pylive.qt_components.QPathEdit import QPathEdit
 logging.basicConfig(level=logging.DEBUG)
@@ -20,7 +16,21 @@ logger = logging.getLogger(__name__)
 # from pylive.QtGraphEditor.definitions_model import DefinitionsModel
 
 ### DATA ###
-# 
+#
+
+class BaseNodeContent(QObject):
+    def __init__(self, parent:QObject=None):
+        super().__init__(parent=parent)
+
+    def kind(self)->LiteralString['operator','expression']:
+        raise NotImplementedError()
+
+    def createInspector(self):
+        ...
+
+    def updateInspector(self):
+        ...
+
 # from pylive.QtGraphEditor.py_functions_model import PyFunctionsModel
 from pylive.VisualCode_v6.py_graph_model import PyGraphModel
 from pylive.VisualCode_v6.py_proxy_node_model import PyProxyNodeModel

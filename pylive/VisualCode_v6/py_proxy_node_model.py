@@ -107,7 +107,7 @@ class PyProxyNodeModel(QAbstractItemModel):
         assert index.isValid()
         return index
 
-    def mapToSource(self, proxy:QModelIndex|QPersistentModelIndex)->str:
+    def mapToSource(self, proxy:QModelIndex|QPersistentModelIndex)->str|None:
         if not proxy.isValid():
             return None
         node = self._nodes[proxy.row()]
@@ -119,9 +119,6 @@ class PyProxyNodeModel(QAbstractItemModel):
 
         item_selection = QItemSelection()
         for r in ranges:
-            r.start
-            r.stop
-
             selection_range = QItemSelectionRange(
                 self.index(r.start, 0), 
                 self.index(r.stop-1, self.columnCount()-1)
@@ -171,9 +168,11 @@ class PyProxyNodeModel(QAbstractItemModel):
         if not self._source_model:
             return None
 
+        if not index.isValid():
+            return None
+
         node_name = self.mapToSource(index)
         column_name = self._headers[index.column()]
-
 
         match column_name:
             case 'name':
@@ -187,20 +186,6 @@ class PyProxyNodeModel(QAbstractItemModel):
             case 'content':
                 kind = self._source_model.data(node_name, 'kind', Qt.ItemDataRole.EditRole)
                 value = self._source_model.data(node_name, 'content', Qt.ItemDataRole.EditRole)
-                match kind:
-                    case 'operator':
-                        assert isinstance(value, str), f"got: {value!r}"
-                    case 'expression':
-                        assert isinstance(value, str), f"got: {value!r}"
-                    case 'value-int':
-                        assert isinstance(value, int), f"got: {value!r}"
-                    case 'value-float':
-                        assert isinstance(value, float), f"got: {value!r}"
-                    case 'value-str':
-                        assert isinstance(value, str), f"got: {value!r}"
-                    case 'value-path':
-                        import pathlib
-                        assert isinstance(value, pathlib.Path), f"got: {value!r}"
 
                 if role == Qt.ItemDataRole.DisplayRole:
                     return f"{value}"
@@ -246,11 +231,10 @@ class PyProxyNodeModel(QAbstractItemModel):
 
     def setData(self, index: QModelIndex | QPersistentModelIndex, value: Any, role: int = Qt.ItemDataRole.EditRole) -> bool:
         if not self._source_model:
-            return None
+            return False
 
         node_name = self.mapToSource(index)
         column_name = self._headers[index.column()]
-
 
         match column_name:
             case 'kind':
@@ -260,21 +244,6 @@ class PyProxyNodeModel(QAbstractItemModel):
 
             case 'content':
                 if role == Qt.ItemDataRole.EditRole:
-                    kind = self._source_model.data(node_name, 'kind')
-                    match kind:
-                        case 'operator':
-                            assert isinstance(value, str)
-                        case 'expression':
-                            assert isinstance(value, str)
-                        case 'value-int':
-                            assert isinstance(value, int)
-                        case 'value-float':
-                            assert isinstance(value, float)
-                        case 'value-str':
-                            assert isinstance(value, str)
-                        case 'value-path':
-                            import pathlib
-                            assert isinstance(value, pathlib.Path)
                     self._source_model.setData(node_name, 'content', value)
                     return True
 

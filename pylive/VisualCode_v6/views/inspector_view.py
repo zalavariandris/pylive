@@ -19,29 +19,7 @@ class InspectorView(QWidget):
         self._model_connections = []
         self._selection_connections = []
 
-        layout = QFormLayout()
-        self.kind_dropdown = QComboBox()
-        self.kind_dropdown.insertItems(0, ['operator', 'value-int', 'value-float', 'value-str', 'value-path', 'expression'])
-        self.kind_dropdown.setDisabled(False)
-        layout.addWidget(self.kind_dropdown)
-
-        self.setLayout(layout)
-
-        # self.content_editor = QLabel("-data editor -")
-        # mapper = QDataWidgetMapper()
-        # operator_editor = QLineEdit() #operator
-        # expression_editor = QLineEdit() #expression   
-        # int_editor = QSpinBox() #value-int
-        # float_editor = QDoubleSpinBox() #value-float
-        # str_editor = QLineEdit() #value-str
-        # path_editor = QPathEdit() #value-path100100
-        # self.stacked_widget = QStackedWidget()
-        # self.stacked_widget.addWidget(operator_editor)
-        # self.stacked_widget.addWidget(expression_editor)
-        # self.stacked_widget.addWidget(int_editor)
-        # self.stacked_widget.addWidget(float_editor)
-        # self.stacked_widget.addWidget(str_editor)
-        # self.stacked_widget.addWidget(path_editor)
+        self.createWidgets()
         
     def setModel(self, model:PyProxyNodeModel|None):
         if self._model:
@@ -73,41 +51,121 @@ class InspectorView(QWidget):
 
         self._node_selection_model = selection
 
+    def createWidgets(self):
+        layout = QFormLayout()
+        self.name_label = QLabel(self, text="-node name-")
+        layout.addRow("name", self.name_label)
+        self.kind_dropdown = QComboBox()
+        self.kind_dropdown.insertItems(0, ['operator', 'value-int', 'value-float', 'value-str', 'value-path', 'expression'])
+        self.kind_dropdown.setDisabled(False)
+        layout.addRow("kind", self.kind_dropdown)
+        self.content_edit = QLineEdit(self)
+        layout.addRow("content", self.content_edit)
+        self.setLayout(layout)
+
+        def updateModelKind(new_kind:str):
+            current_index = self._node_selection_model.currentIndex()
+            kind_index = current_index.siblingAtColumn(1)
+            print(current_index, kind_index)
+            self._model.setData(
+                kind_index, new_kind,
+                Qt.ItemDataRole.DisplayRole
+            )
+        self.kind_dropdown.currentTextChanged.connect(lambda text: updateModelKind(text))
+
+        def updateModelContent(new_content:str):
+              self._model.setData(
+                  self._node_selection_model.currentIndex().siblingAtColumn(2), new_content,
+                  Qt.ItemDataRole.DisplayRole
+              )
+
+        self.content_edit.textChanged.connect(lambda text: updateModelContent(text))
+
+        # self.content_editor = QLabel("-data editor -")
+        # mapper = QDataWidgetMapper()
+        # operator_editor = QLineEdit() #operator
+        # expression_editor = QLineEdit() #expression
+        # int_editor = QSpinBox() #value-int
+        # float_editor = QDoubleSpinBox() #value-float
+        # str_editor = QLineEdit() #value-str
+        # path_editor = QPathEdit() #value-path100100
+        # self.stacked_widget = QStackedWidget()
+        # self.stacked_widget.addWidget(operator_editor)
+        # self.stacked_widget.addWidget(expression_editor)
+        # self.stacked_widget.addWidget(int_editor)
+        # self.stacked_widget.addWidget(float_editor)
+        # self.stacked_widget.addWidget(str_editor)
+        # self.stacked_widget.addWidget(path_editor)
+
     def updateWidget(self):
         assert self._model
         assert self._node_selection_model
         # compare widget state to model state
+        current_row = self._node_selection_model.currentIndex().row()
+
+        PropsDiff = dict[str, tuple[Any, Any]]
+        def props_diff(old: dict[str, Any], new: dict[str, Any]) -> PropsDiff:
+            """
+            Calculate the difference between two PropsDicts, except for "children".
+
+            Will never return a value of (None, None).
+            """
+            diff = {}
+            for key in set(old) | set(new):
+                if key != "children":
+                    if key not in old:
+                        new_val = new[key]
+                        if new_val is not None:
+                            diff[key] = (None, new_val)
+                    elif key not in new:
+                        old_val = old[key]
+                        if old_val is not None:
+                            diff[key] = (old_val, None)
+                    elif old[key] != new[key]:
+                        diff[key] = (old[key], new[key])
+            return diff
 
         new_props = {
-            "name": self._model.data(self._node_selection_model.currentIndex()),
-            "kind": None,
-            "parameters": []
+            "name": self._model.index(current_row, 0).data(Qt.ItemDataRole.DisplayRole),
+            "kind": self._model.index(current_row, 1).data(Qt.ItemDataRole.DisplayRole),
+            "content": self._model.index(current_row, 2).data(Qt.ItemDataRole.DisplayRole),
         }
 
         old_props = {
-            "name":None,
-            "kind": None,
-            "parameters": []
+            "name": self.name_label.text(),
+            "kind": self.kind_dropdown.currentText(),
+            "content": None
         }
+
+        diff_props = props_diff(old_props, new_props)
 
         # compare widget state to model state
-        diff = {
-            "name": ("OLDNODE", "NEWNODE"),
-            "kind": ("OLD_KIND", "NEW_KIND")
-        }
-        print("update widget")
+        print("update widget", diff_props)
         
-        match diff:
-            case {"name": (old_node, new_node)}:
-                print("node changed")
+        match diff_props.get("name"):
+            case (old_name, new_name):
+                print("name changed")
+                self.name_label.setText(new_name)
+        all_kinds = ['operator', 'expression']
 
-        match diff:
-            case {"kind": (old_kind, new_kind)}:
+        match diff_props.get("kind"):
+            case old_kind, new_kind:
                 print("kind changed")
+                self.kind_dropdown.setCurrentText(new_kind)
+                # print(new_kind)
+                # match new_kind:
+                #     case None:
+                #         self.kind_dropdown.setCurrentIndex(-1)
+                #     case 'operator'|'value-int'|'value-float'|'value-str'|'value-path'|'expression':
+                #         self.kind_dropdown.setCurrentText(new_kind)
+                #     case _:
+                #         print("warning unknown kind", new_kind)
+                #         self.kind_dropdown.setCurrentIndex(-1)
 
-        match diff:
-            case {"parameters": (old_params, new_params)}:
-                print("parameters changed")
+        match diff_props.get("content"):
+            case (old_content, new_content):
+                self.content_edit.setText(new_content)
+                print("param content changed")
 
 
     # def _setCurrent(self, node:str|None):
