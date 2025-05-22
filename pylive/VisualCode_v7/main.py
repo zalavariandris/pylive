@@ -5,6 +5,9 @@ from PySide6.QtWidgets import *
 
 from PySide6.QtGui import QStandardItemModel
 from PySide6.QtWidgets import QHBoxLayout, QTreeView
+from graphview import GraphView
+
+
 
 class LinkTableDelegate(QStyledItemDelegate):
     def displayText(self, value: Any, locale: QLocale | QLocale.Language, /) -> str:
@@ -30,6 +33,7 @@ class MainWindow(QWidget):
     def __init__(self, parent:QWidget|None=None):
         super().__init__(parent=parent)
 
+        ### Setup base model
         self.nodes = QStandardItemModel()
         self.nodes.setHorizontalHeaderLabels(["name", "kind", "content", "pos"])
         self.links = QStandardItemModel()
@@ -45,7 +49,7 @@ class MainWindow(QWidget):
         node2[0].appendRow([QStandardItem("in"), QStandardItem("inlet")])
         node2[0].appendRow([QStandardItem("out"), QStandardItem("outlet")])
 
-
+        ### Setup table views
         self.node_tree = QTreeView()
         self.node_tree.setModel(self.nodes)
         self.node_tree.expandAll()
@@ -64,9 +68,15 @@ class MainWindow(QWidget):
         target_item.setData(QPersistentModelIndex(node2[0].child(0,0).index()), Qt.ItemDataRole.EditRole)
         self.links.appendRow([source_item, target_item])
 
+        ### Setup Graphview
+        self.graphview = GraphView()
+        self.graphview.setModel( self.nodes, self.links )
+
+        ### Setup Lazout
         layout = QHBoxLayout()
         layout.addWidget(self.node_tree)
         layout.addWidget(self.link_table)
+        layout.addWidget(self.graphview)
         self.setLayout(layout)
 
     def sizeHint(self):

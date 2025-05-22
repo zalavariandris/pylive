@@ -22,7 +22,7 @@ class BaseNodeContent(QObject):
     def __init__(self, parent:QObject=None):
         super().__init__(parent=parent)
 
-    def kind(self)->LiteralString['operator','expression']:
+    def kind(self)->Literal['operator','expression']:
         raise NotImplementedError()
 
     def createInspector(self):
