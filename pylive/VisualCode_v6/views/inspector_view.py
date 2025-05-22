@@ -187,7 +187,7 @@ class InspectorView(QWidget):
 #                 'value-path':  QPathEdit
 #             }
 
-#             if not isinstance(self._content_editor, kind_editor_map[kind]):
+#             if not isinstance(self._content_editor, kind_editocontentr_map[kind]):
 
 #                 new_editor = kind_editor_map[kind]()
 #                 layout.replaceWidget(self._content_editor, new_editor)
