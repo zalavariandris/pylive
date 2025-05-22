@@ -45,6 +45,7 @@ from pylive.VisualCode_v6.imports_manger import ImportsManager
 from views.preview import PreView
 from views.inspector_view import InspectorView
 
+
 class NodeKindDelegate(QStyledItemDelegate):
     def createEditor(self, parent, option, index):
         if index.column()==1:
