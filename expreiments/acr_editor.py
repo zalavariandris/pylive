@@ -3,6 +3,51 @@ from PySide6.QtWidgets import *
 from PySide6.QtCore import *
 from PySide6.QtGui import *
 import cv2
+from typing import *
+import time
+from functools import wraps
+import numpy as np
+import numpy.typing as npt
+
+def timeit(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        start_time = time.perf_counter()  # more precise than time.time()
+        result = func(*args, **kwargs)
+        end_time = time.perf_counter()
+        execution_time = end_time - start_time
+        print(f"Function '{func.__name__}' executed in {execution_time:.4f} seconds")
+        return result
+    return wrapper
+
+T_My_Numpy_Array_co = TypeVar("T_My_Numpy_Array_co", bound=np.generic, covariant=True)
+
+class MyNumpyArray(Generic[T_My_Numpy_Array_co]):
+    """Wrapper for one `numpy.ndarray <https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html>`_.
+
+    This wrapper class provides the :code:`__eq__` relation for the wrapped
+    :code:`numpy` array such that if two wrapped arrays are :code:`__eq__`,
+    then one can be substituted for the other. This class may be used as a
+    **prop** or a **state**.
+
+    Args:
+        np_array:
+            A `numpy.ndarray <https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html>`_.
+
+    """
+
+    np_array: npt.NDArray[T_My_Numpy_Array_co]
+
+    def __init__(self, np_array: npt.NDArray[T_My_Numpy_Array_co]) -> None:
+        super().__init__()
+        self.dtype = np_array.dtype
+        self.np_array = np_array
+
+    def __eq__(self, other: Self) -> bool: # type: ignore  # noqa: PGH003
+        print("are arrays equal?")
+        return False
+        return self.np_array is other.np_array
+        return np.array_equal(self.np_array, other.np_array, equal_nan=True)
 
 class FileInput(CustomWidget[QPushButton]):
     def __init__(self, path="", on_change=None, **kwargs):
@@ -30,41 +75,56 @@ class FileInput(CustomWidget[QPushButton]):
                 widget.setText(propnew)
 
 from pylive.qt_components.pan_and_zoom_graphicsview_not_optimized import PanAndZoomGraphicsView
-class ImageViewer(CustomWidget[QLabel]):
-    def __init__(self, src="", **kwargs):
-        super().__init__(**kwargs)
-        self._register_props(
-            {
-                "src": src,
-            }
-        )
 
-    def create_widget(self):
-        view = PanAndZoomGraphicsView()
-        scene = QGraphicsScene()
-        pixmap = QPixmap(self.props["src"])
-        pixmap_item = QGraphicsPixmapItem(pixmap.scaled(400, 300, Qt.AspectRatioMode.KeepAspectRatio))
-        scene.addItem(pixmap_item)
-        view.setScene(scene)
-        self.pixmap_item = pixmap_item
-        view.setRenderHint(QPainter.RenderHint.Antialiasing)
-        return view
-
-    def update(self, widget: PanAndZoomGraphicsView, diff_props: PropsDiff):
-        match diff_props.get("src"):
-            case _propold, propnew:
-                pixmap = QPixmap(propnew)
-                if not pixmap.isNull():
-                    self.pixmap_item.setPixmap(pixmap)
-                else:
-                    print(f"Failed to load image from {propnew}")
 
 from typing import *
 from edifice.extra.numpy_image import NumpyArray, NumpyArray_to_QImage, NumpyImage
 from edifice.engine import _WidgetTree, _get_widget_children, CommandType
 import qimage2ndarray
+
+def numpy_to_qimage(image: np.ndarray) -> QImage:
+    if image.dtype == np.float32 or image.dtype == np.float64:
+        # Normalize to [0, 255] and convert to uint8
+        image = np.clip(image, 0, 1)  # Assuming input is in [0, 1] range
+        image = (image * 255).astype(np.uint8)
+
+    if image.ndim == 2:
+        height, width = image.shape
+        return QImage(image.data, width, height, width, QImage.Format_Grayscale8)
+    elif image.ndim == 3:
+        height, width, channels = image.shape
+        if channels == 3:
+            return QImage(image.data, width, height, width * 3, QImage.Format_RGB888)
+        elif channels == 4:
+            return QImage(image.data, width, height, width * 4, QImage.Format_RGBA8888)
+    raise ValueError("Unsupported image shape")
+
+def numpy_to_qimage_fast(image: np.ndarray) -> QImage:
+    # if not img.flags['C_CONTIGUOUS']:
+    #     img = np.ascontiguousarray(image)
+
+    if image.dtype == np.float32 or image.dtype == np.float64:
+        image = cv2.normalize(image, None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
+        # image = image.astype(np.uint8)
+
+    # image = np.ascontiguousarray(image)
+    assert image.dtype == np.uint8
+    print("numpy_to_qimage_fast")
+    if image.ndim == 2:
+        h, w = image.shape
+        return QImage(image.data, w, h, w, QImage.Format_Grayscale8).copy()
+    elif image.ndim == 3:
+        h, w, ch = image.shape
+        if ch == 3:
+            return QImage(image.data, w, h, w * 3, QImage.Format_RGB888).copy()
+        elif ch == 4:
+            return QImage(image.data, w, h, w * 4, QImage.Format_RGBA8888).copy()
+    
+    raise ValueError("Unsupported shape or dtype")
+
+
 class NumpyImageViewer(CustomWidget[PanAndZoomGraphicsView]):
-    def __init__(self, src:NumpyArray, **kwargs):
+    def __init__(self, src:MyNumpyArray, **kwargs):
         super().__init__(**kwargs)
         self._register_props(
             {
@@ -92,8 +152,7 @@ class NumpyImageViewer(CustomWidget[PanAndZoomGraphicsView]):
         match diff_props.get("src"):
             case _, new_image:
                 img = new_image.np_array
-                # print(img)
-                qimg = qimage2ndarray.array2qimage( (img*255).astype(np.uint8) )
+                qimg = numpy_to_qimage_fast(img)
                 pixmap = QPixmap.fromImage(qimg)
                 if not pixmap.isNull():
                     self.pixmap_item.setPixmap(pixmap)
@@ -193,27 +252,29 @@ def HelloWorld(self):
     def read():
         return cv2.imread(filename).astype(np.float32)/255
     img = use_memo(read, (filename,) )
-    try:
-        cc = img*exposure
-    except Exception:
-        cc = np.ones((32,32,3), np.float32)
-
-    def update_exposure(val):
-        print("exposure was set to:", val)
-        set_exposure(val)
+    cc = img
+    def process_color_correction():
+        try:
+            print("process color correction")
+            cc = img*exposure/100
+            print(cc)
+        except Exception:
+            cc = np.ones((32,32,3), np.float32)
+    process_color_correction()
 
     with Window(title="Color Grade", _size_open=(1024,576), full_screen=False):
         with SplitView(sizes=(500,200)):
             with VBoxView(style={'align': 'center'}):
                 FileInput(path=filename, on_change=set_filename)
-                NumpyImageViewer(src=NumpyArray(cc))
+                NumpyImageViewer(src=MyNumpyArray(cc))
             with VBoxView(style={'align': 'top'}):
+                Label(f"{cc.shape} {cc.dtype}")
                 Label("exposure")
                 Slider(
                     value=exposure,
                     min_value=-10,
                     max_value=10,
-                    on_change=update_exposure
+                    on_change=set_exposure
                 )
                 Label("temperature")
                 Slider(
