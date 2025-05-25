@@ -9,6 +9,8 @@ from functools import wraps
 import numpy as np
 import numpy.typing as npt
 
+from PySide6.QtOpenGLWidgets import *
+
 def timeit(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
@@ -44,7 +46,6 @@ class MyNumpyArray(Generic[T_My_Numpy_Array_co]):
         self.np_array = np_array
 
     def __eq__(self, other: Self) -> bool: # type: ignore  # noqa: PGH003
-        print("are arrays equal?")
         return False
         return self.np_array is other.np_array
         return np.array_equal(self.np_array, other.np_array, equal_nan=True)
@@ -82,11 +83,68 @@ from edifice.extra.numpy_image import NumpyArray, NumpyArray_to_QImage, NumpyIma
 from edifice.engine import _WidgetTree, _get_widget_children, CommandType
 import qimage2ndarray
 
+from PySide6.QtGui import QPainter, QImage
+from PySide6.QtCore import QRectF, QSize
+from PySide6.QtOpenGLWidgets import QOpenGLWidget
+from OpenGL.GL import *
+from PySide6.QtGui import QOpenGLContext
+
+class OpenGLTextureItem(QGraphicsItem):
+    def __init__(self, texture_id, texture_size):
+        super().__init__()
+        self.texture_id = texture_id
+        self.texture_size = texture_size
+
+    def boundingRect(self) -> QRectF:
+        return QRectF(0, 0, self.texture_size.width(), self.texture_size.height())
+
+    def paint(self, painter: QPainter, option, widget=None):
+        if not QOpenGLContext.currentContext():
+            return
+
+        painter.beginNativePainting()
+
+        glEnable(GL_TEXTURE_2D)
+        glBindTexture(GL_TEXTURE_2D, self.texture_id)
+
+        glBegin(GL_QUADS)
+        glTexCoord2f(0, 1); glVertex2f(0, 0)
+        glTexCoord2f(1, 1); glVertex2f(self.texture_size.width(), 0)
+        glTexCoord2f(1, 0); glVertex2f(self.texture_size.width(), self.texture_size.height())
+        glTexCoord2f(0, 0); glVertex2f(0, self.texture_size.height())
+        glEnd()
+
+        glBindTexture(GL_TEXTURE_2D, 0)
+        glDisable(GL_TEXTURE_2D)
+
+        painter.endNativePainting()
+
+
+def create_opengl_texture_from_image(image: QImage) -> (int, QSize):
+    image = image.convertToFormat(QImage.Format_RGBA8888)
+    width, height = image.width(), image.height()
+    data = image.bits().asstring(image.sizeInBytes())
+
+    texture_id = glGenTextures(1)
+    glBindTexture(GL_TEXTURE_2D, texture_id)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+
+    glTexImage2D(
+        GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0,
+        GL_RGBA, GL_UNSIGNED_BYTE, data
+    )
+
+    glBindTexture(GL_TEXTURE_2D, 0)
+    return texture_id, QSize(width, height)
+
+
 def numpy_to_qimage(image: np.ndarray) -> QImage:
     if image.dtype == np.float32 or image.dtype == np.float64:
+        image = cv2.normalize(image, None, 0, 255, cv2.NORM_INF, cv2.CV_8U)
         # Normalize to [0, 255] and convert to uint8
-        image = np.clip(image, 0, 1)  # Assuming input is in [0, 1] range
-        image = (image * 255).astype(np.uint8)
+        # image = np.clip(image, 0, 1)  # Assuming input is in [0, 1] range
+        # image = (image * 255).astype(np.uint8)
 
     if image.ndim == 2:
         height, width = image.shape
@@ -104,21 +162,24 @@ def numpy_to_qimage_fast(image: np.ndarray) -> QImage:
     #     img = np.ascontiguousarray(image)
 
     if image.dtype == np.float32 or image.dtype == np.float64:
-        image = cv2.normalize(image, None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
-        # image = image.astype(np.uint8)
+        # image = cv2.normalize(image, None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
+        # print(image)
+        image = np.clip(image, 0, 1)  # Ensure values are in [0, 255]
+        # image = (image * 255).astype(np.uint8)  # Convert to float32
+        pass
 
     # image = np.ascontiguousarray(image)
     assert image.dtype == np.uint8
     print("numpy_to_qimage_fast")
     if image.ndim == 2:
         h, w = image.shape
-        return QImage(image.data, w, h, w, QImage.Format_Grayscale8).copy()
+        return QImage(image.data, w, h, w, QImage.Format_Grayscale8)
     elif image.ndim == 3:
         h, w, ch = image.shape
         if ch == 3:
-            return QImage(image.data, w, h, w * 3, QImage.Format_RGB888).copy()
+            return QImage(image.data, w, h, w * 3, QImage.Format_RGB888)
         elif ch == 4:
-            return QImage(image.data, w, h, w * 4, QImage.Format_RGBA8888).copy()
+            return QImage(image.data, w, h, w * 4, QImage.Format_RGBA8888)
     
     raise ValueError("Unsupported shape or dtype")
 
@@ -134,7 +195,11 @@ class NumpyImageViewer(CustomWidget[PanAndZoomGraphicsView]):
 
     def create_widget(self):
         view = PanAndZoomGraphicsView()
+        view.setViewport(QOpenGLWidget() )
         scene = QGraphicsScene()
+
+    
+
         pixmap_item = QGraphicsPixmapItem()
         scene.addItem(pixmap_item)
         view.setScene(scene)
@@ -238,7 +303,7 @@ class SplitView(QtWidgetElement[QSplitter]):
 import cv2
 import numpy as np
 @component
-def HelloWorld(self):
+def RootComponent(self):
     def initializer():
         palette = palette_edifice_light() if theme_is_light() else palette_edifice_dark()
         palette = palette_edifice_dark()
@@ -252,15 +317,14 @@ def HelloWorld(self):
     def read():
         return cv2.imread(filename).astype(np.float32)/255
     img = use_memo(read, (filename,) )
-    cc = img
-    def process_color_correction():
+    def process_color_correction(img):
         try:
-            print("process color correction")
-            cc = img*exposure/100
-            print(cc)
-        except Exception:
+            cc = img*exposure
+        except Exception:   
             cc = np.ones((32,32,3), np.float32)
-    process_color_correction()
+        return cc
+    cc = use_memo(lambda: process_color_correction(img), (img, exposure) )
+
 
     with Window(title="Color Grade", _size_open=(1024,576), full_screen=False):
         with SplitView(sizes=(500,200)):
@@ -272,8 +336,8 @@ def HelloWorld(self):
                 Label("exposure")
                 Slider(
                     value=exposure,
-                    min_value=-10,
-                    max_value=10,
+                    min_value=-100,
+                    max_value=100,
                     on_change=set_exposure
                 )
                 Label("temperature")
@@ -291,4 +355,4 @@ def HelloWorld(self):
                 VBoxView()
 
 if __name__ == "__main__":
-    App(HelloWorld()).start()
+    App(RootComponent()).start()
