@@ -10,6 +10,9 @@ import numpy as np
 import numpy.typing as npt
 
 from PySide6.QtOpenGLWidgets import *
+import PyOpenColorIO as ocio
+# 1. Load OCIO config (use built-in config)
+
 
 def timeit(func):
     @wraps(func)
@@ -80,7 +83,7 @@ from pylive.qt_components.pan_and_zoom_graphicsview_not_optimized import PanAndZ
 
 from typing import *
 from edifice.extra.numpy_image import NumpyArray, NumpyArray_to_QImage, NumpyImage
-from edifice.engine import _WidgetTree, _get_widget_children, CommandType
+
 import qimage2ndarray
 
 from PySide6.QtGui import QPainter, QImage
@@ -92,11 +95,17 @@ from PySide6.QtGui import QOpenGLContext
 class OpenGLTextureItem(QGraphicsItem):
     def __init__(self, texture_id, texture_size):
         super().__init__()
-        self.texture_id = texture_id
-        self.texture_size = texture_size
+        self._texture_id = texture_id
+        self._texture_size = texture_size
 
     def boundingRect(self) -> QRectF:
-        return QRectF(0, 0, self.texture_size.width(), self.texture_size.height())
+        return QRectF(0, 0, self._texture_size.width(), self._texture_size.height())
+    
+    def setTexture(self, texture_id: int, texture_size: QSize):
+        """Set the OpenGL texture ID and size."""
+        self._texture_id = texture_id
+        self._texture_size = texture_size
+        self.update()
 
     def paint(self, painter: QPainter, option, widget=None):
         if not QOpenGLContext.currentContext():
@@ -105,13 +114,13 @@ class OpenGLTextureItem(QGraphicsItem):
         painter.beginNativePainting()
 
         glEnable(GL_TEXTURE_2D)
-        glBindTexture(GL_TEXTURE_2D, self.texture_id)
+        glBindTexture(GL_TEXTURE_2D, self._texture_id)
 
         glBegin(GL_QUADS)
         glTexCoord2f(0, 1); glVertex2f(0, 0)
-        glTexCoord2f(1, 1); glVertex2f(self.texture_size.width(), 0)
-        glTexCoord2f(1, 0); glVertex2f(self.texture_size.width(), self.texture_size.height())
-        glTexCoord2f(0, 0); glVertex2f(0, self.texture_size.height())
+        glTexCoord2f(1, 1); glVertex2f(self._texture_size.width(), 0)
+        glTexCoord2f(1, 0); glVertex2f(self._texture_size.width(), self._texture_size.height())
+        glTexCoord2f(0, 0); glVertex2f(0, self._texture_size.height())
         glEnd()
 
         glBindTexture(GL_TEXTURE_2D, 0)
@@ -139,25 +148,8 @@ def create_opengl_texture_from_image(image: QImage) -> (int, QSize):
     return texture_id, QSize(width, height)
 
 
+
 def numpy_to_qimage(image: np.ndarray) -> QImage:
-    if image.dtype == np.float32 or image.dtype == np.float64:
-        image = cv2.normalize(image, None, 0, 255, cv2.NORM_INF, cv2.CV_8U)
-        # Normalize to [0, 255] and convert to uint8
-        # image = np.clip(image, 0, 1)  # Assuming input is in [0, 1] range
-        # image = (image * 255).astype(np.uint8)
-
-    if image.ndim == 2:
-        height, width = image.shape
-        return QImage(image.data, width, height, width, QImage.Format_Grayscale8)
-    elif image.ndim == 3:
-        height, width, channels = image.shape
-        if channels == 3:
-            return QImage(image.data, width, height, width * 3, QImage.Format_RGB888)
-        elif channels == 4:
-            return QImage(image.data, width, height, width * 4, QImage.Format_RGBA8888)
-    raise ValueError("Unsupported image shape")
-
-def numpy_to_qimage_fast(image: np.ndarray) -> QImage:
     # if not img.flags['C_CONTIGUOUS']:
     #     img = np.ascontiguousarray(image)
 
@@ -170,7 +162,7 @@ def numpy_to_qimage_fast(image: np.ndarray) -> QImage:
 
     # image = np.ascontiguousarray(image)
     assert image.dtype == np.uint8
-    print("numpy_to_qimage_fast")
+    print("numpy_to_qimage")
     if image.ndim == 2:
         h, w = image.shape
         return QImage(image.data, w, h, w, QImage.Format_Grayscale8)
@@ -197,9 +189,6 @@ class NumpyImageViewer(CustomWidget[PanAndZoomGraphicsView]):
         view = PanAndZoomGraphicsView()
         view.setViewport(QOpenGLWidget() )
         scene = QGraphicsScene()
-
-    
-
         pixmap_item = QGraphicsPixmapItem()
         scene.addItem(pixmap_item)
         view.setScene(scene)
@@ -217,88 +206,74 @@ class NumpyImageViewer(CustomWidget[PanAndZoomGraphicsView]):
         match diff_props.get("src"):
             case _, new_image:
                 img = new_image.np_array
-                qimg = numpy_to_qimage_fast(img)
+                qimg = numpy_to_qimage(img)
                 pixmap = QPixmap.fromImage(qimg)
                 if not pixmap.isNull():
                     self.pixmap_item.setPixmap(pixmap)
                 else:
-                    print(f"Failed to load image from {propnew}")
+                    print("TODO: Failed to convert numpy array to QImage") #TODO: Handle this case properly
+                    print(f"Shape: {img.shape}, Dtype: {img.dtype}")
                 
 
 
-class SplitView(QtWidgetElement[QSplitter]):
+from splitview import SplitView
+config = ocio.Config.CreateRaw()
+srgb_to_linear_tf = ocio.ColorSpaceTransform(src='sRGB', dst='Linear')
+linear_to_srgb_tf = ocio.ColorSpaceTransform(src='Linear', dst='sRGB')
+
+def adjust_exposure(image, exposure_value):
     """
-    A layout that splits its children and allows user-resizable panels.
+    Adjust exposure. exposure_value > 1 brightens the image,
+    exposure_value < 1 darkens the image.
+    """
+    adjusted = image * (2 ** exposure_value)
+    return np.clip(adjusted, 0, 1)  # Keep values in [0, 1] range
 
-    .. highlights::
+import colour
 
-        - Underlying Qt Widget: `QSplitter <https://doc.qt.io/qtforpython-6/PySide6/QtWidgets/QSplitter.html>`_
-
-    .. rubric:: Props
-
-    All **props** from :class:`QtWidgetElement` plus:
-
-    Args:
-        orientation:
-            Orientation of the splitter: `QtCore.Qt.Horizontal` or `QtCore.Qt.Vertical`.
-        sizes:
-            Optional list of initial sizes for each widget (in pixels).
-
-    .. rubric:: Usage
-
-    .. code-block:: python
-
-        SplitView(orientation=QtCore.Qt.Horizontal)
+def apply_white_balance_linear(image, temperature=0.0, tint=0.0):
+    """
+    Apply temperature/tint in linear space using OCIO.
+    
+    - temperature: float in [-1, 1] (warm/cool)
+    - tint: float in [-1, 1] (green/magenta)
     """
 
-    def __init__(
-        self,
-        orientation: Qt.Orientation = Qt.Orientation.Horizontal,
-        sizes: list[int] | None = None,
-        **kwargs,
-    ):
-        super().__init__(**kwargs)
-        self._register_props({
-            "orientation": orientation,
-            "sizes": sizes,
-        })
-        self._widget_children: list[QtWidgetElement] = []
+    # Convert sRGB → linear using OCIO
+    processor_to_linear = config.getProcessor(srgb_to_linear_tf)
+    linear = processor_to_linear.applyRGB(image.reshape(-1, 3)).reshape(image.shape)
 
-    def _initialize(self):
-        self.underlying = QSplitter(self.props["orientation"])
-        self.underlying.setObjectName(str(id(self)))
+    # Compute RGB gains based on temperature and tint
+    # Temperature affects red/blue; Tint affects green
+    r_gain = 1.0 + 0.1 * temperature
+    g_gain = 1.0 - 0.1 * tint
+    b_gain = 1.0 - 0.1 * temperature
 
-    def _qt_update_commands(
-        self,
-        widget_trees: dict[Element, _WidgetTree],
-        diff_props: PropsDiff,
-    ):
-        if self.underlying is None:
-            self._initialize()
+    gains = np.array([r_gain, g_gain, b_gain]).reshape(1, 1, 3)
+    balanced = linear * gains
 
-        assert self.underlying is not None
-        commands = super()._qt_update_commands_super(widget_trees, diff_props, self.underlying)
+    # Convert linear → sRGB
+    processor_to_srgb = config.getProcessor(linear_to_srgb_tf)
+    result = processor_to_srgb.applyRGB(balanced.reshape(-1, 3)).reshape(image.shape)
 
-        children = _get_widget_children(widget_trees, self)
+    return np.clip(result, 0, 1)
 
-        if children != self._widget_children:
-            # Remove existing widgets
-            for i in reversed(range(self.underlying.count())):
-                widget = self.underlying.widget(i)
-                self.underlying.widget(i).setParent(None)
-                widget.deleteLater()
+def adjust_exposure_ocio(image, exposure_value):
+    # Normalize image to [0, 1]
+    image = image.astype(np.float32) / 255.0
 
-            # Add new children
-            for child in children:
-                assert child.underlying is not None
-                self.underlying.addWidget(child.underlying)
+    # Convert sRGB → Linear
+    processor_srgb_to_linear = config.getProcessor(srgb_to_linear_tf)
+    linear = processor_srgb_to_linear.applyRGB(image.reshape(-1, 3)).reshape(image.shape)
 
-            self._widget_children = children
+    # Apply exposure in linear space
+    linear *= 2 ** exposure_value
 
-            if self.props["sizes"]:
-                commands.append(CommandType(self.underlying.setSizes, self.props["sizes"]))
+    # Convert Linear → sRGB
+    processor_linear_to_srgb = config.getProcessor(linear_to_srgb_tf)
+    corrected = processor_linear_to_srgb.applyRGB(linear.reshape(-1, 3)).reshape(image.shape)
 
-        return commands
+    return np.clip(corrected, 0, 1)
 
 import cv2
 import numpy as np
@@ -311,46 +286,51 @@ def RootComponent(self):
         return palette
 
     palette = use_memo(initializer)
-    filename, set_filename = use_state(r"C:\dev\src\pylive\assets\IMG_0885.JPG")
-    exposure, set_exposure = use_state(1)
+
+    filename, set_filename = use_state(r"C:\dev\src\pylive\assets\colorchecker-classic_01.png")
+    exposure, set_exposure = use_state(0)
+    temperature, set_temperature = use_state(50)
+    tint, set_tint = use_state(50)
 
     def read():
-        return cv2.imread(filename).astype(np.float32)/255
+        img = cv2.imread(filename).astype(np.float32)/255
+        img = cv2.resize(img, (1024, 576), interpolation=cv2.INTER_LINEAR, dst=img)
+        return img
+    
     img = use_memo(read, (filename,) )
-    def process_color_correction(img):
-        try:
-            cc = img*exposure
-        except Exception:   
-            cc = np.ones((32,32,3), np.float32)
-        return cc
-    cc = use_memo(lambda: process_color_correction(img), (img, exposure) )
 
+    img = apply_temperature_tint(img, kelvin=temperature, tint_shift=tint/100)
+    img = adjust_exposure(img, exposure/100)
 
+    
+    # cc = use_memo(lambda: process_color_correction(img, exposure), (img, exposure) )
     with Window(title="Color Grade", _size_open=(1024,576), full_screen=False):
         with SplitView(sizes=(500,200)):
             with VBoxView(style={'align': 'center'}):
                 FileInput(path=filename, on_change=set_filename)
-                NumpyImageViewer(src=MyNumpyArray(cc))
+                NumpyImage(src=NumpyArray((img*255).astype(np.uint8)))
             with VBoxView(style={'align': 'top'}):
-                Label(f"{cc.shape} {cc.dtype}")
-                Label("exposure")
-                Slider(
-                    value=exposure,
-                    min_value=-100,
-                    max_value=100,
-                    on_change=set_exposure
-                )
+                Label(f"{img.shape} {img.dtype}")
                 Label("temperature")
                 Slider(
-                    value=50,
-                    min_value=0,
-                    max_value=100
+                    value=temperature,
+                    min_value=1000,
+                    max_value=40000,
+                    on_change=set_temperature
                 )
                 Label("tint")
                 Slider(
-                    value=50,
-                    min_value=0,
-                    max_value=100
+                    value=tint,
+                    min_value=-100,
+                    max_value=100,
+                    on_change=set_tint
+                )
+                Label("exposure")
+                Slider(
+                    value=exposure,
+                    min_value=-500,
+                    max_value=500,
+                    on_change=set_exposure
                 )
                 VBoxView()
 
