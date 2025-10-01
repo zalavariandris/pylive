@@ -451,6 +451,7 @@ class OutletItem(PortItem):
         self._label.setPlainText(f"{self.key}")
         self.update()
 
+
 # class NodeCell(QGraphicsWidget):
 #     def __init__(self, index: QPersistentModelIndex, parent: QGraphicsItem | None = None):
 #         super().__init__(parent=parent)
