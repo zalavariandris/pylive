@@ -14,16 +14,7 @@ import PyOpenColorIO as ocio
 # 1. Load OCIO config (use built-in config)
 
 
-def timeit(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        start_time = time.perf_counter()  # more precise than time.time()
-        result = func(*args, **kwargs)
-        end_time = time.perf_counter()
-        execution_time = end_time - start_time
-        print(f"Function '{func.__name__}' executed in {execution_time:.4f} seconds")
-        return result
-    return wrapper
+
 
 T_My_Numpy_Array_co = TypeVar("T_My_Numpy_Array_co", bound=np.generic, covariant=True)
 
@@ -49,84 +40,19 @@ class MyNumpyArray(Generic[T_My_Numpy_Array_co]):
         self.np_array = np_array
 
     def __eq__(self, other: Self) -> bool: # type: ignore  # noqa: PGH003
-        return False
         return self.np_array is other.np_array
-        return np.array_equal(self.np_array, other.np_array, equal_nan=True)
 
-class FileInput(CustomWidget[QPushButton]):
-    def __init__(self, path="", on_change=None, **kwargs):
-        super().__init__(**kwargs)
-        self._register_props(
-            {
-                "path": path,
-                "on_change": on_change,
-            }
-        )
 
-    def create_widget(self):
-        button = QPushButton("Select File...")
-        def on_click():
-            file_path, _ = QFileDialog.getOpenFileName(button, "Select a file", self.props["path"])
-            if file_path and self.props["on_change"]:
-                self.props["on_change"](file_path)
-        button.pressed.connect(on_click)
-        return button
 
-    def update(self, widget: QPushButton, diff_props: PropsDiff):
-        # This function should update the widget
-        match diff_props.get("path"):
-            case _propold, propnew:
-                widget.setText(propnew)
 
-from pylive.qt_components.pan_and_zoom_graphicsview_not_optimized import PanAndZoomGraphicsView
-
+from splitview import SplitView
 
 from typing import *
 from edifice.extra.numpy_image import NumpyArray, NumpyArray_to_QImage, NumpyImage
 
 import qimage2ndarray
 
-from PySide6.QtGui import QPainter, QImage
-from PySide6.QtCore import QRectF, QSize
-from PySide6.QtOpenGLWidgets import QOpenGLWidget
-from OpenGL.GL import *
-from PySide6.QtGui import QOpenGLContext
 
-class OpenGLTextureItem(QGraphicsItem):
-    def __init__(self, texture_id, texture_size):
-        super().__init__()
-        self._texture_id = texture_id
-        self._texture_size = texture_size
-
-    def boundingRect(self) -> QRectF:
-        return QRectF(0, 0, self._texture_size.width(), self._texture_size.height())
-    
-    def setTexture(self, texture_id: int, texture_size: QSize):
-        """Set the OpenGL texture ID and size."""
-        self._texture_id = texture_id
-        self._texture_size = texture_size
-        self.update()
-
-    def paint(self, painter: QPainter, option, widget=None):
-        if not QOpenGLContext.currentContext():
-            return
-
-        painter.beginNativePainting()
-
-        glEnable(GL_TEXTURE_2D)
-        glBindTexture(GL_TEXTURE_2D, self._texture_id)
-
-        glBegin(GL_QUADS)
-        glTexCoord2f(0, 1); glVertex2f(0, 0)
-        glTexCoord2f(1, 1); glVertex2f(self._texture_size.width(), 0)
-        glTexCoord2f(1, 0); glVertex2f(self._texture_size.width(), self._texture_size.height())
-        glTexCoord2f(0, 0); glVertex2f(0, self._texture_size.height())
-        glEnd()
-
-        glBindTexture(GL_TEXTURE_2D, 0)
-        glDisable(GL_TEXTURE_2D)
-
-        painter.endNativePainting()
 
 
 def create_opengl_texture_from_image(image: QImage) -> (int, QSize):
@@ -146,7 +72,6 @@ def create_opengl_texture_from_image(image: QImage) -> (int, QSize):
 
     glBindTexture(GL_TEXTURE_2D, 0)
     return texture_id, QSize(width, height)
-
 
 
 def numpy_to_qimage(image: np.ndarray) -> QImage:
@@ -176,47 +101,8 @@ def numpy_to_qimage(image: np.ndarray) -> QImage:
     raise ValueError("Unsupported shape or dtype")
 
 
-class NumpyImageViewer(CustomWidget[PanAndZoomGraphicsView]):
-    def __init__(self, src:MyNumpyArray, **kwargs):
-        super().__init__(**kwargs)
-        self._register_props(
-            {
-                "src": src,
-            }
-        )
-
-    def create_widget(self):
-        view = PanAndZoomGraphicsView()
-        view.setViewport(QOpenGLWidget() )
-        scene = QGraphicsScene()
-        pixmap_item = QGraphicsPixmapItem()
-        scene.addItem(pixmap_item)
-        view.setScene(scene)
-        self.pixmap_item = pixmap_item
-        pixmap = QPixmap.fromImage(qimage2ndarray.array2qimage(self.props["src"].np_array))
-        self.pixmap_item.setPixmap(pixmap)
-        view.setRenderHint(QPainter.RenderHint.Antialiasing)
-
-        # scene.addPixmap()
-        view.setScene(scene)
-
-        return view
-
-    def update(self, widget: PanAndZoomGraphicsView, diff_props: PropsDiff):
-        match diff_props.get("src"):
-            case _, new_image:
-                img = new_image.np_array
-                qimg = numpy_to_qimage(img)
-                pixmap = QPixmap.fromImage(qimg)
-                if not pixmap.isNull():
-                    self.pixmap_item.setPixmap(pixmap)
-                else:
-                    print("TODO: Failed to convert numpy array to QImage") #TODO: Handle this case properly
-                    print(f"Shape: {img.shape}, Dtype: {img.dtype}")
-                
 
 
-from splitview import SplitView
 config = ocio.Config.CreateRaw()
 srgb_to_linear_tf = ocio.ColorSpaceTransform(src='sRGB', dst='Linear')
 linear_to_srgb_tf = ocio.ColorSpaceTransform(src='Linear', dst='sRGB')

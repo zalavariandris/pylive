@@ -45,5 +45,6 @@ dependencies = [
     "scipy",
     "colour-science",
     "bidict",
-    "pyyaml"
+    "pyyaml",
+    "opencolorio"
 ]

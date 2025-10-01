@@ -36,7 +36,7 @@
 #   methods to define the node, item, edge visuals.
 #   This will potentially lead to a GraphView that is able to use the builtin StyledItemDelegates
 
-# - consider adding editors for column cell inside the node,
+# - consider adding editors for colurlinkrlinkmn cell inside the node,
 #   as if a node would be a row in a table, but in a different _view_
 
 import traceback
