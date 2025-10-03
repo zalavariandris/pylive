@@ -15,11 +15,21 @@ class Camera:
 		far_plane = 1000.0  # Far clipping plane
 		self.projection = glm.perspective(glm.radians(fov), aspect_ratio, near_plane, far_plane)
 
-	def setAspectRation(self, aspect:float):
+	def setAspectRatio(self, aspect:float):
 		fov = 45.0  # Field of view in degrees
 		near_plane = 0.1  # Near clipping plane
 		far_plane = 1000.0  # Far clipping plane
 		self.projection = glm.perspective(glm.radians(fov), aspect, near_plane, far_plane)
+
+	def setFOV(self, fov_degrees:float):
+		"""
+		Sets the field of view in degrees and updates the projection matrix.
+		"""
+		self.fov = fov_degrees
+		aspect_ratio = 1.0  # Will be overridden by setAspectRatio if needed
+		near_plane = 0.1
+		far_plane = 1000.0
+		self.projection = glm.perspective(glm.radians(fov_degrees), aspect_ratio, near_plane, far_plane)
 
 	def viewMatrix(self):
 		"""
@@ -45,6 +55,13 @@ class Camera:
 		Returns the position of the camera by extracting it from the transform matrix.
 		"""
 		return glm.vec3(self.transform[3].x, self.transform[3].y, self.transform[3].z)
+
+	def getDistance(self)->float:
+		"""
+		Returns the distance of the camera from the origin.
+		"""
+		pos = self.getPosition()
+		return glm.length(pos)
 
 	def translate(self, offset: Vec3):
 		"""

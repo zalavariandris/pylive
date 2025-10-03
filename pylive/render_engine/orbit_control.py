@@ -57,5 +57,5 @@ class OrbitControl(QObject):
 
 				case QEvent.Type.Resize:
 					widget = cast(QWidget, watched)
-					self.camera.setAspectRation(widget.width()/widget.height())
+					self.camera.setAspectRatio(widget.width()/widget.height())
 		return False
