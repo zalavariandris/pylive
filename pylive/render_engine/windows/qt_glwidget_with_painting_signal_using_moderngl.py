@@ -21,8 +21,8 @@ class GLCanvasWidget(QOpenGLWidget):
 		self.setAttribute(Qt.WA_OpaquePaintEvent, False) # see docs: https://doc.qt.io/qt-6/qt.html#WidgetAttribute-enum
 
 		fmt = QSurfaceFormat()
-		fmt.setDepthBufferSize(24);
-		fmt.setStencilBufferSize(8);
+		fmt.setDepthBufferSize(24)
+		fmt.setStencilBufferSize(8)
 		fmt.setSwapInterval(1)
 		fmt.setMajorVersion(4)
 		fmt.setMinorVersion(6)

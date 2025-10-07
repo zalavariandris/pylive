@@ -1,11 +1,9 @@
 import numpy as np
-import streamlit as st
-import plotly.graph_objects as go
 from typing import List, Tuple, Dict, Any
 
 # --- Calibration functions ---
 
-from core import LineSegment, VanishingPoint, PrincipalPoint, RotationMatrix
+from core import LineSegment, Point2D, VanishingPoint, PrincipalPoint, RotationMatrix
 
 
 def compute_vanishing_point(lines: List[LineSegment]) -> VanishingPoint:
@@ -57,37 +55,50 @@ def estimate_focal_length(v1: VanishingPoint, v2: VanishingPoint, principal_poin
     return float(np.sqrt(f2))
 
 
-def compute_camera_orientation(vps: List[VanishingPoint], f: float, principal_point: PrincipalPoint) -> RotationMatrix:
+def compute_camera_orientation(vanishing_points: List[Point2D], focal_length: float, principal_point: Point2D) -> np.ndarray:
     """
-    Compute the camera rotation matrix from vanishing points and focal length.
-
+    Compute camera rotation matrix from vanishing points using fSpy's method.
+    
     Args:
-        vps (List[VanishingPoint]): List of vanishing points for each axis.
-        f (float): Focal length.
-        principal_point (PrincipalPoint): Image principal point (u0, v0).
-
+        vanishing_points: List of 2 or 3 vanishing points corresponding to world axes (X, Y, Z order)
+        focal_length: Camera focal length in pixels
+        principal_point: Principal point (u0, v0) in pixels
+    
     Returns:
-        RotationMatrix: 3x3 rotation matrix representing camera orientation.
+        3x3 rotation matrix representing the VIEW TRANSFORM (world-to-camera).
+        This is the matrix that transforms world coordinates to camera coordinates.
+        For the camera's transform matrix, take the transpose (inverse for rotation).
+    
+    Reference: fSpy solver.ts - computeCameraRotationMatrix()
     """
+    if len(vanishing_points) < 2:
+        raise ValueError("Need at least 2 vanishing points to compute camera orientation")
+    
     u0, v0 = principal_point
-    K = np.array([[f, 0, u0],
-                  [0, f, v0],
-                  [0, 0, 1]])
-    Kinv = np.linalg.inv(K)
-
-    dirs = []
-    for vp in vps:
-        d = Kinv @ np.array([vp[0], vp[1], 1.0])
-        d /= np.linalg.norm(d)
-        dirs.append(d)
-
-    x_axis = dirs[0]
-    y_axis = dirs[1] - np.dot(dirs[1], x_axis) * x_axis
-    y_axis /= np.linalg.norm(y_axis)
-    z_axis = np.cross(x_axis, y_axis)
-    z_axis /= np.linalg.norm(z_axis)
-
-    R = np.column_stack((x_axis, y_axis, z_axis))
+    vp1, vp2 = vanishing_points[0], vanishing_points[1]
+    
+    # Vectors from principal point to vanishing points in image plane coordinates
+    # Note: Z = -f because camera looks down -Z axis (OpenGL convention)
+    OFu = np.array([vp1[0] - u0, vp1[1] - v0, -focal_length])
+    OFv = np.array([vp2[0] - u0, vp2[1] - v0, -focal_length])
+    
+    # Normalize to get direction vectors (first two rows of rotation matrix)
+    s1 = np.linalg.norm(OFu)
+    s2 = np.linalg.norm(OFv)
+    upRc = OFu / s1  # First world axis direction in camera space
+    vpRc = OFv / s2  # Second world axis direction in camera space
+    
+    # Third axis via cross product
+    wpRc = np.cross(upRc, vpRc)
+    
+    # Build rotation matrix as rows (world axes in camera space)
+    # This is the world-to-camera transform
+    R = np.array([
+        [upRc[0], vpRc[0], wpRc[0]],  # Row 0: how world X, Y, Z map to camera X
+        [upRc[1], vpRc[1], wpRc[1]],  # Row 1: how world X, Y, Z map to camera Y
+        [upRc[2], vpRc[2], wpRc[2]]   # Row 2: how world X, Y, Z map to camera Z
+    ])
+    
     return R
 
 

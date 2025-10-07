@@ -1,0 +1,35 @@
+from imgui_bundle import imgui
+from typing import Tuple
+
+def window_to_screen(window_pos: imgui.ImVec2) -> imgui.ImVec2:
+    """Convert window-relative coordinates to screen coordinates."""
+    screen_offset = imgui.get_cursor_screen_pos() - imgui.get_cursor_pos()
+    return window_pos + screen_offset
+
+def drag_point(label:str, point:imgui.ImVec2)->Tuple[bool, imgui.ImVec2]:
+    new_point = imgui.ImVec2(point.x, point.y)
+    changed = False
+    store_cursor_pos = imgui.get_cursor_pos()
+    btn_size = imgui.ImVec2(28,28)
+    imgui.set_cursor_pos(point-btn_size/2)
+    imgui.invisible_button(label, btn_size)
+    color = (1.0,1.0,1.0,0.5)
+    if imgui.is_item_hovered() or imgui.is_item_active():
+        color = (1.0,1.0,1.0,0.9)
+    draw_list = imgui.get_window_draw_list()
+    
+    draw_list.add_circle_filled(window_to_screen(point), 5, imgui.color_convert_float4_to_u32(color))
+    text = f"{label}".split("##")[0]
+    text_offset = imgui.ImVec2(5, -5)
+    draw_list.add_text(window_to_screen(point) + text_offset, imgui.color_convert_float4_to_u32(color), text)
+
+
+    if imgui.is_item_active():
+        delta = imgui.get_mouse_drag_delta()
+        imgui.reset_mouse_drag_delta()
+        new_point.x += delta.x
+        new_point.y += delta.y
+        changed = True
+
+    imgui.set_cursor_pos(store_cursor_pos)
+    return changed, new_point

@@ -1,3 +1,8 @@
+import math
+import numpy as np
+import imgui
+
+
 class Simple3DScene:
     def __init__(self):
         self.rotation_x = 0.0

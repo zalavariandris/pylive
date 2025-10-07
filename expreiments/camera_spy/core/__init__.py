@@ -7,4 +7,4 @@ PrincipalPoint = Tuple[float, float]
 VanishingPoint = np.ndarray
 RotationMatrix = np.ndarray
 
-__all__ = ["Point2D"]
+__all__ = ["Point2D", "LineSegment", "PrincipalPoint", "VanishingPoint", "RotationMatrix"]
