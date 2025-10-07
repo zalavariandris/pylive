@@ -88,45 +88,44 @@ class SceneLayer(RenderLayer):
         self.grid.render(view=camera.viewMatrix(), projection=camera.projectionMatrix())
         super().render()
 
-camera = Camera()
-camera.setPosition(glm.vec3(5, 5, 5))
-camera.lookAt(glm.vec3(0,0,0))
+
+## GUI helpers
+from gizmos import drag_axes, drag_horizon
+from utils.geo import closest_point_line_segment
+
+# ModernGL context and framebuffer
 scene_renderer = SceneLayer()
 ctx: moderngl.Context|None = None
 fbo: moderngl.Framebuffer|None = None
 
-## GUI helpers
-
-
-from gizmos import drag_axes, drag_horizon
-
-## GEO helpers
-from utils.geo import closest_point_line_segment
+# Parameters
 horizon = 300.0
+vanishing_lines = [
+        [
 
+    ],[
 
-use_z_axes:bool = True
-use_x_axes:bool = False
-use_y_axes:bool = False
+    ],[
+        [imgui.ImVec2(145, 480), imgui.ImVec2(330, 330)],
+        [imgui.ImVec2(650, 460), imgui.ImVec2(508, 343)]
+    ]
+]
 
-axes = [[
-
-],[
-
-],[
-    [imgui.ImVec2(145, 480), imgui.ImVec2(330, 330)],
-    [imgui.ImVec2(650, 460), imgui.ImVec2(508, 343)]
-]]
-
-use_axes = [False, False, True]
+use_vanishing_lines = [False, False, True]
 axis_names = ('X', 'Y', 'Z')
 screen_origin = imgui.ImVec2(400, 400)
 fov:Degrees = 60.0
 distance = 5.0
 
-
 def gui():
-    global ctx, screen_origin, fov, distance, camera, z_axes, horizon, distance, fbo, axes, use_axes
+    global ctx, fbo
+    # Camera Calibration parameters
+    global distance
+    global screen_origin
+    global horizon
+    global fov
+    global vanishing_lines, use_vanishing_lines
+
     imgui.text("Camera Spy")
     if imgui.begin_child("3d_viewport", imgui.ImVec2(0, 0)):
         # Get ImGui child window dimensions and position
@@ -169,15 +168,15 @@ def gui():
         principal_point = imgui.ImVec2(size.x / 2, size.y / 2)
         
         camera_yaw = 0.0
-        for i, in_use in enumerate(use_axes):
-            _, use_axes[i] = imgui.checkbox(f"use {axis_names[i]} axes", in_use)
+        for i, in_use in enumerate(use_vanishing_lines):
+            _, use_vanishing_lines[i] = imgui.checkbox(f"use {axis_names[i]} axes", in_use)
 
-        if use_axes[2]:
+        if use_vanishing_lines[2]:
             # position axes lines
-            _, axes[2] = drag_axes(axes[2], BLUE)
+            _, vanishing_lines[2] = drag_axes(vanishing_lines[2], BLUE)
 
             # calculate vanishing point
-            vp_z = imgui.ImVec2(compute_vanishing_point([axis for axis in axes[2]]))
+            vp_z = imgui.ImVec2(compute_vanishing_point([axis for axis in vanishing_lines[2]]))
             
 
             # draw vanishing point
@@ -186,7 +185,7 @@ def gui():
             draw_list.add_text(window_to_screen(vp_z) + imgui.ImVec2(5, -5),  BLUE, f"VP{2} ({vp_z.x:.0f},{vp_z.y:.0f})")
 
             # draw lines to vanishing point
-            for axis in axes[2]:
+            for axis in vanishing_lines[2]:
                 closest_point = closest_point_line_segment(vp_z, axis)
                 imgui.get_window_draw_list().add_line(window_to_screen(closest_point), window_to_screen(vp_z), BLUE_DIMMED, 1)
 
