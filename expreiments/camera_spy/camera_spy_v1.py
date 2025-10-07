@@ -43,16 +43,9 @@ from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Tuple, List, Optional
 import pickle
-
-Point2D = Tuple[float, float]
-
-@dataclass
-class LineSegment:
-    start: Point2D
-    end: Point2D
-
-    def __iter__(self):
-        return iter((self.start, self.end))
+from typing import NewType
+Point2D = NewType("Point2D", Tuple[float, float])
+LineSegment = NewType("LineSegment", Tuple[Point2D, Point2D])
 
 from gizmos import window_to_screen, drag_point
 
@@ -117,6 +110,126 @@ screen_origin = imgui.ImVec2(400, 400)
 fov:Degrees = 60.0
 distance = 5.0
 
+from typing import NamedTuple
+class CameraEstimate(NamedTuple):
+    position: glm.vec3
+    pitch: float  # radians
+    yaw: float    # radians
+    roll: float   # radians
+    fov: Optional[float] = None  # degrees, None if not estimable
+
+
+Width = NewType("Width", int)
+Height = NewType("Height", int)
+Size = NewType("Size", Tuple[Width, Height])
+
+class Rect(NamedTuple):
+    x: int
+    y: int
+    width: Width
+    height: Height
+
+
+class CameraEstimator:
+    def estimate_camera(
+            self,
+            viewport: Rect, # x, y, width, height
+            screen_origin,
+            distance,
+            vanishing_lines:     Tuple[List[LineSegment], List[LineSegment], List[LineSegment]],
+            use_vanishing_lines: Tuple[bool, bool, bool],
+            horizon:float|None=None,
+            provided_fov:float|None=None
+    )->CameraEstimate:
+        num_axes = sum(use_vanishing_lines)
+
+        if num_axes == 0:
+            return self._estimate_no_axes(viewport, screen_origin, distance, horizon, provided_fov)
+        elif num_axes == 1:
+            return self._estimate_one_axis(viewport, screen_origin, distance, vanishing_lines, use_vanishing_lines, provided_fov)
+        elif num_axes == 2:
+            return self._estimate_two_axes(viewport, screen_origin, distance, vanishing_lines, use_vanishing_lines)
+        else:  # num_axes == 3
+            return self._estimate_three_axes(viewport, screen_origin, distance, vanishing_lines, use_vanishing_lines)
+
+    def _estimate_no_axes(
+        self, 
+        viewport:Rect, 
+        screen_origin:Point2D, 
+        distance:float, 
+        horizon:float|None=None, 
+        provided_fov:float|None=None
+    )->CameraEstimate:
+        principal_point = imgui.ImVec2(viewport.width / 2, viewport.height / 2)
+        if horizon is None:
+            horizon = principal_point.y  # assume horizon at center if not provided
+
+        horizon_ndc_dy = (principal_point.y - horizon) / (viewport[3] / 2.0)
+        camera_pitch = math.atan2(-horizon_ndc_dy * math.tan(math.radians(fov) / 2), 1.0)
+
+        position = self._calculate_camera_position(screen_origin, distance, camera_pitch, 0.0, fov)
+
+    def _calculate_camera_position(
+        self, 
+        viewport:Rect, 
+        screen_origin, 
+        distance, 
+        pitch, 
+        yaw, 
+        fov
+    )->glm.vec3:
+        # Convert origin to NDC space
+        principal_point = imgui.ImVec2(viewport.width / 2, viewport.height / 2)
+        origin_ndc_x = (screen_origin.x - principal_point.x) / (viewport.width / 2.0)
+        origin_ndc_y = (principal_point.y - screen_origin.y) / (viewport.height / 2.0)  # Flip Y
+        
+        # Calculate the ray direction from camera through the origin point in screen space
+        aspect = viewport.width / viewport.height
+        tan_half_fov = math.tan(math.radians(fov) / 2.0)
+        
+        # Ray direction in camera space (normalized device coordinates)
+        ray_x = origin_ndc_x * tan_half_fov * aspect
+        ray_y = origin_ndc_y * tan_half_fov
+        ray_z = -1.0  # Looking down -Z
+        
+        # Normalize the ray
+        ray_length = math.sqrt(ray_x**2 + ray_y**2 + ray_z**2)
+        ray_x /= ray_length
+        ray_y /= ray_length
+        ray_z /= ray_length
+        
+        # Apply camera pitch and yaw rotation to ray
+        cos_pitch = math.cos(pitch)
+        sin_pitch = math.sin(pitch)
+        cos_yaw = math.cos(yaw)
+        sin_yaw = math.sin(yaw)
+        
+        # Rotation matrices
+        # Pitch rotation around X-axis
+        pitch_matrix = glm.mat3(
+            glm.vec3(1, 0, 0),
+            glm.vec3(0, cos_pitch, -sin_pitch),
+            glm.vec3(0, sin_pitch, cos_pitch)
+        )
+        
+        # Yaw rotation around Y-axis
+        yaw_matrix = glm.mat3(
+            glm.vec3(cos_yaw, 0, sin_yaw),
+            glm.vec3(0, 1, 0),
+            glm.vec3(-sin_yaw, 0, cos_yaw)
+        )
+        
+        # Combined rotation
+        rotation_matrix = yaw_matrix * pitch_matrix
+        
+        ray_world = rotation_matrix * glm.vec3(ray_x, ray_y, ray_z)
+        
+        camera_pos_x = -distance * ray_world.x
+        camera_pos_y = -distance * ray_world.y
+        camera_pos_z = -distance
+
+        return glm.vec3(camera_pos_x, camera_pos_y, camera_pos_z)
+
 def gui():
     global ctx, fbo
     # Camera Calibration parameters
@@ -173,7 +286,7 @@ def gui():
 
         if use_vanishing_lines[2]:
             # position axes lines
-            _, vanishing_lines[2] = drag_axes(vanishing_lines[2], BLUE)
+            _, vanishing_lines[2] = drag_axes("Z", vanishing_lines[2], BLUE)
 
             # calculate vanishing point
             vp_z = imgui.ImVec2(compute_vanishing_point([axis for axis in vanishing_lines[2]]))

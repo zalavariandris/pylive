@@ -13,13 +13,17 @@ def drag_point(label:str, point:imgui.ImVec2)->Tuple[bool, imgui.ImVec2]:
     btn_size = imgui.ImVec2(28,28)
     imgui.set_cursor_pos(point-btn_size/2)
     imgui.invisible_button(label, btn_size)
+
+    text = f"{label}".split("##")[0]
     color = (1.0,1.0,1.0,0.5)
     if imgui.is_item_hovered() or imgui.is_item_active():
         color = (1.0,1.0,1.0,0.9)
+        text += f"({point.x:.0f},{point.y:.0f})"
     draw_list = imgui.get_window_draw_list()
     
     draw_list.add_circle_filled(window_to_screen(point), 5, imgui.color_convert_float4_to_u32(color))
-    text = f"{label}".split("##")[0]
+    
+
     text_offset = imgui.ImVec2(5, -5)
     draw_list.add_text(window_to_screen(point) + text_offset, imgui.color_convert_float4_to_u32(color), text)
 
