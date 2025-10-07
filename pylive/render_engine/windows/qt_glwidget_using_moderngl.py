@@ -15,38 +15,48 @@ import numpy as np
 from OpenGL import GL as gl
 
 from pylive.render_engine.camera import Camera
-from pylive.render_engine.orbit_control import OrbitControl
-from pylive.render_engine.render_layers import *
+from pylive.render_engine.windows.orbitcontrol_for_qtwidget import OrbitControl
+from pylive.render_engine.render_layers import RenderLayer, TrimeshLayer, TriangleLayer
+
+from textwrap import dedent
 
 
 class GLWidget(QOpenGLWidget):
 	def __init__(self, parent=None):
 		super().__init__(parent=parent)
+		# Set OpenGL format BEFORE calling super().__init__
+		fmt = QSurfaceFormat()
+		fmt.setVersion(4, 1)  # OpenGL 4.1 is the maximum on macOS
+		fmt.setProfile(QSurfaceFormat.CoreProfile)  # Use Core Profile (required on macOS)
+		fmt.setDepthBufferSize(24)
+		fmt.setStencilBufferSize(8)
+		fmt.setSwapInterval(1)  # Enable VSync
+		self.setFormat(fmt)
+		
 		self.is_dragging = False
 
 		### Start Animation Loop ###
 		self.timer = QTimer()
 		self.timer.timeout.connect(self.update)
 		self.timer.start(1000//60)
-		self._layers = []
+		self._layers: List[RenderLayer] = []
+
+	def setRenderLayers(self, layers:List[RenderLayer]):
+		self._layers = layers
+		for layer in layers:
+			layer.setContext(self.context())
 
 	def sizeHint(self) -> QSize:
 		return QSize(720, 576)
 
 	def initializeGL(self) -> None:
-		# fmt = QSurfaceFormat()
-		# fmt.setDepthBufferSize(24);
-		# fmt.setStencilBufferSize(8);
-		# fmt.setSwapInterval(1)
-		# fmt.setMajorVersion(4)
-		# fmt.setMinorVersion(6)
-		# self.setFormat(fmt)
-
 		# print the current OpenGL context
 		context = self.context()
 		if context is not None and context.isValid():
 			version = context.format().version()
+			profile = context.format().profile()
 			print(f"OpenGL Version Used by QOpenGLWindow: {version[0]}.{version[1]}")
+			print(f"OpenGL Profile: {'Core' if profile == QSurfaceFormat.CoreProfile else 'Compatibility'}")
 		else:
 			print("Failed to retrieve OpenGL context.")
 		
@@ -115,6 +125,15 @@ if __name__ == "__main__":
 	import sys
 	import math
 	app = QApplication(sys.argv)
+
+	# Set default surface format for the entire application
+	fmt = QSurfaceFormat()
+	fmt.setVersion(4, 1)  # OpenGL 4.1 for macOS compatibility
+	fmt.setProfile(QSurfaceFormat.CoreProfile)
+	fmt.setDepthBufferSize(24)
+	fmt.setStencilBufferSize(8)
+	fmt.setSwapInterval(1)
+	QSurfaceFormat.setDefaultFormat(fmt)
 
 	glwidget = GLWidget()
 	camera = Camera()

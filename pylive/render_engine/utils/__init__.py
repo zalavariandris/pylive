@@ -130,8 +130,8 @@ def set_default_opengl_format(version=(3,3)):
     """
     format = QSurfaceFormat()
     format.setVersion(*version)  # OpenGL 3.3
-    format.setDepthBufferSize(24);
-    format.setStencilBufferSize(8);
+    format.setDepthBufferSize(24)
+    format.setStencilBufferSize(8)
     format.setSwapInterval(1)
     format.setMajorVersion(4)
     format.setMinorVersion(6)

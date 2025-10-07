@@ -1,9 +1,9 @@
 #%% setup
 from PySide6.QtWidgets import *
-from pylive.render_engine.gl_widget_with_moderngl import GLWidget
+from pylive.render_engine.windows.qt_glwidget_using_moderngl import GLWidget
 
 from pylive.render_engine.camera import Camera
-from pylive.render_engine.orbit_control import OrbitControl
+from pylive.render_engine.windows.orbitcontrol_for_qtwidget import OrbitControl
 from pylive.render_engine.render_layers import RenderLayer, BoxLayer, TriangleLayer
 
 import glm

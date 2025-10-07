@@ -7,6 +7,8 @@ from PySide6.QtOpenGL import *
 
 from pylive.render_engine.camera import Camera
 import glm
+
+
 class OrbitControl(QObject):
 	def __init__(self, widget:QWidget, camera:Camera):
 		super().__init__(parent=widget)
@@ -57,5 +59,5 @@ class OrbitControl(QObject):
 
 				case QEvent.Type.Resize:
 					widget = cast(QWidget, watched)
-					self.camera.setAspectRation(widget.width()/widget.height())
+					self.camera.setAspectRatio(widget.width()/widget.height())
 		return False

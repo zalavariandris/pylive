@@ -3,23 +3,41 @@ import glm
 
 Vec3 = glm.vec3 | Tuple[float, float, float]
 
+
 class Camera:
 	def __init__(self) -> None:
 		# The transformation matrix, combining position, rotation, and scale
 		self.transform = glm.mat4(1.0)  # Identity matrix as the initial transform
 
+		# Camera parameters
+		self.fov = 45.0  # Field of view in degrees
+		self.aspect_ratio = 1.0  # Aspect ratio (width / height)
+		self.near_plane = 0.1  # Near clipping plane
+		self.far_plane = 1000.0  # Far clipping plane
+		
 		# Perspective projection matrix
-		fov = 45.0  # Field of view in degrees
-		aspect_ratio = 1.0  # Aspect ratio (width / height)
-		near_plane = 0.1  # Near clipping plane
-		far_plane = 1000.0  # Far clipping plane
-		self.projection = glm.perspective(glm.radians(fov), aspect_ratio, near_plane, far_plane)
+		self._update_projection()
 
-	def setAspectRation(self, aspect:float):
-		fov = 45.0  # Field of view in degrees
-		near_plane = 0.1  # Near clipping plane
-		far_plane = 1000.0  # Far clipping plane
-		self.projection = glm.perspective(glm.radians(fov), aspect, near_plane, far_plane)
+	def _update_projection(self):
+		"""Updates the projection matrix based on current camera parameters."""
+		self.projection = glm.perspective(
+			glm.radians(self.fov), 
+			self.aspect_ratio, 
+			self.near_plane, 
+			self.far_plane
+		)
+
+	def setAspectRatio(self, aspect:float):
+		"""Sets the aspect ratio and updates the projection matrix."""
+		self.aspect_ratio = aspect
+		self._update_projection()
+
+	def setFOV(self, fov_degrees:float):
+		"""
+		Sets the field of view in degrees and updates the projection matrix.
+		"""
+		self.fov = fov_degrees
+		self._update_projection()
 
 	def viewMatrix(self):
 		"""
@@ -45,6 +63,13 @@ class Camera:
 		Returns the position of the camera by extracting it from the transform matrix.
 		"""
 		return glm.vec3(self.transform[3].x, self.transform[3].y, self.transform[3].z)
+
+	def getDistance(self)->float:
+		"""
+		Returns the distance of the camera from the origin.
+		"""
+		pos = self.getPosition()
+		return glm.length(pos)
 
 	def translate(self, offset: Vec3):
 		"""
