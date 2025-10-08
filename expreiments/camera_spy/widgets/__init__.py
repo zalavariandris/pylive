@@ -1,5 +1,5 @@
-from .drag_points import drag_points
+from .touch_pad import touch_pad
 
 __all__ = [
-    "drag_points"
+    "touch_pad"
  ]

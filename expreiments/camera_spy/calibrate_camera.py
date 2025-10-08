@@ -6,7 +6,7 @@ from typing import List, Tuple, Dict, Any
 from core import LineSegment, Point2D, VanishingPoint, PrincipalPoint, RotationMatrix
 
 
-def compute_vanishing_point(lines: List[LineSegment]) -> VanishingPoint:
+def compute_vanishing_point(vanishing_lines: List[LineSegment]) -> VanishingPoint:
     """
     Compute the vanishing point from a set of 2D lines assumed to be parallel in 3D.
 
@@ -16,10 +16,10 @@ def compute_vanishing_point(lines: List[LineSegment]) -> VanishingPoint:
     Returns:
         VanishingPoint: Homogeneous coordinates of the vanishing point [x, y, 1].
     """
-    if len(lines) < 2:
+    if len(vanishing_lines) < 2:
         raise ValueError("At least two lines are required to compute a vanishing point")
     A = []
-    for (x1, y1), (x2, y2) in lines:
+    for (x1, y1), (x2, y2) in vanishing_lines:
         a = y1 - y2
         b = x2 - x1
         c = x1*y2 - x2*y1
