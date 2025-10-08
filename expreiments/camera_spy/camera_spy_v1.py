@@ -1,4 +1,5 @@
 import logging
+import string
 logger = logging.getLogger(__name__)
 
 import math
@@ -84,13 +85,13 @@ class Rect(NamedTuple):
     height: Height
 
 
-# ########################## #
-# Camera Estimator Functions #
-# ########################## #
+# ################ #
+# SOLVER FUNCTIONS #
+# ################ #
 
-from calibrate_camera import compute_vanishing_point, estimate_focal_length, compute_camera_orientation
+from expreiments.camera_spy.solver import compute_vanishing_point, estimate_focal_length, compute_camera_orientation
 
-def compute_camera_position(*,viewport_size:imgui.ImVec2, screen_origin:imgui.ImVec2, principal_point:imgui.ImVec2, camera_pitch:float, distance:float):
+def _compute_camera_position(*,viewport_size:imgui.ImVec2, screen_origin:imgui.ImVec2, principal_point:imgui.ImVec2, camera_pitch:float, distance:float):
     ## 2. Compute camera POSITION from origin marker
     # Origin marker tells us where the world origin (0,0,0) appears on screen
     # We need to position the camera so that (0,0,0) projects to the origin marker
@@ -154,42 +155,7 @@ def _estimate_pitch_from_horizon(horizon:float, principal_point:imgui.ImVec2, si
     pitch = math.atan2(-horizon_ndc_y * math.tan(math.radians(fov) / 2), 1.0)
     return pitch
 
-def estimate_no_axis(*, 
-        viewport_size:imgui.ImVec2, 
-        screen_origin:imgui.ImVec2, 
-        principal_point:imgui.ImVec2, 
-        fov:Degrees, 
-        distance:float, 
-        horizon:float
-    ) -> Tuple[float, float, float, float]:
-    """Estimate camera pitch and position given no axis lines, just horizon and origin.
-    
-    return (camera_pitch, camera_pos_x, camera_pos_y, camera_pos_z)
-    """
-    ## 1. Compute camera PITCH from horizon line (camera orientation)
-    # Horizon tells us where the camera is looking vertically
-
-    # horizon_ndc_dy = (principal_point.y - horizon) / (size.y / 2.0)
-    # camera_pitch = math.atan2(-horizon_ndc_dy * math.tan(math.radians(fov) / 2), 1.0)
-
-    camera_pitch = _estimate_pitch_from_horizon(
-        horizon, 
-        principal_point, 
-        viewport_size, 
-        fov
-    )
-
-    camera_pos_x, camera_pos_y, camera_pos_z = compute_camera_position(
-        viewport_size=viewport_size,
-        screen_origin=screen_origin,
-        principal_point=principal_point,
-        camera_pitch=camera_pitch,
-        distance=distance
-    )
-
-    return camera_pitch, camera_pos_x, camera_pos_y, camera_pos_z
-
-def build_camera_transform(camera_pitch, camera_pos_x, camera_pos_y, camera_pos_z):
+def _build_camera_transform(camera_pitch, camera_pos_x, camera_pos_y, camera_pos_z):
     ## Build camera transform
     # The camera should be oriented based on pitch (from horizon) and positioned
     # so that the world origin (0,0,0) appears at the origin marker's screen position
@@ -223,7 +189,91 @@ def build_camera_transform(camera_pitch, camera_pos_x, camera_pos_y, camera_pos_
     # Combine: first rotate, then translate
     return translation * rotation_matrix
 
+def solve_no_axis(*, 
+        viewport_size:imgui.ImVec2, 
+        screen_origin:imgui.ImVec2, 
+        principal_point:imgui.ImVec2, 
+        fov:Degrees, 
+        distance:float, 
+        horizon:float
+    ) -> Tuple[float, float, float, float]:
+    """Estimate camera pitch and position given no axis lines, just horizon and origin.
+    
+    return (camera_pitch, camera_pos_x, camera_pos_y, camera_pos_z)
+    """
+    ## 1. Compute camera PITCH from horizon line (camera orientation)
+    # Horizon tells us where the camera is looking vertically
 
+    # horizon_ndc_dy = (principal_point.y - horizon) / (size.y / 2.0)
+    # camera_pitch = math.atan2(-horizon_ndc_dy * math.tan(math.radians(fov) / 2), 1.0)
+
+    camera_pitch = _estimate_pitch_from_horizon(
+        horizon, 
+        principal_point, 
+        viewport_size, 
+        fov
+    )
+
+    camera_pos_x, camera_pos_y, camera_pos_z = _compute_camera_position(
+        viewport_size=viewport_size,
+        screen_origin=screen_origin,
+        principal_point=principal_point,
+        camera_pitch=camera_pitch,
+        distance=distance
+    )
+
+    return camera_pitch, camera_pos_x, camera_pos_y, camera_pos_z
+
+from enum import StrEnum
+class Axis(StrEnum):
+  PositiveX = 'xPositive'
+  NegativeX = 'xNegative'
+  PositiveY = 'yPositive'
+  NegativeY = 'yNegative'
+  PositiveZ = 'zPositive'
+  NegativeZ = 'zNegative'
+
+@dataclass
+class CameraParameters:
+  principalPoint: glm.vec2
+  viewTransform: glm.mat4
+  cameraTransform: glm.mat4 # the inverse of the view transform
+  horizontalFieldOfView: float
+  verticalFieldOfView: float
+  vanishingPoints: Tuple[glm.vec2, glm.vec2, glm.vec2]
+  vanishingPointAxes: Tuple[Axis, Axis, Axis]
+  relativeFocalLength: float
+  imageWidth: int
+  imageHeight: int
+
+@dataclass
+class SolverResult:
+    errors: List[str] = field(default_factory=list)
+    warnings: List[str] = field(default_factory=list)
+    cameraParameters: CameraParameters | None = None
+
+
+
+def solve1VP(absoluteFocalLength, sensorWidth, sensorHeight, image_width=800, image_height=800):
+    result = SolverResult()
+
+    # TODO: validate image dimensions
+
+    # Compute relative focal length
+    relativeFocalLength = 0
+    sensorAspectRatio = sensorWidth / sensorHeight
+    # // TODO: verify factor 2
+    if sensorAspectRatio > 1:
+        # wide sensor
+        relativeFocalLength = 2 * absoluteFocalLength / sensorWidth
+    else:
+        # tall sensor
+        relativeFocalLength = 2 * absoluteFocalLength / sensorHeight
+
+    # TODO: validate sensor match image dimensions
+
+    # Compute the input vanishing point in image plane coordinates
+    
 # ########## #
 # INITIALIZE #
 # ########## #
@@ -320,8 +370,8 @@ def gui():
                 _, screen_origin = drag_point("origin###origin", screen_origin)
                 principal_point = imgui.ImVec2(size.x / 2, size.y / 2)
 
-                # compute
-                camera_pitch, camera_pos_x, camera_pos_y, camera_pos_z = estimate_no_axis(
+                # Solve no Axes
+                camera_pitch, camera_pos_x, camera_pos_y, camera_pos_z = solve_no_axis(
                     horizon=horizon,
                     viewport_size=size,
                     screen_origin=screen_origin,
@@ -330,7 +380,7 @@ def gui():
                     distance=distance,
                 )
 
-                camera.transform = build_camera_transform(camera_pitch, camera_pos_x, camera_pos_y, camera_pos_z)
+                camera.transform = _build_camera_transform(camera_pitch, camera_pos_x, camera_pos_y, camera_pos_z)
 
             case (False, False, True):
                 # parameters
@@ -364,7 +414,7 @@ def gui():
                 imgui.text(f"Camera yaw: {math.degrees(camera_yaw):.2f}° (from Z VP)")
 
                 # compute camera position
-                camera_pos_x, camera_pos_y, camera_pos_z = compute_camera_position(
+                camera_pos_x, camera_pos_y, camera_pos_z = _compute_camera_position(
                     viewport_size=size,
                     screen_origin=screen_origin,
                     principal_point=principal_point,
@@ -373,7 +423,7 @@ def gui():
                 )
 
                 # build transform
-                camera.transform = build_camera_transform(camera_pitch, camera_pos_x, camera_pos_y, camera_pos_z)
+                camera.transform = _build_camera_transform(camera_pitch, camera_pos_x, camera_pos_y, camera_pos_z)
                 
 
             case _:
