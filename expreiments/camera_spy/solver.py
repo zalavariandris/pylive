@@ -6,7 +6,7 @@ from typing import List, Tuple, Dict, Any
 from core import LineSegment, Point2D, VanishingPoint, PrincipalPoint, RotationMatrix
 
 
-def compute_vanishing_point(vanishing_lines: List[LineSegment]) -> VanishingPoint:
+def compute_vanishing_point(vanishing_lines: List[LineSegment]) -> Tuple[float, float]:
     """
     Compute the vanishing point from a set of 2D lines assumed to be parallel in 3D.
 
@@ -28,7 +28,7 @@ def compute_vanishing_point(vanishing_lines: List[LineSegment]) -> VanishingPoin
     _, _, Vt = np.linalg.svd(A)
     vp = Vt[-1]
     result = vp / vp[2]
-    return result[0], result[1]
+    return tuple(result[0], result[1])
 
 
 def estimate_focal_length(v1: VanishingPoint, v2: VanishingPoint, principal_point: PrincipalPoint) -> float:
