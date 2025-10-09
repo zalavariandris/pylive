@@ -205,6 +205,7 @@ def _computeFieldOfView(
     fRelative: float,
     vertical: bool
   )->float:
+    """Computes the field of view (horizontal or vertical) in radians."""
     aspectRatio = imageWidth / imageHeight
     d = 1 / aspectRatio if vertical else 1
     return 2 * math.atan(d / fRelative)
@@ -308,8 +309,17 @@ def _computeCameraParameters(
       imageHeight=imageHeight
     )
 
+    # compute camera rotation matrix
+    cameraOrientationMatrix = glm.mat3(_computeCameraRotationMatrix(
+      vp1, vp2, relativeFocalLength, principalPoint
+    ))
+    # Check determinant with very forgiving tolerance for floating-point precision
+    determinant = glm.determinant(cameraOrientationMatrix)
+    if math.fabs(determinant - 1) > 1e-5:  # Much more relaxed: 1e-5 (100x more forgiving than original)
+        raise Exception(f'Invalid vanishing point configuration. Rotation determinant {determinant}')
+    
     # Assing vanishing point axes
-    axisAssignmentMatrix = glm.identity(glm.mat4)
+    axisAssignmentMatrix = glm.identity(glm.mat3)
     row1 = _axisVector(settings.firstVanishingPointAxis)
     row2 = _axisVector(settings.secondVanishingPointAxis)
     row3 = glm.cross(row1, row2)
@@ -323,8 +333,80 @@ def _computeCameraParameters(
     axisAssignmentMatrix[2][1] = row3.y
     axisAssignmentMatrix[2][2] = row3.z
 
+    cameraOrientationMatrix = axisAssignmentMatrix * cameraOrientationMatrix
+    viewOrientationMatrix = glm.inverse(cameraOrientationMatrix)
     if math.fabs(1 - glm.determinant(axisAssignmentMatrix) ) > 1e-7:
       raise Exception("Invalid axis assignment")
+    
+    cameraRotationTransform = glm.mat4(cameraOrientationMatrix)
+    cameraRotationTransform[3][3] = 1.0
+
+    viewRotationTransform = glm.mat4(viewOrientationMatrix)
+    viewRotationTransform[3][3] = 1.0
+
+    #
+    # horizontal field of view
+    cameraParameters.horizontalFieldOfView = _computeFieldOfView(
+      imageWidth,
+      imageHeight,
+      relativeFocalLength,
+      False
+    )
+
+    # vertical field of view
+    cameraParameters.verticalFieldOfView = _computeFieldOfView(
+      imageWidth,
+      imageHeight,
+      relativeFocalLength,
+      True
+    )
+    fov = cameraParameters.horizontalFieldOfView
+    imgui.text(f"FOV: {fov}")
+    projectionMatrix = glm.perspective(
+        fov, # fovy in radians
+        imageWidth/imageHeight, # aspect 
+        0.1, # near
+        100 # far
+    )
+
+    def world_depth_to_ndc_z(world_distance:float, near:float, far:float) -> float:
+        """Convert world depth to NDC z-coordinate using perspective-correct mapping
+        world_distance: The distance from the camera in world units
+        near: The near clipping plane distance
+        far: The far clipping plane distance
+        returns: NDC z-coordinate in [0, 1], where 0 is near and 1 is far
+        """
+        # Clamp the distance between near and far
+        clamped_distance = max(near, min(far, world_distance))
+        
+        # Perspective-correct depth calculation
+        # This matches how the depth buffer actually works
+        ndc_z = (far + near) / (far - near) + (2 * far * near) / ((far - near) * clamped_distance)
+        ndc_z = (ndc_z + 1) / 2  # Convert from [-1, 1] to [0, 1]
+        return ndc_z
+    
+    global DEFAULT_CAMERA_DISTANCE_SCALE
+    _, DEFAULT_CAMERA_DISTANCE_SCALE = imgui.slider_float("World Distance", DEFAULT_CAMERA_DISTANCE_SCALE, 0.1, 100.0)
+    
+    # Convert world distance to NDC z-coordinate
+    ndc_z = world_depth_to_ndc_z(DEFAULT_CAMERA_DISTANCE_SCALE, 0.1, 100)
+    origin_window_coords = glm.vec3(controlPoints.origin.x * imageWidth, (1-controlPoints.origin.y) * imageHeight, ndc_z)
+    imgui.text(f"Origin Window Coords: {origin_window_coords}")
+    origin_3D = glm.unProject(origin_window_coords, viewRotationTransform, projectionMatrix, glm.vec4(0,0,imageWidth,imageHeight))
+    imgui.text(f"       unProjected: {origin_3D}")
+    forward_vector = glm.vec3(
+        cameraRotationTransform[0][2],
+        cameraRotationTransform[1][2],
+        cameraRotationTransform[2][2]
+    )
+
+    cameraTranslateMatrix = glm.translate(glm.mat4(1.0), origin_3D)
+    cameraParameters.cameraTransform = cameraTranslateMatrix*cameraRotationTransform
+
+
+    return cameraParameters
+
+
     
     cameraParameters.vanishingPointAxes = [
       settings.firstVanishingPointAxis,
@@ -363,15 +445,15 @@ def _computeCameraParameters(
     )
 
     # compute camera rotation matrix
-    cameraRotationMatrix = _computeCameraRotationMatrix(
+    cameraOrientationMatrix = _computeCameraRotationMatrix(
       vp1, vp2, relativeFocalLength, principalPoint
     )
     # Check determinant with very forgiving tolerance for floating-point precision
-    determinant = glm.determinant(cameraRotationMatrix)
+    determinant = glm.determinant(cameraOrientationMatrix)
     if math.fabs(determinant - 1) > 1e-5:  # Much more relaxed: 1e-5 (100x more forgiving than original)
         raise Exception(f'Invalid vanishing point configuration. Rotation determinant {determinant}')
 
-    cameraParameters.viewTransform = axisAssignmentMatrix * cameraRotationMatrix
+    cameraParameters.viewTransform = axisAssignmentMatrix * cameraOrientationMatrix
     # view_rotation = glm.mat3(cameraParameters.viewTransform)
     # camera_rotation = glm.inverse(view_rotation)
     
