@@ -175,11 +175,15 @@ class TrimeshLayer(RenderLayer):
 
 class GridLayer(RenderLayer):
     """ A render layer that draws a grid on the XZ plane."""
-    def __init__(self, color=glm.vec4(0.5, 0.5, 0.5, 1.0)):
+    def __init__(self, XY=False, XZ=True, YZ=False, color=glm.vec4(0.5, 0.5, 0.5, 1.0)):
         super().__init__()
         self.program = None
         self.vao = None
         self.color = color
+
+        self.XY = XY
+        self.XZ = XZ
+        self.YZ = YZ
 
         self._initialized = False
         
@@ -189,20 +193,31 @@ class GridLayer(RenderLayer):
             fragment_shader=self.FLAT_FRAGMENT_SHADER
         )
         
-        vertices = []
-        for x in range(0,11,1):
-            vertices.append( (x-5, 0, -5) )
-            vertices.append( (x-5, 0, +5) )
+        all_vertices = []
+        
+        # XZ grid (horizontal plane, Y=0)
+        if self.XZ:
+            for x in range(0, 11, 1):
+                all_vertices.extend([(x-5, 0, -5), (x-5, 0, +5)])
+            for z in range(0, 11, 1):
+                all_vertices.extend([(-5, 0, z-5), (+5, 0, z-5)])
+        
+        # XY grid (vertical plane, Z=0)
+        if self.XY:
+            for x in range(0, 11, 1):
+                all_vertices.extend([(x-5, -5, 0), (x-5, +5, 0)])
+            for y in range(0, 11, 1):
+                all_vertices.extend([(-5, y-5, 0), (+5, y-5, 0)])
+        
+        # YZ grid (vertical plane, X=0)
+        if self.YZ:
+            for y in range(0, 11, 1):
+                all_vertices.extend([(0, y-5, -5), (0, y-5, +5)])
+            for z in range(0, 11, 1):
+                all_vertices.extend([(0, -5, z-5), (0, +5, z-5)])
 
-        for y in range(0,11,1):
-            vertices.append( (-5, 0, y-5) )
-            vertices.append( (+5, 0, y-5) )
-
-        # faces = np.array(faces)
-        grid = trimesh.Trimesh(vertices=vertices)
-
-        # to VAO
-        vertices = grid.vertices.flatten().astype(np.float32)
+        # Convert to numpy array and create buffer
+        vertices = np.array(all_vertices, dtype=np.float32).flatten()
         self.vbo = ctx.buffer(vertices)
 
         self.vao = ctx.vertex_array(

@@ -2,7 +2,6 @@ import glm
 from typing import *
 from enum import StrEnum, IntEnum
 from dataclasses import dataclass, field
-from my_solver import compute_vanishing_point
 import math
 from imgui_bundle import imgui
 
@@ -110,23 +109,17 @@ class SolverResult:
     warnings: List[str] = field(default_factory=list)
     cameraParameters: CameraParameters | None = None
 
-@dataclass
-class ControlPointState:
-    x: float # Relative image coordinates [0, 1]
-    y: float # Relative image coordinates [0, 1]
 
-ControlPointPairState = Tuple[ControlPointState, ControlPointState]
+LineSegmentType = Tuple[glm.vec2, glm.vec2]
 
-@dataclass
-class VanishingPointControlState:
-    lineSegments: List[ControlPointPairState]
+
 
 @dataclass
 class ControlPointsStateBase:
-    principalPoint: ControlPointState
-    origin: ControlPointState
-    referenceDistanceAnchor: ControlPointState
-    firstVanishingPoint: VanishingPointControlState
+    principalPoint: glm.vec2
+    origin: glm.vec2
+    referenceDistanceAnchor: glm.vec2
+    firstVanishingPoint: List[LineSegmentType]
     #   // The offsets are the distances in relative image coordinates
     #   // along the axis from the anchor to the vanishing point corresponding
     #   // to the selected reference axis
@@ -158,12 +151,12 @@ class CalibrationSettingsBase:
 
 @dataclass
 class ControlPointsState1VP:
-  horizon: ControlPointPairState
+  horizon: LineSegmentType
 
 @dataclass
 class ControlPointsState2VP:
-  secondVanishingPoint: VanishingPointControlState
-  thirdVanishingPoint: VanishingPointControlState
+  secondVanishingPoint: List[LineSegmentType]
+  thirdVanishingPoint: List[LineSegmentType]
 
 ################
 # Solver UTILS #
@@ -209,18 +202,53 @@ def _vectorAxis(vector: glm.vec3)->Axis:
     
     raise Exception('Invalid axis vector')
 
+import numpy as np
+def my_compute_vanishing_point(vanishing_lines: List[Tuple[glm.vec2, glm.vec2]]) -> glm.vec2:
+    """
+    Compute the vanishing point from a set of 2D lines assumed to be parallel in 3D.
+
+    Args:
+        lines (List[LineSegment]): List of line segments ((x1,y1),(x2,y2)).
+
+    Returns:
+        VanishingPoint: Homogeneous coordinates of the vanishing point [x, y, 1].
+    """
+    if len(vanishing_lines) < 2:
+        raise ValueError("At least two lines are required to compute a vanishing point")
+    
+    # Build the constraint matrix
+    constraint_matrix = [] # Each row is [a, b, c] for the line equation ax + by + c = 0
+    for line_segment in vanishing_lines:
+        P, Q = line_segment
+        # a = y1 - y2
+        # b = x2 - x1
+        # c = x1*y2 - x2*y1
+        a = P.y - Q.y
+        b = Q.x - P.x
+        c = P.x * Q.y - Q.x * P.y
+        constraint_matrix .append([a, b, c])
+    constraint_matrix  = np.array(constraint_matrix )
+
+    # Solve for the vanishing point using SVD
+    _, _, Vt = np.linalg.svd(constraint_matrix ) # Singular Value Decomposition
+    vp = Vt[-1]
+    result = vp / vp[2]
+    return glm.vec2(result[0], result[1])
+
 ######################
 # Validation Helpers #
 ######################
-def _validateVanishingPointAccuracy(
-    controlPointStates: List[VanishingPointControlState],
+def _validate_vanishing_point_accuracy(
+    controlPointStates: List[List[LineSegmentType]],
   ):
+    """Check for near-parallel lines in each vanishing point set.
+    Raises an exception if any vanishing point set has near-parallel lines."""
     warnings = []
 
     for state_index, control_point_state in enumerate(controlPointStates):
         # Extract the two line segments
-        line1_start, line1_end = control_point_state.lineSegments[0]
-        line2_start, line2_end = control_point_state.lineSegments[1]
+        line1_start, line1_end = control_point_state[0]
+        line2_start, line2_end = control_point_state[1]
 
         # Convert to glm.vec2 or vec3 depending on your data
         line1_dir = glm.normalize(glm.vec2(line1_end) - glm.vec2(line1_start))
@@ -240,33 +268,33 @@ def _validateVanishingPointAccuracy(
 #######################
 # Solver Computations #
 #######################
-def _computeVanishingPointsFromControlPoints(
+def _compute_vanishing_points_from_control_points(
     image_width:int,
     image_height:int, 
-    controlPointStates: List[VanishingPointControlState]
+    vanishing_lines_for_multiple_axes: List[List[LineSegmentType]]
 )->List[glm.vec2] | None:
     results: List[glm.vec2] = []
-    for vanishingPointState in controlPointStates:
+    for vanishing_lines_for_a_single_axis in vanishing_lines_for_multiple_axes:
         # Convert ControlPointPairState to the format expected by compute_vanishing_point
         line_segments = []
-        for pair in vanishingPointState.lineSegments:
-            if isinstance(pair[0], glm.vec2):
+        for line_segment in vanishing_lines_for_a_single_axis:
+            if isinstance(line_segment[0], glm.vec2):
                 # Handle glm.vec2 pairs (from your current usage)
-                line_segments.append(pair)
+                line_segments.append(line_segment)
             else:
                 # Handle ControlPointState pairs (proper fSpy format)
                 line_segments.append([
-                    (pair[0].x, pair[0].y),
-                    (pair[1].x, pair[1].y)
+                    (line_segment[0].x, line_segment[0].y),
+                    (line_segment[1].x, line_segment[1].y)
                 ])
         
-        vanishingPoint = compute_vanishing_point(line_segments)
+        vanishingPoint = my_compute_vanishing_point(line_segments)
         image_plane_vanishing_point = _relative_to_image_plane_coords(vanishingPoint, image_width, image_height)
         results.append(image_plane_vanishing_point)
 
     return results
 
-def _computeFieldOfView(
+def _compute_field_of_view(
     imageWidth: float,
     imageHeight: float,
     fRelative: float,
@@ -277,7 +305,9 @@ def _computeFieldOfView(
     d = 1 / aspectRatio if vertical else 1
     return 2 * math.atan(d / fRelative)
 
-def _computeFocalLength(Fu: glm.vec2, Fv: glm.vec2, P: glm.vec2)-> float:
+def _compute_focal_length_from_vanishing_points(Fu: glm.vec2, Fv: glm.vec2, P: glm.vec2)-> float:
+    """Computes the relative focal length from two vanishing points and the principal point.
+    TODO: what is relative focal length?"""
     # compute Puv, the orthogonal projection of P onto FuFv
     dirFuFv = glm.normalize(glm.vec3(Fu.x - Fv.x, Fu.y - Fv.y, 0.0))
     FvP = glm.vec3(P.x - Fv.x, P.y - Fv.y, 0.0)
@@ -300,7 +330,14 @@ def _computeFocalLength(Fu: glm.vec2, Fv: glm.vec2, P: glm.vec2)-> float:
 
     return math.sqrt(fSq)
 
-def _computeCameraRotationMatrix(Fu: glm.vec2, Fv: glm.vec2, f: float, P: glm.vec2)->glm.mat4:
+def _compute_camera_rotation_matrix(Fu: glm.vec2, Fv: glm.vec2, f: float, P: glm.vec2)->glm.mat3:
+    """Computes the camera rotation matrix from two vanishing points, the focal length and the principal point.
+    param Fu the first vanishing point in _image plane_ coordinates.
+    param Fv the second vanishing point in _image plane_ coordinates.
+    param f the focal length. relative to the image height. TODO: what is relatve focal length?
+    param P the principal point in _image plane_ coordinates TODO: what is image plane coordinates.
+    """
+    
     # Use higher precision by working with normalized vectors from the start
     OFu = glm.vec3(Fu.x - P.x, Fu.y - P.y, -f)
     OFv = glm.vec3(Fv.x - P.x, Fv.y - P.y, -f)
@@ -338,7 +375,7 @@ def _computeCameraRotationMatrix(Fu: glm.vec2, Fv: glm.vec2, f: float, P: glm.ve
     w = w / w_length
 
     # Construct rotation matrix using orthonormal basis vectors
-    M = glm.identity(glm.mat4)
+    M = glm.identity(glm.mat3)
     M[0][0] = u.x
     M[0][1] = v.x
     M[0][2] = w.x
@@ -375,10 +412,13 @@ def _computeTranslationVector(
     return origin3D
 
 def _computeCameraParameters(
-    result: SolverResult,
-    controlPoints: ControlPointsStateBase,
-    settings: CalibrationSettingsBase,
-    principalPoint: glm.vec2,
+    # control points
+    origin: glm.vec2, # relative coords [0,1]
+    # settings
+    firstVanishingPointAxis: Axis,
+    secondVanishingPointAxis: Axis,
+    # parameters
+    principalPoint: glm.vec2, # relative coords [0,1]
     vp1: glm.vec2,
     vp2: glm.vec2,
     relativeFocalLength: float,
@@ -387,7 +427,7 @@ def _computeCameraParameters(
   )->CameraParameters | None:
 
     cameraParameters = CameraParameters(
-      principalPoint=glm.vec2(0,0),
+      principalPoint=glm.vec2(0,0), 
       viewTransform= glm.identity(glm.mat4),
       cameraTransform = glm.identity(glm.mat4),
       horizontalFieldOfView= 0.0,
@@ -399,32 +439,62 @@ def _computeCameraParameters(
       imageHeight=imageHeight
     )
 
-    
-
-    # compute camera rotation matrix
-    cameraOrientationMatrix = glm.mat3(_computeCameraRotationMatrix(
+    # 1. compute camera rotation matrix
+    cameraOrientationMatrix = _compute_camera_rotation_matrix(
       vp1, vp2, relativeFocalLength, principalPoint
-    ))
+    )
+
     # Check determinant with very forgiving tolerance for floating-point precision
     determinant = glm.determinant(cameraOrientationMatrix)
     if math.fabs(determinant - 1) > 1e-5:  # Much more relaxed: 1e-5 (100x more forgiving than original) TODO: why so much error?
         raise Exception(f'Invalid vanishing point configuration. Rotation determinant {determinant}')
     
-    # Assing vanishing point axes
-    axisAssignmentMatrix = glm.identity(glm.mat3)
-    row1 = _axisVector(settings.firstVanishingPointAxis)
-    row2 = _axisVector(settings.secondVanishingPointAxis)
-    row3 = glm.cross(row1, row2)
-    axisAssignmentMatrix[0][0] = row1.x
-    axisAssignmentMatrix[0][1] = row1.y
-    axisAssignmentMatrix[0][2] = row1.z
-    axisAssignmentMatrix[1][0] = row2.x
-    axisAssignmentMatrix[1][1] = row2.y
-    axisAssignmentMatrix[1][2] = row2.z
-    axisAssignmentMatrix[2][0] = row3.x
-    axisAssignmentMatrix[2][1] = row3.y
-    axisAssignmentMatrix[2][2] = row3.z
+    def _createAxisAssignmentMatrix(firstVanishingPointAxis: Axis, secondVanishingPointAxis: Axis) -> glm.mat3:
+        """
+        Creates an axis assignment matrix that maps vanishing point directions to user-specified world axes.
+        
+        Args:
+            firstVanishingPointAxis: The world axis that the first vanishing point should represent
+            secondVanishingPointAxis: The world axis that the second vanishing point should represent
+        
+        Returns:
+            A 3x3 rotation matrix that transforms from vanishing point space to world space
+        
+        Raises:
+            Exception: If the axis assignment creates an invalid (non-orthogonal) matrix
 
+        Note:
+            Identity if:
+            - if First vanishing point naturally points along the world's +X direction
+            - Second vanishing point naturally points along the world's +Y direction
+            - Third direction (computed via cross product) naturally points along the world's +Z direction
+        """
+        imgui.text(f"Axis assignment: {firstVanishingPointAxis}, {secondVanishingPointAxis}")
+        axisAssignmentMatrix = glm.identity(glm.mat3)
+        
+        # Get the unit vectors for the specified axes
+        row1 = _axisVector(firstVanishingPointAxis)
+        row2 = _axisVector(secondVanishingPointAxis)
+        row3 = glm.cross(row1, row2)
+        
+        # Build the matrix with each row representing the target world axis
+        axisAssignmentMatrix[0][0] = row1.x
+        axisAssignmentMatrix[0][1] = row1.y
+        axisAssignmentMatrix[0][2] = row1.z
+        axisAssignmentMatrix[1][0] = row2.x
+        axisAssignmentMatrix[1][1] = row2.y
+        axisAssignmentMatrix[1][2] = row2.z
+        axisAssignmentMatrix[2][0] = row3.x
+        axisAssignmentMatrix[2][1] = row3.y
+        axisAssignmentMatrix[2][2] = row3.z
+        
+        # Validate that we have a proper orthogonal matrix
+        if math.fabs(1 - glm.determinant(axisAssignmentMatrix)) > 1e-7:
+            raise Exception("Invalid axis assignment: axes must be orthogonal")
+        
+        return axisAssignmentMatrix
+
+    axisAssignmentMatrix = _createAxisAssignmentMatrix(firstVanishingPointAxis, secondVanishingPointAxis)
     cameraOrientationMatrix = axisAssignmentMatrix * cameraOrientationMatrix
     viewOrientationMatrix = glm.inverse(cameraOrientationMatrix)
     if math.fabs(1 - glm.determinant(axisAssignmentMatrix) ) > 1e-7:
@@ -436,9 +506,9 @@ def _computeCameraParameters(
     viewRotationTransform = glm.mat4(viewOrientationMatrix)
     viewRotationTransform[3][3] = 1.0
 
-    #
+    # 2. compute camera FOV
     # horizontal field of view
-    cameraParameters.horizontalFieldOfView = _computeFieldOfView(
+    fovx = _compute_field_of_view(
       imageWidth,
       imageHeight,
       relativeFocalLength,
@@ -446,59 +516,71 @@ def _computeCameraParameters(
     )
 
     # vertical field of view
-    cameraParameters.verticalFieldOfView = _computeFieldOfView(
+    fovy = _compute_field_of_view(
       imageWidth,
       imageHeight,
       relativeFocalLength,
       True
     )
-    fov = cameraParameters.horizontalFieldOfView
-    imgui.text(f"FOV: {fov}")
+
     projectionMatrix = glm.perspective(
-        fov, # fovy in radians
+        fovy, # fovy in radians
         imageWidth/imageHeight, # aspect 
         0.1, # near
         100 # far
     )
 
-    def world_depth_to_ndc_z(world_distance:float, near:float, far:float) -> float:
-        """Convert world depth to NDC z-coordinate using perspective-correct mapping
-        world_distance: The distance from the camera in world units
-        near: The near clipping plane distance
-        far: The far clipping plane distance
-        returns: NDC z-coordinate in [0, 1], where 0 is near and 1 is far
-        """
-        # Clamp the distance between near and far
-        clamped_distance = max(near, min(far, world_distance))
+    cameraParameters.horizontalFieldOfView = fovx
+    cameraParameters.verticalFieldOfView = fovy
+
+    # 3. compute camera translation
+    def _compute_camera_position_from_origin(
+            viewRotationTransform:glm.mat4, 
+            projectionMatrix:glm.mat4, 
+            origin:glm.vec2, 
+            image_height:int, 
+            image_width:int,
+            scale: float
+        )->glm.vec3:
+
+        def _world_depth_to_ndc_z(world_distance:float, near:float, far:float) -> float:
+            """Convert world depth to NDC z-coordinate using perspective-correct mapping
+            world_distance: The distance from the camera in world units
+            near: The near clipping plane distance
+            far: The far clipping plane distance
+            returns: NDC z-coordinate in [0, 1], where 0 is near and 1 is far
+            """
+            # Clamp the distance between near and far
+            clamped_distance = max(near, min(far, world_distance))
+            
+            # Perspective-correct depth calculation
+            # This matches how the depth buffer actually works
+            ndc_z = (far + near) / (far - near) + (2 * far * near) / ((far - near) * clamped_distance)
+            ndc_z = (ndc_z + 1) / 2  # Convert from [-1, 1] to [0, 1]
+            return ndc_z
         
-        # Perspective-correct depth calculation
-        # This matches how the depth buffer actually works
-        ndc_z = (far + near) / (far - near) + (2 * far * near) / ((far - near) * clamped_distance)
-        ndc_z = (ndc_z + 1) / 2  # Convert from [-1, 1] to [0, 1]
-        return ndc_z
-    
+        # Convert world distance to NDC z-coordinate
+        ndc_z = _world_depth_to_ndc_z(world_distance=scale, near=0.1, far=100)
+        origin_window_coords = glm.vec3(origin.x * imageWidth, (1-origin.y) * imageHeight, ndc_z)
+        origin_3D = glm.unProject(origin_window_coords, viewRotationTransform, projectionMatrix, glm.vec4(0,0,imageWidth,imageHeight))
+        return origin_3D
+
     global DEFAULT_CAMERA_DISTANCE_SCALE
     _, DEFAULT_CAMERA_DISTANCE_SCALE = imgui.slider_float("World Distance", DEFAULT_CAMERA_DISTANCE_SCALE, 0.1, 100.0)
-    
-    # Convert world distance to NDC z-coordinate
-    ndc_z = world_depth_to_ndc_z(DEFAULT_CAMERA_DISTANCE_SCALE, 0.1, 100)
-    origin_window_coords = glm.vec3(controlPoints.origin.x * imageWidth, (1-controlPoints.origin.y) * imageHeight, ndc_z)
-    imgui.text(f"Origin Window Coords: {origin_window_coords}")
-    origin_3D = glm.unProject(origin_window_coords, viewRotationTransform, projectionMatrix, glm.vec4(0,0,imageWidth,imageHeight))
-    imgui.text(f"       unProjected: {origin_3D}")
-    forward_vector = glm.vec3(
-        cameraRotationTransform[0][2],
-        cameraRotationTransform[1][2],
-        cameraRotationTransform[2][2]
+    origin_3D = _compute_camera_position_from_origin(
+        viewRotationTransform, 
+        projectionMatrix, 
+        origin, 
+        imageHeight, 
+        imageWidth,
+        scale=DEFAULT_CAMERA_DISTANCE_SCALE
     )
 
     cameraTranslateMatrix = glm.translate(glm.mat4(1.0), origin_3D)
     cameraParameters.cameraTransform = cameraTranslateMatrix*cameraRotationTransform
-
-
     return cameraParameters
 
-def _computeSecondVanishingPoint(
+def _compute_second_vanishing_point(
         Fu: glm.vec2, 
         f: float, 
         P: glm.vec2, 
@@ -592,10 +674,10 @@ def solve1VP(
 
     # Compute the input vanishing point in image plane coordinates
     vanishingPointStates = controlPointsBase.firstVanishingPoint
-    input_vanishing_points = _computeVanishingPointsFromControlPoints(
+    input_vanishing_points = _compute_vanishing_points_from_control_points(
         image_width=image_width,
         image_height=image_height,
-        controlPointStates=[vanishingPointStates]
+        vanishing_lines_for_multiple_axes=[vanishingPointStates]
     )
 
     # TODO: validate vanishing points accuracy
@@ -635,16 +717,17 @@ def solve1VP(
         )
     horizonDirection = glm.normalize(horizonEnd - horizonStart)
 
-    second_vanishing_point = _computeSecondVanishingPoint(
+    second_vanishing_point = _compute_second_vanishing_point(
         input_vanishing_points[0],
         relativeFocalLength,
         principalPoint,
         horizonDirection
     )
 
-    camera_parameters = _computeCameraParameters(result,
-        controlPointsBase,
-        settingsBase,
+    camera_parameters = _computeCameraParameters(
+        controlPointsBase.origin,
+        settingsBase.firstVanishingPointAxis,
+        settingsBase.secondVanishingPointAxis,
         principalPoint,
         input_vanishing_points[0],
         second_vanishing_point,
@@ -678,10 +761,10 @@ def solve2VP(
     ...
 
     # Compute the two input vanishing points from the provided control points
-    inputVanishingPoints = _computeVanishingPointsFromControlPoints(
+    inputVanishingPoints = _compute_vanishing_points_from_control_points(
       image_width=image_width,
       image_height=image_height,
-      controlPointStates=[controlPointsBase.firstVanishingPoint, secondVanishingPointControlState],
+      vanishing_lines_for_multiple_axes=[controlPointsBase.firstVanishingPoint, secondVanishingPointControlState],
     )
 
     if not inputVanishingPoints or len(inputVanishingPoints) < 2:
@@ -694,7 +777,7 @@ def solve2VP(
             principalPoint = _relative_to_image_plane_coords(controlPointsBase.principalPoint, image_width, image_height)
         
         case PrincipalPointMode2VP.FromThirdVanishingPoint:
-            thirdVanishingPointArray = _computeVanishingPointsFromControlPoints(
+            thirdVanishingPointArray = _compute_vanishing_points_from_control_points(
                image_width, image_height,
                [controlPoints2VP.thirdVanishingPoint],
             )
@@ -707,7 +790,7 @@ def solve2VP(
                     thirdVanishingPoint
                 )
 
-    fRelative = _computeFocalLength(
+    fRelative = _compute_focal_length_from_vanishing_points(
         inputVanishingPoints[0], 
         inputVanishingPoints[1], 
         principalPoint
@@ -719,19 +802,21 @@ def solve2VP(
         vanishingPointStatesToCheck.append(thirdVanishingPointControlState)
 
     
-    _validateVanishingPointAccuracy(vanishingPointStatesToCheck)
+    _validate_vanishing_point_accuracy(vanishingPointStatesToCheck)
     
     camera_parameters = _computeCameraParameters(
-      result,
-      controlPointsBase,
-      settingsBase,
-      principalPoint,
-      inputVanishingPoints[0],
-      inputVanishingPoints[1],
-      fRelative,
-      image_width,
-      image_height
+        controlPointsBase.origin,
+        settingsBase.firstVanishingPointAxis,
+        settingsBase.secondVanishingPointAxis,
+        principalPoint,
+        inputVanishingPoints[0],
+        inputVanishingPoints[1],
+        fRelative,
+        image_width,
+        image_height
     )
+
+
 
     result.cameraParameters = camera_parameters
     return result
