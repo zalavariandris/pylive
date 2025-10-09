@@ -90,7 +90,7 @@ class SceneLayer(RenderLayer):
 
 
 ## GUI helpers
-from gizmos import drag_axes, drag_horizon
+from gizmos import drag_lines, drag_horizon
 from utils.geo import closest_point_line_segment
 
 # ModernGL context and framebuffer
@@ -182,7 +182,7 @@ def gui():
 
         for i, (in_use, color, name) in enumerate(zip(use_vanishing_lines, colors, axis_names)):
             if in_use:
-                _, vanishing_lines[i] = drag_axes(name, vanishing_lines[i], color)
+                _, vanishing_lines[i] = drag_lines(name, vanishing_lines[i], color)
                 
                 if vanishing_lines[i]:
                     # Calculate and draw vanishing point
