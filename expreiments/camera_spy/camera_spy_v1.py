@@ -217,44 +217,6 @@ def gui():
                 _, vanishing_lines[2] = drag_axes("Z", vanishing_lines[2], BLUE)
                 _, screen_origin = drag_point("origin###origin", screen_origin)
 
-                # # calculate vanishing point
-                # vp_z = imgui.ImVec2(compute_vanishing_point([axis for axis in vanishing_lines[2]]))
-                
-                # # draw vanishing point
-                # draw_list = imgui.get_window_draw_list()
-                # draw_list.add_circle_filled(window_to_screen(vp_z), 5, BLUE)
-                # draw_list.add_text(window_to_screen(vp_z) + imgui.ImVec2(5, -5),  BLUE, f"VP{2} ({vp_z.x:.0f},{vp_z.y:.0f})")
-
-                # # draw lines to vanishing point
-                # for axis in vanishing_lines[2]:
-                #     closest_point = closest_point_line_segment(vp_z, axis)
-                #     imgui.get_window_draw_list().add_line(window_to_screen(closest_point), window_to_screen(vp_z), BLUE_DIMMED, 1)
-
-                # # calc yaw from y axes.
-                # horizon = vp_z.y
-
-                # camera_pitch = _estimate_pitch_from_horizon(horizon, principal_point=principal_point, size=size, fov=fov)
-                
-                # # compute yaw from vanishing point?
-                # vp_z_ndc_x = (vp_z.x - principal_point.x) / (size.x / 2.0)
-                # aspect = size.x / size.y
-                # tan_half_fov = math.tan(math.radians(fov) / 2.0)
-                # tan_half_fov_x = tan_half_fov * aspect
-                # camera_yaw = math.atan(vp_z_ndc_x * tan_half_fov_x)
-                # imgui.text(f"Camera yaw: {math.degrees(camera_yaw):.2f}° (from Z VP)")
-
-                # # compute camera position
-                # camera_pos_x, camera_pos_y, camera_pos_z = _compute_camera_position(
-                #     viewport_size=size,
-                #     fov=fov,
-                #     screen_origin=screen_origin,
-                #     principal_point=principal_point,
-                #     camera_pitch=camera_pitch,
-                #     distance=distance
-                # )
-
-                # # build transform
-                # camera.transform = _build_camera_transform(camera_pitch, camera_pos_x, camera_pos_y, camera_pos_z)
                 import fspy_solver as fspy
                 def fov_to_focal_length(fov_x, *, sensor:tuple[float, float]) -> float:
                     # Return focal length in millimetres for a given horizontal FOV (degrees)

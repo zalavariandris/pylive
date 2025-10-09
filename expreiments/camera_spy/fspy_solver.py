@@ -372,6 +372,8 @@ def _computeCameraParameters(
         raise Exception(f'Invalid vanishing point configuration. Rotation determinant {determinant}')
 
     cameraParameters.viewTransform = axisAssignmentMatrix * cameraRotationMatrix
+    # view_rotation = glm.mat3(cameraParameters.viewTransform)
+    # camera_rotation = glm.inverse(view_rotation)
     
     origin3D = _computeTranslationVector(
       origin=controlPoints.origin,
@@ -394,10 +396,8 @@ def _computeCameraParameters(
     
     # Extract rotation part (3x3 upper-left)
     view_rotation = glm.mat3(cameraParameters.viewTransform)
-    
-    # Camera rotation is the transpose of view rotation
-    camera_rotation = glm.transpose(view_rotation)
-    
+    camera_rotation = glm.transpose(view_rotation)  # Inverse of rotation matrix is its transpose   
+
     # Camera position is -R^T * t, where R is view rotation and t is view translation
     view_translation = glm.vec3(
         cameraParameters.viewTransform[0][3],
@@ -419,8 +419,8 @@ def _computeCameraParameters(
         camera_position.x, camera_position.y, camera_position.z, 1.0
     )
     
-    # Debug: Print the camera position to verify it's correct
-    imgui.text(f"Camera position: ({camera_position.x:.3f}, {camera_position.y:.3f}, {camera_position.z:.3f})")
+    # # Debug: Print the camera position to verify it's correct
+    # imgui.text(f"Camera position: ({camera_position.x:.3f}, {camera_position.y:.3f}, {camera_position.z:.3f})")
 
     return cameraParameters
 
@@ -465,6 +465,34 @@ def solve1VP(
         image_height=800
     ) -> SolverResult:
     result = SolverResult()
+
+
+    imgui.text_wrapped(f"""settingsBase
+    referenceDistanceUnit:    {settingsBase.referenceDistanceUnit}
+    referenceDistance:        {settingsBase.referenceDistance}
+    referenceDistanceAxis:    {settingsBase.referenceDistanceAxis}
+    cameraData:               {settingsBase.cameraData}
+    firstVanishingPointAxis:  {settingsBase.firstVanishingPointAxis}
+    secondVanishingPointAxis: {settingsBase.secondVanishingPointAxis}
+    """)
+    imgui.text_wrapped(f"""settings1VP
+      principalPointMode:  {settings1VP.principalPointMode}
+      absoluteFocalLength: {settings1VP.absoluteFocalLength}
+    """)
+    imgui.text_wrapped(f"""controlPointsBase
+    principalPoint: {controlPointsBase.principalPoint}
+    origin: {controlPointsBase.origin}
+    referenceDistanceAnchor: {controlPointsBase.referenceDistanceAnchor}
+    firstVanishingPoint: {controlPointsBase.firstVanishingPoint}
+    referenceDistanceHandleOffsets: {controlPointsBase.referenceDistanceHandleOffsets}
+    """)
+    imgui.text_wrapped(f"""ControlPointsState1VP
+    horizon: {controlPoints1VP.horizon}
+    """)
+    imgui.text_wrapped(f"""Image dimensions
+    image_width: {image_width}
+    image_height: {image_height}
+    """)
 
     # TODO: validate image dimensions
     # ...
