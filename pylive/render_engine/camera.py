@@ -10,7 +10,7 @@ class Camera:
 		self.transform = glm.mat4(1.0)  # Identity matrix as the initial transform
 
 		# Camera parameters
-		self.fov = 45.0  # Field of view in degrees
+		self.fovy = 45.0  # Field of view in degrees
 		self.aspect_ratio = 1.0  # Aspect ratio (width / height)
 		self.near_plane = 0.1  # Near clipping plane
 		self.far_plane = 1000.0  # Far clipping plane
@@ -21,7 +21,7 @@ class Camera:
 	def _update_projection(self):
 		"""Updates the projection matrix based on current camera parameters."""
 		self.projection = glm.perspective(
-			glm.radians(self.fov), 
+			glm.radians(self.fovy), 
 			self.aspect_ratio, 
 			self.near_plane, 
 			self.far_plane
@@ -32,11 +32,11 @@ class Camera:
 		self.aspect_ratio = aspect
 		self._update_projection()
 
-	def setFOV(self, fov_degrees:float):
+	def setFoVY(self, fovy_degrees:float):
 		"""
 		Sets the field of view in degrees and updates the projection matrix.
 		"""
-		self.fov = fov_degrees
+		self.fovy = fovy_degrees
 		self._update_projection()
 
 	def viewMatrix(self):

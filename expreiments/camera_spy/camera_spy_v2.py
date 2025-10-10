@@ -246,7 +246,7 @@ def gui():
             # Set up camera for 3D rendering
             camera = Camera()
             camera.setAspectRatio(size.x / size.y)
-            camera.setFOV(fov)
+            camera.setFoVY(fov)
             
             # Build camera transform from estimated parameters
             camera_pos = estimate.position
@@ -266,7 +266,7 @@ def gui():
             # Fallback to your original manual calculation
             camera = Camera()
             camera.setAspectRatio(size.x / size.y)
-            camera.setFOV(fov)
+            camera.setFoVY(fov)
             
             # Your original calculation code here...
             horizon_ndc_dy = (principal_point.y - horizon) / (size.y / 2.0)
