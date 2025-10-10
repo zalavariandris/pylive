@@ -11,28 +11,35 @@ from pprint import pformat
 # Graphics Layer #
 # ############## #
 import moderngl
-from pylive.render_engine.render_layers import GridLayer, RenderLayer
+from pylive.render_engine.render_layers import GridLayer, RenderLayer, AxesLayer
 import OpenGL.GL as gl
 import glm
 
 
 class SceneLayer(RenderLayer):
     def __init__(self):
+        super().__init__()
         self.initialized = False
         self.grid = GridLayer()
+        self.axes = AxesLayer()
 
     def setup(self, ctx:moderngl.Context):
         self.grid.setup(ctx)
+        self.axes.setup(ctx)
         super().setup(ctx)
 
     def destroy(self):
         if self.grid:
             self.grid.destroy()
             self.grid = None
+        if self.axes:
+            self.axes.destroy()
+            self.axes = None
         return super().destroy()
     
     def render(self, camera:Camera):
         self.grid.render(view=camera.viewMatrix(), projection=camera.projectionMatrix())
+        self.axes.render(view=camera.viewMatrix(), projection=camera.projectionMatrix())
         super().render()
 
 
@@ -57,13 +64,9 @@ WHITE_DIMMED = imgui.color_convert_float4_to_u32((1,1,1, 0.2))
 # ##### #
 # TYPES #
 # ##### #
-from core import LineSegment, Point2D
-from dataclasses import dataclass, field
 from typing import Tuple, List, Optional
 from typing import NewType, Callable, Dict
-from typing import NewType
-Point2D = NewType("Point2D", Tuple[float, float])
-LineSegment = NewType("LineSegment", Tuple[Point2D, Point2D])
+
 Radians = NewType("Radians", float)
 Degrees = NewType("Degrees", float)
 
@@ -111,9 +114,14 @@ scene_renderer = SceneLayer()
 ctx: moderngl.Context|None = None
 fbo: moderngl.Framebuffer|None = None
 
+import fspy_solver_functional as fspy
+
+
+
 # Parameters
-horizon = 300.0
-vanishing_lines = [
+
+axis_names = ('X', 'Y', 'Z')
+vanishing_lines: List[Tuple[fspy.LineSegmentType, ...]] = [
     [
         [imgui.ImVec2(280, 340), imgui.ImVec2(520, 360)],
         [imgui.ImVec2(230, 480), imgui.ImVec2(560, 460)]
@@ -127,29 +135,29 @@ vanishing_lines = [
         [imgui.ImVec2(520, 500), imgui.ImVec2(480, 330)]
     ]
 ]
-
 use_vanishing_lines = [True, False, True]
-axis_names = ('X', 'Y', 'Z')
-screen_origin = imgui.ImVec2(400, 400)
-fov:Degrees = 60.0
-distance = 5.0
-principal_point_ctrl = imgui.ImVec2(400, 400)
 
+horizon_height: float = 300.0
+default_fov:Degrees = 60.0
+screen_origin = imgui.ImVec2(400, 400)
+principal_point_ctrl = imgui.ImVec2(400, 400)
+DEFAULT_CAMERA_DISTANCE_SCALE = 5.0
+scene_scale = DEFAULT_CAMERA_DISTANCE_SCALE
 # ######### #
 # MAIN LOOP #
 # ######### #
-import fspy_solver_functional as fspy
+
 camera = Camera()
 def gui():
     global camera
     global ctx, fbo
     # Camera Calibration parameters
-    global distance
     global screen_origin
-    global horizon
-    global fov
+    global horizon_height
+    global default_fov
     global vanishing_lines, use_vanishing_lines
     global principal_point_ctrl
+    global scene_scale
 
     imgui.text("Camera Spy")
     if imgui.begin_child("3d_viewport", imgui.ImVec2(0, 0)):
@@ -192,7 +200,7 @@ def gui():
         # parameters
         
         camera.setAspectRatio(size.x / size.y)
-        camera.setFOV(fov)
+        camera.setFOV(default_fov)
 
         # Compute Camera from parameters
         for i, in_use in enumerate(use_vanishing_lines):
@@ -212,7 +220,7 @@ def gui():
             )
         
         # Convert vanishing lines from ImGui coordinates to relative coordinates
-        def vanishing_lines_to_relative(vanishing_lines: List['LineSegment'], size: imgui.ImVec2) -> List['LineSegment']:
+        def vanishing_lines_to_relative(vanishing_lines: List[fspy.LineSegmentType], size: imgui.ImVec2) -> List[fspy.LineSegmentType]:
             relative_lines = []
             for line in vanishing_lines:
                 relative_line = (
@@ -222,23 +230,23 @@ def gui():
                 relative_lines.append(relative_line)
             return relative_lines
 
+        _, scene_scale = imgui.slider_float("scene_scale", scene_scale, 1.0, 100.0, "%.2f")
         match use_vanishing_lines:
             case (False, False, False):
                 # parameters
-                _, horizon = drag_horizon(horizon, WHITE_DIMMED)
-                _, fov = imgui.slider_float("fov", fov, 20.0, 120.0, "%.2f")
-                _, distance = imgui.drag_float("distance", distance, 0.1, 0.1, 20.0, "%.2f")
+                _, horizon_height = drag_horizon(horizon_height, WHITE_DIMMED)
+                _, default_fov = imgui.slider_float("fov", default_fov, 20.0, 120.0, "%.2f")
                 _, screen_origin = drag_point("origin###origin", screen_origin)
                 principal_point = imgui.ImVec2(size.x / 2, size.y / 2)
 
                 # Solve no Axes
                 camera_pitch, camera_pos_x, camera_pos_y, camera_pos_z = solve_no_axis(
-                    horizon=horizon,
+                    horizon=horizon_height,
                     viewport_size=size,
                     screen_origin=screen_origin,
-                    fov=fov,
+                    fov=default_fov,
                     principal_point=principal_point,
-                    distance=distance,
+                    distance=scene_scale,
                 )
 
                 camera.transform = _build_camera_transform(camera_pitch, camera_pos_x, camera_pos_y, camera_pos_z)
@@ -249,47 +257,38 @@ def gui():
                 for i, axis in enumerate(vanishing_lines[2]):
                     _, vanishing_lines[2][i] = drag_line(f"Z{i}", axis, BLUE)
                 _, screen_origin = drag_point("origin###origin", screen_origin)
-                
-                relative_vanishing_lines = vanishing_lines_to_relative(vanishing_lines[2], size)
-
+            
 
                 # Create proper horizon direction from the horizon Y coordinate
                 # Instead of two points on a horizontal line, create a direction vector
-                horizon_start = glm.vec2(0.0, horizon / size.y)
-                horizon_end = glm.vec2(1.0, horizon / size.y)
-                
-                focal_length = fov_to_focal_length(fov, sensor=(36, 24))  # Use actual fov variable
+                horizon_start = glm.vec2(0.0, horizon_height / size.y)
+                horizon_end = glm.vec2(1.0, horizon_height / size.y)
                 
                 # Debug: Print coordinate conversions
                 imgui.text(f"Screen origin: ({screen_origin.x:.1f}, {screen_origin.y:.1f})")
                 imgui.text(f"Viewport size: ({size.x:.1f}, {size.y:.1f})")
-                origin_relative = imgui_to_relative(screen_origin, size)
-                imgui.text(f"Origin relative: ({origin_relative.x:.3f}, {origin_relative.y:.3f})")
-                imgui.text(f"Horizon Y: {horizon:.1f} -> relative: {horizon / size.y:.3f}")
-                imgui.text(f"FOV: {fov:.1f}° -> focal length: {focal_length:.1f}mm")
+                imgui.text(f"Horizon Y: {horizon_height:.1f}")
+                imgui.text(f"FoV: {default_fov:.1f}°")
                 imgui.separator()
                 try:
-                    result:fspy.SolverResult = fspy.solve1VP(
-                        image_width=int(size.x),
-                        image_height=int(size.y),
-                        # control points
-                        first_vanishing_lines=relative_vanishing_lines,  # Use converted relative coordinates
-                        horizon_line_ctrl=(horizon_start, horizon_end),  # Use properly defined horizon points
-                        principalPointCtrl=glm.vec2(0.5, 0.5),  # Center in relative coords [0,1]
-                        originPoint=imgui_to_relative(screen_origin, size),  # Convert to relative coords
-                        # settings
-                        sensor_size= (36, 24),
-                        first_vanishing_lines_axis=fspy.Axis.PositiveZ,
-                        second_vanishing_lines_axis=fspy.Axis.PositiveX,
-                        principalPointMode='Default',
-                        absoluteFocalLength=focal_length # Use calculated focal length from actual fov
+                    result = fspy.solve1VP(
+                        image_width =                 int(size.x),
+                        image_height =                int(size.y),
+                        # control points              
+                        first_vanishing_lines =       vanishing_lines_to_relative(vanishing_lines[2], size),
+                        horizon_line_ctrl =           (horizon_start, horizon_end),
+                        principal_point_ctrl =        glm.vec2(0.5, 0.5),  # Center in relative coords [0,1]
+                        originPoint =                 imgui_to_relative(screen_origin, size),
+                        # settings                    
+                        sensor_size =                 (36, 24),
+                        first_vanishing_lines_axis =  fspy.Axis.PositiveZ,
+                        second_vanishing_lines_axis = fspy.Axis.PositiveX,
+                        principal_point_mode  =       'Default',
+                        absolute_focal_length =       fov_to_focal_length(default_fov, sensor=(36, 24)),
+                        scale =                       scene_scale
                     )
-                    viewTransform = result.cameraParameters.viewTransform
                     
-                    imgui.text_wrapped(f"viewTransform\n{viewTransform}")
-                    imgui.text_wrapped(f"viewTransform inverse\n{glm.inverse(viewTransform)}")
-                    camera.transform = glm.inverse(viewTransform)
-                    # camera.transform = glm.inverse(viewTransform)
+                    camera.transform = glm.inverse(result['view_transform'])
                     
                 except Exception as e:
                     from textwrap import wrap
@@ -306,47 +305,43 @@ def gui():
                 for i, axis in enumerate(vanishing_lines[2]):
                     _, vanishing_lines[2][i] = drag_line(f"Z{i}", axis, BLUE)
 
-
                 _, screen_origin = drag_point("origin###origin", screen_origin)
 
                 # Convert the correct vanishing lines for each axis
-                relative_vanishing_lines = vanishing_lines_to_relative(vanishing_lines[2], size)      # Z-axis (first VP)
-                relative_second_vanishing_lines = vanishing_lines_to_relative(vanishing_lines[0], size)  # X-axis (second VP)
+                relative_vanishing_lines =        vanishing_lines_to_relative(vanishing_lines[2], size) # Z-axis (first VP)
+                relative_second_vanishing_lines = vanishing_lines_to_relative(vanishing_lines[0], size) # X-axis (second VP)
 
                 UseThirdAxisForPrincipalPoint = use_vanishing_lines[1]
                 if not UseThirdAxisForPrincipalPoint:
                     _, principal_point_ctrl = drag_point("principal_point###principal_point", principal_point_ctrl)
-                relative_third_vanishing_lines = []
 
+                relative_third_vanishing_lines = []
                 if UseThirdAxisForPrincipalPoint:
                     for i, axis in enumerate(vanishing_lines[1]):
                         _, vanishing_lines[1][i] = drag_line(f"Y{i}", axis, GREEN)
                     relative_third_vanishing_lines = vanishing_lines_to_relative(vanishing_lines[1], size)  # Y-axis (third VP)
-                
-                focal_length = fov_to_focal_length(fov, sensor=(36, 24))  # Use actual fov variable
-
+            
                 try:
                     result = fspy.solve2VP(
-                        image_width=int(size.x),
-                        image_height=int(size.y),
-                        
+                        image_width =                 int(size.x),
+                        image_height =                int(size.y),
                         # control points
-                        originPoint=imgui_to_relative(screen_origin, size),  # Convert to relative coords
-                        first_vanishing_lines=relative_vanishing_lines,  # Use converted relative coordinates
-                        second_vanishing_lines=relative_second_vanishing_lines,  # Use converted relative coordinates
-                        third_vanishing_lines=relative_third_vanishing_lines,  # Used to determine principal point if present
-                        principalPointCtrl=glm.vec2(0.5, 0.5),  # Center in relative coords [0,1]
-                        
+                        originPoint =                 imgui_to_relative(screen_origin, size),
+                        first_vanishing_lines =       relative_vanishing_lines,
+                        second_vanishing_lines =      relative_second_vanishing_lines,
+                        third_vanishing_lines =       relative_third_vanishing_lines, # Used to determine principal point if present
+                        principalPointCtrl =          glm.vec2(0.5, 0.5),  # Center in relative coords [0,1]
                         # settings
-                        sensor_size=(36, 24),
-                        first_vanishing_lines_axis=fspy.Axis.PositiveZ,
-                        second_vanishing_lines_axis=fspy.Axis.PositiveX,
-                        principalPointMode='Default' if not UseThirdAxisForPrincipalPoint else 'FromThirdVanishingPoint',
-                        quadModeEnabled=False # Use calculated focal length from actual fov
+                        sensor_size =                 (36, 24),
+                        first_vanishing_lines_axis =  fspy.Axis.PositiveZ,
+                        second_vanishing_lines_axis = fspy.Axis.PositiveX,
+                        principal_point_mode =        'Default' if not UseThirdAxisForPrincipalPoint else 'FromThirdVanishingPoint',
+                        quad_mode_enabled =           False,
+                        scale =                       scene_scale
                     )
 
-                    camera.transform = glm.inverse(result.cameraParameters.viewTransform)
-                    camera.setFOV(math.degrees(result.cameraParameters.horizontalFieldOfView))
+                    camera.transform = glm.inverse(result['view_transform'])
+                    camera.setFOV(math.degrees(result['fovx']))
 
                 except Exception as e:
                     from textwrap import wrap
@@ -396,4 +391,4 @@ def gui():
 
 
 if __name__ == "__main__":
-    immapp.run(gui, window_title="ImGui Bundle - 2D Points & 3D Scene", window_size=(800, 600))
+    immapp.run(gui, window_title="ImGui Bundle - 2D Points & 3D Scene", window_size=(16*75, 9*75))
