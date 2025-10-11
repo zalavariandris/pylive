@@ -22,7 +22,6 @@ def drag_point(label:str, point:imgui.ImVec2)->Tuple[bool, imgui.ImVec2]:
     draw_list = imgui.get_window_draw_list()
     
     draw_list.add_circle_filled(window_to_screen(point), 5, imgui.color_convert_float4_to_u32(color))
-    
 
     text_offset = imgui.ImVec2(5, -5)
     draw_list.add_text(window_to_screen(point) + text_offset, imgui.color_convert_float4_to_u32(color), text)

@@ -117,6 +117,20 @@ def vanishing_lines_to_relative(vanishing_lines: List[fspy.LineSegmentType], ima
         )
         relative_lines.append(relative_line)
     return relative_lines
+
+
+def glm_point_from_imgui(imgui_point: imgui.ImVec2) -> glm.vec2:
+    return glm.vec2(imgui_point.x, imgui_point.y)
+
+def glm_linesegment_from_imgui(lines: List[fspy.LineSegmentType]) -> Tuple[glm.vec2, glm.vec2]:
+    result = []
+    for line in lines:
+        line = (
+            glm_point_from_imgui(line[0]),
+            glm_point_from_imgui(line[1])
+        )
+        result.append(line)
+    return result
     
 
 # ########## #
@@ -185,7 +199,7 @@ def gui():
         for i, in_use in enumerate(use_vanishing_lines):
             _, use_vanishing_lines[i] = imgui.checkbox(f"use {axis_names[i]} axes", in_use)
 
-        _, scene_scale = imgui.slider_float("scene_scale", scene_scale, 1.0, 100.0, "%.2f")
+        _, scene_scale = imgui.slider_float("scene_scale", scene_scale, 10.0, 10000.0, "%.2f")
         match use_vanishing_lines:
             case (False, False, False):
                 # parameters
@@ -200,7 +214,7 @@ def gui():
                     viewport_size=widget_size,
                     screen_origin=screen_origin,
                     fov=default_fov,
-                    principal_point=imgui_to_relative(principal_point_ctrl, widget_size.x, widget_size.y),
+                    principal_point=glm_point_from_imgui(principal_point_ctrl),
                     distance=scene_scale,
                 )
 
@@ -222,8 +236,6 @@ def gui():
                 
                 # Debug: Print coordinate conversions
                 imgui.text(f"Screen origin: ({screen_origin.x:.0f}, {screen_origin.y:.0f})")
-                relative_screen_origin = imgui_to_relative(screen_origin, widget_size.x, widget_size.y)
-                imgui.text(f"  relative : ({relative_screen_origin.x:.2f}, {relative_screen_origin.y:.2f})")
                 imgui.text(f"Viewport size: ({widget_size.x:.0f}, {widget_size.y:.0f})")
                 imgui.text(f"Horizon Y: {horizon_height:.1f}")
                 imgui.text(f"FoV: {default_fov:.1f}°")
@@ -233,10 +245,10 @@ def gui():
                         image_width =                 int(widget_size.x),
                         image_height =                int(widget_size.y),
                         # control points              
-                        first_vanishing_lines =       vanishing_lines_to_relative(vanishing_lines[2], widget_size.x, widget_size.y),
+                        first_vanishing_lines =       glm_linesegment_from_imgui(vanishing_lines[2]),
                         horizon_line_ctrl =           (horizon_start, horizon_end),
-                        principal_point_ctrl =        imgui_to_relative(principal_point_ctrl, widget_size.x, widget_size.y),
-                        originPoint =                 imgui_to_relative(screen_origin, widget_size.x, widget_size.y),
+                        principal_point_ctrl =        glm_point_from_imgui(principal_point_ctrl),
+                        originPoint =                 glm_point_from_imgui(screen_origin),
                         # settings                    
                         fovy =                        math.radians(default_fov),
                         sensor_size =                 (36, 24),
@@ -268,15 +280,15 @@ def gui():
                 _, principal_point_ctrl = drag_point("principal_point###principal_point", principal_point_ctrl)
 
                 # Convert the correct vanishing lines for each axis
-                relative_vanishing_lines =        vanishing_lines_to_relative(vanishing_lines[2], widget_size.x, widget_size.y) # Z-axis (first VP)
-                relative_second_vanishing_lines = vanishing_lines_to_relative(vanishing_lines[0], widget_size.x, widget_size.y) # X-axis (second VP)
+                relative_vanishing_lines =        glm_linesegment_from_imgui(vanishing_lines[2]) # Z-axis (first VP)
+                relative_second_vanishing_lines = glm_linesegment_from_imgui(vanishing_lines[0]) # X-axis (second VP)
 
                 UseThirdAxisForPrincipalPoint = use_vanishing_lines[1]
                 relative_third_vanishing_lines = []
                 if UseThirdAxisForPrincipalPoint:
                     for i, axis in enumerate(vanishing_lines[1]):
                         _, vanishing_lines[1][i] = drag_line(f"Y{i}", axis, GREEN)
-                    relative_third_vanishing_lines = vanishing_lines_to_relative(vanishing_lines[1], widget_size.x, widget_size.y)  # Y-axis (third VP)
+                    relative_third_vanishing_lines = glm_linesegment_from_imgui(vanishing_lines[1])  # Y-axis (third VP)
                 else:
                     principal_point_ctrl = imgui.ImVec2(widget_size.x / 2, widget_size.y / 2)
                     
@@ -285,7 +297,7 @@ def gui():
                         image_width =                 int(widget_size.x),
                         image_height =                int(widget_size.y),
                         # control points
-                        originPoint =                 imgui_to_relative(screen_origin, widget_size.x, widget_size.y),
+                        originPoint =                 glm_point_from_imgui(screen_origin),
                         first_vanishing_lines =       relative_vanishing_lines,
                         second_vanishing_lines =      relative_second_vanishing_lines,
                         third_vanishing_lines =       relative_third_vanishing_lines, # Used to determine principal point if present

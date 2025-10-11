@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 import math
 from imgui_bundle import imgui
 import itertools
-
+from gizmos import draw
 
 ############################# 
 # Geometry helper functions #
@@ -394,9 +394,9 @@ def _compute_second_vanishing_point(
     the desired horizon tilt angle. The equations here are derived from
     section 3.2 "Determining the focal length from a single image".
 
-    @param Fu the first vanishing point in _image plane_ coordinates.
+    @param Fu the first vanishing point
     @param f the relative focal length
-    @param P the center of projection in _normalized image_ coordinates
+    @param P the center of projection
     @param horizonDir The desired horizon direction
     """
     
@@ -458,7 +458,6 @@ def _compute_camera_parameters(
     # 2. compute camera FOV
     # horizontal field of view
     imgui.text(f"fovy: {fovy}")
-
     projection_matrix = glm.perspective(
         fovy, # fovy in radians
         image_width/image_height, # aspect 
@@ -467,6 +466,7 @@ def _compute_camera_parameters(
     )
 
     # 3. compute camera translation
+    view_translate_transform = glm.mat4(1.0)
     origin_3D = _compute_camera_position_from_origin(
         view_rotation_transform = view_rotation_transform, 
         projection_matrix =       projection_matrix, 
@@ -496,7 +496,7 @@ def solve1VP(
         image_width, 
         image_height,
         fovy: float, # vertical field of view in radians
-        scale: float = 1.0,
+        scale: float = 5.0,
         # settings
         sensor_size=(36, 24),
         first_vanishing_lines_axis=Axis.PositiveX,
@@ -512,71 +512,38 @@ def solve1VP(
         if are_lines_near_parallel(line1, line2):
             raise Exception("Near parallel lines detected between vanishing line sets")
 
-    # Compute the input vanishing point in image plane coordinates
-    for i, line in enumerate(first_vanishing_lines):
-        P = _relative_to_image_plane_coords(
-            P =            line[0],
-            image_width =  image_width,
-            image_height = image_height
-        )
-        Q = _relative_to_image_plane_coords(
-            P =            line[1],
-            image_width =  image_width,
-            image_height = image_height
-        )
-        first_vanishing_lines[i] = P, Q
-
     all_vanishing_points = _compute_all_vanishing_points_from_control_points(
         vanishing_lines_for_multiple_axes=[first_vanishing_lines]
     )
-    # TODO: THESE COORDINATE CONVERSION ARE SUSPICOUS. CHECK THEM!
-    # for i, vp in enumerate(all_vanishing_points):
-    #     all_vanishing_points[i] = _relative_to_image_plane_coords(
-    #         P=            vp, 
-    #         image_width=  image_width, 
-    #         image_height= image_height
-    #     )
+    
+    imgui.text(f"Computed vanishing points: {all_vanishing_points}")
+    draw.points(all_vanishing_points, labels=["VP1"])
 
     # Get the principal point in ImagePlane coordinates
     match principal_point_mode:
         case 'Default':
-            principal_point = _relative_to_image_plane_coords(
-                P =            glm.vec2(0.5, 0.5), 
-                image_width =  image_width, 
-                image_height = image_height
-            )
+            principal_point = glm.vec2(image_width / 2, image_height / 2)
         case 'Manual':
-            principal_point = _relative_to_image_plane_coords(
-                vp =           principal_point_ctrl, 
-                image_width =  image_width, 
-                image_height = image_height
-            )
+            ...
         case _:
             raise Exception(f"Unsupported principal point mode: {principal_point_mode}")
     
     # Compute the horizon direction
     horizonDirection = glm.vec2(1, 0) # flat by default
     # Convert horizon points from relative coordinates to ImagePlane coordinates
-    horizonStart = _relative_to_image_plane_coords(
-        P =            horizon_line_ctrl[0], 
-        image_width =  image_width, 
-        image_height = image_height
-    )
-    horizonEnd = _relative_to_image_plane_coords(
-        P =            horizon_line_ctrl[1], 
-        image_width =  image_width, 
-        image_height = image_height
-    )
-
+    
+    horizonStart = horizon_line_ctrl[0]
+    horizonEnd = horizon_line_ctrl[1]
     horizonDirection = glm.normalize(horizonEnd - horizonStart)
 
-    # Compute relative focal length (normalized by larger sensor dimension)
+    # Compute second vanishing point
     second_vanishing_point = _compute_second_vanishing_point(
         Fu =         all_vanishing_points[0],
         f =          1 / math.tan(fovy / 2),
         P =          principal_point,
         horizonDir = horizonDirection
     )
+    draw.points([second_vanishing_point], labels=["VP2"])
 
     return _compute_camera_parameters(
         origin =                      originPoint,
@@ -611,43 +578,11 @@ def solve2VP(
 
 )->Dict:
 
-    # Map input coord to image plane coordinates
-    for i, line in enumerate(first_vanishing_lines):
-        P = _relative_to_image_plane_coords(
-            P =            line[0],
-            image_width =  image_width,
-            image_height = image_height
-        )
-        Q = _relative_to_image_plane_coords(
-            P =            line[1],
-            image_width =  image_width,
-            image_height = image_height
-        )
-        first_vanishing_lines[i] = P, Q
-    
-    for i, line in enumerate(second_vanishing_lines):
-        P = _relative_to_image_plane_coords(
-            P =            line[0],
-            image_width =  image_width,
-            image_height = image_height
-        )
-        Q = _relative_to_image_plane_coords(
-            P =            line[1],
-            image_width =  image_width,
-            image_height = image_height
-        )
-        second_vanishing_lines[i] = P, Q
-
     # Compute the two input vanishing points from the provided control points
     all_vanishing_points = _compute_all_vanishing_points_from_control_points(
       vanishing_lines_for_multiple_axes = [first_vanishing_lines, second_vanishing_lines],
     )
-    # for i, vp in enumerate(all_vanishing_points):
-    #     all_vanishing_points[i] = _relative_to_image_plane_coords(
-    #         P=            vp, 
-    #         image_width=  image_width, 
-    #         image_height= image_height
-    #     )
+    draw.points(all_vanishing_points, labels=["VP1", "VP2"])
 
     if not all_vanishing_points or len(all_vanishing_points) < 2:
         raise Exception("Failed to compute vanishing points")
@@ -655,18 +590,9 @@ def solve2VP(
     # TODO: principal point seem to be overcomplicated in fSpy. Why? Fix it!
     match principal_point_mode:
         case 'Default':
-            principal_point = _relative_to_image_plane_coords(
-                P =           glm.vec2(0.5, 0.5), 
-                image_width =  image_width, 
-                image_height = image_height
-            )
-
+            principal_point = glm.vec2(image_width / 2, image_height / 2)
         case 'Manual':
-            principal_point = _relative_to_image_plane_coords(
-                P =            principal_point_ctrl, 
-                image_width =  image_width, 
-                image_height = image_height
-            )
+            ...
 
         case 'FromThirdVanishingPoint':
             thirdVanishingPointArray = _compute_all_vanishing_points_from_control_points(
@@ -697,13 +623,16 @@ def solve2VP(
             if are_lines_near_parallel(line1, line2):
                 raise Exception("Near parallel lines detected between vanishing line sets")
 
-    relative_focal_length = _compute_focal_length_from_vanishing_points(
-        Fu = all_vanishing_points[0], 
-        Fv = all_vanishing_points[1], 
-        P =  principal_point
-    )
-
-    fovy = math.atan(1 / relative_focal_length) * 2
+    # 3. compute field of view
+    # relative_focal_length = _compute_focal_length_from_vanishing_points(
+    #     Fu = all_vanishing_points[0], 
+    #     Fv = all_vanishing_points[1], 
+    #     P =  principal_point
+    # )
+    # imgui.text(f"computed relative focal length: {relative_focal_length}")
+    # fovy = math.atan(1 / relative_focal_length) * 2
+    # imgui.text(f"   fovy: {fovy}")
+    fovy = math.radians(60)
     
     return _compute_camera_parameters(
         # control points
