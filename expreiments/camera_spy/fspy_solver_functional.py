@@ -7,7 +7,6 @@ from imgui_bundle import imgui
 import itertools
 
 
-
 ############################# 
 # Geometry helper functions #
 #############################
@@ -77,15 +76,40 @@ LineSegmentType = Tuple[glm.vec2, glm.vec2]
 ################
 # Solver UTILS #
 ################
+from typing import TypeVar, Generic
+T = TypeVar('T', int, float, glm.vec2)
+def remap(value:T|List[T]|Tuple[T], from_min:T, from_max:T, to_min:T, to_max:T) -> T:
+    match value:
+        # value
+        case float() | int():
+            return (value - from_min) * (to_max - to_min) / (from_max - from_min) + to_min
+        
+        # Point2D
+        case glm.vec2():
+            return glm.vec2(
+                remap(value.x, from_min.x, from_max.x, to_min.x, to_max.x),
+                remap(value.y, from_min.y, from_max.y, to_min.y, to_max.y)
+            )
+        
+        # LineSegment
+        case tuple() if len(value) == 2 and all(isinstance(_, (glm.vec2)) for _ in value):
+            # linesegment
+            return (
+                remap(value[0], from_min, from_max, to_min, to_max),
+                remap(value[1], from_min, from_max, to_min, to_max)
+            )
 
-def remap(value, from_min, from_max, to_min, to_max):
-    return (value - from_min) * (to_max - to_min) / (from_max - from_min) + to_min
+        # list or tuple of the above
+        case tuple() | list() if all(isinstance(v, (int, float, glm.vec2)) for v in value):
+            result = []
+            for v in zip(value, from_min, from_max, to_min, to_max):
+                result.append(remap(v, from_min, from_max, to_min, to_max))
 
-def remap2D(value: glm.vec2, from_min: glm.vec2, from_max: glm.vec2, to_min: glm.vec2, to_max: glm.vec2) -> glm.vec2:
-    return glm.vec2(
-        remap(value.x, from_min.x, from_max.x, to_min.x, to_max.x),
-        remap(value.y, from_min.y, from_max.y, to_min.y, to_max.y)
-    )
+            return tuple(result) if isinstance(value, tuple) else result 
+            
+        case _:
+            raise ValueError(f"Unsupported type for remap: {type(value)}")
+    
 
 def _relative_to_image_plane_coords(
         P: glm.vec2, 
@@ -96,14 +120,17 @@ def _relative_to_image_plane_coords(
     
     if aspect_ratio <= 1:
         # tall image
-        x = remap(P.x, 0, 1, -aspect_ratio, aspect_ratio)
-        y = remap(P.y, 0, 1, 1, -1)  # Y-flipped
+        return remap(P, 
+                     glm.vec2(0,0),                         glm.vec2(1,1), 
+                     glm.vec2(-aspect_ratio, aspect_ratio), glm.vec2(1,-1)
+        )
+        
     else:
-        # wide image  
-        x = remap(P.x, 0, 1, -1, 1)
-        y = remap(P.y, 0, 1, 1/aspect_ratio, -1/aspect_ratio)  # Y-flipped
-    
-    return glm.vec2(x, y)
+        # wide image
+        return remap(P, 
+                     glm.vec2(0,0),                         glm.vec2(1,1), 
+                     glm.vec2(-aspect_ratio, aspect_ratio), glm.vec2(1,-1)
+        )
     
 def _axisVector(axis: Axis)->glm.vec3:
     match axis:
