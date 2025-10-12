@@ -285,11 +285,11 @@ def gui():
                         image_width =                 int(widget_size.x),
                         image_height =                int(widget_size.y),
                         # control points
-                        originPoint =                 imgui_to_relative(screen_origin, widget_size.x, widget_size.y),
-                        first_vanishing_lines =       relative_vanishing_lines,
-                        second_vanishing_lines =      relative_second_vanishing_lines,
-                        third_vanishing_lines =       relative_third_vanishing_lines, # Used to determine principal point if present
-                        principal_point_ctrl =          glm.vec2(0.5, 0.5),  # Center in relative coords [0,1]
+                        origin_relative =                 imgui_to_relative(screen_origin, widget_size.x, widget_size.y),
+                        first_vanishing_lines_relative =       relative_vanishing_lines,
+                        second_vanishing_lines_relative =      relative_second_vanishing_lines,
+                        third_vanishing_lines_relative =       relative_third_vanishing_lines, # Used to determine principal point if present
+                        principal_point_relative =          glm.vec2(0.5, 0.5),  # Center in relative coords [0,1]
                         # settings
                         sensor_size =                 (36, 24),
                         first_vanishing_lines_axis =  fspy.Axis.PositiveZ,

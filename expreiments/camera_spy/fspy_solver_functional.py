@@ -60,13 +60,13 @@ class Unit(StrEnum):
     Feet = 'Feet',
     Miles = 'Miles'
 
-class Axis(StrEnum):
-    PositiveX = 'xPositive'
-    NegativeX = 'xNegative'
-    PositiveY = 'yPositive'
-    NegativeY = 'yNegative'
-    PositiveZ = 'zPositive'
-    NegativeZ = 'zNegative'
+class Axis(IntEnum):
+    PositiveX = 0
+    NegativeX = 1
+    PositiveY = 2
+    NegativeY = 3
+    PositiveZ = 4
+    NegativeZ = 5
 
 ################
 # Solver Types #
@@ -305,7 +305,7 @@ def _create_orientation_matrix_from_vanishing_points(
 def _compute_camera_position_from_origin(
             view_rotation_transform:glm.mat4, 
             projection_matrix:glm.mat4, 
-            origin:glm.vec2, 
+            origin_pixel:glm.vec2, 
             image_width:int,
             image_height:int, 
             scale: float
@@ -328,9 +328,11 @@ def _compute_camera_position_from_origin(
             return ndc_z
         
         # Convert world distance to NDC z-coordinate
-        imgui.text(f"  !!!!!!!Origin {origin}")
-        x = remap(origin.x, 0, 1, 0, image_width)
-        y = remap(origin.y, 0, 1, image_height, 0) # Y-flipped
+        imgui.text(f"  !!!!!!!Origin {origin_pixel}")
+        # x = remap(origin_pixel.x, 0, 1, 0, image_width)
+        # y = remap(origin_pixel.y, 0, 1, image_height, 0) # Y-flipped
+        x = origin_pixel.x
+        y = origin_pixel.y
         ndc_z = _world_depth_to_ndc_z(world_distance=scale, near=0.1, far=100)
         origin_3D = glm.unProject(
             glm.vec3(x, y, ndc_z), 
@@ -416,16 +418,16 @@ def _compute_second_vanishing_point(
 
 def _compute_camera_parameters(
     # control points
-    origin: glm.vec2, # relative coords [0,1]
+    origin_relative: glm.vec2, # relative coords [0,1]
 
     # settings
-    first_vanishing_point_axis: Axis,
-    second_vanishing_point_axis: Axis,
+    first_axis: Axis,
+    second_axis: Axis,
 
     # parameters
-    principal_point: glm.vec2, # relative coords [0,1]
-    first_vanishing_point: glm.vec2,
-    second_vanishing_point: glm.vec2,
+    principal_point_image_plane: glm.vec2, # relative coords [0,1]
+    first_vanishing_point_relative: glm.vec2,
+    second_vanishing_point_relative: glm.vec2,
     fovy: float,
     image_width: float,
     image_height: float,
@@ -433,10 +435,10 @@ def _compute_camera_parameters(
   )->Dict | None:
 
     camera_orientation_matrix:glm.mat3 = _create_orientation_matrix_from_vanishing_points(
-        Fu = first_vanishing_point, 
-        Fv = second_vanishing_point, 
+        Fu = first_vanishing_point_relative, 
+        Fv = second_vanishing_point_relative, 
         f =  1 / math.tan(fovy / 2), # fovy is vertical fov in radians, 
-        P =  principal_point
+        P =  principal_point_image_plane
     )
 
     # validate if matrix is a purely rotational matrix
@@ -445,7 +447,7 @@ def _compute_camera_parameters(
         raise Exception(f'Invalid vanishing point configuration. Rotation determinant {determinant}')
 
     # apply axis assignment
-    axis_assignment_matrix:glm.mat3 = _createAxisAssignmentMatrix(first_vanishing_point_axis, second_vanishing_point_axis)
+    axis_assignment_matrix:glm.mat3 = _createAxisAssignmentMatrix(first_axis, second_axis)
     camera_orientation_matrix:glm.mat3 = axis_assignment_matrix * camera_orientation_matrix
     view_orientation_matrix:glm.mat3 = glm.inverse(camera_orientation_matrix)
     if math.fabs(1 - glm.determinant(axis_assignment_matrix) ) > 1e-7:
@@ -470,7 +472,7 @@ def _compute_camera_parameters(
     origin_3D = _compute_camera_position_from_origin(
         view_rotation_transform = view_rotation_transform, 
         projection_matrix =       projection_matrix, 
-        origin =                  origin, 
+        origin_pixel =                  origin_relative, 
         image_width =             image_width,
         image_height =            image_height, 
         scale =                   scale
@@ -579,12 +581,12 @@ def solve1VP(
     )
 
     return _compute_camera_parameters(
-        origin =                      originPoint,
-        first_vanishing_point_axis =  first_vanishing_lines_axis,
-        second_vanishing_point_axis = second_vanishing_lines_axis,
-        principal_point =             principal_point,
-        first_vanishing_point =       all_vanishing_points[0],
-        second_vanishing_point =      second_vanishing_point,
+        origin_relative =                      originPoint,
+        first_axis =  first_vanishing_lines_axis,
+        second_axis = second_vanishing_lines_axis,
+        principal_point_image_plane =             principal_point,
+        first_vanishing_point_relative =       all_vanishing_points[0],
+        second_vanishing_point_relative =      second_vanishing_point,
         fovy =                        fovy,
         image_width =                 image_width,
         image_height =                image_height,
@@ -593,11 +595,11 @@ def solve1VP(
 
 def solve2VP(
     # control points
-    principal_point_ctrl: glm.vec2,
-    originPoint: glm.vec2,
-    first_vanishing_lines:  Tuple[LineSegmentType, ...],
-    second_vanishing_lines: Tuple[LineSegmentType, ...],
-    third_vanishing_lines:  Tuple[LineSegmentType, ...]|None,
+    principal_point_relative: glm.vec2,
+    origin_relative: glm.vec2,
+    first_vanishing_lines_relative:  Tuple[LineSegmentType, ...],
+    second_vanishing_lines_relative: Tuple[LineSegmentType, ...],
+    third_vanishing_lines_relative:  Tuple[LineSegmentType, ...]|None,
     # parameters
     image_width, 
     image_height,
@@ -612,7 +614,7 @@ def solve2VP(
 )->Dict:
 
     # Map input coord to image plane coordinates
-    for i, line in enumerate(first_vanishing_lines):
+    for i, line in enumerate(first_vanishing_lines_relative):
         P = _relative_to_image_plane_coords(
             P =            line[0],
             image_width =  image_width,
@@ -623,9 +625,9 @@ def solve2VP(
             image_width =  image_width,
             image_height = image_height
         )
-        first_vanishing_lines[i] = P, Q
+        first_vanishing_lines_relative[i] = P, Q
     
-    for i, line in enumerate(second_vanishing_lines):
+    for i, line in enumerate(second_vanishing_lines_relative):
         P = _relative_to_image_plane_coords(
             P =            line[0],
             image_width =  image_width,
@@ -636,23 +638,16 @@ def solve2VP(
             image_width =  image_width,
             image_height = image_height
         )
-        second_vanishing_lines[i] = P, Q
+        second_vanishing_lines_relative[i] = P, Q
 
     # Compute the two input vanishing points from the provided control points
     all_vanishing_points = _compute_all_vanishing_points_from_control_points(
-      vanishing_lines_for_multiple_axes = [first_vanishing_lines, second_vanishing_lines],
+      vanishing_lines_for_multiple_axes = [first_vanishing_lines_relative, second_vanishing_lines_relative],
     )
-    # for i, vp in enumerate(all_vanishing_points):
-    #     all_vanishing_points[i] = _relative_to_image_plane_coords(
-    #         P=            vp, 
-    #         image_width=  image_width, 
-    #         image_height= image_height
-    #     )
 
     if not all_vanishing_points or len(all_vanishing_points) < 2:
         raise Exception("Failed to compute vanishing points")
     
-    # TODO: principal point seem to be overcomplicated in fSpy. Why? Fix it!
     match principal_point_mode:
         case 'Default':
             principal_point = _relative_to_image_plane_coords(
@@ -663,14 +658,14 @@ def solve2VP(
 
         case 'Manual':
             principal_point = _relative_to_image_plane_coords(
-                P =            principal_point_ctrl, 
+                P =            principal_point_relative, 
                 image_width =  image_width, 
                 image_height = image_height
             )
 
         case 'FromThirdVanishingPoint':
             thirdVanishingPointArray = _compute_all_vanishing_points_from_control_points(
-               vanishing_lines_for_multiple_axes = [third_vanishing_lines],
+               vanishing_lines_for_multiple_axes = [third_vanishing_lines_relative],
             )
             for i, vp in enumerate(thirdVanishingPointArray):
                 thirdVanishingPointArray[i] = _relative_to_image_plane_coords(
@@ -692,7 +687,7 @@ def solve2VP(
             raise Exception(f"Unsupported principal point mode: {principal_point_mode}")
         
     # Check vanishing line sets for near-parallel lines
-    for vanishing_lines in filter(lambda _:bool(_), [first_vanishing_lines, second_vanishing_lines, third_vanishing_lines]):
+    for vanishing_lines in filter(lambda _:bool(_), [first_vanishing_lines_relative, second_vanishing_lines_relative, third_vanishing_lines_relative]):
         for line1, line2 in itertools.combinations(vanishing_lines, 2):
             if are_lines_near_parallel(line1, line2):
                 raise Exception("Near parallel lines detected between vanishing line sets")
@@ -707,12 +702,12 @@ def solve2VP(
     
     return _compute_camera_parameters(
         # control points
-        origin =                      originPoint,
-        first_vanishing_point_axis =  first_vanishing_lines_axis,
-        second_vanishing_point_axis = second_vanishing_lines_axis,
-        principal_point =             principal_point,
-        first_vanishing_point =       all_vanishing_points[0],
-        second_vanishing_point =      all_vanishing_points[1],
+        origin_relative =                      origin_relative,
+        first_axis =  first_vanishing_lines_axis,
+        second_axis = second_vanishing_lines_axis,
+        principal_point_image_plane =             principal_point,
+        first_vanishing_point_relative =       all_vanishing_points[0],
+        second_vanishing_point_relative =      all_vanishing_points[1],
         # parameters
         fovy =                        fovy,
         image_width =                 image_width,

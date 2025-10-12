@@ -4,14 +4,13 @@ from typing import Tuple
 def window_to_screen(window_pos: imgui.ImVec2) -> imgui.ImVec2:
     """Convert window-relative coordinates to screen coordinates."""
     screen_offset = imgui.get_cursor_screen_pos() - imgui.get_cursor_pos()
-    return window_pos + screen_offset
+    return imgui.ImVec2(window_pos.x, window_pos.y) + screen_offset
 
-def drag_point(label:str, point:imgui.ImVec2)->Tuple[bool, imgui.ImVec2]:
-    new_point = imgui.ImVec2(point.x, point.y)
+def drag_point(label:str, point:imgui.ImVec2)->Tuple[bool, imgui.ImVec2]:   
     changed = False
     store_cursor_pos = imgui.get_cursor_pos()
     btn_size = imgui.ImVec2(28,28)
-    imgui.set_cursor_pos(point-btn_size/2)
+    imgui.set_cursor_pos(imgui.ImVec2(point.x-btn_size.x/2, point.y-btn_size.y/2))
     imgui.invisible_button(label, btn_size)
 
     text = f"{label}".split("##")[0]
@@ -28,6 +27,7 @@ def drag_point(label:str, point:imgui.ImVec2)->Tuple[bool, imgui.ImVec2]:
     draw_list.add_text(window_to_screen(point) + text_offset, imgui.color_convert_float4_to_u32(color), text)
 
 
+    new_point = type(point)(point.x, point.y)
     if imgui.is_item_active():
         delta = imgui.get_mouse_drag_delta()
         imgui.reset_mouse_drag_delta()
