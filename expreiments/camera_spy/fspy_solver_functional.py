@@ -10,6 +10,35 @@ import itertools
 ############################# 
 # Geometry helper functions #
 #############################
+def _gram_schmidt_orthogonalization(matrix: glm.mat3) -> glm.mat3:
+    """
+    Apply Gram-Schmidt orthogonalization to a 3x3 matrix to make it orthogonal.
+    This ensures the matrix represents a valid rotation matrix.
+    """
+    # Extract the three column vectors
+    v1 = glm.vec3(matrix[0])  # First column
+    v2 = glm.vec3(matrix[1])  # Second column
+    v3 = glm.vec3(matrix[2])  # Third column
+    
+    # Step 1: Normalize the first vector
+    u1 = glm.normalize(v1)
+    
+    # Step 2: Make v2 orthogonal to u1
+    u2 = v2 - glm.dot(v2, u1) * u1
+    u2 = glm.normalize(u2)
+    
+    # Step 3: Make v3 orthogonal to both u1 and u2
+    u3 = v3 - glm.dot(v3, u1) * u1 - glm.dot(v3, u2) * u2
+    u3 = glm.normalize(u3)
+    
+    # Construct the orthogonal matrix
+    result = glm.mat3()
+    result[0] = u1  # First column
+    result[1] = u2  # Second column
+    result[2] = u3  # Third column
+    
+    return result
+
 def _thirdTriangleVertex(firstVertex: glm.vec2, secondVertex: glm.vec2, orthocenter: glm.vec2)->glm.vec2:
     a = firstVertex
     b = secondVertex
@@ -72,6 +101,8 @@ class Axis(IntEnum):
 # Solver Types #
 ################
 LineSegmentType = Tuple[glm.vec2, glm.vec2]
+
+
 
 ################
 # Solver UTILS #
@@ -258,8 +289,8 @@ def _createAxisAssignmentMatrix(firstVanishingPointAxis: Axis, secondVanishingPo
     axisAssignmentMatrix[2][2] = row3.z
     
     # Validate that we have a proper orthogonal matrix
-    if math.fabs(1 - glm.determinant(axisAssignmentMatrix)) > 1e-7:
-        raise Exception("Invalid axis assignment: axes must be orthogonal")
+    assert math.fabs(1 - glm.determinant(axisAssignmentMatrix)) < 1e-7, "Invalid axis assignment: axes must be orthogonal"
+
     
     return axisAssignmentMatrix
 
@@ -302,6 +333,22 @@ def _create_orientation_matrix_from_vanishing_points(
 
     return M
 
+def _world_depth_to_ndc_z(world_distance:float, near:float, far:float) -> float:
+    """Convert world depth to NDC z-coordinate using perspective-correct mapping
+    world_distance: The distance from the camera in world units
+    near: The near clipping plane distance
+    far: The far clipping plane distance
+    returns: NDC z-coordinate in [0, 1], where 0 is near and 1 is far
+    """
+    # Clamp the distance between near and far
+    clamped_distance = max(near, min(far, world_distance))
+    
+    # Perspective-correct depth calculation
+    # This matches how the depth buffer actually works
+    ndc_z = (far + near) / (far - near) + (2 * far * near) / ((far - near) * clamped_distance)
+    ndc_z = (ndc_z + 1) / 2  # Convert from [-1, 1] to [0, 1]
+    return ndc_z
+
 def _compute_camera_position_from_origin(
             view_rotation_transform:glm.mat4, 
             projection_matrix:glm.mat4, 
@@ -310,32 +357,14 @@ def _compute_camera_position_from_origin(
             image_height:int, 
             scale: float
         )->glm.vec3:
-
-        def _world_depth_to_ndc_z(world_distance:float, near:float, far:float) -> float:
-            """Convert world depth to NDC z-coordinate using perspective-correct mapping
-            world_distance: The distance from the camera in world units
-            near: The near clipping plane distance
-            far: The far clipping plane distance
-            returns: NDC z-coordinate in [0, 1], where 0 is near and 1 is far
-            """
-            # Clamp the distance between near and far
-            clamped_distance = max(near, min(far, world_distance))
-            
-            # Perspective-correct depth calculation
-            # This matches how the depth buffer actually works
-            ndc_z = (far + near) / (far - near) + (2 * far * near) / ((far - near) * clamped_distance)
-            ndc_z = (ndc_z + 1) / 2  # Convert from [-1, 1] to [0, 1]
-            return ndc_z
         
         # Convert world distance to NDC z-coordinate
-        imgui.text(f"  !!!!!!!Origin {origin_pixel}")
-        # x = remap(origin_pixel.x, 0, 1, 0, image_width)
-        # y = remap(origin_pixel.y, 0, 1, image_height, 0) # Y-flipped
-        x = origin_pixel.x
-        y = origin_pixel.y
-        ndc_z = _world_depth_to_ndc_z(world_distance=scale, near=0.1, far=100)
         origin_3D = glm.unProject(
-            glm.vec3(x, y, ndc_z), 
+            glm.vec3(
+                origin_pixel.x, 
+                origin_pixel.y, 
+                _world_depth_to_ndc_z(world_distance=scale, near=0.1, far=100)
+            ),
             view_rotation_transform, 
             projection_matrix, 
             glm.vec4(0,0,image_width,image_height)
