@@ -189,26 +189,24 @@ def _vectorAxis(vector: glm.vec3)->Axis:
     raise Exception('Invalid axis vector')
 
 import numpy as np
-def my_compute_vanishing_point(vanishing_lines: List[Tuple[glm.vec2, glm.vec2]]) -> glm.vec2:
+def least_squares_intersection_of_lines(line_segments: List[Tuple[glm.vec2, glm.vec2]]) -> glm.vec2:
     """
-    Compute the vanishing point from a set of 2D lines assumed to be parallel in 3D.
+    Compute the intersection point from a set of 2D lines assumed to be parallel in 3D.
+    This gives the best-fit intersection point in a least-squares sense when the lines don’t intersect exactly
 
     Args:
         lines (List[LineSegment]): List of line segments ((x1,y1),(x2,y2)).
 
     Returns:
-        VanishingPoint: Homogeneous coordinates of the vanishing point [x, y, 1].
+        IntersectionPoint: [x, y].ishingPoint: Homogeneous coordinates of the vanishing point [x, y, 1].
     """
-    if len(vanishing_lines) < 2:
+    if len(line_segments) < 2:
         raise ValueError("At least two lines are required to compute a vanishing point")
     
     # Build the constraint matrix
     constraint_matrix = [] # Each row is [a, b, c] for the line equation ax + by + c = 0
-    for line_segment in vanishing_lines:
+    for line_segment in line_segments:
         P, Q = line_segment
-        # a = y1 - y2
-        # b = x2 - x1
-        # c = x1*y2 - x2*y1
         a = P.y - Q.y
         b = Q.x - P.x
         c = P.x * Q.y - Q.x * P.y
@@ -379,7 +377,7 @@ def _compute_all_vanishing_points_from_control_points(
 )->List[glm.vec2] | None:
     results: List[glm.vec2] = []
     for vanishing_lines_for_a_single_axis in vanishing_lines_for_multiple_axes:
-        vanishing_point = my_compute_vanishing_point(vanishing_lines_for_a_single_axis)
+        vanishing_point = least_squares_intersection_of_lines(vanishing_lines_for_a_single_axis)
         results.append(vanishing_point)
 
     return results
@@ -417,7 +415,7 @@ def _compute_second_vanishing_point(
         Fu: glm.vec2,        # first vanishing point
         f: float,            # relative vertical focal length
         P: glm.vec2,         # principal point
-        horizonDir: glm.vec2 # horizon direction
+        dir: glm.vec2 # horizon direction
     )->glm.vec2|None:
     """
     Computes the coordinates of the second vanishing point
@@ -432,16 +430,15 @@ def _compute_second_vanishing_point(
     """
     
     # find the second vanishing point
-    # // TODO_ take principal point into account here
     if glm.distance(Fu, P) < 1e-7:
         return None
 
-    Fup =Fu-P
+    Fu_P =Fu-P
 
-    k = -(Fup.x * Fup.x + Fup.y * Fup.y + f * f) / (Fup.x * horizonDir.x + Fup.y * horizonDir.y)
+    k = -(Fu_P.x * Fu_P.x + Fu_P.y * Fu_P.y + f * f) / (Fu_P.x * dir.x + Fu_P.y * dir.y)
     Fv = glm.vec2(
-        x=Fup.x + k * horizonDir.x + P.x,
-        y=Fup.y + k * horizonDir.y + P.y
+        x=Fu_P.x + k * dir.x + P.x,
+        y=Fu_P.y + k * dir.y + P.y
     )
     return Fv
 
@@ -606,7 +603,7 @@ def solve1VP(
         Fu =         all_vanishing_points[0],
         f =          1 / math.tan(fovy / 2),
         P =          principal_point,
-        horizonDir = horizonDirection
+        dir = horizonDirection
     )
 
     return _compute_camera_parameters(

@@ -1,11 +1,17 @@
 import logging
 import string
+
 logger = logging.getLogger(__name__)
 
 import math
 import numpy as np
 from pylive.render_engine.camera import Camera
 from pprint import pformat
+
+from imgui_bundle import imgui, immapp
+from gizmos import drag_line, drag_horizon
+from utils.geo import closest_point_line_segment
+from gizmos import window_to_screen, drag_point
 
 # ############## #
 # Graphics Layer #
@@ -42,14 +48,57 @@ class SceneLayer(RenderLayer):
         self.axes.render(view=camera.viewMatrix(), projection=camera.projectionMatrix())
         super().render()
 
+def render_scene_to_image_ref(moderngl_ctx, camera:Camera, scene_layer:RenderLayer, fbo: moderngl.Framebuffer, widget_size: glm.vec2) -> imgui.ImTextureRef:
+    ############################
+    # Render 3D Scene in ImGui #
+    ############################
+        
+    # Update GL viewport
+    dpi = imgui.get_io().display_framebuffer_scale
+    gl_size = widget_size * dpi
+    moderngl_ctx.viewport = (0, 0, gl_size.x, gl_size.y)
+
+    ## Create or resize framebuffer if needed
+    dpi = imgui.get_io().display_framebuffer_scale
+    fbo_width = int(widget_size.x * dpi.x)
+    fbo_height = int(widget_size.y * dpi.y)
+    
+    if fbo is None or fbo.width != fbo_width or fbo.height != fbo_height:
+        if fbo is not None:
+            fbo.release()
+        
+        # Create color texture
+        color_texture = moderngl_ctx.texture((fbo_width, fbo_height), 4, dtype='f1')
+        color_texture.filter = (moderngl.LINEAR, moderngl.LINEAR)
+        
+        # Create depth renderbuffer
+        depth_buffer = moderngl_ctx.depth_renderbuffer((fbo_width, fbo_height))
+        
+        # Create framebuffer
+        fbo = moderngl_ctx.framebuffer(
+            color_attachments=[color_texture],
+            depth_attachment=depth_buffer
+        )
+        
+        logger.info(f"Created framebuffer: {fbo_width}x{fbo_height}")
+    imgui.text_wrapped(f"fbo size: {fbo_width}x{fbo_height}")
+
+    # Render to framebuffer
+    fbo.use()
+    fbo.clear(0.1, 0.1, 0.1, 0.0)  # Clear with dark gray background
+    moderngl_ctx.enable(moderngl.DEPTH_TEST)
+    scene_layer.render(camera)
+    moderngl_ctx.screen.use() # Restore default framebuffer
+    
+    # Display the framebuffer texture in ImGui
+    texture = fbo.color_attachments[0] # Get texture from framebuffer
+    texture_ref = imgui.ImTextureRef(texture.glo)
+    return texture_ref
+
 
 # ########### #
 # GUI helpers #
 # ########### #
-from imgui_bundle import imgui, immapp
-from gizmos import drag_line, drag_horizon
-from utils.geo import closest_point_line_segment
-from gizmos import window_to_screen, drag_point
 
 # COLOR CONSTANTS
 RED = imgui.color_convert_float4_to_u32((1,0,0, 1.0))
@@ -99,358 +148,258 @@ from my_solver import solve_no_axis
 
 import fspy_solver_functional as fspy
 
-#########################
-# Coordinate Conversion #
-#########################
-from typing import TypeVar, Generic
-T = TypeVar('T', int, float, glm.vec2)
-def remap(value:T|List[T]|Tuple[T], from_min:T, from_max:T, to_min:T, to_max:T) -> T:
-    match value:
-        # value
-        case float() | int():
-            return (value - from_min) * (to_max - to_min) / (from_max - from_min) + to_min
-        
-        # Point2D
-        case glm.vec2():
-            return glm.vec2(
-                remap(value.x, from_min.x, from_max.x, to_min.x, to_max.x),
-                remap(value.y, from_min.y, from_max.y, to_min.y, to_max.y)
-            )
-        
-        # LineSegment
-        case tuple() if len(value) == 2 and all(isinstance(_, (glm.vec2)) for _ in value):
-            # linesegment
-            return (
-                remap(value[0], from_min, from_max, to_min, to_max),
-                remap(value[1], from_min, from_max, to_min, to_max)
-            )
-
-        # list or tuple of the above
-        case tuple() | list() if all(isinstance(v, (int, float, glm.vec2)) for v in value):
-            result = []
-            for v in zip(value, from_min, from_max, to_min, to_max):
-                result.append(remap(v, from_min, from_max, to_min, to_max))
-
-            return tuple(result) if isinstance(value, tuple) else result 
-            
-        case _:
-            raise ValueError(f"Unsupported type for remap: {type(value)}")
-    
-def pixel_point_to_relative_coords(value: glm.vec2|fspy.LineSegmentType, image_width, image_height) -> glm.vec2:
-    return glm.vec2(
-        value.x / image_width,
-        value.y / image_height
-    )
-
-def relative_point_to_image_plane_coords(
-        P: glm.vec2, 
-        image_width: int, 
-        image_height: int
-    ) -> glm.vec2:
-    aspect_ratio = image_width / image_height
-    
-    if aspect_ratio <= 1:
-        # tall image
-        return remap(P, 
-                     glm.vec2(0,0),                         glm.vec2(1,1), 
-                     glm.vec2(-aspect_ratio, aspect_ratio), glm.vec2(1,-1)
-        )
-        
-    else:
-        # wide image
-        return remap(P, 
-                     glm.vec2(0,0),                         glm.vec2(1,1), 
-                     glm.vec2(-aspect_ratio, aspect_ratio), glm.vec2(1,-1)
-        )
-    
-def pixel_point_to_image_plane_coords(
-        P: glm.vec2, image_width: int, image_height: int) -> glm.vec2:
-    return relative_point_to_image_plane_coords(pixel_point_to_relative_coords(P, image_width, image_height), image_width, image_height)
-
-def pixel_line_to_relative_coords(line: fspy.LineSegmentType, image_width, image_height) -> fspy.LineSegmentType:
-    return (
-        pixel_point_to_relative_coords(glm.vec2(line[0].x, line[0].y), image_width, image_height),
-        pixel_point_to_relative_coords(glm.vec2(line[1].x, line[1].y), image_width, image_height)
-    )
-
-def relative_line_to_image_plane_coords(
-        line: fspy.LineSegmentType, image_width: int, image_height: int
-    ) -> fspy.LineSegmentType:
-    return (
-        relative_point_to_image_plane_coords(line[0], image_width, image_height),
-        relative_point_to_image_plane_coords(line[1], image_width, image_height)
-    )
-
-def pixel_line_to_image_plane_coords(
-        line: fspy.LineSegmentType, image_width: int, image_height: int
-    ) -> fspy.LineSegmentType:
-    return (
-        pixel_point_to_image_plane_coords(line[0], image_width, image_height),
-        pixel_point_to_image_plane_coords(line[1], image_width, image_height)
-    )
-
 # ########## #
 # INITIALIZE #
 # ########## #
 
 # ModernGL context and framebuffer
-scene_renderer = SceneLayer()
+scene_layer = SceneLayer()
 moderngl_ctx: moderngl.Context|None = None
 fbo: moderngl.Framebuffer|None = None
 
+# ########## #
+# Parameters #
+# ########## #
 
-# Parameters
-axis_names = ('Z', 'X', 'Y')
-
-
-
-from enum import IntEnum
-class PrincipalPointMode(IntEnum):
-    Default = 0
-    Manual = 1
-    FromThirdVanishingPoint = 2
-
-# control points
-second_vanishing_lines_pixel:Tuple[fspy.LineSegmentType] = [
-    [glm.vec2(280, 340), glm.vec2(520, 360)],
-    [glm.vec2(230, 480), glm.vec2(560, 460)]
-]
-
-third_vanishing_lines_pixel:Tuple[fspy.LineSegmentType] = [
-    [glm.vec2(480, 500), glm.vec2(580, 270)],
-    [glm.vec2(315, 505), glm.vec2(220, 270)]
-]
-
-first_vanishing_lines_pixel:Tuple[fspy.LineSegmentType] = [
-    [glm.vec2(280, 520), glm.vec2(310, 300)],
-    [glm.vec2(520, 500), glm.vec2(480, 330)]
-]
-
+# Control Points
 origin_pixel = glm.vec2(400, 400)
 principal_point_pixel = glm.vec2(400, 400)
 first_vanishing_point_pixel = glm.vec2(100, 250)
 second_vanishing_point_pixel = glm.vec2(800, 250)
 
-principal_point_mode: PrincipalPointMode = PrincipalPointMode.Default
-horizon_height: float = 300.0
-fovy: Radians = math.radians(60.0)
+axis_names = ('Z', 'X', 'Y')
 
-DEFAULT_CAMERA_DISTANCE_SCALE = 5.0
-scene_scale = DEFAULT_CAMERA_DISTANCE_SCALE
-# settings
+# Z axis by defaul
+first_vanishing_lines_pixel:Tuple[fspy.LineSegmentType] = [
+    [glm.vec2(280, 520), glm.vec2(310, 300)],
+    [glm.vec2(520, 500), glm.vec2(480, 330)]
+]
+
+# X axis by default
+second_vanishing_lines_pixel:Tuple[fspy.LineSegmentType] = [
+    [glm.vec2(280, 340), glm.vec2(520, 360)],
+    [glm.vec2(230, 480), glm.vec2(560, 460)]
+]
+
+# Y axis by default
+third_vanishing_lines_pixel:Tuple[fspy.LineSegmentType] = [
+    [glm.vec2(480, 500), glm.vec2(580, 270)],
+    [glm.vec2(315, 505), glm.vec2(220, 270)]
+]
+
+# parameers
+scene_scale = 5.0
+# fovy:Radians = Radians(60.0 * math.pi / 180.0) # vertical fov in radians
+focal_length_pixel = 500.0
+# Options
+from enum import IntEnum
+class PrincipalPointMode(IntEnum):
+    Default = 0
+    Manual = 1
+    FromThirdVanishingPoint = 2
+principal_point_mode: PrincipalPointMode = PrincipalPointMode.Default
 first_axis = fspy.Axis.PositiveZ
 second_axis = fspy.Axis.PositiveX
-camera = Camera()
 quad_mode:bool = False
+horizon_roll:float = 0.0
+
+# Camera
+camera = Camera()
+
+class SolverMode(IntEnum):
+    OneVP = 0
+    TwoVP = 1
+
+SOLVER_MODE = SolverMode.OneVP
+
 # ######### #
 # MAIN LOOP #
 # ######### #
-
 import itertools
 def gui():
-    global camera
+    # renderer
     global moderngl_ctx, fbo
-    # Camera Calibration parameters
-    global first_axis, second_axis
-    global principal_point_pixel, principal_point_mode
+
+    # solver mode
+    global SOLVER_MODE
+
+    # Control Points
+    global origin_pixel
+    global principal_point_pixel
     global first_vanishing_point_pixel
     global second_vanishing_point_pixel
-    global origin_pixel
-    global horizon_height
-    global fovy
+
     global first_vanishing_lines_pixel
     global second_vanishing_lines_pixel
+    global third_vanishing_lines_pixel
+
+    # parameters
+    global focal_length_pixel
     global scene_scale
+    global horizon_roll
+    
+    # options
+    global principal_point_mode
+    global first_axis, second_axis
     global quad_mode
+    
+    # Camera
+    global camera
 
     imgui.text("Camera Spy")
-    if imgui.begin_child("controls", imgui.ImVec2(0, 150)):
-        _, first_axis = imgui.combo("first axis", first_axis, ["PositiveX", "NegativeX", "PositiveY", "NegativeY", "PositiveZ", "NegativeZ"])
-        _, second_axis = imgui.combo("second axis", second_axis, ["PositiveX", "NegativeX", "PositiveY", "NegativeY", "PositiveZ", "NegativeZ"])
-        _, scene_scale = imgui.slider_float("scene_scale", scene_scale, 1.0, 100.0, "%.2f")
-        _, principal_point_mode = imgui.combo("principal point mode", principal_point_mode, ["Default", "Manual", "FromThirdVanishingPoint"])
-    imgui.end_child()
+    _, SOLVER_MODE = imgui.combo("Solver Mode", SOLVER_MODE, ["1VP", "2VP"])
+    
+    import my_solver_v3 as my_solver
+    from gizmos import draw
 
-    if imgui.begin_child("3d_viewport", imgui.ImVec2(0, 0)):
-        # Get ImGui child window dimensions and position
-        widget_size = imgui.get_content_region_avail()
 
-        # Compute Camera from parameters
-        for i, axis in enumerate(second_vanishing_lines_pixel):
-            changed, new_line = drag_line(f"X{i}", axis, RED)
-            second_vanishing_lines_pixel[i] = new_line
+    match SOLVER_MODE:
+        case SolverMode.OneVP:
+            widget_size = imgui.get_content_region_avail()
+            image_width, image_height = int(widget_size.x), int(widget_size.y)
+            # Parameters
+            _, first_axis = imgui.combo("first axis", first_axis, ["PositiveX", "NegativeX", "PositiveY", "NegativeY", "PositiveZ", "NegativeZ"])
+            _, scene_scale = imgui.slider_float("scene_scale", scene_scale, 1.0, 100.0, "%.2f")
+            _, focal_length_pixel = imgui.slider_float("focal_length_pixel", focal_length_pixel, 1.0, image_height, "%.2f")
 
-        for i, axis in enumerate(first_vanishing_lines_pixel):
-            changed, new_line = drag_line(f"Z{i}", axis, BLUE)
-            first_vanishing_lines_pixel[i] = new_line
+            _, horizon_roll = imgui.slider_float("horizon roll", horizon_roll, 1.0, image_height, "%.2f")
 
-        _, principal_point_pixel = drag_point("principal_point", principal_point_pixel)
-        principal_point_pixel = glm.vec2(widget_size.x / 2, widget_size.y / 2)
-        _, first_vanishing_point_pixel = drag_point("first_vanishing_point", first_vanishing_point_pixel)
-        _, second_vanishing_point_pixel = drag_point("second_vanishing_point", second_vanishing_point_pixel)
-        _, origin_pixel = drag_point("origin", origin_pixel)
-        
-        try:
-            ###############################
-            # 0. Validate input values #
-            ###############################
-            image_width =                 int(widget_size.x)
-            image_height =                int(widget_size.y)
             
-            # Check vanishing line sets for near-parallel lines
-            for vanishing_line_set in filter(lambda _:bool(_), [first_vanishing_lines_pixel, second_vanishing_lines_pixel, third_vanishing_lines_pixel]):
-                for line1, line2 in itertools.combinations(vanishing_line_set, 2):
-                    if fspy.are_lines_near_parallel(line1, line2):
-                        raise Exception("Near parallel lines detected between vanishing line sets")
+            if imgui.begin_child("3d_viewport", widget_size):
+                # Control Points
+                for i, axis in enumerate(first_vanishing_lines_pixel):
+                    changed, new_line = drag_line(f"Z{i}", axis, BLUE)
+                    first_vanishing_lines_pixel[i] = new_line
 
-            ###############################
-            # 1. COMPUTE vanishing points #
-            ###############################
-            first_vanishing_point_pixel =  fspy.my_compute_vanishing_point(first_vanishing_lines_pixel)
-            second_vanishing_point_pixel = fspy.my_compute_vanishing_point(second_vanishing_lines_pixel)
-            third_vanishing_point_pixel =  fspy.my_compute_vanishing_point(third_vanishing_lines_pixel)
+                changed, second_vanishing_lines_pixel[0] = drag_line(f"Horizon{i}", second_vanishing_lines_pixel[0], RED)
 
-            # second_vanishing_point_pixel = fspy._compute_second_vanishing_point(
-            #     Fu =         first_vanishing_point_pixel,
-            #     f =          focal_length_pixel,
-            #     P =          principal_point_pixel,
-            #     horizonDir = glm.vec2(1,0)
-            # )
-            
-            #############################
-            # 2. COMPUTE Focal Length #
-            ##############################
-            _, fovy = imgui.slider_float("field of view (radians)", fovy, 1.0, 179.0, "%.1f")
-            # focal_length_pixel = (image_height / 2) / math.tan(fovy / 2)
-            focal_length_pixel = fspy._compute_focal_length_from_vanishing_points(
-                Fu = first_vanishing_point_pixel, 
-                Fv = second_vanishing_point_pixel, 
-                P =  principal_point_pixel
-            )
-            fovy = math.atan(image_height / 2 / focal_length_pixel) * 2
-            
-            imgui.text(f"fovy: {fovy}")
+                _, principal_point_pixel = drag_point("principal_point", principal_point_pixel)
+                principal_point_pixel = glm.vec2(widget_size.x / 2, widget_size.y / 2)
+                # _, first_vanishing_point_pixel = drag_point("first_vanishing_point", first_vanishing_point_pixel)
+                _, origin_pixel = drag_point("origin", origin_pixel)
 
-            #################################
-            # 3. COMPUTE Camera Orientation #
-            #################################
-            camera_orientation_matrix:glm.mat3 = fspy._create_orientation_matrix_from_vanishing_points(
-                Fu = first_vanishing_point_pixel, 
-                Fv = second_vanishing_point_pixel, 
-                f = focal_length_pixel, # math.tan(fovy / 2), # fovy is vertical fov in radians, 
-                P =  principal_point_pixel
-            )
+                try:
+                    from my_solver_v3 import solve1vp
+                    view_orientation_matrix, position = solve1vp(
+                        image_width=int(widget_size.x),
+                        image_height=int(widget_size.y),
+                        principal_point_pixel=principal_point_pixel,
+                        origin_pixel=origin_pixel,
+                        first_vanishing_lines_pixel=first_vanishing_lines_pixel,
+                        second_vanishing_line_pixel=second_vanishing_lines_pixel[0],
+                        focal_length_pixel=focal_length_pixel,
+                        first_axis=first_axis,
+                        second_axis=second_axis,
+                        scene_scale=scene_scale
+                    )
 
-            # validate if matrix is a purely rotational matrix
-            determinant = glm.determinant(camera_orientation_matrix)
-            if math.fabs(determinant - 1) > 1e-6:
-                raise Exception(f'Invalid vanishing point configuration. Rotation determinant {determinant}')
+                    view_translate_transform = glm.translate(glm.mat4(1.0), position)
+                    view_rotation_transform = glm.mat4(view_orientation_matrix)
+                    view_transform= view_rotation_transform * view_translate_transform
+                    camera.transform = glm.inverse(view_transform)
+                    camera.setAspectRatio(widget_size.x / widget_size.y)
+                    fovy = math.atan(image_height / 2 / focal_length_pixel) * 2
+                    camera.setFoVY(math.degrees(fovy))
 
-            # apply axis assignment
-            axis_assignment_matrix:glm.mat3 = fspy._createAxisAssignmentMatrix(first_axis, second_axis)
-            camera_orientation_matrix:glm.mat3 = axis_assignment_matrix * camera_orientation_matrix
-            view_orientation_matrix:glm.mat3 = glm.inverse(camera_orientation_matrix)
+                    # Roll the camera based on the horizon line projected to 3D
+                    roll_matrix = my_solver.compute_roll_matrix(
+                        image_width, 
+                        image_height, 
+                        second_vanishing_lines_pixel[0],
+                        projection_matrix=camera.projectionMatrix(),
+                        view_matrix=camera.viewMatrix()
+                    )
+                    camera.transform = glm.inverse(roll_matrix) * camera.transform  
 
-            # convert to 4x4 matrix for transformations
-            view_rotation_transform:glm.mat4 = glm.mat4(view_orientation_matrix)
-            view_rotation_transform[3][3] = 1.0
 
-            ##############################
-            # 4. COMPUTE Camera Position #
-            ##############################
-            projection_matrix = glm.perspective(
-                fovy, # fovy in radians
-                image_width/image_height, # aspect 
-                0.1, # near
-                100 # far
-            )
+                except Exception as e:
+                    from textwrap import wrap
+                    imgui.push_style_color(imgui.Col_.text, (1.0, 0.2, 0.2, 1.0))
+                    imgui.text_wrapped(f"fspy error: {pformat(e)}")
+                    import traceback
+                    traceback.print_exc()
+                    imgui.pop_style_color()
 
-            origin_3D = fspy._compute_camera_position_from_origin(
-                view_rotation_transform = view_rotation_transform, 
-                projection_matrix =       projection_matrix, 
-                origin_pixel =            origin_pixel, # flip Y for image coords
-                image_width =             image_width,
-                image_height =            image_height, 
-                scale =                   scene_scale
-            )
+                # Render Scene
+                if moderngl_ctx is None:
+                    logger.info("Initializing ModernGL context...")
+                    moderngl_ctx = moderngl.create_context()
+                    scene_layer.setup(moderngl_ctx)
+                image_ref = render_scene_to_image_ref(moderngl_ctx, camera, scene_layer, fbo, widget_size)
+                imgui.set_cursor_pos(imgui.ImVec2(0,0))
+                imgui.image(image_ref,imgui.ImVec2(widget_size.x, widget_size.y))
 
-            ###################
-            # 5. Apply Camera #
-            ###################
-            view_translate_transform = glm.translate(glm.mat4(1.0), -origin_3D)
-            view_transform= view_rotation_transform * view_translate_transform
-            camera.transform = glm.inverse(view_transform)
-            camera.setAspectRatio(widget_size.x / widget_size.y)
-            camera.setFoVY(math.degrees(fovy))
-            
-        except Exception as e:
-            from textwrap import wrap
+            imgui.end_child()
+
+        case SolverMode.TwoVP:
+            # Parameters
+            _, first_axis = imgui.combo("first axis", first_axis, ["PositiveX", "NegativeX", "PositiveY", "NegativeY", "PositiveZ", "NegativeZ"])
+            _, second_axis = imgui.combo("second axis", second_axis, ["PositiveX", "NegativeX", "PositiveY", "NegativeY", "PositiveZ", "NegativeZ"])
+            _, scene_scale = imgui.slider_float("scene_scale", scene_scale, 1.0, 100.0, "%.2f")
+            _, principal_point_mode = imgui.combo("principal point mode", principal_point_mode, ["Default", "Manual", "FromThirdVanishingPoint"])
+
+            widget_size = imgui.get_content_region_avail()
+            if imgui.begin_child("3d_viewport", widget_size):
+                # Control Points
+                for i, axis in enumerate(first_vanishing_lines_pixel):
+                    changed, new_line = drag_line(f"Z{i}", axis, BLUE)
+                    first_vanishing_lines_pixel[i] = new_line
+
+                for i, axis in enumerate(second_vanishing_lines_pixel):
+                    changed, new_line = drag_line(f"X{i}", axis, RED)
+                    second_vanishing_lines_pixel[i] = new_line
+
+                _, principal_point_pixel = drag_point("principal_point", principal_point_pixel)
+                principal_point_pixel = glm.vec2(widget_size.x / 2, widget_size.y / 2)
+                _, origin_pixel = drag_point("origin", origin_pixel)
+
+                # Compute Camera
+                try:
+                    from my_solver_v3 import solve2vp
+                    # solve camera
+                    fovy, view_orientation_matrix, position = solve2vp(
+                        image_width=int(widget_size.x),
+                        image_height=int(widget_size.y),
+                        principal_point_pixel=principal_point_pixel,
+                        origin_pixel=origin_pixel,
+                        first_vanishing_lines_pixel=first_vanishing_lines_pixel,
+                        second_vanishing_lines_pixel=second_vanishing_lines_pixel,
+                        first_axis=first_axis,
+                        second_axis=second_axis,
+                        scene_scale=scene_scale
+                    )
+                    
+                    view_translate_transform = glm.translate(glm.mat4(1.0), position)
+                    view_rotation_transform = glm.mat4(view_orientation_matrix)
+                    view_transform= view_rotation_transform * view_translate_transform
+                    camera.transform = glm.inverse(view_transform)
+                    camera.setAspectRatio(widget_size.x / widget_size.y)
+                    camera.setFoVY(math.degrees(fovy))
+                    
+                except Exception as e:
+                    from textwrap import wrap
+                    imgui.push_style_color(imgui.Col_.text, (1.0, 0.2, 0.2, 1.0))
+                    imgui.text_wrapped(f"fspy error: {pformat(e)}")
+                    import traceback
+                    traceback.print_exc()
+                    imgui.pop_style_color()
+
+                # Render Scene
+                if moderngl_ctx is None:
+                    logger.info("Initializing ModernGL context...")
+                    moderngl_ctx = moderngl.create_context()
+                    scene_layer.setup(moderngl_ctx)
+                image_ref = render_scene_to_image_ref(moderngl_ctx, camera, scene_layer, fbo, widget_size)
+                imgui.set_cursor_pos(imgui.ImVec2(0,0))
+                imgui.image(image_ref,imgui.ImVec2(widget_size.x, widget_size.y))
+            imgui.end_child()
+
+        case _:
             imgui.push_style_color(imgui.Col_.text, (1.0, 0.2, 0.2, 1.0))
-            imgui.text_wrapped(f"fspy error: {pformat(e)}")
-            import traceback
-            traceback.print_exc()
+            imgui.text(f"Unsupported solver mode {SOLVER_MODE}")
             imgui.pop_style_color()
-
-        ############################
-        # Render 3D Scene in ImGui #
-        ############################
-        if moderngl_ctx is None:
-            logger.info("Initializing ModernGL context...")
-            moderngl_ctx = moderngl.create_context()
-            
-            scene_renderer.setup(moderngl_ctx)
-            
-        # Update GL viewport
-        dpi = imgui.get_io().display_framebuffer_scale
-        gl_size = widget_size * dpi
-        moderngl_ctx.viewport = (0, 0, gl_size.x, gl_size.y)
-
-        ## Create or resize framebuffer if needed
-        dpi = imgui.get_io().display_framebuffer_scale
-        fbo_width = int(widget_size.x * dpi.x)
-        fbo_height = int(widget_size.y * dpi.y)
-        
-        if fbo is None or fbo.width != fbo_width or fbo.height != fbo_height:
-            if fbo is not None:
-                fbo.release()
-            
-            # Create color texture
-            color_texture = moderngl_ctx.texture((fbo_width, fbo_height), 4, dtype='f1')
-            color_texture.filter = (moderngl.LINEAR, moderngl.LINEAR)
-            
-            # Create depth renderbuffer
-            depth_buffer = moderngl_ctx.depth_renderbuffer((fbo_width, fbo_height))
-            
-            # Create framebuffer
-            fbo = moderngl_ctx.framebuffer(
-                color_attachments=[color_texture],
-                depth_attachment=depth_buffer
-            )
-            
-            logger.info(f"Created framebuffer: {fbo_width}x{fbo_height}")
-        imgui.text_wrapped(f"fbo size: {fbo_width}x{fbo_height}")
-
-        # Render to framebuffer
-        fbo.use()
-        fbo.clear(0.1, 0.1, 0.1, 0.0)  # Clear with dark gray background
-        moderngl_ctx.enable(moderngl.DEPTH_TEST)
-        scene_renderer.render(camera)
-        moderngl_ctx.screen.use() # Restore default framebuffer
-        
-        # Display the framebuffer texture in ImGui
-        texture = fbo.color_attachments[0] # Get texture from framebuffer
-        texture_ref = imgui.ImTextureRef(texture.glo)
-        
-        imgui.set_cursor_pos(imgui.ImVec2(0,0))
-        imgui.image(
-            texture_ref,  # OpenGL texture ID
-            imgui.ImVec2(widget_size.x, widget_size.y)
-            # uv0=imgui.ImVec2(0, 1),  # Flip vertically (OpenGL texture is bottom-up)
-            # uv1=imgui.ImVec2(1, 0)
-        )
-
-    imgui.end_child()
 
 
 if __name__ == "__main__":
-    immapp.run(gui, window_title="ImGui Bundle - 2D Points & 3D Scene", window_size=(9*75, 9*75))
+    immapp.run(gui, window_title="ImGui Bundle - 2D Points & 3D Scene", window_size=(800, 800))
+

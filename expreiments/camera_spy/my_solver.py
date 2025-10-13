@@ -257,3 +257,89 @@ def solve_no_axis(*,
     )
 
     return camera_pitch, camera_pos_x, camera_pos_y, camera_pos_z
+
+
+
+def ray_plane_intersection(
+    ray_origin: glm.vec3,
+    ray_direction: glm.vec3,
+    plane_point: glm.vec3,
+    plane_normal: glm.vec3
+) -> Tuple[bool, glm.vec3, float]:
+    """
+    Compute the intersection point between a 3D ray and a plane.
+    
+    Args:
+        ray_origin: Starting point of the ray
+        ray_direction: Direction vector of the ray (should be normalized)
+        plane_point: Any point on the plane
+        plane_normal: Normal vector of the plane (should be normalized)
+    
+    Returns:
+        Tuple of (intersects, intersection_point, t_parameter)
+        - intersects: True if ray intersects the plane
+        - intersection_point: The 3D point of intersection (valid only if intersects=True)
+        - t_parameter: The parameter t where intersection = ray_origin + t * ray_direction
+    """
+    # Normalize inputs to ensure reliable calculations
+    ray_dir = glm.normalize(ray_direction)
+    plane_norm = glm.normalize(plane_normal)
+    
+    # Calculate the denominator (dot product of ray direction and plane normal)
+    denominator = glm.dot(ray_dir, plane_norm)
+    
+    # Check if ray is parallel to the plane (denominator near zero)
+    if math.fabs(denominator) < 1e-6:
+        return False, glm.vec3(0), 0.0
+    
+    # Calculate the distance from ray origin to plane
+    plane_to_origin = plane_point - ray_origin
+    t = glm.dot(plane_to_origin, plane_norm) / denominator
+    
+    # Calculate intersection point
+    intersection_point = ray_origin + t * ray_dir
+    
+    # Ray intersects if t >= 0 (intersection is in front of ray origin)
+    intersects = t >= 0
+    
+    return intersects, intersection_point, t
+
+
+def ray_plane_intersection_simple(
+    ray_origin: glm.vec3,
+    ray_direction: glm.vec3,
+    plane_normal: glm.vec3,
+    plane_distance: float
+) -> Tuple[bool, glm.vec3, float]:
+    """
+    Simplified ray-plane intersection using plane equation: normal·x + d = 0
+    
+    Args:
+        ray_origin: Starting point of the ray
+        ray_direction: Direction vector of the ray
+        plane_normal: Normal vector of the plane (should be normalized)
+        plane_distance: Distance from origin to plane (negative of d in plane equation)
+    
+    Returns:
+        Tuple of (intersects, intersection_point, t_parameter)
+    """
+    ray_dir = glm.normalize(ray_direction)
+    plane_norm = glm.normalize(plane_normal)
+    
+    # Calculate the denominator (dot product of ray direction and plane normal)
+    denominator = glm.dot(ray_dir, plane_norm)
+    
+    # Check if ray is parallel to the plane (denominator near zero)
+    if math.fabs(denominator) < 1e-6:
+        return False, glm.vec3(0), 0.0
+    
+    t = -(glm.dot(ray_origin, plane_norm) + plane_distance) / denominator
+    intersection_point = ray_origin + t * ray_dir
+    
+    intersects = t >= 0
+    return intersects, intersection_point, t
+
+def plane_distance(plane_point: glm.vec3, plane_normal: glm.vec3) -> float:
+    # Compute the distance parameter 'd' for a plane equation: normal·x + d = 0
+    plane_norm = glm.normalize(plane_normal)
+    return -glm.dot(plane_norm, plane_point)
