@@ -1,4 +1,5 @@
 import logging
+import time
 from typing import *
 import math
 import numpy as np
@@ -7,6 +8,8 @@ import trimesh
 import moderngl
 from textwrap import dedent
 from pylive.render_engine.camera import Camera
+
+logger = logging.getLogger(__name__)
 
 
 from abc import ABC, abstractmethod
@@ -69,10 +72,17 @@ class TriangleLayer(RenderLayer):
 
     @override
     def setup(self, ctx:moderngl.Context):
+        logger.info(f"Setting up {self.__class__.__name__}...")
+        start_time = time.time()
+        
+        logger.info(f"{self.__class__.__name__}: Compiling shaders...")
+        shader_start = time.time()
         self.program = ctx.program(
             vertex_shader=self.FLAT_VERTEX_SHADER,
             fragment_shader=self.FLAT_FRAGMENT_SHADER
         )
+        shader_time = time.time() - shader_start
+        logger.info(f"{self.__class__.__name__}: Shader compilation took {shader_time:.3f}s")
 
         # triangle
         vertices = np.array([
@@ -90,6 +100,9 @@ class TriangleLayer(RenderLayer):
             ],
             mode=moderngl.TRIANGLES
         )
+        
+        setup_time = time.time() - start_time
+        logger.info(f"{self.__class__.__name__} setup completed in {setup_time:.3f}s")
 
     @override
     def destroy(self):
@@ -121,11 +134,18 @@ class TrimeshLayer(RenderLayer):
 
     @override
     def setup(self, ctx:moderngl.Context):
+        logger.info(f"Setting up {self.__class__.__name__}...")
+        start_time = time.time()
+        
         # Setup shaders
+        logger.info(f"{self.__class__.__name__}: Compiling shaders...")
+        shader_start = time.time()
         self.program = ctx.program(
             vertex_shader=self.FLAT_VERTEX_SHADER,
             fragment_shader=self.FLAT_FRAGMENT_SHADER
         )
+        shader_time = time.time() - shader_start
+        logger.info(f"{self.__class__.__name__}: Shader compilation took {shader_time:.3f}s")
 
         # to VAO
         vertices = self.mesh.vertices.flatten().astype(np.float32)
@@ -141,6 +161,9 @@ class TrimeshLayer(RenderLayer):
             mode=moderngl.TRIANGLES,
             index_buffer=self.ibo
         )
+        
+        setup_time = time.time() - start_time
+        logger.info(f"{self.__class__.__name__} setup completed in {setup_time:.3f}s")
 
     @override
     def render(self, *, view:glm.mat4=None, projection:glm.mat4=None, color:glm.vec4=None):
@@ -188,10 +211,17 @@ class GridLayer(RenderLayer):
         self._initialized = False
         
     def setup(self, ctx):
+        logger.info(f"Setting up {self.__class__.__name__}...")
+        start_time = time.time()
+        
+        logger.info(f"{self.__class__.__name__}: Compiling shaders...")
+        shader_start = time.time()
         self.program = ctx.program(
             vertex_shader=self.FLAT_VERTEX_SHADER,
             fragment_shader=self.FLAT_FRAGMENT_SHADER
         )
+        shader_time = time.time() - shader_start
+        logger.info(f"{self.__class__.__name__}: Shader compilation took {shader_time:.3f}s")
         
         all_vertices = []
         
@@ -228,6 +258,9 @@ class GridLayer(RenderLayer):
             mode=moderngl.LINES
         )
         self._initialized = True
+        
+        setup_time = time.time() - start_time
+        logger.info(f"{self.__class__.__name__} setup completed in {setup_time:.3f}s")
         
     def render(self, view:glm.mat4, projection:glm.mat4):
         if not self._initialized:
@@ -342,10 +375,17 @@ class ArrowLayer(RenderLayer):
         self.color = color
         
     def setup(self, ctx):
+        logger.info(f"Setting up {self.__class__.__name__}...")
+        start_time = time.time()
+        
+        logger.info(f"{self.__class__.__name__}: Compiling shaders...")
+        shader_start = time.time()
         self.program = ctx.program(
             vertex_shader=self.FLAT_VERTEX_SHADER,
             fragment_shader=self.FLAT_FRAGMENT_SHADER
         )
+        shader_time = time.time() - shader_start
+        logger.info(f"{self.__class__.__name__}: Shader compilation took {shader_time:.3f}s")
         
         vertices = np.array([
             (0.0, 0.0, 0.0),  # Bottom of the shaft
@@ -368,6 +408,9 @@ class ArrowLayer(RenderLayer):
             ],
             mode=moderngl.LINES
         )
+        
+        setup_time = time.time() - start_time
+        logger.info(f"{self.__class__.__name__} setup completed in {setup_time:.3f}s")
         
     def render(self, view:glm.mat4=None, projection:glm.mat4=None):
         self.program['view'].write(view)
@@ -410,9 +453,15 @@ class AxesLayer(RenderLayer):
         ) # Z
 
     def setup(self, ctx: moderngl.Context):
+        logger.info(f"Setting up {self.__class__.__name__}...")
+        start_time = time.time()
+        
         self.xarrow.setup(ctx)
         self.yarrow.setup(ctx)
         self.zarrow.setup(ctx)
+        
+        setup_time = time.time() - start_time
+        logger.info(f"{self.__class__.__name__} setup completed in {setup_time:.3f}s")
 
     def render(self, view:glm.mat4, projection:glm.mat4):
         self.xarrow.render(view, projection)

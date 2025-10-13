@@ -4,6 +4,8 @@ from typing import List, Tuple
 import math
 
 from enum import IntEnum
+from gizmos import draw
+
 class Axis(IntEnum):
     PositiveX = 0
     NegativeX = 1
@@ -12,7 +14,6 @@ class Axis(IntEnum):
     PositiveZ = 4
     NegativeZ = 5
 
-from gizmos import draw
 
 def solve1vp(
     image_width:int,
@@ -36,7 +37,7 @@ def solve1vp(
     #################################
     # 2. COMPUTE Camera Orientation #
     #################################
-    import fspy_solver_functional as fspy
+    
     forward = glm.normalize(glm.vec3(first_vanishing_point_pixel-principal_point_pixel, -focal_length_pixel))
     up = glm.normalize(glm.cross(forward, glm.vec3(1,0,0)))
     right = glm.cross(forward, up)
@@ -77,7 +78,6 @@ def solve1vp(
         projection_matrix, 
         glm.vec4(0,0,image_width,image_height)
     )
-
 
     # create transformation
     view_translate_transform = glm.translate(glm.mat4(1.0), -origin_3D)
@@ -411,7 +411,7 @@ def compute_roll_matrix(
     horizon_end_pixel = horizon_line[1]
     
     # Project the horizon line to the XY plane in 3D world space
-    from my_solver_v3 import project_line_to_xy_plane
+    
     
     viewport = glm.vec4(0, 0, image_width, image_height)
     start_3d, end_3d = project_line_to_xy_plane(
