@@ -1,13 +1,14 @@
 from imgui_bundle import imgui
-from typing import Tuple
+from typing import Tuple, TypeVar, Generic
 
 def window_to_screen(window_pos: imgui.ImVec2) -> imgui.ImVec2:
     """Convert window-relative coordinates to screen coordinates."""
     screen_offset = imgui.get_cursor_screen_pos() - imgui.get_cursor_pos()
     return imgui.ImVec2(window_pos.x, window_pos.y) + screen_offset
 
-def drag_point(label:str, point:imgui.ImVec2)->Tuple[bool, imgui.ImVec2]:   
-    changed = False
+Vec2T = TypeVar('Vec2')
+def drag_point(label:str, point:Vec2T)->Tuple[bool, Vec2T]:   
+    change = False
     store_cursor_pos = imgui.get_cursor_pos()
     btn_size = imgui.ImVec2(28,28)
     imgui.set_cursor_pos(imgui.ImVec2(point.x-btn_size.x/2, point.y-btn_size.y/2))
@@ -33,7 +34,7 @@ def drag_point(label:str, point:imgui.ImVec2)->Tuple[bool, imgui.ImVec2]:
         imgui.reset_mouse_drag_delta()
         new_point.x += delta.x
         new_point.y += delta.y
-        changed = True
+        change = True
 
     imgui.set_cursor_pos(store_cursor_pos)
-    return changed, new_point
+    return change, new_point

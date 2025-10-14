@@ -48,7 +48,7 @@ class SceneLayer(RenderLayer):
 # ########### #
 from imgui_bundle import imgui, immapp
 from gizmos import drag_line, drag_horizon
-from utils.geo import closest_point_line_segment
+from utils.geo import closest_point_on_line_segment
 from gizmos import window_to_screen, drag_point
 
 # COLOR CONSTANTS

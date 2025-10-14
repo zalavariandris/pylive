@@ -91,7 +91,7 @@ class SceneLayer(RenderLayer):
 
 ## GUI helpers
 from gizmos import drag_lines, drag_horizon
-from utils.geo import closest_point_line_segment
+from utils.geo import closest_point_on_line_segment
 
 # ModernGL context and framebuffer
 scene_renderer = SceneLayer()
@@ -194,7 +194,7 @@ def gui():
                     
                     # Draw lines to vanishing point
                     for axis in vanishing_lines[i]:
-                        closest_point = closest_point_line_segment(vp, axis)
+                        closest_point = closest_point_on_line_segment(vp, axis)
                         imgui.get_window_draw_list().add_line(window_to_screen(closest_point), window_to_screen(vp), color, 1)
                     
                     # Show line angles for single axis case
