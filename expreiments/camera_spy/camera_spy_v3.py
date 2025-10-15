@@ -144,6 +144,8 @@ GREEN = imgui.color_convert_float4_to_u32((0,1,0, 1.0))
 GREEN_DIMMED = imgui.color_convert_float4_to_u32((0,1,0, 0.2))
 WHITE = imgui.color_convert_float4_to_u32((1,1,1, 1.0))
 WHITE_DIMMED = imgui.color_convert_float4_to_u32((1,1,1, 0.2))
+PINK = imgui.color_convert_float4_to_u32((1,0,1, 1.0))
+PINK_DIMMED = imgui.color_convert_float4_to_u32((1,0,1, 0.2))
 
 # ##### #
 # TYPES #
@@ -238,7 +240,7 @@ class SolverMode(IntEnum):
     FSpy = 3
     SolverModel = 4
 
-SOLVER_MODE = SolverMode.SolverModel
+SOLVER_MODE = SolverMode.TwoVP
 
 from dataclasses import dataclass
 
@@ -488,6 +490,17 @@ def gui():
                     camera.transform = glm.inverse(view_transform)
                     camera.setAspectRatio(widget_size.x / widget_size.y)
                     camera.setFoVY(math.degrees(fovy))
+
+                    from my_solver_v3 import vanishing_points_from_camera
+                    vp1, vp2 = vanishing_points_from_camera(
+                        camera.viewMatrix(), 
+                        camera.projectionMatrix(), 
+                        (0, 0, widget_size.x, widget_size.y)
+                    )
+
+                    imgui.text(f"vp1: {vp1}, vp2: {vp2}")
+                
+                    draw.points([vp1, vp2], ["VP", "VP"], [PINK, PINK])
                     
                 except Exception as e:
                     from textwrap import wrap
@@ -511,8 +524,13 @@ def gui():
                     setup_time = time.time() - setup_start
                     logger.info(f"Scene layer setup completed in {setup_time:.3f}s")
                 image_ref = render_scene_to_image_ref(moderngl_ctx, camera, scene_layer, widget_size)
+
+
+
                 imgui.set_cursor_pos(imgui.ImVec2(0,0))
                 imgui.image(image_ref,imgui.ImVec2(widget_size.x, widget_size.y))
+
+                
             imgui.end_child()
 
         case SolverMode.Advanced:

@@ -163,7 +163,6 @@ def solve2vp(
 
     return fovy, view_orientation_matrix, -origin_3D
 
-
 def least_squares_intersection_of_lines(line_segments: List[Tuple[glm.vec2, glm.vec2]]) -> glm.vec2:
     """
     Compute the intersection point from a set of 2D lines assumed to be parallel in 3D.
@@ -195,6 +194,76 @@ def least_squares_intersection_of_lines(line_segments: List[Tuple[glm.vec2, glm.
     return glm.vec2(result[0], result[1])
 
 def compute_focal_length_from_vanishing_points(
+        Fu: glm.vec2, # first vanishing point
+        Fv: glm.vec2, # second vanishing point
+        P: glm.vec2   # principal point
+    )-> float:
+    """
+    Computes the focal length from two orthogonal vanishing points using the cross-ratio formula.
+    
+    The formula is derived from the constraint that orthogonal directions in 3D space
+    project to vanishing points that satisfy: f² = |Fv_Puv| * |Fu_Puv| - |P_Puv|²
+    where Puv is the orthogonal projection of P onto the line FuFv.
+    
+    Args:
+        Fu: First vanishing point in pixel coordinates
+        Fv: Second vanishing point in pixel coordinates  
+        P: Principal point in pixel coordinates
+        
+    Returns:
+        Focal length in pixels
+        
+    Raises:
+        ValueError: If vanishing points are too close, collinear with principal point,
+                   or configuration is otherwise invalid
+    """
+    # Check for degenerate cases
+    Fu_Fv_distance = glm.distance(Fu, Fv)
+    if Fu_Fv_distance < 1e-6:
+        raise ValueError(f"Vanishing points are too close together: distance = {Fu_Fv_distance:.2e}")
+    
+    # Compute Puv: orthogonal projection of principal point P onto line segment Fu-Fv
+    horizon_vector = Fu - Fv
+    horizon_direction = glm.normalize(horizon_vector)
+    
+    # Vector from Fv to principal point
+    principal_to_fv = P - Fv
+    
+    # Project onto horizon line
+    projection_length = glm.dot(horizon_direction, principal_to_fv)
+    projection_point = Fv + projection_length * horizon_direction
+    
+    # Compute distances for focal length formula
+    # f² = |Fv_Puv| * |Fu_Puv| - |P_Puv|²
+    distance_fv_to_proj = glm.distance(Fv, projection_point)
+    distance_fu_to_proj = glm.distance(Fu, projection_point)
+    distance_p_to_proj = glm.distance(P, projection_point)
+    
+    # Apply focal length formula
+    focal_length_squared = distance_fv_to_proj * distance_fu_to_proj - distance_p_to_proj * distance_p_to_proj
+    
+    # Validate result
+    if focal_length_squared <= 0:
+        # Provide detailed diagnostic information
+        vanishing_point_distance = glm.distance(Fu, Fv)
+        angle_deg = math.degrees(math.acos(glm.clamp(
+            glm.dot(glm.normalize(Fu - P), glm.normalize(Fv - P)), -1.0, 1.0
+        )))
+        
+        raise ValueError(
+            f"Invalid vanishing point configuration: cannot compute focal length.\n"
+            f"  f² = {focal_length_squared:.6f} (must be > 0)\n"
+            f"  Vanishing point separation: {vanishing_point_distance:.2f} pixels\n"
+            f"  Angle between VP directions: {angle_deg:.1f}° (should be close to 90°)\n"
+            f"  Distance Fu->projection: {distance_fu_to_proj:.2f}\n"
+            f"  Distance Fv->projection: {distance_fv_to_proj:.2f}\n"
+            f"  Distance P->projection: {distance_p_to_proj:.2f}\n"
+            f"  Possible causes: VPs too close to principal point, VPs not orthogonal, or VPs collinear with principal point"
+        )
+    
+    return math.sqrt(focal_length_squared)
+
+def compute_focal_length_from_vanishing_points_OLD(
         Fu: glm.vec2, # first vanishing point
         Fv: glm.vec2, # second vanishing point
         P: glm.vec2   # principal point
@@ -428,6 +497,50 @@ def compute_roll_matrix(
     # Apply roll to the camera transform
     return glm.rotate(glm.mat4(1.0), roll_angle, glm.vec3(0, 0, 1))
 
+def vanishing_points_from_camera(
+        view_matrix: glm.mat3, 
+        projection_matrix: glm.mat4, 
+        viewport: glm.vec4
+    ) -> Tuple[glm.vec2, glm.vec2, glm.vec2]:
+    # Project vanishing Points
+    MAX_FLOAT = np.finfo(np.float32).max/10.0
+    VPX = glm.project(glm.vec3(MAX_FLOAT,0,0), view_matrix, projection_matrix, viewport)
+    VPY = glm.project(glm.vec3(0,MAX_FLOAT,0), view_matrix, projection_matrix, viewport)
+    VPZ = glm.project(glm.vec3(0,0,MAX_FLOAT), view_matrix, projection_matrix, viewport)
+    return glm.vec2(VPX), glm.vec2( VPY), glm.vec2(VPZ)
+
+def second_vanishing_point_from_focal_length(
+        Fu: glm.vec2, 
+        f: float, 
+        P: glm.vec2, 
+        horizonDir: glm.vec2
+    )->glm.vec2|None:
+    """
+    Computes the coordinates of the second vanishing point
+    based on the first, a focal length, the center of projection and
+    the desired horizon tilt angle. The equations here are derived from
+    section 3.2 "Determining the focal length from a single image".
+
+    @param Fu the first vanishing point in _image plane_ coordinates.
+    @param f the relative focal length
+    @param P the center of projection in _normalized image_ coordinates
+    @param horizonDir The desired horizon direction
+    """
+    
+    # find the second vanishing point
+    # // TODO_ take principal point into account here
+    if glm.distance(Fu, P) < 1e-7:
+        return None
+
+    if glm.distance(Fu, P) < 1e-7:
+        return None
+
+    Fu_P = Fu - P
+
+    k = -(glm.dot(Fu_P, Fu_P) + f * f) / glm.dot(Fu_P, horizonDir)
+    Fv = Fu_P + k * horizonDir + P
+
+    return Fv
 
 
 class DataModel:
@@ -637,7 +750,11 @@ class SolverModel(DataModel):
         return camera
         
 
-def adjust_vanishing_lines(old_vp:glm.vec2, new_vp:glm.vec2, vanishing_lines:List[Tuple[glm.vec2, glm.vec2]]) -> List[Tuple[glm.vec2, glm.vec2]]:
+def adjust_vanishing_lines(
+        old_vp:glm.vec2, 
+        new_vp:glm.vec2, 
+        vanishing_lines:List[Tuple[glm.vec2, glm.vec2]]
+    ) -> List[Tuple[glm.vec2, glm.vec2]]:
     # When vanishing point moves, adjust only the closest endpoint of each vanishing line
     new_vanishing_lines = vanishing_lines.copy()
     for i, (P, Q) in enumerate(vanishing_lines):
@@ -665,4 +782,50 @@ def adjust_vanishing_lines(old_vp:glm.vec2, new_vp:glm.vec2, vanishing_lines:Lis
                 new_vanishing_lines[i] = (new_moving_point, Q)
             else:
                 new_vanishing_lines[i] = (P, new_moving_point)
+    return new_vanishing_lines
+
+def adjust_vanishing_lines_by_rotation(
+        old_vp: glm.vec2, 
+        new_vp: glm.vec2, 
+        vanishing_lines: List[Tuple[glm.vec2, glm.vec2]],
+        principal_point: glm.vec2
+    ) -> List[Tuple[glm.vec2, glm.vec2]]:
+    """
+    Adjust vanishing lines by rotating them around the principal point so they point to the new vanishing point.
+    """
+    
+    # Create rotation matrix
+    def rotate_point_around_center(point: glm.vec2, center: glm.vec2, rotation_angle:float) -> glm.vec2:
+        # Rotation matrix components
+        cos_angle = math.cos(rotation_angle)
+        sin_angle = math.sin(rotation_angle)
+
+        # Translate to origin
+        translated = point - center
+        # Apply rotation
+        rotated_x = translated.x * cos_angle - translated.y * sin_angle
+        rotated_y = translated.x * sin_angle + translated.y * cos_angle
+        # Translate back
+        return glm.vec2(rotated_x, rotated_y) + center
+    
+    # Apply the same rotation to all line endpoints
+    new_vanishing_lines = []
+    for P, Q in vanishing_lines:
+        # Calculate the global rotation from old VP to new VP (relative to principal point)
+        old_dir = glm.normalize(old_vp - P)
+        new_dir = glm.normalize(new_vp - P)
+        
+        # Calculate rotation angle
+        dot_product = glm.dot(old_dir, new_dir)
+        dot_product = max(-1.0, min(1.0, dot_product))  # Clamp to avoid numerical errors
+        rotation_angle = math.acos(dot_product)
+        
+        # Determine rotation direction using cross product (in 2D, this gives the z-component)
+        cross_z = old_dir.x * new_dir.y - old_dir.y * new_dir.x
+        if cross_z < 0:
+            rotation_angle = -rotation_angle
+        new_P = rotate_point_around_center(P, principal_point, rotation_angle)
+        new_Q = rotate_point_around_center(Q, principal_point, rotation_angle)
+        new_vanishing_lines.append((new_P, new_Q))
+    
     return new_vanishing_lines
