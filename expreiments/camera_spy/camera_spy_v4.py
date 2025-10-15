@@ -95,7 +95,7 @@ import my_solver_v3 as solver
 # Application State #
 # ################# #
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 @dataclass
 class State:
     origin_pixel: glm.vec2 =          glm.vec2(400, 400)
@@ -134,7 +134,7 @@ def gui():
     if not scene_layer.initialized:
         scene_layer.setup()
 
-    global overrides, settings, state
+    global state
 
     # # Control Points
     # global origin_pixel
@@ -275,17 +275,17 @@ def gui():
             # Override Camera Parameters #
             ##############################
             imgui.text("Override Camera Parameters:")
-            overrides.setdefault('fov', None)
-            _, override_fov = imgui.checkbox("fov", overrides['fov'] is not None)
+            state.overrides.setdefault('fov', None)
+            _, override_fov = imgui.checkbox("fov", state.overrides['fov'] is not None)
             if _:
-                overrides.setdefault('fov', math.degrees(fovy))
+                state.overrides.setdefault('fov', math.degrees(fovy))
                 _, new_fov_y_degrees = imgui.slider_float("fov_y (degrees)", math.degrees(fovy), 1.0, 179.0, "%.1f")
-                overrides['fov'] = new_fov_y_degrees
+                state.overrides['fov'] = new_fov_y_degrees
             else:
                 imgui.text(f"fov_y (degrees): {math.degrees(fovy):.1f}")
             
-            if overrides['fov'] is not None:
-                camera.setFoVY(overrides['fov'])
+            if state.overrides['fov'] is not None:
+                camera.setFoVY(state.overrides['fov'])
 
             # Project vanishing Points
             VP_X, VP_Y, VP_Z = solver.vanishing_points_from_camera(
