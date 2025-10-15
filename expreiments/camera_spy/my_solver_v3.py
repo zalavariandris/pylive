@@ -14,97 +14,26 @@ class Axis(IntEnum):
     PositiveZ = 4
     NegativeZ = 5
 
-
-def solve1vp(
-    image_width:int,
-    image_height:int,
-    principal_point_pixel: glm.vec2,
-    origin_pixel: glm.vec2,
-    first_vanishing_lines_pixel: List[Tuple[glm.vec2, glm.vec2]],
-    second_vanishing_line_pixel: Tuple[glm.vec2, glm.vec2], # determines the horizon roll
-    focal_length_pixel: float,
-    first_axis = Axis.PositiveZ,
-    second_axis = Axis.PositiveX,
-    scene_scale:float=1.0
-):
-    # Compute Camera
-    ###############################
-    # 1. COMPUTE vanishing points #
-    ###############################
-    first_vanishing_point_pixel =  least_squares_intersection_of_lines(first_vanishing_lines_pixel)
-    draw.points([first_vanishing_point_pixel], ["1st VP"])
-
-    #################################
-    # 2. COMPUTE Camera Orientation #
-    #################################
-    
-    forward = glm.normalize(glm.vec3(first_vanishing_point_pixel-principal_point_pixel, -focal_length_pixel))
-    up = glm.normalize(glm.cross(forward, glm.vec3(1,0,0)))
-    right = glm.cross(forward, up)
-    view_orientation_matrix = glm.mat3(forward, right, up)
-
-    glm.determinant(view_orientation_matrix)
-    if 1-math.fabs(glm.determinant(view_orientation_matrix)) > 1e-5:
-        raise Exception(f'Invalid vanishing point configuration. Rotation determinant {glm.determinant(view_orientation_matrix)}')
-
-    # apply axis assignment
-    axis_assignment_matrix:glm.mat3 = create_axis_assignment_matrix(first_axis, second_axis)            
-    view_orientation_matrix:glm.mat3 = view_orientation_matrix * glm.inverse(axis_assignment_matrix)
-
-    # convert to 4x4 matrix for transformations
-    view_rotation_transform:glm.mat4 = glm.mat4(view_orientation_matrix)
-    view_rotation_transform[3][3] = 1.0
-
-    ##############################
-    # 3. COMPUTE Camera Position #
-    ##############################
-    fovy = math.atan(image_height / 2 / focal_length_pixel) * 2
-    near = 0.1
-    far = 100
-    projection_matrix = glm.perspective(
-        fovy, # fovy in radians
-        image_width/image_height, # aspect 
-        near,
-        far
-    )
-
-    origin_3D = glm.unProject(
-        glm.vec3(
-            origin_pixel.x, 
-            origin_pixel.y, 
-            _world_depth_to_ndc_z(scene_scale, near, far)
-        ),
-        view_rotation_transform, 
-        projection_matrix, 
-        glm.vec4(0,0,image_width,image_height)
-    )
-
-    # create transformation
-    view_translate_transform = glm.translate(glm.mat4(1.0), -origin_3D)
-    view_rotation_transform = glm.mat4(view_orientation_matrix)
-    view_transform = view_rotation_transform * view_translate_transform
-    return view_orientation_matrix, -origin_3D
+from typing import NewType
+LineSegmentType = Tuple[glm.vec2, glm.vec2]
+Width = NewType("Width", int)
+Height = NewType("Height", int)
+Size = NewType("Size", Tuple[Width, Height])
 
 def solve2vp(
         image_width:int,
         image_height:int,
         principal_point_pixel: glm.vec2,
         origin_pixel: glm.vec2,
-        first_vanishing_lines_pixel: List[Tuple[glm.vec2, glm.vec2]],
-        second_vanishing_lines_pixel: List[Tuple[glm.vec2, glm.vec2]],
+        first_vanishing_point_pixel: glm.vec2,
+        second_vanishing_point_pixel: glm.vec2,
         first_axis = Axis.PositiveZ,
         second_axis = Axis.PositiveX,
         scene_scale:float=1.0
     )->Tuple[float, glm.mat3, glm.vec3]:
-    """
-    Solve camera intrinsics and orientation from 3 orthogonal vanishing points.
+    """ Solve camera intrinsics and orientation from 3 orthogonal vanishing points.
     returns (fovy in radians, camera_orientation_matrix, camera_position)
     """
-    ###############################
-    # 1. COMPUTE vanishing points #
-    ###############################
-    first_vanishing_point_pixel =  least_squares_intersection_of_lines(first_vanishing_lines_pixel)
-    second_vanishing_point_pixel = least_squares_intersection_of_lines(second_vanishing_lines_pixel)
 
     ###########################
     # 2. COMPUTE Focal Length #
