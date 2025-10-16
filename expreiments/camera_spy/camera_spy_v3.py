@@ -780,7 +780,7 @@ def gui():
                             second_vanishing_point_pixel = solver.least_squares_intersection_of_lines(second_vanishing_lines_pixel)
 
                             # compute fov
-                            focal_length_pixel = solver.compute_focal_length_from_vanishing_points(
+                            focal_length_pixel = solver.compute_focal_length_from_vanishing_points_simple(
                                 Fu = first_vanishing_point_pixel, 
                                 Fv = second_vanishing_point_pixel, 
                                 P =  principal_point_pixel

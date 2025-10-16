@@ -4,7 +4,7 @@ from typing import List, Tuple
 import math
 
 from enum import IntEnum
-from gizmos import draw
+from ui import draw
 
 class Axis(IntEnum):
     PositiveX = 0
@@ -20,13 +20,69 @@ Width = NewType("Width", int)
 Height = NewType("Height", int)
 Size = NewType("Size", Tuple[Width, Height])
 
+def focal_length_from_fov(fovy, image_height):
+    return (image_height / 2) / math.tan(fovy / 2)
+
+def fov_from_focal_length(focal_length_pixel, image_height):
+    return math.atan(image_height / 2 / focal_length_pixel) * 2
+
+def solve1vp(
+        image_width:int,
+        image_height:int,
+        first_vanishing_point_pixel: glm.vec2,
+        focal_length_pixel:float,
+        principal_point_pixel: glm.vec2,
+        origin_pixel: glm.vec2,
+        first_axis = Axis.PositiveZ,
+        second_axis = Axis.PositiveX,
+        scene_scale:float=1.0
+    )->Tuple[glm.mat3, glm.vec3]:
+        #################################
+        # 3. COMPUTE Camera Orientation #
+        #################################
+        forward = glm.normalize(glm.vec3(first_vanishing_point_pixel-principal_point_pixel,  -focal_length_pixel))
+        up_world = glm.vec3(0, 1, 0)
+        right = glm.normalize(glm.cross(up_world, forward))
+        up = glm.cross(forward, right)
+        view_orientation_matrix = glm.mat3(forward, right, up)
+
+        # validate if matrix is a purely rotational matrix
+        determinant = glm.determinant(view_orientation_matrix)
+        if math.fabs(determinant - 1) > 1e-6:
+            view_orientation_matrix = _gram_schmidt_orthogonalization(view_orientation_matrix)
+            print("Warning: View orientation matrix was not orthogonal, applied Gram-Schmidt orthogonalization")
+            # raise Exception(f'Invalid vanishing point configuration. Rotation determinant {determinant}')
+
+        # apply axis assignment
+        axis_assignment_matrix:glm.mat3 = create_axis_assignment_matrix(first_axis, second_axis)            
+        view_orientation_matrix:glm.mat3 = view_orientation_matrix * glm.inverse(axis_assignment_matrix)
+
+        # convert to 4x4 matrix for transformations
+        view_rotation_transform:glm.mat4 = glm.mat4(view_orientation_matrix)
+        view_rotation_transform[3][3] = 1.0
+
+
+        ##############################
+        # 4. COMPUTE Camera Position #
+        ##############################
+        camera_position = compute_camera_position(
+            image_width, 
+            image_height, 
+            focal_length_pixel, 
+            view_orientation_matrix, 
+            origin_pixel, 
+            scene_scale
+        )
+
+        return view_orientation_matrix, camera_position
+
 def solve2vp(
         image_width:int,
         image_height:int,
-        principal_point_pixel: glm.vec2,
-        origin_pixel: glm.vec2,
         first_vanishing_point_pixel: glm.vec2,
         second_vanishing_point_pixel: glm.vec2,
+        principal_point_pixel: glm.vec2,
+        origin_pixel: glm.vec2,
         first_axis = Axis.PositiveZ,
         second_axis = Axis.PositiveX,
         scene_scale:float=1.0
@@ -43,6 +99,7 @@ def solve2vp(
         Fv = second_vanishing_point_pixel, 
         P =  principal_point_pixel
     )
+    fovy = fov_from_focal_length(focal_length_pixel, image_height)
 
     #################################
     # 3. COMPUTE Camera Orientation #
@@ -55,20 +112,40 @@ def solve2vp(
     # validate if matrix is a purely rotational matrix
     determinant = glm.determinant(view_orientation_matrix)
     if math.fabs(determinant - 1) > 1e-6:
-        raise Exception(f'Invalid vanishing point configuration. Rotation determinant {determinant}')
+        view_orientation_matrix = _gram_schmidt_orthogonalization(view_orientation_matrix)
+        print("Warning: View orientation matrix was not orthogonal, applied Gram-Schmidt orthogonalization")
+        # raise Exception(f'Invalid vanishing point configuration. Rotation determinant {determinant}')
 
     # apply axis assignment
     axis_assignment_matrix:glm.mat3 = create_axis_assignment_matrix(first_axis, second_axis)            
     view_orientation_matrix:glm.mat3 = view_orientation_matrix * glm.inverse(axis_assignment_matrix)
 
-    # convert to 4x4 matrix for transformations
-    view_rotation_transform:glm.mat4 = glm.mat4(view_orientation_matrix)
-    view_rotation_transform[3][3] = 1.0
-
     ##############################
     # 4. COMPUTE Camera Position #
     ##############################
-    fovy = math.atan(image_height / 2 / focal_length_pixel) * 2
+    camera_position = compute_camera_position(
+        image_width, 
+        image_height, 
+        focal_length_pixel, 
+        view_orientation_matrix, 
+        origin_pixel, 
+        scene_scale
+    )
+    
+    return fovy, view_orientation_matrix, camera_position
+
+def compute_camera_position(
+        image_width:int,
+        image_height:int,
+        focal_length_pixel:float,
+        view_orientation_matrix:glm.mat3,
+        origin_pixel:glm.vec2,
+        scene_scale:float=1.0,
+    )-> glm.vec3:
+    """
+    Computes the camera position in 3D space from 2D image coordinates and camera parameters.
+    """
+    fovy = fov_from_focal_length(focal_length_pixel, image_height)
     near = 0.1
     far = 100
     projection_matrix = glm.perspective(
@@ -77,6 +154,10 @@ def solve2vp(
         near,
         far
     )
+
+    # convert to 4x4 matrix for transformations
+    view_rotation_transform:glm.mat4 = glm.mat4(view_orientation_matrix)
+    view_rotation_transform[3][3] = 1.0
 
     origin_3D = glm.unProject(
         glm.vec3(
@@ -88,9 +169,8 @@ def solve2vp(
         projection_matrix, 
         glm.vec4(0,0,image_width,image_height)
     )
-    view_translate_matrix = glm.translate(glm.mat4(1.0), -origin_3D)
 
-    return fovy, view_orientation_matrix, -origin_3D
+    return -origin_3D
 
 def least_squares_intersection_of_lines(line_segments: List[Tuple[glm.vec2, glm.vec2]]) -> glm.vec2:
     """
@@ -122,7 +202,7 @@ def least_squares_intersection_of_lines(line_segments: List[Tuple[glm.vec2, glm.
     result = vp / vp[2]
     return glm.vec2(result[0], result[1])
 
-def compute_focal_length_from_vanishing_points(
+def compute_focal_length_from_vanishing_points_simple(
         Fu: glm.vec2, # first vanishing point
         Fv: glm.vec2, # second vanishing point
         P: glm.vec2   # principal point
@@ -222,6 +302,81 @@ def compute_focal_length_from_vanishing_points_OLD(
                         f"fSq = {fSq}, distances: FvPuv={glm.length(Fv_Puv):.6f}, FuPuv={glm.length(Fu_Puv):.6f}, PPuv={glm.length(P_Puv):.6f}")
 
     return math.sqrt(fSq)
+
+def compute_focal_length_from_vanishing_points(
+        Fu: glm.vec2, # first vanishing point
+        Fv: glm.vec2, # second vanishing point
+        P: glm.vec2   # principal point
+    )-> float:
+    """
+    Computes the focal length from two orthogonal vanishing points using the cross-ratio formula.
+    Enhanced with numerical stability improvements for distant vanishing points.
+    """
+    # Check for degenerate cases
+    Fu_Fv_distance = glm.distance(Fu, Fv)
+    if Fu_Fv_distance < 1e-6:
+        raise ValueError(f"Vanishing points are too close together: distance = {Fu_Fv_distance:.2e}")
+    
+    # Detect if vanishing points are very far away and need special handling
+    max_reasonable_distance = 1e4  # Configurable threshold
+    Fu_distance = glm.distance(Fu, P)
+    Fv_distance = glm.distance(Fv, P)
+    
+    # For very distant VPs, clamp them to reasonable bounds to prevent numerical issues
+    if Fu_distance > max_reasonable_distance or Fv_distance > max_reasonable_distance:
+        print(f"Warning: Very distant vanishing points detected (Fu: {Fu_distance:.1f}, Fv: {Fv_distance:.1f})")
+        
+        # Clamp to reasonable distance while preserving direction
+        if Fu_distance > max_reasonable_distance:
+            direction = glm.normalize(Fu - P)
+            Fu = P + direction * max_reasonable_distance
+            
+        if Fv_distance > max_reasonable_distance:
+            direction = glm.normalize(Fv - P)
+            Fv = P + direction * max_reasonable_distance
+    
+    # Use the standard cross-ratio formula with improved numerical precision
+    horizon_vector = Fu - Fv
+    horizon_direction = glm.normalize(horizon_vector)
+    
+    principal_to_fv = P - Fv
+    projection_length = glm.dot(horizon_direction, principal_to_fv)
+    projection_point = Fv + projection_length * horizon_direction
+    
+    # Use double precision for critical calculations
+    distance_fv_to_proj = float(glm.distance(Fv, projection_point))
+    distance_fu_to_proj = float(glm.distance(Fu, projection_point))
+    distance_p_to_proj =  float(glm.distance(P, projection_point))
+    
+    focal_length_squared = distance_fv_to_proj * distance_fu_to_proj - distance_p_to_proj * distance_p_to_proj
+    
+    if focal_length_squared <= 0:
+        vanishing_point_distance = glm.distance(Fu, Fv)
+        angle_deg = math.degrees(math.acos(glm.clamp(
+            glm.dot(glm.normalize(Fu - P), glm.normalize(Fv - P)), -1.0, 1.0
+        )))
+        
+        raise ValueError(
+            f"Invalid vanishing point configuration: cannot compute focal length.\n"
+            f"  f² = {focal_length_squared:.6f} (must be > 0)\n"
+            f"  Vanishing point separation: {vanishing_point_distance:.2f} pixels\n"
+            f"  Angle between VP directions: {angle_deg:.1f}° (should be close to 90°)\n"
+            f"  Distance Fu->projection: {distance_fu_to_proj:.2f}\n"
+            f"  Distance Fv->projection: {distance_fv_to_proj:.2f}\n"
+            f"  Distance P->projection: {distance_p_to_proj:.2f}\n"
+            f"  Possible causes: VPs too close to principal point, VPs not orthogonal, or VPs collinear with principal point"
+        )
+    
+    focal_length = math.sqrt(focal_length_squared)
+    
+    # Sanity check the result
+    min_focal = 10.0   # Minimum reasonable focal length
+    max_focal = 10000.0 # Maximum reasonable focal length
+    
+    if focal_length < min_focal or focal_length > max_focal:
+        print(f"Warning: Computed focal length {focal_length:.1f} is outside reasonable range [{min_focal}, {max_focal}]")
+    
+    return focal_length
 
 def create_axis_assignment_matrix(firstVanishingPointAxis: Axis, secondVanishingPointAxis: Axis) -> glm.mat3:
     """
@@ -400,31 +555,30 @@ def project_line_to_xy_plane(line_start_pixel: glm.vec2, line_end_pixel: glm.vec
 def compute_roll_matrix(
         image_width:int,
         image_height:int,
-        second_vanishing_line:Tuple[glm.vec2, glm.vec2],
+        horizontal_line:Tuple[glm.vec2, glm.vec2],
         projection_matrix:glm.mat4,
         view_matrix:glm.mat4
 ):
-    horizon_line = second_vanishing_line
-    horizon_start_pixel = horizon_line[0]
-    horizon_end_pixel = horizon_line[1]
-    
+    """
+    Compute a roll correction matrix to align the horizon based on the second vanishing lines.
+    """
+
     # Project the horizon line to the XY plane in 3D world space
-    
-    
     viewport = glm.vec4(0, 0, image_width, image_height)
-    start_3d, end_3d = project_line_to_xy_plane(
-        horizon_start_pixel, horizon_end_pixel,
+    projected_horizontal_line = project_line_to_xy_plane(
+        horizontal_line[0], horizontal_line[1],
         view_matrix, projection_matrix,
         viewport
     )
-    
-    # Calculate roll angle from 3D line in XY plane
-    dx_3d = end_3d.x - start_3d.x
-    dy_3d = end_3d.y - start_3d.y
-    roll_angle = math.atan2(dy_3d, dx_3d)
-    
-    # Apply roll to the camera transform
-    return glm.rotate(glm.mat4(1.0), roll_angle, glm.vec3(0, 0, 1))
+
+    A, B = projected_horizontal_line
+
+    # Calculate how much this line deviates from horizontal (y = constant)
+    delta = B.xy - A.xy
+    roll = math.atan2(delta.y, delta.x)
+
+    # Apply negative roll to correct the deviation (counter-rotate)
+    return glm.rotate(glm.mat4(1.0), roll, glm.vec3(0, 0, 1))
 
 def vanishing_points_from_camera(
         view_matrix: glm.mat3, 
@@ -472,212 +626,6 @@ def second_vanishing_point_from_focal_length(
     return Fv
 
 
-class DataModel:
-    ...
-
-
-class SolverModel(DataModel):
-    def __init__(self, dimensions:Tuple[int,int]):
-        self._image_width, self._image_height = dimensions
-
-        self._principal_point_pixel = None
-        self._origin_pixel = None
-        self._first_vanishing_lines_pixel = None
-        self._second_vanishing_lines_pixel = None
-        self._focal_length_pixel = None
-
-        self.first_axis = Axis.PositiveZ
-        self.second_axis = Axis.PositiveX
-
-        self._scene_scale:float|None = None
-
-    # required user input
-    @property
-    def dimensions(self)->Tuple[int,int]:
-        return self._image_width, self._image_height
-    
-    @dimensions.setter
-    def dimensions(self, value:Tuple[int,int]):
-        assert len(value) == 2, "Dimensions must be a tuple of (width, height)"
-        assert isinstance(value[0], int) and isinstance(value[1], int), "Width and height must be integers"
-        assert value[0] > 0 and value[1] > 0, "Width and height must be positive"
-        self._image_width, self._image_height = value
-
-    # user input wih defaults
-    @property
-    def principal_point_pixel(self)->glm.vec2:
-        # depends on: dimensions
-        if self._principal_point_pixel:
-            return self._principal_point_pixel
-        image_width, image_height = self.dimensions
-        return glm.vec2(image_width / 2, image_height / 2)
-    
-    @principal_point_pixel.setter
-    def principal_point_pixel(self, value:glm.vec2|None):
-        assert value is None or isinstance(value, glm.vec2), "Principal point must be a glm.vec2 or None"
-        self._principal_point_pixel = value
-
-    @property
-    def origin_pixel(self):
-        # depends on: principal_point_pixel
-        if self._origin_pixel:
-            return self._origin_pixel
-        
-        return self.principal_point_pixel # default
-    
-    @origin_pixel.setter
-    def origin_pixel(self, value:glm.vec2|None):
-        assert value is None or isinstance(value, glm.vec2), "Principal point must be a glm.vec2 or None"
-        self._origin_pixel = value
-
-    @property
-    def scene_scale(self):
-        if self._scene_scale:
-            return self._scene_scale
-        return 5.0 # default
-
-    @scene_scale.setter
-    def scene_scale(self, value:float|None):
-        assert value is None or (isinstance(value, (int, float)) and value > 0), "Scene scale must be a positive number or None"
-        self._scene_scale = value
-
-    @property
-    def first_vanishing_lines_pixel(self):
-        # optional user input, drives first_vanishing_point_pixel
-        if self._first_vanishing_lines_pixel:
-            return self._first_vanishing_lines_pixel
-        return []
-    
-    @first_vanishing_lines_pixel.setter
-    def first_vanishing_lines_pixel(self, value:List[Tuple[glm.vec2, glm.vec2]]|None):
-        self._first_vanishing_lines_pixel = value
-
-    @property
-    def second_vanishing_lines_pixel(self):
-        # optional user input, drives second_vanishing_point_pixel
-        return self._second_vanishing_lines_pixel
-    
-    @second_vanishing_lines_pixel.setter
-    def second_vanishing_lines_pixel(self, value:List[Tuple[glm.vec2, glm.vec2]]|None):
-        self._second_vanishing_lines_pixel = value
-
-    @property
-    def first_vanishing_point_pixel(self):
-        # depends on: first_vanishing_lines_pixel
-        try:
-            # compute by default
-            return least_squares_intersection_of_lines(self.first_vanishing_lines_pixel)
-        except ValueError:
-            # fallback to stored value
-            return self._first_vanishing_point_pixel
-
-    @first_vanishing_point_pixel.setter
-    def first_vanishing_point_pixel(self, value:glm.vec2):
-        if self._first_vanishing_lines_pixel:
-            # adjust dependent lines
-            current_value = self.first_vanishing_point_pixel
-            new_vp = value
-            self.first_vanishing_lines_pixel = adjust_vanishing_lines(current_value, new_vp, self.first_vanishing_lines_pixel)
-        else:
-            self._first_vanishing_point_pixel = value
-
-    @property
-    def second_vanishing_point_pixel(self):
-        # circular dependency second_vanishing_lines_pixel
-        return least_squares_intersection_of_lines(self.second_vanishing_lines_pixel)
-
-    @second_vanishing_point_pixel.setter
-    def second_vanishing_point_pixel(self, value:glm.vec2):
-        # adjust dependent lines
-        current_value = self.second_vanishing_point_pixel
-        new_vp = value
-        self.second_vanishing_lines_pixel = adjust_vanishing_lines(current_value, new_vp, self.second_vanishing_lines_pixel)
-
-    @property
-    def focal_length_pixel(self):
-        # depends on: vp1, vp2, principal_point_pixel
-        pp = self.principal_point_pixel
-        vp1 = self.first_vanishing_point_pixel
-        vp2 = self.second_vanishing_point_pixel
-        
-        # Add validation
-        if not all([pp, vp1, vp2]):
-            return self._image_height / 2.0  # default
-            
-        try:
-            return compute_focal_length_from_vanishing_points(vp1, vp2, pp)
-        except ValueError:
-            return self._image_height / 2.0  # fallback to default
-
-    # computed values
-    @property
-    def orientation(self)->glm.mat3:
-        # depends on vp1, vp2, focal_length_pixel
-        assert isinstance(self.first_vanishing_point_pixel, glm.vec2), f"First vanishing point must be computed before orientation, {self.first_vanishing_point_pixel}"
-        assert isinstance(self.second_vanishing_point_pixel, glm.vec2), f"Second vanishing point must be computed before orientation, {self.second_vanishing_point_pixel}"
-        assert isinstance(self.focal_length_pixel, float), f"Focal length must be computed before orientation, {self.focal_length_pixel}"
-        assert isinstance(self.principal_point_pixel, glm.vec2), f"Principal point must be computed before orientation, {self.principal_point_pixel}"
-        forward = glm.normalize(glm.vec3(self.first_vanishing_point_pixel - self.principal_point_pixel, -self.focal_length_pixel))
-        right =   glm.normalize(glm.vec3(self.second_vanishing_point_pixel- self.principal_point_pixel, -self.focal_length_pixel))
-        up = glm.cross(forward, right)
-
-        view_orientation_matrix = glm.mat3(forward, right, up)
-
-        glm.determinant(view_orientation_matrix)
-        if 1-math.fabs(glm.determinant(view_orientation_matrix)) > 1e-5:
-            raise Exception(f'Invalid vanishing point configuration. Rotation determinant {glm.determinant(view_orientation_matrix)}')
-
-        # apply axis assignment
-        axis_assignment_matrix:glm.mat3 = create_axis_assignment_matrix(self.first_axis, self.second_axis)            
-        view_orientation_matrix:glm.mat3 = view_orientation_matrix * glm.inverse(axis_assignment_matrix)
-
-        return view_orientation_matrix
-
-    @property
-    def position(self):
-        # depends on: orientation, fov, origin_pixel, scene_scale
-        image_width, image_height = self.dimensions
-        
-        fovy = math.atan(image_height / 2 / self.focal_length_pixel) * 2
-        near = 0.1
-        far = 100
-        projection_matrix = glm.perspective(
-            fovy, # fovy in radians
-            image_width/image_height, # aspect 
-            near,
-            far
-        )
-        assert isinstance(self.orientation, glm.mat3), f"Orientation must be computed before position, {self.orientation}"
-        assert isinstance(self.origin_pixel, glm.vec2), f"Origin pixel must be computed before position, {self.origin_pixel}"
-        view_transform = glm.mat4(self.orientation)
-        view_transform[3][3] = 1.0
-        origin_3D = glm.unProject(
-            glm.vec3(
-                self.origin_pixel.x, 
-                self.origin_pixel.y, 
-                _world_depth_to_ndc_z(self.scene_scale, near, far)
-            ),
-            view_transform, 
-            projection_matrix, 
-            glm.vec4(0,0,image_width,image_height)
-        )
-
-        return -origin_3D
-
-    def camera(self)->'Camera':
-        # depends on: orientation, position, fov
-        from pylive.render_engine.camera import Camera
-        camera = Camera()
-        fovy = math.atan(self._image_height / 2 / self.focal_length_pixel) * 2
-        camera.setFoVY(math.degrees(fovy))
-
-        view_translate_transform = glm.translate(glm.mat4(1.0), self.position)
-        view_rotation_transform = glm.mat4(self.orientation)
-        view_rotation_transform[3][3] = 1.0
-        view_transform= view_rotation_transform * view_translate_transform
-        camera.transform = glm.inverse(view_transform)
-        return camera
-        
 
 def adjust_vanishing_lines(
         old_vp:glm.vec2, 
@@ -758,3 +706,32 @@ def adjust_vanishing_lines_by_rotation(
         new_vanishing_lines.append((new_P, new_Q))
     
     return new_vanishing_lines
+
+def _gram_schmidt_orthogonalization(matrix: glm.mat3) -> glm.mat3:
+    """
+    Apply Gram-Schmidt orthogonalization to a 3x3 matrix to make it orthogonal.
+    This ensures the matrix represents a valid rotation matrix.
+    """
+    # Extract the three column vectors
+    v1 = glm.vec3(matrix[0])  # First column
+    v2 = glm.vec3(matrix[1])  # Second column
+    v3 = glm.vec3(matrix[2])  # Third column
+    
+    # Step 1: Normalize the first vector
+    u1 = glm.normalize(v1)
+    
+    # Step 2: Make v2 orthogonal to u1
+    u2 = v2 - glm.dot(v2, u1) * u1
+    u2 = glm.normalize(u2)
+    
+    # Step 3: Make v3 orthogonal to both u1 and u2
+    u3 = v3 - glm.dot(v3, u1) * u1 - glm.dot(v3, u2) * u2
+    u3 = glm.normalize(u3)
+    
+    # Construct the orthogonal matrix
+    result = glm.mat3()
+    result[0] = u1  # First column
+    result[1] = u2  # Second column
+    result[2] = u3  # Third column
+    
+    return result

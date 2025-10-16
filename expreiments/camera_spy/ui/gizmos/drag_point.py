@@ -1,13 +1,14 @@
 from imgui_bundle import imgui
 from typing import Tuple, TypeVar, Generic
 
+
 def window_to_screen(window_pos: imgui.ImVec2) -> imgui.ImVec2:
     """Convert window-relative coordinates to screen coordinates."""
     screen_offset = imgui.get_cursor_screen_pos() - imgui.get_cursor_pos()
     return imgui.ImVec2(window_pos.x, window_pos.y) + screen_offset
 
 Vec2T = TypeVar('Vec2')
-def drag_point(label:str, point:Vec2T, color:int=None)->Tuple[bool, Vec2T]:
+def drag_point(label:str, point:Vec2T, *,  color:int=None)->Tuple[bool, Vec2T]:
     if color is None:
         color = imgui.color_convert_float4_to_u32((1.0,1.0,1.0,0.9))
 
