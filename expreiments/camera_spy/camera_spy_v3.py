@@ -388,16 +388,16 @@ def gui():
                 try:
                     from my_solver_v3 import solve1vp
                     view_orientation_matrix, position = solve1vp(
-                        image_width=int(widget_size.x),
-                        image_height=int(widget_size.y),
-                        principal_point_pixel=principal_point_pixel,
-                        origin_pixel=origin_pixel,
+                        width=int(widget_size.x),
+                        height=int(widget_size.y),
+                        P=principal_point_pixel,
+                        O=origin_pixel,
                         first_vanishing_lines_pixel=first_vanishing_lines_pixel,
                         second_vanishing_line_pixel=second_vanishing_lines_pixel[0],
-                        focal_length_pixel=focal_length_pixel,
+                        f=focal_length_pixel,
                         first_axis=first_axis,
                         second_axis=second_axis,
-                        scene_scale=scene_scale
+                        scale=scene_scale
                     )
 
                     view_translate_transform = glm.translate(glm.mat4(1.0), position)
@@ -473,15 +473,15 @@ def gui():
                     from my_solver_v3 import solve2vp
                     # solve camera
                     fovy, view_orientation_matrix, position = solve2vp(
-                        image_width=int(widget_size.x),
-                        image_height=int(widget_size.y),
-                        principal_point_pixel=principal_point_pixel,
-                        origin_pixel=origin_pixel,
+                        width=int(widget_size.x),
+                        height=int(widget_size.y),
+                        P=principal_point_pixel,
+                        O=origin_pixel,
                         first_vanishing_lines_pixel=first_vanishing_lines_pixel,
                         second_vanishing_lines_pixel=second_vanishing_lines_pixel,
                         first_axis=first_axis,
                         second_axis=second_axis,
-                        scene_scale=scene_scale
+                        scale=scene_scale
                     )
                     
                     view_translate_transform = glm.translate(glm.mat4(1.0), position)
@@ -780,7 +780,7 @@ def gui():
                             second_vanishing_point_pixel = solver.least_squares_intersection_of_lines(second_vanishing_lines_pixel)
 
                             # compute fov
-                            focal_length_pixel = solver.compute_focal_length_from_vanishing_points_simple(
+                            focal_length_pixel = solver._compute_focal_length_from_vanishing_points_simple(
                                 Fu = first_vanishing_point_pixel, 
                                 Fv = second_vanishing_point_pixel, 
                                 P =  principal_point_pixel
