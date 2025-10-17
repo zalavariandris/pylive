@@ -1,5 +1,6 @@
 """
 TODO:
+- update the modderngl window example with a camera control, by using the new __call__ overrides
 - create an imgui example, where the ResourceManager resources, cache, buffers etc are visualized in realtime.
 - use Regl.__call__ to execute commands?
 - VAO caching: per-command dictionary keyed by (program, buffer ids, attribute names)
