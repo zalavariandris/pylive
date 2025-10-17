@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 import math
 import numpy as np
-from pylive.render_engine.camera import Camera
+
 from pprint import pformat
 
 from imgui_bundle import imgui, immapp
@@ -21,8 +21,9 @@ from typing import Any, List, Tuple, Dict
 # Graphics Layer #
 # ############## #
 import moderngl
-from pylive.render_engine.render_layers import GridLayer, RenderLayer, AxesLayer
-from pylive.render_engine.render_target import RenderTarget
+from pylive.glrenderer.gllayers import GridLayer, RenderLayer, AxesLayer
+from pylive.glrenderer.utils.render_target import RenderTarget
+from pylive.glrenderer.utils.camera import Camera
 
 class SceneLayer(RenderLayer):
     def __init__(self):
@@ -66,8 +67,6 @@ render_target = RenderTarget(800, 800)
 # ############## #
 # GUI #
 # ############## #
-import fspy_solver_functional as fspy
-from ui import draw
 
 # COLOR CONSTANTS
 dimmed_alpha = 0.4
@@ -86,7 +85,7 @@ PINK_DIMMED = imgui.color_convert_float4_to_u32((1,0,1, dimmed_alpha))
 # TYPES #
 # ##### #
 import glm
-import my_solver_v3 as solver
+from solver import my_solver_v3 as solver
 
 # ################# #
 # Application State #
@@ -128,6 +127,8 @@ state = State()
 # ######### #
 # MAIN LOOP #
 # ######### #
+
+
 def gui():
     # Configure imgui
     style = imgui.get_style()
@@ -166,7 +167,7 @@ def gui():
             drag_line = ui.comp(ui.drag_point)
             drag_lines = ui.comp(drag_line)
             _, state.first_vanishing_lines_pixel = drag_lines("Z", state.first_vanishing_lines_pixel, color=BLUE)
-            draw.lines(state.first_vanishing_lines_pixel, "", BLUE)
+            ui.draw.draw_lines(state.first_vanishing_lines_pixel, "", BLUE)
             
 
             # _, principal_point_pixel = drag_point("principal_point", principal_point_pixel)
@@ -181,7 +182,7 @@ def gui():
                     ######)
                     _, state.settings["fov_degrees"] = imgui.slider_float("fov°", state.settings.get("fov_degrees", 60.0), 1.0, 179.0, "%.1f°")
                     _, state.second_vanishing_lines_pixel[0] = drag_line("X", state.second_vanishing_lines_pixel[0], color=RED)  
-                    draw.lines(state.second_vanishing_lines_pixel[:1], "", RED)
+                    ui.draw.draw_lines(state.second_vanishing_lines_pixel[:1], "", RED)
 
                     ###############################
                     # 1. COMPUTE vanishing points #
@@ -193,7 +194,7 @@ def gui():
                     VP1 = first_vanishing_point_pixel
                     for A, B in state.first_vanishing_lines_pixel:
                         P = sorted([A, B], key=lambda P: glm.distance2(P, VP1))[0]
-                        draw.lines([(P, VP1)], "", BLUE_DIMMED)
+                        ui.draw.draw_lines([(P, VP1)], "", BLUE_DIMMED)
 
                     ###################
                     # 2. Solve Camera #
@@ -247,7 +248,7 @@ def gui():
                         ]
                     else:
                         _, state.second_vanishing_lines_pixel = drag_lines("X", state.second_vanishing_lines_pixel, color=RED)
-                    draw.lines(state.second_vanishing_lines_pixel, "", RED)
+                    ui.draw.draw_lines(state.second_vanishing_lines_pixel, "", RED)
                     ###############################
                     # 1. COMPUTE vanishing points #
                     ###############################
@@ -261,11 +262,11 @@ def gui():
                     VP1 = first_vanishing_point_pixel
                     for A, B in state.first_vanishing_lines_pixel:
                         P = sorted([A, B], key=lambda P: glm.distance2(P, VP1))[0]
-                        draw.lines([(P, VP1)], "", BLUE_DIMMED)
+                        ui.draw.draw_lines([(P, VP1)], "", BLUE_DIMMED)
                     VP2 = second_vanishing_point_pixel
                     for A, B in state.second_vanishing_lines_pixel:
                         P = sorted([A, B], key=lambda P: glm.distance2(P, VP2))[0]
-                        draw.lines([(P, VP2)], "", RED_DIMMED)
+                        ui.draw.draw_lines([(P, VP2)], "", RED_DIMMED)
 
                     ###################
                     # 2. Solve Camera #
@@ -371,6 +372,12 @@ def gui():
         imgui.set_cursor_pos(imgui.ImVec2(0,0))
         image_ref = imgui.ImTextureRef(int(render_target.color_texture.glo))
         imgui.image(image_ref,imgui.ImVec2(widget_size.x, widget_size.y))
+
+        # Draw 3D grid
+        view = camera.viewMatrix()
+        projection = glm.perspective(math.radians(camera.fovy), camera.aspect_ratio, 0.1, 100.0)
+        viewport = (0, 0, int(widget_size.x), int(widget_size.y))
+        ui.draw.draw_grid3D(view, projection, viewport)
 
         
     imgui.end_child()

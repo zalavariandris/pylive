@@ -5,7 +5,7 @@ from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 from PySide6.QtOpenGL import *
 
-from pylive.render_engine.camera import Camera
+from pylive.glrenderer.utils.camera import Camera
 import glm
 
 

@@ -47,48 +47,6 @@ class Buffer(GLResource):
         super().__init__(resource_manager, handle)
 
 
-class Program(GLResource):
-    def __init__(self, resource_manager: 'ResourceManager',
-        vertex_shader: ShaderSource, 
-        fragment_shader: Optional[ShaderSource] = None, 
-        geometry_shader: Optional[ShaderSource] = None, 
-        tess_control_shader: Optional[ShaderSource] = None, 
-        tess_evaluation_shader: Optional[ShaderSource] = None, 
-        varyings: Tuple[str, ...] = (), 
-        fragment_outputs: Optional[Dict[str, int]] = None, 
-        varyings_capture_mode: str = 'interleaved'
-    ):
-        handle = resource_manager.mgl().program(
-            vertex_shader,
-            fragment_shader,
-            geometry_shader,
-            tess_control_shader,
-            tess_evaluation_shader,
-            varyings,
-            fragment_outputs,
-            varyings_capture_mode)
-        super().__init__(resource_manager, handle)
-
-
-class VertexArray(GLResource):
-    def __init__(self, resource_manager: 'ResourceManager', 
-        program: moderngl.Program, 
-        buffer: moderngl.Buffer, 
-        *attributes: Union[List[str], Tuple[str, ...]], 
-        index_buffer: Optional[moderngl.Buffer] = None, 
-        index_element_size: int = 4, 
-        mode: Optional[int] = None
-    ):
-        handle = resource_manager.mgl().vertex_array(
-            program,
-            buffer,
-            *attributes,
-            index_buffer=index_buffer,
-            index_element_size=index_element_size,
-            mode=mode)
-        super().__init__(resource_manager, handle)
-
-
 class Texture(GLResource):
     def __init__(self, resource_manager: 'ResourceManager',
         size: Tuple[int, int],
@@ -180,21 +138,68 @@ class Renderbuffer(GLResource):
         super().__init__(resource_manager, handle)
 
 
-### GL RESOURCE MANAGER ###
+# Program and VAOs are handled inside Command class now. Therefore they are commented out.
+# ### ADDITIONAL GL RESOURCE OBJECTS ###
+# class Program(GLResource):
+#     def __init__(self, resource_manager: 'ResourceManager',
+#         vertex_shader:          ShaderSource, 
+#         fragment_shader:        ShaderSource | None = None, 
+#         geometry_shader:        ShaderSource | None = None, 
+#         tess_control_shader:    ShaderSource | None = None, 
+#         tess_evaluation_shader: ShaderSource | None = None, 
+#         varyings:               Tuple[str, ...] = (), 
+#         fragment_outputs:       Dict[str, int] | None = None, 
+#         varyings_capture_mode:  str = 'interleaved'
+#     ):
+#         handle = resource_manager.mgl().program(
+#             vertex_shader,
+#             fragment_shader,
+#             geometry_shader,
+#             tess_control_shader,
+#             tess_evaluation_shader,
+#             varyings,
+#             fragment_outputs,
+#             varyings_capture_mode)
+#         super().__init__(resource_manager, handle)
 
+
+# class VertexArray(GLResource):
+#     def __init__(self, resource_manager: 'ResourceManager', 
+#         program: moderngl.Program, 
+#         buffer: moderngl.Buffer, 
+#         *attributes: Union[List[str], Tuple[str, ...]], 
+#         index_buffer: Optional[moderngl.Buffer] = None, 
+#         index_element_size: int = 4, 
+#         mode: Optional[int] = None
+#     ):
+#         handle = resource_manager.mgl().vertex_array(
+#             program,
+#             buffer,
+#             *attributes,
+#             index_buffer=index_buffer,
+#             index_element_size=index_element_size,
+#             mode=mode)
+#         super().__init__(resource_manager, handle)
+
+
+### GL RESOURCE MANAGER ###
 class ResourceManager:
     def __init__(self):
-        self.buffers = []
-        self.programs = []
-        self.vertex_arrays = []
-        self.textures = []
-        self.texture_arrays = []
-        self.texture3ds = []
-        self.texture_cubes = []
-        self.framebuffers = []
-        self.renderbuffers = []
+        self.buffers:        list[Buffer] =       []
+        # self.programs:       list[Program] =      []
+        # self.vertex_arrays:  list[VertexArray] =  []
+        self.textures:       list[Texture] =      []
+        self.texture_arrays: list[TextureArray] = []
+        self.texture3ds:     list[Texture3D] =    []
+        self.texture_cubes:  list[TextureCube] =  []
+        self.framebuffers:   list[Framebuffer] =  []
+        self.renderbuffers:  list[Renderbuffer] = []
 
         self._mgl = None
+
+        # weakref caches (for reuse)
+        self._buffer_cache = {}
+        # self._program_cache = {}
 
     def mgl(self)->moderngl.Context:
         if not self._mgl:
@@ -206,49 +211,75 @@ class ResourceManager:
         reserve: int = 0, 
         dynamic: bool = False
     )->Buffer:
+        # create cache key
+        cache_key = id(data) if isinstance(data, np.ndarray) else None
+        if cache_key and cache_key in self._buffer_cache:
+            ref = self._buffer_cache[cache_key]
+            buf = ref()
+            if buf:
+                return buf
+            
+        # create new buffer
         buffer = Buffer(self, data, reserve=reserve, dynamic=dynamic)
         self.buffers.append(buffer)
+
+        # cache buffer
+        self._buffer_cache[cache_key] = weakref.ref(buffer)
         return buffer
 
-    def program(self, *, 
-        vertex_shader: ShaderSource, 
-        fragment_shader: Optional[ShaderSource] = None, 
-        geometry_shader: Optional[ShaderSource] = None, 
-        tess_control_shader: Optional[ShaderSource] = None, 
-        tess_evaluation_shader: Optional[ShaderSource] = None, 
-        varyings: Tuple[str, ...] = (), 
-        fragment_outputs: Optional[Dict[str, int]] = None, 
-        varyings_capture_mode: str = 'interleaved'
-    )->Program:
-        program = Program(self,
-            vertex_shader,
-            fragment_shader,
-            geometry_shader,
-            tess_control_shader,
-            tess_evaluation_shader,
-            varyings,
-            fragment_outputs,
-            varyings_capture_mode)
-        self.programs.append(program)
-        return program
+    # def _program(self, *, 
+    #     vertex_shader:          ShaderSource, 
+    #     fragment_shader:        ShaderSource | None = None, 
+    #     geometry_shader:        ShaderSource | None = None, # not implemented yet
+    #     tess_control_shader:    ShaderSource | None = None,  # not implemented yet
+    #     tess_evaluation_shader: ShaderSource | None = None,  # not implemented yet
+    #     varyings:               Tuple[str, ...] = (),  # not implemented yet
+    #     fragment_outputs:       Dict[str, int] | None = None,  # not implemented yet
+    #     varyings_capture_mode:  str = 'interleaved' # not implemented yet
+    # )->Program:
+    #     # create cache key
+    #     cache_key = (vertex_shader, fragment_shader)
 
-    def vertex_array(self,
-        program: moderngl.Program, 
-        buffer: moderngl.Buffer, 
-        *attributes: Union[List[str], Tuple[str, ...]], 
-        index_buffer: Optional[moderngl.Buffer] = None, 
-        index_element_size: int = 4, 
-        mode: Optional[int] = None
-    ) -> VertexArray:
-        vao = VertexArray(self, 
-            program,
-            buffer,
-            *attributes,
-            index_buffer=index_buffer,
-            index_element_size=index_element_size,
-            mode=mode)
-        self.vertex_arrays.append(vao)
-        return vao
+    #     # get from cache
+    #     ref  = self._program_cache.get(cache_key)
+    #     if ref:
+    #         program = ref()
+    #         if program:
+    #             return program
+
+    #     # create new program
+    #     program = Program(self,
+    #         vertex_shader,
+    #         fragment_shader,
+    #         geometry_shader,
+    #         tess_control_shader,
+    #         tess_evaluation_shader,
+    #         varyings,
+    #         fragment_outputs,
+    #         varyings_capture_mode)
+    #     self.programs.append(program)
+
+    #     # cache program
+    #     self._program_cache[cache_key] = weakref.ref(program)
+    #     return program
+
+    # def _vertex_array(self,
+    #     program: moderngl.Program, 
+    #     buffer: moderngl.Buffer, 
+    #     *attributes: Union[List[str], Tuple[str, ...]], 
+    #     index_buffer: Optional[moderngl.Buffer] = None, 
+    #     index_element_size: int = 4, 
+    #     mode: Optional[int] = None
+    # ) -> VertexArray:
+    #     vao = VertexArray(self, 
+    #         program,
+    #         buffer,
+    #         *attributes,
+    #         index_buffer=index_buffer,
+    #         index_element_size=index_element_size,
+    #         mode=mode)
+    #     self.vertex_arrays.append(vao)
+    #     return vao
 
     def texture(self,
         size: Tuple[int, int],
@@ -348,6 +379,7 @@ class ResourceManager:
         return renderbuffer
 
     def destroy(self):
+        # release all resources
         for buffer in self.buffers:
             buffer.release()
         for program in self.programs:
@@ -366,6 +398,10 @@ class ResourceManager:
             framebuffer.release()
         for renderbuffer in self.renderbuffers:
             renderbuffer.release()
+
+        # clear caches
+        self._buffer_cache.clear()
+        self._program_cache.clear()
 
     def __del__(self):
         self.destroy()

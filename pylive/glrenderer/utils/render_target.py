@@ -55,45 +55,26 @@ class RenderTarget:
         self.setup()
 
     def __enter__(self):
+        # Get current context
         ctx = moderngl.get_context()
         if ctx is None:
             raise Exception("No current ModernGL context. Cannot setup SceneLayer.")
         
+        # Save previous framebuffer
         if self._previous_fbo is not None:
             raise Exception("RenderTarget already in use.")
-        
         self._previous_fbo = ctx.fbo
-        self.use()
-    
-    def __exit__(self, exc_type, exc_value, traceback):
-        assert self._previous_fbo
-        self._previous_fbo.use()
-        self._previous_fbo = None
 
-# @contextmanager
-    # def bound(self):
-    #     """ Context manager that binds this render target for rendering """
-        
-        
-    #     if self._previous_fbo is not None:
-    #         raise Exception("RenderTarget already in use.")
-        
-    #     self._previous_fbo = ctx.fbo
-    #     self.use()
-    #     try:
-    #         ctx.enable(moderngl.DEPTH_TEST)
-    #         yield self
-    #     finally:
-    #         if self._previous_fbo:
-    #             self._previous_fbo.use()
-    #         self._previous_fbo = None
-
-    def use(self):
-        """ Activate this render target's framebuffer for rendering.
-        """
+        # Bind our framebuffer
         if self.fbo is None:
             raise Exception("RenderTarget not setup. Call setup(ctx) before using.")
         self.fbo.use()
+    
+    def __exit__(self, exc_type, exc_value, traceback):
+        assert self._previous_fbo, "RenderTarget was not properly entered."
+        # Restore previous framebuffer
+        self._previous_fbo.use()
+        self._previous_fbo = None
 
     def destroy(self):
         if self.fbo:

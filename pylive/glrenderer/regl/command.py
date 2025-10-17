@@ -1,43 +1,45 @@
 from typing import Dict
 import moderngl
 import numpy as np
+from typing import Any, Tuple, List
+import textwrap
 
 
 class Command:
-	def __init__(self, vert:str, frag:str, uniforms:Dict, attributes:Dict, count:int):
+	def __init__(self, vert:str, frag:str, uniforms:Dict[str, Any], attributes:Dict[str, np.ndarray|list], count:int):
 		super().__init__()
-		self.vert = vert
-		self.frag = frag
+		self.vert = textwrap.dedent(vert)
+		self.frag = textwrap.dedent(frag)
 		self.uniforms = uniforms
 		self.attributes = attributes
 		self.count = count
 
 		# GL OBJECTS
-		self.vao = None
-		self.buffers = []
-		self.program:moderngl.Program = None
+		self._attr_buffers: list[Tuple[moderngl.Buffer, str, str]] = []
+		self._program:moderngl.Program = None
 
 	def _lazy_setup(self):
 		ctx = moderngl.get_context()
 
-		self.program = ctx.program(self.vert, self.frag)
+		# create program
+		self._program = ctx.program(self.vert, self.frag)
 
+		# create attribute buffers
+		for name, data in self.attributes.items():
+			buffer = ctx.buffer(data.tobytes())
+			type_string = f"{data.shape[1]}{data.dtype.char}"
+			attr_buffer = (buffer, type_string, name)
+			self._attr_buffers.append(attr_buffer)
 
-		self.buffers = [
-			(
-				ctx.buffer(buffer.tobytes()), 
-				f"{buffer.shape[1]}{buffer.dtype.char}", 
-				name
-			)
-			for name, buffer in self.attributes.items()
-		]
+		# TODO: consider createing VAO here for performance
+		# how to cache it, and how to update buffers if needed in __call__ ?
+		...
 
 	def __del__(self):
-		for buffer, type_string, name in self.buffers:
+		for buffer, type_string, name in self._attr_buffers:
 			buffer.release()
-		if vao:=self.vao:
-			vao.release()
-		if program:=self.program:
+
+		if program:=self._program:
 			program.release()
 
 	def validate_uniforms(self):
@@ -63,28 +65,34 @@ class Command:
 			if buffer.dtype.char not in supported_datatypes:
 				raise ValueError(f"Datatype '{buffer.dtype}' is not supported.")
 
-	def __call__(self):
+	def __call__(self, *, uniforms:Dict[str, Any]=None, attributes:Dict[str, np.ndarray|list]=None, count:int=None):
+		uniforms = uniforms or {}
+		if attributes is not None:
+			raise NotImplementedError("Updating attributes at call time is not implemented yet.")
+		attributes = attributes or {}
+
 		# lazy setup
-		if not (self.buffers and self.vao and self.program):
+		if not (self._attr_buffers and self._program):
 			self._lazy_setup()
 
 		# validate input parameters
 		self.validate_uniforms()
-		self.validate_attributes()
 
-		assert self.program
+		assert self._program
+
 		# update uniforms
-		for key, value in self.uniforms.items():
-			self.program[key].write(value)
+		final_uniforms = {**self.uniforms, **uniforms} # merge initial uniforms with call-time uniforms
+		for key, value in final_uniforms.items():
+			self._program[key].write(value)
 
 		ctx = moderngl.get_context()
 
 		# reorganize buffers for modenrgl format
 
-		# create vao
+		# create vao TODO: consider caching VAO for performance
 		vao = ctx.vertex_array(
-			self.program,
-			self.buffers,
+			self._program,
+			self._attr_buffers,
 			mode=moderngl.TRIANGLES
 		)
 		vao.render()

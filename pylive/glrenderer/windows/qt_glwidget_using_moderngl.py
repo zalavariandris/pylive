@@ -14,9 +14,9 @@ import glm # or import pyrr !!!! TODO: checkout pyrr
 import numpy as np
 from OpenGL import GL as gl
 
-from pylive.render_engine.camera import Camera
-from pylive.render_engine.windows.orbitcontrol_for_qtwidget import OrbitControl
-from pylive.render_engine.render_layers import RenderLayer, TrimeshLayer, TriangleLayer
+from pylive.glrenderer.utils.camera import Camera
+from pylive.glrenderer.windows.orbitcontrol_for_qtwidget import OrbitControl
+from pylive.glrenderer.gllayers import RenderLayer, TrimeshLayer, TriangleLayer
 
 from textwrap import dedent
 
