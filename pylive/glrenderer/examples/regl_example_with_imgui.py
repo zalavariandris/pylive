@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 from imgui_bundle import imgui, immapp
 
-from pylive.glrenderer.regl.regl import REGL
+from pylive.glrenderer.regl_old.regl import REGL
 import glm
 import numpy as np
 # ############## #

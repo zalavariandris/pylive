@@ -21,6 +21,7 @@ class GLResource:
 
     def handle(self):
         return self._handle
+        
 
 
 class Texture(GLResource):

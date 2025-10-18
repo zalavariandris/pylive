@@ -13,7 +13,15 @@ from typing import TypeVar
 Handle = TypeVar("Handle")
 
 
-
+from .resources import (
+    Texture, 
+    TextureArray, 
+    Texture3D, 
+    TextureCube, 
+    Framebuffer, 
+    Renderbuffer, 
+    Buffer
+)
 
 ### GL RESOURCE MANAGER ###
 class ResourceManager:
@@ -27,17 +35,10 @@ class ResourceManager:
         self.texture_cubes:  list[TextureCube] =  []
         self.framebuffers:   list[Framebuffer] =  []
         self.renderbuffers:  list[Renderbuffer] = []
-
-        self._mgl = None
-
+        
         # weakref caches (for reuse)
         self._buffer_cache = {}
         # self._program_cache = {}
-
-    def mgl(self)->moderngl.Context:
-        if not self._mgl:
-            self._mgl = moderngl.get_context()
-        return self._mgl
 
     def buffer(self, 
         data: Optional[Any] = None, *, 
@@ -59,60 +60,6 @@ class ResourceManager:
         # cache buffer
         self._buffer_cache[cache_key] = weakref.ref(buffer)
         return buffer
-
-    # def _program(self, *, 
-    #     vertex_shader:          ShaderSource, 
-    #     fragment_shader:        ShaderSource | None = None, 
-    #     geometry_shader:        ShaderSource | None = None, # not implemented yet
-    #     tess_control_shader:    ShaderSource | None = None,  # not implemented yet
-    #     tess_evaluation_shader: ShaderSource | None = None,  # not implemented yet
-    #     varyings:               Tuple[str, ...] = (),  # not implemented yet
-    #     fragment_outputs:       Dict[str, int] | None = None,  # not implemented yet
-    #     varyings_capture_mode:  str = 'interleaved' # not implemented yet
-    # )->Program:
-    #     # create cache key
-    #     cache_key = (vertex_shader, fragment_shader)
-
-    #     # get from cache
-    #     ref  = self._program_cache.get(cache_key)
-    #     if ref:
-    #         program = ref()
-    #         if program:
-    #             return program
-
-    #     # create new program
-    #     program = Program(self,
-    #         vertex_shader,
-    #         fragment_shader,
-    #         geometry_shader,
-    #         tess_control_shader,
-    #         tess_evaluation_shader,
-    #         varyings,
-    #         fragment_outputs,
-    #         varyings_capture_mode)
-    #     self.programs.append(program)
-
-    #     # cache program
-    #     self._program_cache[cache_key] = weakref.ref(program)
-    #     return program
-
-    # def _vertex_array(self,
-    #     program: moderngl.Program, 
-    #     buffer: moderngl.Buffer, 
-    #     *attributes: Union[List[str], Tuple[str, ...]], 
-    #     index_buffer: Optional[moderngl.Buffer] = None, 
-    #     index_element_size: int = 4, 
-    #     mode: Optional[int] = None
-    # ) -> VertexArray:
-    #     vao = VertexArray(self, 
-    #         program,
-    #         buffer,
-    #         *attributes,
-    #         index_buffer=index_buffer,
-    #         index_element_size=index_element_size,
-    #         mode=mode)
-    #     self.vertex_arrays.append(vao)
-    #     return vao
 
     def texture(self,
         size: Tuple[int, int],
@@ -216,10 +163,6 @@ class ResourceManager:
         # release all resources
         for buffer in self.buffers:
             buffer.release()
-        # for program in self.programs:
-        #     program.release()
-        # for vertex_array in self.vertex_arrays:
-        #     vertex_array.release()
         for texture in self.textures:
             texture.release()
         for texture_array in self.texture_arrays:
