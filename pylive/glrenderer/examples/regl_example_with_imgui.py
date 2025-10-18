@@ -1,14 +1,29 @@
+import logging
 
-import trimesh
-import moderngl
 
-from pylive.glrenderer.windows.mgl_render_window import MGLCameraWindow
+# Configure logging to see shader compilation logs
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+
+from imgui_bundle import imgui, immapp
+
 from pylive.glrenderer.regl.regl import REGL
 import glm
 import numpy as np
+# ############## #
+# GUI #
+# ############## #
 
 regl = REGL()
+color = regl.texture(
+    size=(800,800), 
+    components=4
+)
+
+# fbo = regl.framebuffer(color_attachments=[color])
 draw_triangle = regl.command(
+    framebuffer=None,
     vert='''\
         #version 410 core
 
@@ -49,15 +64,16 @@ draw_triangle = regl.command(
     count=3
 )
 
-class REGLExampleWindow(MGLCameraWindow):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        # create draw triangle command
-        
-    def on_render(self, time: float, frametime: float):
-        self.ctx.clear(0.1, 0.1, 0.1, 1.0)
-        draw_triangle()
+
+
+def gui():
+    imgui.begin_child("3d_viewport")
+    imgui.text("This is where the 3D viewport would be rendered.")
+    imgui.end_child()
+    draw_triangle()
+
+
 
 if __name__ == "__main__":
-    # Run the window
-    REGLExampleWindow.run()
+    immapp.run(gui, window_title="RenderLayers example with imgui", window_size=(800, 800))
+

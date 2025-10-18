@@ -24,12 +24,15 @@ import glm
 import textwrap
 
 class REGL(ResourceManager):
-	def command(self, vert:str, frag:str, uniforms:Dict, attributes:Dict, count:int):
-		return Command(vert=vert,
+	def command(self, *, vert:str, frag:str, uniforms:Dict, attributes:Dict, count:int, framebuffer:moderngl.Framebuffer=None):
+		return Command(
+			vert=vert,
 			frag=frag,
 			uniforms=uniforms,
 			attributes=attributes,
-			count=count)
+			count=count,
+			framebuffer=framebuffer
+		)
 
 	def clear(self, color:glm.vec4=glm.vec4(0,0,0,1)):
 		ctx = moderngl.get_context()

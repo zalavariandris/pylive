@@ -12,8 +12,6 @@ from pprint import pformat
 
 from imgui_bundle import imgui, immapp
 
-
-    
 # ############## #
 # Graphics Layer #
 # ############## #

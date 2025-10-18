@@ -29,6 +29,7 @@ dependencies = [
     "pyyaml",
     "colour-science",
     "imgui_bundle",
+    "PyOpenGL_accelerate,
     
 
     "rope ~= 1.13.0",

@@ -6,13 +6,21 @@ import textwrap
 
 
 class Command:
-	def __init__(self, vert:str, frag:str, uniforms:Dict[str, Any], attributes:Dict[str, np.ndarray|list], count:int):
+	def __init__(self, 
+			vert:str, 
+			frag:str, 
+			uniforms:Dict[str, Any], 
+			attributes:Dict[str, np.ndarray|list], 
+			count:int,
+			framebuffer:moderngl.Framebuffer=None
+		):
 		super().__init__()
 		self.vert = textwrap.dedent(vert)
 		self.frag = textwrap.dedent(frag)
 		self.uniforms = uniforms
 		self.attributes = attributes
 		self.count = count
+		self.framebuffer = framebuffer
 
 		# GL OBJECTS
 		self._attr_buffers: list[Tuple[moderngl.Buffer, str, str]] = []
@@ -95,4 +103,11 @@ class Command:
 			self._attr_buffers,
 			mode=moderngl.TRIANGLES
 		)
+
+		if self.framebuffer:
+			self.framebuffer.use()
+		else:
+			ctx.screen.use()
 		vao.render()
+		if self.framebuffer:
+			ctx.screen.use()
