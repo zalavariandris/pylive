@@ -24,7 +24,10 @@ class GridLayer(RenderLayer):
 
         self._initialized = False
         
-    def setup(self, ctx):
+    def setup(self):
+        ctx = moderngl.get_context()
+        if ctx is None:
+            raise Exception("No current ModernGL context. Cannot setup ArrowLayer.")
         logger.info(f"Setting up {self.__class__.__name__}...")
         start_time = time.time()
         
@@ -85,7 +88,7 @@ class GridLayer(RenderLayer):
         self.program['color'].write(self.color)
         self.vao.render()
 
-    def destroy(self):
+    def release(self):
         if self.program:
             self.program.release()
         if self.vao:

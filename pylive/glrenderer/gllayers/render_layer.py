@@ -39,7 +39,7 @@ class RenderLayer(ABC):
     ''')
 
     @abstractmethod
-    def setup(self, ctx:moderngl.Context):
+    def setup(self):
         ...
 
     @abstractmethod
@@ -47,5 +47,5 @@ class RenderLayer(ABC):
         ...
 
     @abstractmethod
-    def destroy(self):
+    def release(self):
         ...

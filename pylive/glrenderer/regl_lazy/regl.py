@@ -13,12 +13,12 @@ from typing import *
 
 from numpy import dtype
 import moderngl
-from pylive.glrenderer.regl.command import Command
-from pylive.glrenderer.regl.resource_manager import ResourceManager
-from pylive.glrenderer.utils.camera import Camera
+from .command import Command
+from .resource_manager import ResourceManager
+
 from OpenGL.GL import *
 
-camera = Camera()
+
 import glm
 
 class REGL(ResourceManager):

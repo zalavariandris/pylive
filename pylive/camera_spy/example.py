@@ -45,15 +45,15 @@ class SceneLayer(RenderLayer):
         super().setup(ctx)
         self._initialized = True
 
-    def destroy(self):
+    def release(self):
         if self.grid:
-            self.grid.destroy()
+            self.grid.release()
             self.grid = None
         if self.axes:
-            self.axes.destroy()
+            self.axes.release()
             self.axes = None
         self._initialized = False
-        return super().destroy()
+        return super().release()
     
     def render(self, camera:Camera):
         self.grid.render(view=camera.viewMatrix(), projection=camera.projectionMatrix())

@@ -21,7 +21,10 @@ class TriangleLayer(RenderLayer):
         self.program = None
 
     @override
-    def setup(self, ctx:moderngl.Context):
+    def setup(self):
+        ctx = moderngl.get_context()
+        if ctx is None:
+            raise Exception("No current ModernGL context. Cannot setup ArrowLayer.")
         logger.info(f"Setting up {self.__class__.__name__}...")
         start_time = time.time()
         
@@ -55,7 +58,7 @@ class TriangleLayer(RenderLayer):
         logger.info(f"{self.__class__.__name__} setup completed in {setup_time:.3f}s")
 
     @override
-    def destroy(self):
+    def release(self):
         if self.program:
             self.program.release()
             self.program = None

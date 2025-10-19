@@ -11,18 +11,21 @@ class RenderLayersExampleWindow(MGLCameraWindow):
                     
         # Create triangle layer
         self.triangle = TriangleLayer()
-        self.triangle.setup(self.ctx)
+        self.triangle.setup()
         self.grid = GridLayer()
-        self.grid.setup(self.ctx)
+        self.grid.setup()
         self.axes = AxesLayer()
-        self.axes.setup(self.ctx)
+        self.axes.setup()
         self.cube = TrimeshLayer(mesh=trimesh.creation.box(extents=(1,1,1)))
-        self.cube.setup(self.ctx)
+        self.cube.setup()
         
         # Enable depth testing
         self.ctx.enable(moderngl.DEPTH_TEST)
     
     def on_render(self, time: float, frametime: float):
+        ctx = moderngl.get_context()
+        if ctx is None:
+            raise Exception("No current ModernGL context. Cannot setup ArrowLayer.")
         self.ctx.clear(0.1, 0.1, 0.1, 1.0)
         self.triangle.render()
         self.grid.render(self.camera.viewMatrix(), self.camera.projectionMatrix())

@@ -40,6 +40,20 @@ class ResourceManager:
         self._buffer_cache = {}
         # self._program_cache = {}
 
+    def stats(self)->Dict[str, int]:
+        return {
+            'buffers': len(self.buffers),
+            # 'programs': len(self.programs),
+            # 'vertex_arrays': len(self.vertex_arrays),
+            'textures': len(self.textures),
+            'texture_arrays': len(self.texture_arrays),
+            'texture3ds': len(self.texture3ds),
+            'texture_cubes': len(self.texture_cubes),
+            'framebuffers': len(self.framebuffers),
+            'renderbuffers': len(self.renderbuffers),
+            
+        }
+
     def buffer(self, 
         data: Optional[Any] = None, *, 
         reserve: int = 0, 
@@ -70,7 +84,7 @@ class ResourceManager:
         dtype: str = 'f1',
         internal_format: Optional[int] = None
     )->Texture:
-        texture = Texture(self,
+        texture = Texture(
             size,
             components,
             data,
@@ -89,7 +103,7 @@ class ResourceManager:
         alignment: int = 1,
         dtype: str = 'f1'
     )->TextureArray:
-        texture_array = TextureArray(self, 
+        texture_array = TextureArray( 
             size, 
             components, 
             data, 
@@ -106,7 +120,7 @@ class ResourceManager:
         alignment: int = 1,
         dtype: str = 'f1'
     )->Texture3D:
-        texture3d = Texture3D(self,
+        texture3d = Texture3D(
             size,
             components,
             data,
@@ -115,7 +129,7 @@ class ResourceManager:
         self.texture3ds.append(texture3d)
         return texture3d
 
-    def texture_cube(self, 
+    def texture_cube(
         size: Tuple[int, int], 
         components: int, 
         data: Optional[Any] = None,
@@ -151,7 +165,7 @@ class ResourceManager:
         samples: int = 0,
         dtype: str = 'f1'
     )->Renderbuffer:
-        renderbuffer = Renderbuffer(self,
+        renderbuffer = Renderbuffer(
             size,
             components,
             samples=samples,

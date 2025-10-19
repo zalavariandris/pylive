@@ -3,7 +3,7 @@ import trimesh
 import moderngl
 
 from pylive.glrenderer.windows.mgl_render_window import MGLCameraWindow
-from pylive.glrenderer.regl_old.regl import REGL
+from pylive.glrenderer.regl_lazy.regl import REGL
 import glm
 import numpy as np
 

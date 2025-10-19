@@ -78,7 +78,7 @@ class Texture(GLResource[moderngl.Texture]):
     @override
     def release(self, handle:Handle):
         handle.release()
-    
+ 
 
 class Framebuffer(GLResource[moderngl.Framebuffer]):
     def __init__(self, 
@@ -101,7 +101,7 @@ class Framebuffer(GLResource[moderngl.Framebuffer]):
     @override
     def release(self, handle:Handle):
         handle.release()
-        
+   
 
 class Buffer(GLResource[moderngl.Buffer]):
     def __init__(self, 

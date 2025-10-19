@@ -33,13 +33,13 @@ class AxesLayer(RenderLayer):
             color=glm.vec4(0,0,1,1)
         ) # Z
 
-    def setup(self, ctx: moderngl.Context):
+    def setup(self):
         logger.info(f"Setting up {self.__class__.__name__}...")
         start_time = time.time()
         
-        self.xarrow.setup(ctx)
-        self.yarrow.setup(ctx)
-        self.zarrow.setup(ctx)
+        self.xarrow.setup()
+        self.yarrow.setup()
+        self.zarrow.setup()
         
         setup_time = time.time() - start_time
         logger.info(f"{self.__class__.__name__} setup completed in {setup_time:.3f}s")
@@ -49,9 +49,9 @@ class AxesLayer(RenderLayer):
         self.yarrow.render(view, projection)
         self.zarrow.render(view, projection)
 
-    def destroy(self):
-        self.xarrow.destroy()
-        self.yarrow.destroy()
-        self.zarrow.destroy()
+    def release(self):
+        self.xarrow.release()
+        self.yarrow.release()
+        self.zarrow.release()
 
 

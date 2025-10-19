@@ -14,8 +14,8 @@ import weakref
 
 from numpy import dtype
 import moderngl
-from pylive.glrenderer.regl.command import Command
-from pylive.glrenderer.regl.resource_manager import ResourceManager
+from .command import Command
+from .resource_manager import ResourceManager
 from pylive.glrenderer.utils.camera import Camera
 from OpenGL.GL import *
 

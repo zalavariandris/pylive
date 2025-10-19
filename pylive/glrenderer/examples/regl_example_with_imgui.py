@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 from imgui_bundle import imgui, immapp
 
-from pylive.glrenderer.regl_old.regl import REGL
+from pylive.glrenderer.regl_lazy.regl import REGL
 import glm
 import numpy as np
 # ############## #
@@ -68,6 +68,8 @@ draw_triangle = regl.command(
 
 def gui():
     imgui.begin_child("3d_viewport")
+    from pprint import pformat
+    imgui.text(pformat(regl.stats()))
     imgui.text("This is where the 3D viewport would be rendered.")
     imgui.end_child()
     draw_triangle()
