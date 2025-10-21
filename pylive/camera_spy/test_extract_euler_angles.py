@@ -1,3 +1,11 @@
+import glm
+import math
+from src import solver
+
+import glm
+import math
+import pytest
+
 def build_matrix_from_euler(angles, order):
     x, y, z = angles
     import glm
@@ -34,13 +42,6 @@ def matrices_almost_equal(A, B, tol=1e-5):
             if abs(A[i][j] - B[i][j]) > tol:
                 return False
     return True
-import glm
-import math
-from src import solver
-
-import glm
-import math
-import pytest
 
 # Import your get_rotation function here if it's in another file
 # from your_module import get_rotation
@@ -72,7 +73,7 @@ def test_get_rotation(order, angles):
             R = glm.rotate(R, angle, glm.vec3(0, 0, 1))
 
     R3 = glm.mat3(R)
-    computed = solver.get_rotation(R3, order)
+    computed = solver.extract_euler_angle(R3, order)
 
     # Reconstruct matrix from computed angles and compare
     reconstructed = build_matrix_from_euler(computed, order)

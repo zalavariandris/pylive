@@ -3,6 +3,8 @@ from imgui_bundle import imgui, immapp
 from pprint import pformat
 from typing import Any, List, Tuple, Dict
 
+import glm
+
 
 # first_vanishing_point_pixel =  solver.least_squares_intersection_of_lines(first_vanishing_lines)
 
@@ -64,15 +66,10 @@ class SceneLayer(RenderLayer):
 scene_layer = SceneLayer()
 render_target = RenderTarget(800, 800)
 
-# ############## #
-# GUI #
-# ############## #
-
 
 # ################# #
 # Application State #
 # ################# #
-
 from enum import IntEnum
 class SolverMode(IntEnum):
     OneVP = 0
@@ -187,12 +184,12 @@ def gui():
                         image_width, 
                         image_height, 
                         first_vanishing_point_pixel,
-                        focal_length_pixel
-                        # principal_point_pixel,
-                        # state.origin_pixel,
-                        # state.first_axis,
-                        # state.second_axis,
-                        # state.scene_scale
+                        focal_length_pixel,
+                        principal_point_pixel,
+                        state.origin_pixel,
+                        state.first_axis,
+                        state.second_axis,
+                        state.scene_scale
                     )
 
                     view_translate_transform = glm.translate(glm.mat4(1.0), position)
@@ -205,23 +202,21 @@ def gui():
                     # 3. Adjust Camera Roll to match second vanishing lines
                     ###################
                     # Roll the camera based on the horizon line projected to 3D
-                    # roll_matrix = solver.compute_roll_matrix(
-                    #     image_width, 
-                    #     image_height, 
-                    #     state.second_vanishing_lines_pixel[0],
-                    #     projection_matrix=glm.perspective(fovy, image_width/image_height, 0.1, 100.0),
-                    #     view_matrix=view_transform
-                    # )
+                    roll_matrix = solver.compute_roll_matrix(
+                        image_width, 
+                        image_height, 
+                        state.second_vanishing_lines_pixel[0],
+                        projection_matrix=glm.perspective(fovy, image_width/image_height, 0.1, 100.0),
+                        view_matrix=view_transform
+                    )
 
-                    # view_transform = view_transform * roll_matrix
+                    view_transform = view_transform * roll_matrix
 
                     # create camera
                     camera = Camera()
                     camera.setFoVY(fovy)
                     
                     camera.transform = glm.inverse(view_transform)
-                    x, y, z = solver.get_rotation(camera_orientation, order="ZXY")
-                    imgui.text(f"rotate: {math.degrees(x)}, {math.degrees(y)}, {math.degrees(z)}")
                     camera.setAspectRatio(widget_size.x / widget_size.y)
                     camera.setFoVY(math.degrees(fovy))
 
@@ -262,12 +257,12 @@ def gui():
                         image_width, 
                         image_height, 
                         first_vanishing_point_pixel,
-                        second_vanishing_point_pixel
-                        # principal_point_pixel,
-                        # state.origin_pixel,
-                        # state.first_axis,
-                        # state.second_axis,
-                        # state.scene_scale
+                        second_vanishing_point_pixel,
+                        principal_point_pixel,
+                        state.origin_pixel,
+                        state.first_axis,
+                        state.second_axis,
+                        state.scene_scale
                     )
 
                     view_translate_transform = glm.translate(glm.mat4(1.0), position)
@@ -288,6 +283,9 @@ def gui():
             import traceback
             traceback.print_exc()
             imgui.pop_style_color()
+
+        x, y, z = solver.extract_euler_angle(camera.transform, order="ZXY")
+        imgui.text(f"rotate: {math.degrees(x)}, {math.degrees(y)}, {math.degrees(z)}")
 
         # Render Scene
         gl_size = widget_size * imgui.get_io().display_framebuffer_scale

@@ -1,10 +1,11 @@
-from typing import List, Tuple, NewType
+from typing import List, Tuple, Literal
 from enum import IntEnum
 import math
-
-# from . import glmx
 import glm
 
+#########
+# TYPES #
+#########
 class Axis(IntEnum):
     PositiveX = 0
     NegativeX = 1
@@ -13,43 +14,41 @@ class Axis(IntEnum):
     PositiveZ = 4
     NegativeZ = 5
 
-LineSegmentType = Tuple[glm.vec2, glm.vec2]
+type LineSegment = Tuple[glm.vec2, glm.vec2]
 
-###
-def focal_length_from_fov(fovy, image_height):
-    return (image_height / 2) / math.tan(fovy / 2)
+import inspect
+from functools import wraps
 
-def fov_from_focal_length(focal_length_pixel, image_height):
-    return math.atan(image_height / 2 / focal_length_pixel) * 2
+def enforce_types(func):
+    sig = inspect.signature(func)
+    annotations = func.__annotations__
 
-def _axisVector(axis: Axis)->glm.vec3:
-    match axis:
-      case Axis.NegativeX:
-        return glm.vec3(-1, 0, 0)
-      case Axis.PositiveX:
-        return glm.vec3(1, 0, 0)
-      case Axis.NegativeY:
-        return glm.vec3(0, -1, 0)
-      case Axis.PositiveY:
-        return glm.vec3(0, 1, 0)
-      case Axis.NegativeZ:
-        return glm.vec3(0, 0, -1)
-      case Axis.PositiveZ:
-        return glm.vec3(0, 0, 1)
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        bound = sig.bind(*args, **kwargs)
+        bound.apply_defaults()
 
-def _vectorAxis(vector: glm.vec3)->Axis:
-    if vector.x == 0 and vector.y == 0:
-      return Axis.PositiveZ if vector.z > 0 else Axis.NegativeZ
-    elif vector.x == 0 and vector.z == 0:
-      return Axis.PositiveY if vector.y > 0 else Axis.NegativeY
-    elif vector.y == 0 and vector.z == 0:
-      return Axis.PositiveX if vector.x > 0 else Axis.NegativeX
-    
-    raise Exception('Invalid axis vector')
+        for name, value in bound.arguments.items():
+            expected_type = annotations.get(name)
+            if expected_type is not None:
+                try:
+                    # Only cast if not already correct type
+                    if not isinstance(value, expected_type):
+                        bound.arguments[name] = expected_type(value)
+                except Exception as e:
+                    raise TypeError(
+                        f"Failed to cast argument '{name}' to {expected_type}: {e}"
+                    ) from e
 
-###
-# MAIN SOLVER FUNCTIONS
-###
+        return func(*bound.args, **bound.kwargs)
+
+    return wrapper
+
+#########################
+# MAIN SOLVER FUNCTIONS #
+#########################
+
+@enforce_types
 def solve1vp(
         width:int,
         height:int,
@@ -95,6 +94,7 @@ def solve1vp(
 
         return view_orientation_matrix, camera_position
 
+@enforce_types
 def solve2vp(
         width:int,
         height:int,
@@ -148,9 +148,10 @@ def solve2vp(
     
     return fovy, view_orientation_matrix, camera_position
 
-###
-# CORE SOLVER FUNCTIOS
-###
+
+########################
+# CORE SOLVER FUNCTIOS #
+########################
 def second_vanishing_point_from_focal_length(
         Fu: glm.vec2, 
         f: float, 
@@ -264,7 +265,7 @@ def compute_camera_position(
 def compute_roll_matrix(
         width:int,
         height:int,
-        second_vanishing_line:Tuple[glm.vec2, glm.vec2],
+        second_vanishing_line:LineSegment,
         projection_matrix:glm.mat4,
         view_matrix:glm.mat4
 ):
@@ -509,39 +510,45 @@ def create_axis_assignment_matrix(first_axis: Axis, second_axis: Axis) -> glm.ma
     return axis_aqssignment_matrix
 
 
-###
-# 2D-3D GOMETRY FUNCTIONS
-###
-def cast_ray(
-    pos: glm.vec2, 
-    view_matrix: glm.mat4, 
-    projection_matrix: glm.mat4, 
-    viewport: glm.vec4
-) -> Tuple[glm.vec3, glm.vec3]:
-    """
-    Cast a ray from the camera through a pixel in screen space.
+###########################
+# Solver helper functions #
+###########################
+def focal_length_from_fov(fovy, image_height):
+    return (image_height / 2) / math.tan(fovy / 2)
+
+def fov_from_focal_length(focal_length_pixel, image_height):
+    return math.atan(image_height / 2 / focal_length_pixel) * 2
+
+def _axisVector(axis: Axis)->glm.vec3:
+    match axis:
+      case Axis.NegativeX:
+        return glm.vec3(-1, 0, 0)
+      case Axis.PositiveX:
+        return glm.vec3(1, 0, 0)
+      case Axis.NegativeY:
+        return glm.vec3(0, -1, 0)
+      case Axis.PositiveY:
+        return glm.vec3(0, 1, 0)
+      case Axis.NegativeZ:
+        return glm.vec3(0, 0, -1)
+      case Axis.PositiveZ:
+        return glm.vec3(0, 0, 1)
+
+def _vectorAxis(vector: glm.vec3)->Axis:
+    if vector.x == 0 and vector.y == 0:
+      return Axis.PositiveZ if vector.z > 0 else Axis.NegativeZ
+    elif vector.x == 0 and vector.z == 0:
+      return Axis.PositiveY if vector.y > 0 else Axis.NegativeY
+    elif vector.y == 0 and vector.z == 0:
+      return Axis.PositiveX if vector.x > 0 else Axis.NegativeX
     
-    Args:
-        screen_x: X coordinate in pixel space
-        screen_y: Y coordinate in pixel space
-        view_matrix: Camera view matrix
-        projection_matrix: Camera projection matrix
-        viewport: Viewport (x, y, width, height)
-    """
+    raise Exception('Invalid axis vector')
 
-    world_near = glm.unProject(
-        glm.vec3(pos.x, pos.y, 0.0),
-        view_matrix, projection_matrix, viewport
-    )
 
-    world_far = glm.unProject(
-        glm.vec3(pos.x, pos.y, 1.0),
-        view_matrix, projection_matrix, viewport
-    )
-
-    return world_near, world_far
-
-def least_squares_intersection_of_lines(line_segments: List[Tuple[glm.vec2, glm.vec2]]) -> glm.vec2:
+###########################
+# 2D-3D GOMETRY FUNCTIONS #
+###########################
+def least_squares_intersection_of_lines(line_segments: List[LineSegment]) -> glm.vec2:
     """
     Compute the least-squares intersection (vanishing point) of a set of 2D lines
     defined by their endpoints. Uses pure PyGLM math, no numpy.
@@ -581,6 +588,35 @@ def least_squares_intersection_of_lines(line_segments: List[Tuple[glm.vec2, glm.
     y = (-S_aa * S_bc + S_ab * S_ac) / det
 
     return glm.vec2(x, y)
+
+def cast_ray(
+    pos: glm.vec2, 
+    view_matrix: glm.mat4, 
+    projection_matrix: glm.mat4, 
+    viewport: glm.vec4
+) -> Tuple[glm.vec3, glm.vec3]:
+    """
+    Cast a ray from the camera through a pixel in screen space.
+    
+    Args:
+        screen_x: X coordinate in pixel space
+        screen_y: Y coordinate in pixel space
+        view_matrix: Camera view matrix
+        projection_matrix: Camera projection matrix
+        viewport: Viewport (x, y, width, height)
+    """
+
+    world_near = glm.unProject(
+        glm.vec3(pos.x, pos.y, 0.0),
+        view_matrix, projection_matrix, viewport
+    )
+
+    world_far = glm.unProject(
+        glm.vec3(pos.x, pos.y, 1.0),
+        view_matrix, projection_matrix, viewport
+    )
+
+    return world_near, world_far
 
 def _world_depth_to_ndc_z(distance:float, near:float, far:float, clamp=False) -> float:
     """Convert world depth to NDC z-coordinate using perspective-correct mapping
@@ -687,14 +723,15 @@ def _gram_schmidt_orthogonalization(matrix: glm.mat3) -> glm.mat3:
     
     return result
 
-###
-# Post-processing functions
-###
+
+#############################
+# Post-processing functions #
+#############################
 def adjust_vanishing_lines(
         old_vp:glm.vec2, 
         new_vp:glm.vec2, 
-        vanishing_lines:List[Tuple[glm.vec2, glm.vec2]]
-    ) -> List[Tuple[glm.vec2, glm.vec2]]:
+        vanishing_lines:List[LineSegment]
+    ) -> List[LineSegment]:
     # When vanishing point moves, adjust only the closest endpoint of each vanishing line
     new_vanishing_lines = vanishing_lines.copy()
     for i, (P, Q) in enumerate(vanishing_lines):
@@ -727,9 +764,9 @@ def adjust_vanishing_lines(
 def adjust_vanishing_lines_by_rotation(
         old_vp: glm.vec2, 
         new_vp: glm.vec2, 
-        vanishing_lines: List[Tuple[glm.vec2, glm.vec2]],
+        vanishing_lines: List[LineSegment],
         principal_point: glm.vec2
-    ) -> List[Tuple[glm.vec2, glm.vec2]]:
+    ) -> List[LineSegment]:
     """
     Adjust vanishing lines by rotating them around the principal point so they point to the new vanishing point.
     """
@@ -803,96 +840,92 @@ def mat3_to_euler_zxy(M: glm.mat3) -> Tuple[float, float, float]:
 
     return z, x, y  # Z, X, Y order
 
-import glm
-import math
-from typing import Tuple
 
-def get_rotation(M: glm.mat3, order: str = "ZXY") -> Tuple[float, float, float]:
+##################
+# GLM EXTENSIONS #
+##################
+def extract_euler_angle_XYZ(M: glm.mat4) -> Tuple[float, float, float]:
+    T1 = math.atan2(M[2][1], M[2][2])
+    C2 = math.sqrt(M[0][0] * M[0][0] + M[1][0] * M[1][0])
+    T2 = math.atan2(-M[2][0], C2)
+    S1 = math.sin(T1)
+    C1 = math.cos(T1)
+    T3 = math.atan2(S1 * M[0][2] - C1 * M[0][1], C1 * M[1][1] - S1 * M[1][2])
+    return -T1, -T2, -T3
+
+def extract_euler_angle_YXZ(M: glm.mat4) -> Tuple[float, float, float]:
+    T1 = math.atan2(M[2][0], M[2][2])
+    C2 = math.sqrt(M[0][1] * M[0][1] + M[1][1] * M[1][1])
+    T2 = math.atan2(-M[2][1], C2)
+    S1 = math.sin(T1)
+    C1 = math.cos(T1)
+    T3 = math.atan2(S1 * M[1][2] - C1 * M[1][0], C1 * M[0][0] - S1 * M[0][2])
+    return T1, T2, T3
+
+def extract_euler_angle_XZY(M: glm.mat4) -> Tuple[float, float, float]:
+    T1 = math.atan2(M[1][2], M[1][1])
+    C2 = math.sqrt(M[0][0] * M[0][0] + M[2][0] * M[2][0])
+    T2 = math.atan2(-M[1][0], C2)
+    S1 = math.sin(T1)
+    C1 = math.cos(T1)
+    T3 = math.atan2(S1 * M[0][1] - C1 * M[0][2], C1 * M[2][2] - S1 * M[2][1])
+    return T1, T2, T3
+
+def extract_euler_angle_YZX(M: glm.mat4) -> Tuple[float, float, float]:
+    T1 = math.atan2(-M[0][2], M[0][0])
+    C2 = math.sqrt(M[1][1] * M[1][1] + M[2][1] * M[2][1])
+    T2 = math.atan2(M[0][1], C2)
+    S1 = math.sin(T1)
+    C1 = math.cos(T1)
+    T3 = math.atan2(S1 * M[1][0] + C1 * M[1][2], S1 * M[2][0] + C1 * M[2][2])
+    return T1, T2, T3
+
+def extract_euler_angle_ZYX(M: glm.mat4) -> Tuple[float, float, float]:
+    T1 = math.atan2(M[0][1], M[0][0])
+    C2 = math.sqrt(M[1][2] * M[1][2] + M[2][2] * M[2][2])
+    T2 = math.atan2(-M[0][2], C2)
+    S1 = math.sin(T1)
+    C1 = math.cos(T1)
+    T3 = math.atan2(S1 * M[2][0] - C1 * M[2][1], C1 * M[1][1] - S1 * M[1][0])
+    return T1, T2, T3
+
+def extract_euler_angle_ZXY(M: glm.mat4) -> Tuple[float, float, float]:
+    T1 = math.atan2(-M[1][0], M[1][1])
+    C2 = math.sqrt(M[0][2] * M[0][2] + M[2][2] * M[2][2])
+    T2 = math.atan2(M[1][2], C2)
+    S1 = math.sin(T1)
+    C1 = math.cos(T1)
+    T3 = math.atan2(C1 * M[2][0] + S1 * M[2][1], C1 * M[0][0] + S1 * M[0][1])
+    return T1, T2, T3
+
+def extract_euler_angle(M: glm.mat3, order: str = Literal["XYZ", "XZY", "YXZ", "YZX", "ZXY", "ZYX"]) -> Tuple[float, float, float]:
     """
     Convert a glm.mat3 rotation matrix to Euler angles (radians)
     for the specified rotation order.
     Supported orders: "XYZ", "XZY", "YXZ", "YZX", "ZXY", "ZYX"
     """
-    # Convert glm.mat3 to 2D list for easier indexing
-    R = [[M[i][j] for j in range(3)] for i in range(3)]
-    eps = 1e-6
+    match order:
+        case "XYZ":
+            x,y,z = extract_euler_angle_XYZ(M)
+            return x,y,z
+        case "XZY":
+            x,z,y = extract_euler_angle_XZY(M)
+            return x,y,z
+        case "YXZ":
+            y,x,z = extract_euler_angle_YXZ(M)
+            return x,y,z
+        case "YZX":
+            y,z,x = extract_euler_angle_YZX(M)
+            return x,y,z
+        case "ZXY":
+            z,x,y = extract_euler_angle_ZXY(M)
+            return x,y,z
+        case "ZYX":
+            z,y,x = extract_euler_angle_ZYX(M)
+            return x,y,z
+        case _:
+            raise ValueError(f"Unsupported Euler angle order: {order}")
 
-    def clamp(v, minv=-1.0, maxv=1.0):
-        return max(min(v, maxv), minv)
 
-    if order == "XYZ":
-        sy = math.sqrt(R[0][0]**2 + R[1][0]**2)
-        singular = sy < eps
-        if not singular:
-            x = math.atan2(R[2][1], R[2][2])
-            y = math.atan2(-R[2][0], sy)
-            z = math.atan2(R[1][0], R[0][0])
-        else:
-            x = math.atan2(-R[1][2], R[1][1])
-            y = math.atan2(-R[2][0], sy)
-            z = 0.0
 
-    elif order == "XZY":
-        sz = math.sqrt(R[0][0]**2 + R[2][0]**2)
-        singular = sz < eps
-        if not singular:
-            x = math.atan2(-R[1][2], R[1][1])
-            z = math.atan2(-R[2][0], R[0][0])
-            y = math.atan2(R[1][0], R[1][1])
-        else:
-            x = math.atan2(-R[1][2], R[1][1])
-            z = math.atan2(-R[2][0], R[0][0])
-            y = 0.0
 
-    elif order == "YXZ":
-        sx = -R[1][2]
-        cx = math.sqrt(1 - sx*sx)
-        if abs(cx) > eps:
-            x = math.asin(clamp(sx))
-            y = math.atan2(R[0][2], R[2][2])
-            z = math.atan2(R[1][0], R[1][1])
-        else:
-            x = math.asin(clamp(sx))
-            y = math.atan2(-R[2][0], R[0][0])
-            z = 0.0
-
-    elif order == "YZX":
-        sz = -R[1][0]
-        cz = math.sqrt(1 - sz*sz)
-        if abs(cz) > eps:
-            y = math.asin(clamp(sz))
-            z = math.atan2(R[1][2], R[1][1])
-            x = math.atan2(R[2][0], R[0][0])
-        else:
-            y = math.asin(clamp(sz))
-            z = math.atan2(-R[2][1], R[2][2])
-            x = 0.0
-
-    elif order == "ZXY":
-        sx = R[2][1]
-        cx = math.sqrt(1 - sx*sx)
-        if abs(cx) > eps:
-            x = math.asin(clamp(sx))
-            y = math.atan2(-R[2][0], R[2][2])
-            z = math.atan2(-R[0][1], R[1][1])
-        else:
-            x = math.asin(clamp(sx))
-            y = 0.0
-            z = math.atan2(R[1][0], R[0][0])
-
-    elif order == "ZYX":
-        sy = math.sqrt(R[0][0]**2 + R[1][0]**2)
-        singular = sy < eps
-        if not singular:
-            x = math.atan2(R[2][1], R[2][2])
-            y = math.atan2(-R[2][0], sy)
-            z = math.atan2(R[1][0], R[0][0])
-        else:
-            x = math.atan2(-R[1][2], R[1][1])
-            y = math.atan2(-R[2][0], sy)
-            z = 0.0
-
-    else:
-        raise ValueError(f"Rotation order '{order}' not supported.")
-
-    return (x, y, z)
