@@ -1,5 +1,6 @@
 import math
-from imgui_bundle import imgui, immapp
+from imgui_bundle import imgui, immapp, imgui_ctx, hello_imgui
+
 from pprint import pformat
 from typing import Any, List, Tuple, Dict
 
@@ -25,7 +26,12 @@ import trimesh
 class SceneLayer(RenderLayer):
     def __init__(self):
         super().__init__()
-        self.grid = GridLayer()
+        self.show_grid_XY = True
+        self.show_grid_XZ = False
+        self.show_grid_YZ = False
+        self.gridXY = GridLayer(XY=True)
+        self.gridXZ = GridLayer(XZ=True)
+        self.gridYZ = GridLayer(YZ=True)
         self.axes = AxesLayer()
         mesh = trimesh.creation.icosphere(subdivisions=2, radius=0.1)
         mesh = mesh.apply_translation([0, 0, 1])
@@ -38,15 +44,23 @@ class SceneLayer(RenderLayer):
 
     def setup(self):
         super().setup()
-        self.grid.setup()
+        self.gridXY.setup()
+        self.gridXZ.setup()
+        self.gridYZ.setup()
         self.axes.setup()
         self.mesh.setup()
         self._initialized = True
 
     def release(self):
-        if self.grid:
-            self.grid.release()
-            self.grid = None
+        if self.gridXY:
+            self.gridXY.release()
+            self.gridXY = None
+        if self.gridXZ:
+            self.gridXZ.release()
+            self.gridXZ = None
+        if self.gridYZ:
+            self.gridYZ.release()
+            self.gridYZ = None
         if self.axes:
             self.axes.release()
             self.axes = None
@@ -57,7 +71,12 @@ class SceneLayer(RenderLayer):
         return super().release()
     
     def render(self, camera:Camera):
-        self.grid.render(view=camera.viewMatrix(), projection=camera.projectionMatrix())
+        if self.show_grid_XY:
+            self.gridXY.render(view=camera.viewMatrix(), projection=camera.projectionMatrix())
+        if self.show_grid_XZ:
+            self.gridXZ.render(view=camera.viewMatrix(), projection=camera.projectionMatrix())
+        if self.show_grid_YZ:
+            self.gridYZ.render(view=camera.viewMatrix(), projection=camera.projectionMatrix())
         self.axes.render(view=camera.viewMatrix(), projection=camera.projectionMatrix())
         self.mesh.render(view=camera.viewMatrix(), projection=camera.projectionMatrix())
         super().render()
@@ -107,13 +126,29 @@ state = State()
 # MAIN LOOP #
 # ######### #
 
+def get_axis_color(axis:solver.Axis, dim:bool=False) -> Tuple[float, float, float]:
+    match axis:
+        case solver.Axis.PositiveX | solver.Axis.NegativeX:
+            return ui.colors.RED if not dim else ui.colors.RED_DIMMED
+        case solver.Axis.PositiveY | solver.Axis.NegativeY:
+            return ui.colors.GREEN if not dim else ui.colors.GREEN_DIMMED
+        case solver.Axis.PositiveZ | solver.Axis.NegativeZ:
+            return ui.colors.BLUE if not dim else ui.colors.BLUE_DIMMED
+        case _:
+            return (1.0, 1.0, 1.0)
+        
 
+
+@immapp.static(theme=hello_imgui.ImGuiTheme_.darcula_darker)
 def gui():
+    
+
     # Configure imgui
     style = imgui.get_style()
     style.anti_aliased_lines = True
     style.anti_aliased_lines_use_tex = True
     style.anti_aliased_fill = True
+    
 
     # ModernGL renderer
     global render_target
@@ -123,31 +158,41 @@ def gui():
         scene_layer.setup()
 
     global state
-
-    imgui.text("Camera Spy")    
     
+    # Compute Camera
+    camera = Camera()
 
     # Parameters
-    _, state.first_axis = imgui.combo("first axis",   state.first_axis, solver.Axis._member_names_)
-    _, state.second_axis = imgui.combo("second axis", state.second_axis, solver.Axis._member_names_)
-    _, state.scene_scale = imgui.slider_float("scene_scale", state.scene_scale, 1.0, 100.0, "%.2f")
-    _, state.settings["solver_mode"] = imgui.combo("mode", state.settings.get("solver_mode", SolverMode.OneVP), SolverMode._member_names_)
-    # _, state.quad_mode = imgui.checkbox("quad mode", state.quad_mode)
+    display_size = imgui.get_io().display_size
+    PANEL_FLAGS = imgui.WindowFlags_.always_auto_resize | imgui.WindowFlags_.no_move | imgui.WindowFlags_.no_resize | imgui.WindowFlags_.no_collapse | imgui.WindowFlags_.no_title_bar
+    side_panel_width = 500
+    imgui.set_next_window_pos((0,0))
+    imgui.set_next_window_size((side_panel_width, display_size.y))
+    with imgui_ctx.begin("Parameters", None, PANEL_FLAGS):
+        _, state.first_axis = imgui.combo("first axis",   state.first_axis, solver.Axis._member_names_)
+        _, state.second_axis = imgui.combo("second axis", state.second_axis, solver.Axis._member_names_)
+        _, state.scene_scale = imgui.slider_float("scene_scale", state.scene_scale, 1.0, 100.0, "%.2f")
+        _, state.settings["solver_mode"] = imgui.combo("mode", state.settings.get("solver_mode", SolverMode.OneVP), SolverMode._member_names_)
+        # _, state.quad_mode = imgui.checkbox("quad mode", state.quad_mode)
+        _, gui.theme = imgui.combo("Theme",   gui.theme, hello_imgui.ImGuiTheme_._member_names_)
+        if _:
+            hello_imgui.apply_theme(gui.theme)
 
-    widget_size = imgui.get_content_region_avail()
-    if imgui.begin_child("3d_viewport", widget_size):
+    imgui.set_next_window_pos((side_panel_width,0))
+    imgui.set_next_window_size((display_size.x - side_panel_width*2, display_size.y))
+    with imgui_ctx.begin("3d_viewport_child", None, PANEL_FLAGS):
+        widget_size = imgui.get_content_region_avail()
         image_width, image_height = int(widget_size.x), int(widget_size.y)
 
-        # Compute Camera
-        camera = Camera()
+
         try:
             # Control Points
             from collections import defaultdict
             drag_line = ui.comp(ui.drag_point)
             drag_lines = ui.comp(drag_line)
-            _, state.first_vanishing_lines_pixel = drag_lines("Z", state.first_vanishing_lines_pixel, color=ui.colors.BLUE)
-            ui.draw.draw_lines(state.first_vanishing_lines_pixel, "", ui.colors.BLUE)
-            
+            _, state.first_vanishing_lines_pixel = drag_lines("Z", state.first_vanishing_lines_pixel, color=get_axis_color(state.first_axis))
+            ui.draw.draw_lines(state.first_vanishing_lines_pixel, "", get_axis_color(state.first_axis))
+
 
             # _, principal_point_pixel = drag_point("principal_point", principal_point_pixel)
             principal_point_pixel = glm.vec2(widget_size.x / 2, widget_size.y / 2)
@@ -160,8 +205,8 @@ def gui():
                     # UI #
                     ######)
                     _, state.settings["fov_degrees"] = imgui.slider_float("fov°", state.settings.get("fov_degrees", 60.0), 1.0, 179.0, "%.1f°")
-                    _, state.second_vanishing_lines_pixel[0] = drag_line("X", state.second_vanishing_lines_pixel[0], color=ui.colors.RED)  
-                    ui.draw.draw_lines(state.second_vanishing_lines_pixel[:1], "", ui.colors.RED)
+                    _, state.second_vanishing_lines_pixel[0] = drag_line("X", state.second_vanishing_lines_pixel[0], color=get_axis_color(state.second_axis))  
+                    ui.draw.draw_lines(state.second_vanishing_lines_pixel[:1], "", get_axis_color(state.second_axis))
 
                     ###############################
                     # 1. COMPUTE vanishing points #
@@ -173,7 +218,7 @@ def gui():
                     VP1 = first_vanishing_point_pixel
                     for A, B in state.first_vanishing_lines_pixel:
                         P = sorted([A, B], key=lambda P: glm.distance2(P, VP1))[0]
-                        ui.draw.draw_lines([(P, VP1)], "", ui.colors.BLUE_DIMMED)
+                        ui.draw.draw_lines([(P, VP1)], "", get_axis_color(state.first_axis, dim=True))
 
                     ###################
                     # 2. Solve Camera #
@@ -229,8 +274,8 @@ def gui():
                             (VL[0][1], VL[1][1])
                         ]
                     else:
-                        _, state.second_vanishing_lines_pixel = drag_lines("X", state.second_vanishing_lines_pixel, color=ui.colors.RED)
-                    ui.draw.draw_lines(state.second_vanishing_lines_pixel, "", ui.colors.RED)
+                        _, state.second_vanishing_lines_pixel = drag_lines("X", state.second_vanishing_lines_pixel, color=get_axis_color(state.second_axis))
+                    ui.draw.draw_lines(state.second_vanishing_lines_pixel, "", get_axis_color(state.second_axis, dim=True))
                     ###############################
                     # 1. COMPUTE vanishing points #
                     ###############################
@@ -244,11 +289,11 @@ def gui():
                     VP1 = first_vanishing_point_pixel
                     for A, B in state.first_vanishing_lines_pixel:
                         P = sorted([A, B], key=lambda P: glm.distance2(P, VP1))[0]
-                        ui.draw.draw_lines([(P, VP1)], "", ui.colors.BLUE_DIMMED)
+                        ui.draw.draw_lines([(P, VP1)], "", get_axis_color(state.first_axis, dim=True))
                     VP2 = second_vanishing_point_pixel
                     for A, B in state.second_vanishing_lines_pixel:
                         P = sorted([A, B], key=lambda P: glm.distance2(P, VP2))[0]
-                        ui.draw.draw_lines([(P, VP2)], "", ui.colors.RED_DIMMED)
+                        ui.draw.draw_lines([(P, VP2)], "", get_axis_color(state.second_axis, dim=True))
 
                     ###################
                     # 2. Solve Camera #
@@ -284,20 +329,19 @@ def gui():
             traceback.print_exc()
             imgui.pop_style_color()
 
-        x, y, z = solver.extract_euler_angle(camera.transform, order="ZXY")
-        imgui.text(f"rotate: {math.degrees(x)}, {math.degrees(y)}, {math.degrees(z)}")
+        
 
         # Render Scene
         gl_size = widget_size * imgui.get_io().display_framebuffer_scale
-        render_target.resize(int(gl_size.x), int(gl_size.y))
-        with render_target:
-            render_target.clear(0.1, 0.1, 0.1, 0.0)  # Clear with dark gray background
-            scene_layer.render(camera)
+        # render_target.resize(int(gl_size.x), int(gl_size.y))
+        # with render_target:
+        #     render_target.clear(0.1, 0.1, 0.1, 0.0)  # Clear with dark gray background
+        #     scene_layer.render(camera)
 
-        # Display the framebuffer texture in ImGui
-        imgui.set_cursor_pos(imgui.ImVec2(0,0))
-        image_ref = imgui.ImTextureRef(int(render_target.color_texture.glo))
-        imgui.image(image_ref,imgui.ImVec2(widget_size.x, widget_size.y))
+        # # Display the framebuffer texture in ImGui
+        # imgui.set_cursor_pos(imgui.ImVec2(0,0))
+        # image_ref = imgui.ImTextureRef(int(render_target.color_texture.glo))
+        # imgui.image(image_ref,imgui.ImVec2(widget_size.x, widget_size.y))
 
         # Draw 3D grid
         view = camera.viewMatrix()
@@ -305,10 +349,32 @@ def gui():
         viewport = (0, 0, int(widget_size.x), int(widget_size.y))
         ui.draw_grid3D(view, projection, viewport)
 
+    imgui.set_next_window_pos((display_size.x - side_panel_width, 0))
+    imgui.set_next_window_size((side_panel_width, display_size.y))
+    with imgui_ctx.begin("Results", None, PANEL_FLAGS):
+        x, y, z = solver.extract_euler_angle(camera.transform, order="ZXY")
+        pos = camera.getPosition()
+        imgui.input_text_multiline("results", "text",size=None, flags=imgui.InputTextFlags_.read_only)
         
-    imgui.end_child()
+        
+        imgui.text(f"matrix:\n{pformat(camera.transform)}")
+
+        
+
+        imgui.input_text("translate", f"{pos.x:.2f}, {pos.y:.2f}, {pos.z:.2f}",                               flags=imgui.InputTextFlags_.read_only)
+        imgui.input_text("rotate",    f"{math.degrees(x):.0f}, {math.degrees(y):.0f}, {math.degrees(z):.0f}", flags=imgui.InputTextFlags_.read_only)
+        
+        imgui.text(f"translate: {pos.x:.2f}, {pos.y:.2f}, {pos.z:.2f}")
+        imgui.text(f"rotate:    {math.degrees(x):.0f}, {math.degrees(y):.0f}, {math.degrees(z):.0f}")
+
+        imgui.input_float4("quaternion", (3,3,3,4), "%.3f", imgui.InputTextFlags_.read_only)
+        imgui.input_float3("translate", camera.getPosition(), "%.3f", imgui.InputTextFlags_.read_only)
+        imgui.input_float3("rotate", (x,y,z), "%.3f", imgui.InputTextFlags_.read_only)
+
+        
+    
 
 
 if __name__ == "__main__":
-    immapp.run(gui, window_title="ImGui Bundle - 2D Points & 3D Scene", window_size=(800, 800))
+    immapp.run(gui, window_title="Camera Spy", window_size=(1200, 512))
 

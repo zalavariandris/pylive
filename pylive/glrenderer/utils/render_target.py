@@ -26,6 +26,7 @@ class RenderTarget:
         ctx = moderngl.get_context()
         if ctx is None:
             raise Exception("No current ModernGL context. Cannot setup SceneLayer.")
+        
         # Create color texture
         self.color_texture = ctx.texture((self._width, self._height), 4, dtype='f1')
         self.color_texture.filter = (moderngl.LINEAR, moderngl.LINEAR)
