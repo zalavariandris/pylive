@@ -19,7 +19,7 @@ class AxesLayer(RenderLayer):
         super().__init__()
 
         self.xarrow = ArrowLayer( 
-            model=glm.rotate(math.radians(90), glm.vec3(1,0,0)),
+            model=glm.rotate(math.radians(90), glm.vec3(0,0,1)),
             color=glm.vec4(1,0,0,1)
         ) # X
 
@@ -29,7 +29,7 @@ class AxesLayer(RenderLayer):
         ) # Y
 
         self.zarrow = ArrowLayer( 
-            model=glm.rotate(math.radians(90), glm.vec3(0,0,1)),
+            model=glm.rotate(math.radians(90), glm.vec3(1,0,0)),
             color=glm.vec4(0,0,1,1)
         ) # Z
 
