@@ -3,7 +3,6 @@ import time
 from typing import *
 import numpy as np
 import glm # or import pyrr !!!! TODO: checkout pyrr
-import trimesh
 import moderngl
 from textwrap import dedent
 from pylive.glrenderer.utils.camera import Camera
