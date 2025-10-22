@@ -1,5 +1,6 @@
 import math
 from imgui_bundle import imgui, immapp, imgui_ctx, hello_imgui
+from imgui_bundle import portable_file_dialogs as pfd
 
 from pprint import pformat
 from typing import Any, List, Tuple, Dict
@@ -164,11 +165,27 @@ def gui():
     # Compute Camera
     camera = Camera()
 
+    if imgui.begin_main_menu_bar():
+        if imgui.begin_menu("File", True):
+            clicked_open, _ = imgui.menu_item("Open", "Ctrl+O", False, True)
+            if clicked_open:
+                file_object = pfd.open_file(
+                    title="Open fspy file"
+                )
+                file_paths = file_object.result()
+                print("Selected file:", file_paths)
+            clicked_exit, _ = imgui.menu_item("Exit", "Alt+F4", False, True)
+            if clicked_exit:
+                print("Exiting...")
+            imgui.end_menu()
+        imgui.end_main_menu_bar()   
+
     # Parameters
     display_size = imgui.get_io().display_size
     PANEL_FLAGS = imgui.WindowFlags_.always_auto_resize | imgui.WindowFlags_.no_move | imgui.WindowFlags_.no_resize | imgui.WindowFlags_.no_collapse | imgui.WindowFlags_.no_title_bar
-    side_panel_width = 500
-    imgui.set_next_window_pos((0,0))
+    
+    side_panel_width = 300
+    imgui.set_next_window_pos((0,24))
     imgui.set_next_window_size((side_panel_width, display_size.y))
     with imgui_ctx.begin("Parameters", None, PANEL_FLAGS):
         _, gui.first_axis = imgui.combo("first axis",   gui.first_axis, solver.Axis._member_names_)
@@ -179,14 +196,14 @@ def gui():
         if _:
             hello_imgui.apply_theme(gui.theme)
 
-    imgui.set_next_window_pos((side_panel_width,0))
+    imgui.set_next_window_pos((side_panel_width,24))
     imgui.set_next_window_size((display_size.x - side_panel_width*2, display_size.y))
     with imgui_ctx.begin("3d_viewport_child", None, PANEL_FLAGS):
         widget_size = imgui.get_content_region_avail()
         image_width, image_height = int(widget_size.x), int(widget_size.y)
 
-        with imgui_ctx.begin_drag_drop_target() as target:
-            print(target)
+        # with imgui_ctx.begin_drag_drop_target() as target:
+        #     print(target)
             # payload = imgui.accept_drag_drop_payload("MY_PAYLOAD_TYPE")
             # if payload is not None:
                 # print("Dropped payload:", payload.data.decode("utf-8"))
@@ -357,7 +374,7 @@ def gui():
         viewport = (0, 0, int(widget_size.x), int(widget_size.y))
         ui.draw_grid3D(view, projection, viewport)
 
-    imgui.set_next_window_pos((display_size.x - side_panel_width, 0))
+    imgui.set_next_window_pos((display_size.x - side_panel_width, 24))
     imgui.set_next_window_size((side_panel_width, display_size.y))
     with imgui_ctx.begin("Results", None, PANEL_FLAGS):
         x, y, z = solver.extract_euler_angle(camera.transform, order="ZXY")
