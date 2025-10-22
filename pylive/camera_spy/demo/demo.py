@@ -1,5 +1,5 @@
 import math
-from imgui_bundle import imgui, immapp, imgui_ctx, hello_imgui
+from imgui_bundle import imgui, immapp, imgui_ctx, hello_imgui, implot3d
 from imgui_bundle import portable_file_dialogs as pfd
 
 from pprint import pformat
@@ -87,8 +87,6 @@ scene_layer = SceneLayer()
 render_target = RenderTarget(800, 800)
 
 
-
-
 # ######### #
 # MAIN LOOP #
 # ######### #
@@ -111,21 +109,6 @@ from enum import IntEnum
 class SolverMode(IntEnum):
     OneVP = 0
     TwoVP = 1
-
-# class State:
-#     def __init__(self):
-#         # controlpoints
-
-
-#         self.first_vanishing_lines_pixel: List[solver.LineSegmentType] = [
-#             (glm.vec2(240, 408), glm.vec2(355, 305)),
-#             (glm.vec2(501, 462), glm.vec2(502, 325))
-#         ]
-#         self.second_vanishing_lines_pixel: List[solver.LineSegmentType] = [
-#             [glm.vec2(350, 260), glm.vec2(550, 330)],
-#             [glm.vec2(440, 480), glm.vec2(240, 300)]
-#         ]
-# state = State()
 
 @immapp.static(
     first_vanishing_lines_pixel = [
@@ -178,6 +161,13 @@ def gui():
             if clicked_exit:
                 print("Exiting...")
             imgui.end_menu()
+        if imgui.begin_menu("View", True):
+            for theme in hello_imgui.ImGuiTheme_:
+                activated, toggle = imgui.menu_item(f"{theme}", "", gui.theme == theme, True)
+                if activated:
+                    gui.theme = theme
+                    hello_imgui.apply_theme(gui.theme)
+            imgui.end_menu()
         imgui.end_main_menu_bar()   
 
     # Parameters
@@ -192,9 +182,15 @@ def gui():
         _, gui.second_axis = imgui.combo("second axis", gui.second_axis, solver.Axis._member_names_)
         _, gui.scene_scale = imgui.slider_float("scene_scale", gui.scene_scale, 1.0, 100.0, "%.2f")
         _, gui.solver_mode = imgui.combo("mode", gui.solver_mode, SolverMode._member_names_)
-        _, gui.theme = imgui.combo("Theme",   gui.theme, hello_imgui.ImGuiTheme_._member_names_)
-        if _:
-            hello_imgui.apply_theme(gui.theme)
+
+        match gui.solver_mode:
+            case SolverMode.OneVP:
+                _, gui.fov_degrees = imgui.slider_float("fov°", gui.fov_degrees, 1.0, 179.0, "%.1f°")
+            case SolverMode.TwoVP:
+                _, gui.quad_mode = imgui.checkbox("quad", gui.quad_mode)
+
+        if ui.myplot.begin_plot("myplot"):
+            ui.myplot.end_plot()
 
     imgui.set_next_window_pos((side_panel_width,24))
     imgui.set_next_window_size((display_size.x - side_panel_width*2, display_size.y))
@@ -202,22 +198,27 @@ def gui():
         widget_size = imgui.get_content_region_avail()
         image_width, image_height = int(widget_size.x), int(widget_size.y)
 
+        #######################
+        # UI Viewport Handles #
+        #######################
+        match gui.solver_mode:
+            case SolverMode.OneVP:
+                ...
+            case SolverMode.TwoVP:
+                ...
+
         # with imgui_ctx.begin_drag_drop_target() as target:
         #     print(target)
             # payload = imgui.accept_drag_drop_payload("MY_PAYLOAD_TYPE")
             # if payload is not None:
                 # print("Dropped payload:", payload.data.decode("utf-8"))
 
-
-
         try:
             # Control Points
-            from collections import defaultdict
             drag_line = ui.comp(ui.drag_point)
             drag_lines = ui.comp(drag_line)
             _, gui.first_vanishing_lines_pixel = drag_lines("Z", gui.first_vanishing_lines_pixel, color=get_axis_color(gui.first_axis))
             ui.draw.draw_lines(gui.first_vanishing_lines_pixel, "", get_axis_color(gui.first_axis))
-
 
             # _, principal_point_pixel = drag_point("principal_point", principal_point_pixel)
             principal_point_pixel = glm.vec2(widget_size.x / 2, widget_size.y / 2)
@@ -229,7 +230,6 @@ def gui():
                     ######
                     # UI #
                     ######)
-                    _, gui.fov_degrees = imgui.slider_float("fov°", gui.fov_degrees, 1.0, 179.0, "%.1f°")
                     _, gui.second_vanishing_lines_pixel[0] = drag_line("X", gui.second_vanishing_lines_pixel[0], color=get_axis_color(gui.second_axis))  
                     ui.draw.draw_lines(gui.second_vanishing_lines_pixel[:1], "", get_axis_color(gui.second_axis))
 
@@ -250,10 +250,11 @@ def gui():
                     ###################
                     fovy = math.radians(gui.fov_degrees)
                     focal_length_pixel = solver.focal_length_from_fov(fovy, image_height)
-                    view_orientation, position = solver.solve1vp(
+                    camera_transform = solver.solve1vp(
                         image_width, 
                         image_height, 
                         first_vanishing_point_pixel,
+                        gui.second_vanishing_lines_pixel[0],
                         focal_length_pixel,
                         principal_point_pixel,
                         gui.origin_pixel,
@@ -262,36 +263,16 @@ def gui():
                         gui.scene_scale
                     )
 
-                    view_translate_transform = glm.translate(glm.mat4(1.0), position)
-                    view_rotation_transform = glm.mat4(view_orientation)
-                    view_transform= view_rotation_transform * view_translate_transform
-
-                    camera_orientation = glm.mat3(view_orientation)
-
-                    ###################
-                    # 3. Adjust Camera Roll to match second vanishing lines
-                    ###################
-                    # Roll the camera based on the horizon line projected to 3D
-                    roll_matrix = solver.compute_roll_matrix(
-                        image_width, 
-                        image_height, 
-                        gui.second_vanishing_lines_pixel[0],
-                        projection_matrix=glm.perspective(fovy, image_width/image_height, 0.1, 100.0),
-                        view_matrix=view_transform
-                    )
-
-                    view_transform = view_transform * roll_matrix
-
                     # create camera
                     camera = Camera()
                     camera.setFoVY(fovy)
                     
-                    camera.transform = glm.inverse(view_transform)
+                    camera.transform = camera_transform
                     camera.setAspectRatio(widget_size.x / widget_size.y)
                     camera.setFoVY(math.degrees(fovy))
 
                 case SolverMode.TwoVP: # 2VP
-                    _, gui.quad_mode = imgui.checkbox("quad", gui.quad_mode)
+                    
                     if gui.quad_mode:
                         VL = gui.first_vanishing_lines_pixel
                         gui.second_vanishing_lines_pixel = [
@@ -323,7 +304,7 @@ def gui():
                     ###################
                     # 2. Solve Camera #
                     ###################
-                    fovy, view_orientation, position = solver.solve2vp(
+                    fovy, camera_transform = solver.solve2vp(
                         image_width, 
                         image_height, 
                         first_vanishing_point_pixel,
@@ -335,14 +316,10 @@ def gui():
                         gui.scene_scale
                     )
 
-                    view_translate_transform = glm.translate(glm.mat4(1.0), position)
-                    view_rotation_transform = glm.mat4(view_orientation)
-                    view_transform= view_rotation_transform * view_translate_transform
-
                     # create camera
                     camera = Camera()
                     camera.setFoVY(fovy)
-                    camera.transform = glm.inverse(view_transform)
+                    camera.transform = camera_transform
                     camera.setAspectRatio(widget_size.x / widget_size.y)
                     camera.setFoVY(math.degrees(fovy))            
 
@@ -381,8 +358,11 @@ def gui():
         pos = camera.getPosition()
         imgui.input_text_multiline("results", "text",size=None, flags=imgui.InputTextFlags_.read_only)
         
-        
-        imgui.text(f"matrix:\n{pformat(camera.transform)}")
+        matrix = [camera.transform[j][i] for i in range(4) for j in range(4)]
+        imgui.input_float4("matrix##row1", matrix[0:4], "%.3f", imgui.InputTextFlags_.read_only)
+        imgui.input_float4("##matrixrow2", matrix[4:8], "%.3f", imgui.InputTextFlags_.read_only)
+        imgui.input_float4("##matrixrow3", matrix[8:12], "%.3f", imgui.InputTextFlags_.read_only)
+        imgui.input_float4("##matrixrow4", matrix[12:16], "%.3f", imgui.InputTextFlags_.read_only)
 
         
 
@@ -401,5 +381,5 @@ def gui():
 
 
 if __name__ == "__main__":
-    immapp.run(gui, window_title="Camera Spy", window_size=(1200, 512))
+    immapp.run(gui, window_title="Camera Spy", window_size=(1200, 512), with_implot3d=True)
 

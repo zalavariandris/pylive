@@ -14,7 +14,6 @@ class Axis(IntEnum):
     PositiveZ = 4
     NegativeZ = 5
 
-type LineSegment = Tuple[glm.vec2, glm.vec2]
 
 import inspect
 from functools import wraps
@@ -47,19 +46,20 @@ def enforce_types(func):
 #########################
 # MAIN SOLVER FUNCTIONS #
 #########################
-
-@enforce_types
 def solve1vp(
         width:int,
         height:int,
         Fu: glm.vec2,
-        f:float,
+        second_vanishing_line: Tuple[glm.vec2, glm.vec2],
+        f:float=None, # focal length in pixels
         P: glm.vec2=None,
         O: glm.vec2=None,
         first_axis = Axis.PositiveZ,
         second_axis = Axis.PositiveX,
         scale:float=1.0
-    )->Tuple[glm.mat3, glm.vec3]:
+    )->glm.mat4:
+        if f is None:
+            f = height / 4  # assume a reasonable focal length
         if P is None:
             P = glm.vec2(width/2, height/2)
         if O is None:
@@ -92,9 +92,33 @@ def solve1vp(
             scale
         )
 
-        return view_orientation_matrix, camera_position
+        view_translate_transform = glm.translate(glm.mat4(1.0), camera_position)
+        view_rotation_transform = glm.mat4(view_orientation_matrix)
+        view_transform = view_rotation_transform * view_translate_transform
 
-@enforce_types
+        camera_orientation = glm.mat3(view_orientation_matrix)
+        camera_transform = glm.inverse(view_transform)
+
+        ###################
+        # 3. Adjust Camera Roll to match second vanishing lines
+        ###################
+        # Roll the camera based on the horizon line projected to 3D
+        fovy = fov_from_focal_length(f, height)
+
+        if second_vanishing_line:
+            roll_matrix = compute_roll_matrix(
+                width, 
+                height, 
+                second_vanishing_line,
+                projection_matrix=glm.perspective(fovy, width/height, 0.1, 100.0),
+                view_matrix=view_transform
+            )
+
+            view_transform = view_transform * roll_matrix
+            camera_transform = glm.inverse(view_transform)
+
+        return camera_transform
+
 def solve2vp(
         width:int,
         height:int,
@@ -105,7 +129,7 @@ def solve2vp(
         first_axis = Axis.PositiveZ,
         second_axis = Axis.PositiveX,
         scale:float=1.0
-    )->Tuple[float, glm.mat3, glm.vec3]:
+    )->Tuple[float, glm.mat4]:
     """ Solve camera intrinsics and orientation from 3 orthogonal vanishing points.
     returns (fovy in radians, camera_orientation_matrix, camera_position)
     """
@@ -145,8 +169,13 @@ def solve2vp(
         O, 
         scale
     )
-    
-    return fovy, view_orientation_matrix, camera_position
+
+    view_translate_transform = glm.translate(glm.mat4(1.0), camera_position)
+    view_rotation_transform = glm.mat4(view_orientation_matrix)
+    view_transform= view_rotation_transform * view_translate_transform
+    camera_transform = glm.inverse(view_transform)
+
+    return fovy, camera_transform
 
 
 ########################
@@ -208,7 +237,7 @@ def compute_orientation_from_two_vanishing_points(
 def compute_orientation_from_single_vanishing_point(
         Fu:glm.vec2,
         Fv:glm.vec2,
-        f:float
+        f:float,
     ):
     Fu_Fv = Fu-Fv
     forward = glm.normalize(glm.vec3(Fu_Fv.x, Fu_Fv.y,  -f))
@@ -265,7 +294,7 @@ def compute_camera_position(
 def compute_roll_matrix(
         width:int,
         height:int,
-        second_vanishing_line:LineSegment,
+        second_vanishing_line:Tuple[glm.vec2, glm.vec2],
         projection_matrix:glm.mat4,
         view_matrix:glm.mat4
 ):
@@ -514,10 +543,17 @@ def create_axis_assignment_matrix(first_axis: Axis, second_axis: Axis) -> glm.ma
 # Solver helper functions #
 ###########################
 def focal_length_from_fov(fovy, image_height):
+    # fov = math.atan(height / 2 / f) * 2
+    # fov/2 = math.atan(height / 2 / f)
+    # tan(fov/2) = height / 2 / f
+    # f * tan(fov/2) = height / 2
+    # f = (height / 2) / tan(fov/2)
+
     return (image_height / 2) / math.tan(fovy / 2)
 
 def fov_from_focal_length(focal_length_pixel, image_height):
     return math.atan(image_height / 2 / focal_length_pixel) * 2
+
 
 def _axisVector(axis: Axis)->glm.vec3:
     match axis:
@@ -548,7 +584,7 @@ def _vectorAxis(vector: glm.vec3)->Axis:
 ###########################
 # 2D-3D GOMETRY FUNCTIONS #
 ###########################
-def least_squares_intersection_of_lines(line_segments: List[LineSegment]) -> glm.vec2:
+def least_squares_intersection_of_lines(line_segments: List[Tuple[glm.vec2, glm.vec2]]) -> glm.vec2:
     """
     Compute the least-squares intersection (vanishing point) of a set of 2D lines
     defined by their endpoints. Uses pure PyGLM math, no numpy.
@@ -730,8 +766,8 @@ def _gram_schmidt_orthogonalization(matrix: glm.mat3) -> glm.mat3:
 def adjust_vanishing_lines(
         old_vp:glm.vec2, 
         new_vp:glm.vec2, 
-        vanishing_lines:List[LineSegment]
-    ) -> List[LineSegment]:
+        vanishing_lines:List[Tuple[glm.vec2, glm.vec2]]
+    ) -> List[Tuple[glm.vec2, glm.vec2]]:
     # When vanishing point moves, adjust only the closest endpoint of each vanishing line
     new_vanishing_lines = vanishing_lines.copy()
     for i, (P, Q) in enumerate(vanishing_lines):
@@ -764,9 +800,9 @@ def adjust_vanishing_lines(
 def adjust_vanishing_lines_by_rotation(
         old_vp: glm.vec2, 
         new_vp: glm.vec2, 
-        vanishing_lines: List[LineSegment],
+        vanishing_lines: List[Tuple[glm.vec2, glm.vec2]],
         principal_point: glm.vec2
-    ) -> List[LineSegment]:
+    ) -> List[Tuple[glm.vec2, glm.vec2]]:
     """
     Adjust vanishing lines by rotating them around the principal point so they point to the new vanishing point.
     """

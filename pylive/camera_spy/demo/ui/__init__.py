@@ -5,7 +5,7 @@ from .compose.comp import comp
 from .compose.zip import zip
 from . import colors
 from .draw import draw_points, draw_lines, draw_lines3D, draw_grid3D
-
+from . import myplot
 __all__ = [
     "radio_group",
     "touch_pad",
@@ -16,5 +16,6 @@ __all__ = [
     "draw_points",
     "draw_lines",
     "draw_lines3D",
-    "draw_grid3D"
+    "draw_grid3D",
+    "myplot"
 ]

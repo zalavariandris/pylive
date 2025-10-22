@@ -109,6 +109,33 @@ def draw_lines(lines: List[Tuple[imgui.ImVec2, imgui.ImVec2]], labels: list[str]
                 label
             )
 
+def draw_points3D(view: glm.mat4, projection: glm.mat4, viewport: Tuple[int,int,int,int],
+                  points: List[imgui.ImVec2], labels: list[str]|str|None = None, colors:List[int]|int|None=None):
+    """Draw 3D lines in the scene.
+    Note: lines are clipped against the near plane before projection.
+    """
+    ###
+    # the current implementation is a simple readable but a naive per-line processing.
+    # TODO: Consider using numpy arrays and vectorized operations.
+    ###
+    # clip lines to near plane
+    clipped_points = []
+    for P in points:
+        P = _clip_point_near_plane_world(P, view, near=0.1)
+        clipped_points.append(P)
+
+    # project lines to screen
+    projected_points = []
+    for A in clipped_points:
+        if A:
+            P_proj = glm.project(A, view, projection, viewport)
+            projected_points.append(imgui.ImVec2(P_proj.x, P_proj.y))
+        else:
+            projected_points.append(None)
+
+    # draw lines
+    draw_points(projected_points, labels, colors)
+
 def draw_lines3D(view: glm.mat4, projection: glm.mat4, viewport: Tuple[int,int,int,int],
                  lines, labels=None, colors=None, near=0.1):
     """Draw 3D lines in the scene.
@@ -196,3 +223,20 @@ def _clip_line_near_plane_world(A: glm.vec3, B: glm.vec3, view: glm.mat4, near=0
     else:
         return A, intersection_world
     
+
+def _clip_point_near_plane_world(A: glm.vec3, view: glm.mat4, near=0.1):
+    """Clip a line against the near plane in camera space, return world-space endpoints."""
+    A_cam = glm.vec3(view * glm.vec4(A, 1.0))
+
+    zA = A_cam.z
+
+    # Both in front
+    if zA <= -near:  # negative z is in front in OpenGL
+        return A
+
+    # Both behind → discard
+    if zA > -near:
+        return None
+    
+    else:
+        return A
