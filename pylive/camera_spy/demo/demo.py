@@ -86,40 +86,6 @@ scene_layer = SceneLayer()
 render_target = RenderTarget(800, 800)
 
 
-# ################# #
-# Application State #
-# ################# #
-from enum import IntEnum
-class SolverMode(IntEnum):
-    OneVP = 0
-    TwoVP = 1
-
-class State:
-    def __init__(self):
-        # controlpoints
-        self.origin_pixel: glm.vec2 =          glm.vec2(400, 400)
-        self.principal_point_pixel: glm.vec2 = glm.vec2(400, 400)
-
-        self.first_vanishing_lines_pixel: List[solver.LineSegmentType] = [
-            (glm.vec2(240, 408), glm.vec2(355, 305)),
-            (glm.vec2(501, 462), glm.vec2(502, 325))
-        ]
-        self.second_vanishing_lines_pixel: List[solver.LineSegmentType] = [
-            [glm.vec2(350, 260), glm.vec2(550, 330)],
-            [glm.vec2(440, 480), glm.vec2(240, 300)]
-        ]
-
-        # params
-        self.scene_scale:float =                5.0
-        self.first_axis:solver.Axis =           solver.Axis.PositiveZ
-        self.second_axis:solver.Axis =          solver.Axis.PositiveX
-
-        # options
-        # self.quad_mode:bool =                   False
-        self.overrides = dict()
-        self.settings = dict()
-
-state = State()
 
 
 # ######### #
@@ -136,13 +102,49 @@ def get_axis_color(axis:solver.Axis, dim:bool=False) -> Tuple[float, float, floa
             return ui.colors.BLUE if not dim else ui.colors.BLUE_DIMMED
         case _:
             return (1.0, 1.0, 1.0)
-        
+
+# ################# #
+# Application State #
+# ################# #
+from enum import IntEnum
+class SolverMode(IntEnum):
+    OneVP = 0
+    TwoVP = 1
+
+# class State:
+#     def __init__(self):
+#         # controlpoints
 
 
-@immapp.static(theme=hello_imgui.ImGuiTheme_.darcula_darker)
+#         self.first_vanishing_lines_pixel: List[solver.LineSegmentType] = [
+#             (glm.vec2(240, 408), glm.vec2(355, 305)),
+#             (glm.vec2(501, 462), glm.vec2(502, 325))
+#         ]
+#         self.second_vanishing_lines_pixel: List[solver.LineSegmentType] = [
+#             [glm.vec2(350, 260), glm.vec2(550, 330)],
+#             [glm.vec2(440, 480), glm.vec2(240, 300)]
+#         ]
+# state = State()
+
+@immapp.static(
+    first_vanishing_lines_pixel = [
+        (glm.vec2(240, 408), glm.vec2(355, 305)),
+        (glm.vec2(501, 462), glm.vec2(502, 325))
+    ],
+    second_vanishing_lines_pixel = [
+        [glm.vec2(350, 260), glm.vec2(550, 330)],
+        [glm.vec2(440, 480), glm.vec2(240, 300)]
+    ],
+    solver_mode=SolverMode.OneVP,
+    origin_pixel=glm.vec2(400, 300),
+    principal_point_pixel=glm.vec2(400, 300),
+    theme=hello_imgui.ImGuiTheme_.darcula_darker,
+    fov_degrees=60.0,
+    quad_mode=False,
+    scene_scale=5.0,
+    first_axis=solver.Axis.PositiveZ,
+    second_axis=solver.Axis.PositiveX)
 def gui():
-    
-
     # Configure imgui
     style = imgui.get_style()
     style.anti_aliased_lines = True
@@ -169,11 +171,10 @@ def gui():
     imgui.set_next_window_pos((0,0))
     imgui.set_next_window_size((side_panel_width, display_size.y))
     with imgui_ctx.begin("Parameters", None, PANEL_FLAGS):
-        _, state.first_axis = imgui.combo("first axis",   state.first_axis, solver.Axis._member_names_)
-        _, state.second_axis = imgui.combo("second axis", state.second_axis, solver.Axis._member_names_)
-        _, state.scene_scale = imgui.slider_float("scene_scale", state.scene_scale, 1.0, 100.0, "%.2f")
-        _, state.settings["solver_mode"] = imgui.combo("mode", state.settings.get("solver_mode", SolverMode.OneVP), SolverMode._member_names_)
-        # _, state.quad_mode = imgui.checkbox("quad mode", state.quad_mode)
+        _, gui.first_axis = imgui.combo("first axis",   gui.first_axis, solver.Axis._member_names_)
+        _, gui.second_axis = imgui.combo("second axis", gui.second_axis, solver.Axis._member_names_)
+        _, gui.scene_scale = imgui.slider_float("scene_scale", gui.scene_scale, 1.0, 100.0, "%.2f")
+        _, gui.solver_mode = imgui.combo("mode", gui.solver_mode, SolverMode._member_names_)
         _, gui.theme = imgui.combo("Theme",   gui.theme, hello_imgui.ImGuiTheme_._member_names_)
         if _:
             hello_imgui.apply_theme(gui.theme)
@@ -184,46 +185,53 @@ def gui():
         widget_size = imgui.get_content_region_avail()
         image_width, image_height = int(widget_size.x), int(widget_size.y)
 
+        with imgui_ctx.begin_drag_drop_target() as target:
+            print(target)
+            # payload = imgui.accept_drag_drop_payload("MY_PAYLOAD_TYPE")
+            # if payload is not None:
+                # print("Dropped payload:", payload.data.decode("utf-8"))
+
+
 
         try:
             # Control Points
             from collections import defaultdict
             drag_line = ui.comp(ui.drag_point)
             drag_lines = ui.comp(drag_line)
-            _, state.first_vanishing_lines_pixel = drag_lines("Z", state.first_vanishing_lines_pixel, color=get_axis_color(state.first_axis))
-            ui.draw.draw_lines(state.first_vanishing_lines_pixel, "", get_axis_color(state.first_axis))
+            _, gui.first_vanishing_lines_pixel = drag_lines("Z", gui.first_vanishing_lines_pixel, color=get_axis_color(gui.first_axis))
+            ui.draw.draw_lines(gui.first_vanishing_lines_pixel, "", get_axis_color(gui.first_axis))
 
 
             # _, principal_point_pixel = drag_point("principal_point", principal_point_pixel)
             principal_point_pixel = glm.vec2(widget_size.x / 2, widget_size.y / 2)
-            _, state.origin_pixel = ui.drag_point("origin", state.origin_pixel)
+            _, gui.origin_pixel = ui.drag_point("origin", gui.origin_pixel)
 
  
-            match state.settings["solver_mode"]:
+            match gui.solver_mode:
                 case SolverMode.OneVP: # 1VP
                     ######
                     # UI #
                     ######)
-                    _, state.settings["fov_degrees"] = imgui.slider_float("fov°", state.settings.get("fov_degrees", 60.0), 1.0, 179.0, "%.1f°")
-                    _, state.second_vanishing_lines_pixel[0] = drag_line("X", state.second_vanishing_lines_pixel[0], color=get_axis_color(state.second_axis))  
-                    ui.draw.draw_lines(state.second_vanishing_lines_pixel[:1], "", get_axis_color(state.second_axis))
+                    _, gui.fov_degrees = imgui.slider_float("fov°", gui.fov_degrees, 1.0, 179.0, "%.1f°")
+                    _, gui.second_vanishing_lines_pixel[0] = drag_line("X", gui.second_vanishing_lines_pixel[0], color=get_axis_color(gui.second_axis))  
+                    ui.draw.draw_lines(gui.second_vanishing_lines_pixel[:1], "", get_axis_color(gui.second_axis))
 
                     ###############################
                     # 1. COMPUTE vanishing points #
                     ###############################
                     first_vanishing_point_pixel =  solver.least_squares_intersection_of_lines(
-                        state.first_vanishing_lines_pixel)
+                        gui.first_vanishing_lines_pixel)
                     
                     # draw vanishing line to VP1
                     VP1 = first_vanishing_point_pixel
-                    for A, B in state.first_vanishing_lines_pixel:
+                    for A, B in gui.first_vanishing_lines_pixel:
                         P = sorted([A, B], key=lambda P: glm.distance2(P, VP1))[0]
-                        ui.draw.draw_lines([(P, VP1)], "", get_axis_color(state.first_axis, dim=True))
+                        ui.draw.draw_lines([(P, VP1)], "", get_axis_color(gui.first_axis, dim=True))
 
                     ###################
                     # 2. Solve Camera #
                     ###################
-                    fovy = math.radians(state.settings["fov_degrees"])
+                    fovy = math.radians(gui.fov_degrees)
                     focal_length_pixel = solver.focal_length_from_fov(fovy, image_height)
                     view_orientation, position = solver.solve1vp(
                         image_width, 
@@ -231,10 +239,10 @@ def gui():
                         first_vanishing_point_pixel,
                         focal_length_pixel,
                         principal_point_pixel,
-                        state.origin_pixel,
-                        state.first_axis,
-                        state.second_axis,
-                        state.scene_scale
+                        gui.origin_pixel,
+                        gui.first_axis,
+                        gui.second_axis,
+                        gui.scene_scale
                     )
 
                     view_translate_transform = glm.translate(glm.mat4(1.0), position)
@@ -250,7 +258,7 @@ def gui():
                     roll_matrix = solver.compute_roll_matrix(
                         image_width, 
                         image_height, 
-                        state.second_vanishing_lines_pixel[0],
+                        gui.second_vanishing_lines_pixel[0],
                         projection_matrix=glm.perspective(fovy, image_width/image_height, 0.1, 100.0),
                         view_matrix=view_transform
                     )
@@ -266,34 +274,34 @@ def gui():
                     camera.setFoVY(math.degrees(fovy))
 
                 case SolverMode.TwoVP: # 2VP
-                    _, state.settings["quad_mode"] = imgui.checkbox("quad", state.settings.get("quad_mode", False))
-                    if state.settings["quad_mode"]:
-                        VL = state.first_vanishing_lines_pixel
-                        state.second_vanishing_lines_pixel = [
+                    _, gui.quad_mode = imgui.checkbox("quad", gui.quad_mode)
+                    if gui.quad_mode:
+                        VL = gui.first_vanishing_lines_pixel
+                        gui.second_vanishing_lines_pixel = [
                             (VL[0][0], VL[1][0]), 
                             (VL[0][1], VL[1][1])
                         ]
                     else:
-                        _, state.second_vanishing_lines_pixel = drag_lines("X", state.second_vanishing_lines_pixel, color=get_axis_color(state.second_axis))
-                    ui.draw.draw_lines(state.second_vanishing_lines_pixel, "", get_axis_color(state.second_axis, dim=True))
+                        _, gui.second_vanishing_lines_pixel = drag_lines("X", gui.second_vanishing_lines_pixel, color=get_axis_color(gui.second_axis))
+                    ui.draw.draw_lines(gui.second_vanishing_lines_pixel, "", get_axis_color(gui.second_axis, dim=True))
                     ###############################
                     # 1. COMPUTE vanishing points #
                     ###############################
                     first_vanishing_point_pixel =  solver.least_squares_intersection_of_lines(
-                        state.first_vanishing_lines_pixel)
+                        gui.first_vanishing_lines_pixel)
                     
                     second_vanishing_point_pixel = solver.least_squares_intersection_of_lines(
-                        state.second_vanishing_lines_pixel)
+                        gui.second_vanishing_lines_pixel)
                     
                     # draw vanishing line to VP1
                     VP1 = first_vanishing_point_pixel
-                    for A, B in state.first_vanishing_lines_pixel:
+                    for A, B in gui.first_vanishing_lines_pixel:
                         P = sorted([A, B], key=lambda P: glm.distance2(P, VP1))[0]
-                        ui.draw.draw_lines([(P, VP1)], "", get_axis_color(state.first_axis, dim=True))
+                        ui.draw.draw_lines([(P, VP1)], "", get_axis_color(gui.first_axis, dim=True))
                     VP2 = second_vanishing_point_pixel
-                    for A, B in state.second_vanishing_lines_pixel:
+                    for A, B in gui.second_vanishing_lines_pixel:
                         P = sorted([A, B], key=lambda P: glm.distance2(P, VP2))[0]
-                        ui.draw.draw_lines([(P, VP2)], "", get_axis_color(state.second_axis, dim=True))
+                        ui.draw.draw_lines([(P, VP2)], "", get_axis_color(gui.second_axis, dim=True))
 
                     ###################
                     # 2. Solve Camera #
@@ -304,10 +312,10 @@ def gui():
                         first_vanishing_point_pixel,
                         second_vanishing_point_pixel,
                         principal_point_pixel,
-                        state.origin_pixel,
-                        state.first_axis,
-                        state.second_axis,
-                        state.scene_scale
+                        gui.origin_pixel,
+                        gui.first_axis,
+                        gui.second_axis,
+                        gui.scene_scale
                     )
 
                     view_translate_transform = glm.translate(glm.mat4(1.0), position)
