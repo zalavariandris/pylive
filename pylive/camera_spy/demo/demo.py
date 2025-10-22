@@ -1,95 +1,26 @@
+# Standard library imports
+import time
+startup_start_time = time.time()
 import math
-from imgui_bundle import imgui, immapp, imgui_ctx, hello_imgui, implot3d
-from imgui_bundle import portable_file_dialogs as pfd
-
+import logging
 from pprint import pformat
 from typing import Any, List, Tuple, Dict
+from enum import IntEnum
 
+# Third-party imports
 import glm
+from imgui_bundle import imgui, immapp, imgui_ctx, hello_imgui
+from imgui_bundle import portable_file_dialogs as pfd
 
-
-# first_vanishing_point_pixel =  solver.least_squares_intersection_of_lines(first_vanishing_lines)
+# Local application imports
+import ui
+from pylive.glrenderer.utils.camera import Camera
+from pylive.camera_spy import solver
 
 # Configure logging to see shader compilation logs
-import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-import ui
-from pylive.glrenderer.gllayers import GridLayer, RenderLayer, AxesLayer, TrimeshLayer
-from pylive.glrenderer.utils.render_target import RenderTarget
-from pylive.glrenderer.utils.camera import Camera
-
-import glm
-from pylive.camera_spy import solver
-import trimesh
-
-class SceneLayer(RenderLayer):
-    def __init__(self):
-        super().__init__()
-        self.show_grid_XY = True
-        self.show_grid_XZ = False
-        self.show_grid_YZ = False
-        self.gridXY = GridLayer(XY=True)
-        self.gridXZ = GridLayer(XZ=True)
-        self.gridYZ = GridLayer(YZ=True)
-        self.axes = AxesLayer()
-        mesh = trimesh.creation.icosphere(subdivisions=2, radius=0.1)
-        mesh = mesh.apply_translation([0, 0, 1])
-        self.mesh = TrimeshLayer(mesh=mesh)
-        self._initialized = False
-        
-    @property
-    def initialized(self) -> bool:
-        return self._initialized
-
-    def setup(self):
-        super().setup()
-        self.gridXY.setup()
-        self.gridXZ.setup()
-        self.gridYZ.setup()
-        self.axes.setup()
-        self.mesh.setup()
-        self._initialized = True
-
-    def release(self):
-        if self.gridXY:
-            self.gridXY.release()
-            self.gridXY = None
-        if self.gridXZ:
-            self.gridXZ.release()
-            self.gridXZ = None
-        if self.gridYZ:
-            self.gridYZ.release()
-            self.gridYZ = None
-        if self.axes:
-            self.axes.release()
-            self.axes = None
-        if self.mesh:
-            self.mesh.release()
-            self.mesh = None
-        self._initialized = False
-        return super().release()
-    
-    def render(self, camera:Camera):
-        if self.show_grid_XY:
-            self.gridXY.render(view=camera.viewMatrix(), projection=camera.projectionMatrix())
-        if self.show_grid_XZ:
-            self.gridXZ.render(view=camera.viewMatrix(), projection=camera.projectionMatrix())
-        if self.show_grid_YZ:
-            self.gridYZ.render(view=camera.viewMatrix(), projection=camera.projectionMatrix())
-        self.axes.render(view=camera.viewMatrix(), projection=camera.projectionMatrix())
-        self.mesh.render(view=camera.viewMatrix(), projection=camera.projectionMatrix())
-        super().render()
-
-# ModernGL context and framebuffer
-scene_layer = SceneLayer()
-render_target = RenderTarget(800, 800)
-
-
-# ######### #
-# MAIN LOOP #
-# ######### #
 
 def get_axis_color(axis:solver.Axis, dim:bool=False) -> Tuple[float, float, float]:
     match axis:
@@ -105,7 +36,7 @@ def get_axis_color(axis:solver.Axis, dim:bool=False) -> Tuple[float, float, floa
 # ################# #
 # Application State #
 # ################# #
-from enum import IntEnum
+
 class SolverMode(IntEnum):
     OneVP = 0
     TwoVP = 1
@@ -127,23 +58,18 @@ class SolverMode(IntEnum):
     quad_mode=False,
     scene_scale=5.0,
     first_axis=solver.Axis.PositiveZ,
-    second_axis=solver.Axis.PositiveX)
+    second_axis=solver.Axis.PositiveX,
+    startup_end_time = None,
+    my_point=imgui.ImVec2(50,50))
 def gui():
+    if gui.startup_end_time is None:
+        gui.startup_end_time = time.time()
+        logger.info(f"Startup time: {gui.startup_end_time - startup_start_time:.2f} seconds")
     # Configure imgui
     style = imgui.get_style()
     style.anti_aliased_lines = True
     style.anti_aliased_lines_use_tex = True
     style.anti_aliased_fill = True
-    
-
-    # ModernGL renderer
-    global render_target
-    if not render_target.initialized:
-        render_target.setup()
-    if not scene_layer.initialized:
-        scene_layer.setup()
-
-    global state
     
     # Compute Camera
     camera = Camera()
@@ -175,9 +101,9 @@ def gui():
     PANEL_FLAGS = imgui.WindowFlags_.always_auto_resize | imgui.WindowFlags_.no_move | imgui.WindowFlags_.no_resize | imgui.WindowFlags_.no_collapse | imgui.WindowFlags_.no_title_bar
     
     side_panel_width = 300
-    imgui.set_next_window_pos((0,24))
-    imgui.set_next_window_size((side_panel_width, display_size.y))
-    with imgui_ctx.begin("Parameters", None, PANEL_FLAGS):
+    # imgui.set_next_window_pos((0,24))
+    # imgui.set_next_window_size((side_panel_width, display_size.y))
+    with imgui_ctx.begin("Parameters", None):
         _, gui.first_axis = imgui.combo("first axis",   gui.first_axis, solver.Axis._member_names_)
         _, gui.second_axis = imgui.combo("second axis", gui.second_axis, solver.Axis._member_names_)
         _, gui.scene_scale = imgui.slider_float("scene_scale", gui.scene_scale, 1.0, 100.0, "%.2f")
@@ -189,11 +115,16 @@ def gui():
             case SolverMode.TwoVP:
                 _, gui.quad_mode = imgui.checkbox("quad", gui.quad_mode)
 
-        if ui.myplot.begin_plot("myplot"):
-            ui.myplot.end_plot()
+    with imgui_ctx.begin("MyPlotWindow", None):
+        _, gui.my_point.x = imgui.slider_float("x", gui.my_point.x, 0, 100)
+        _, gui.my_point.y = imgui.slider_float("y", gui.my_point.y, 0, 100)
+        if ui.myplot.begin_plot("my_plot", (100,100), None):
+            ui.myplot.setup_orthographic(0,0,100,100)
+            _, gui.my_point = ui.myplot.point_handle("P1", gui.my_point)
+        ui.myplot.end_plot()
 
-    imgui.set_next_window_pos((side_panel_width,24))
-    imgui.set_next_window_size((display_size.x - side_panel_width*2, display_size.y))
+    # imgui.set_next_window_pos((side_panel_width,24))
+    # imgui.set_next_window_size((display_size.x - side_panel_width*2, display_size.y))
     with imgui_ctx.begin("3d_viewport_child", None, PANEL_FLAGS):
         widget_size = imgui.get_content_region_avail()
         image_width, image_height = int(widget_size.x), int(widget_size.y)
@@ -223,7 +154,6 @@ def gui():
             # _, principal_point_pixel = drag_point("principal_point", principal_point_pixel)
             principal_point_pixel = glm.vec2(widget_size.x / 2, widget_size.y / 2)
             _, gui.origin_pixel = ui.drag_point("origin", gui.origin_pixel)
-
  
             match gui.solver_mode:
                 case SolverMode.OneVP: # 1VP
@@ -324,7 +254,6 @@ def gui():
                     camera.setFoVY(math.degrees(fovy))            
 
         except Exception as e:
-            from textwrap import wrap
             imgui.push_style_color(imgui.Col_.text, (1.0, 0.2, 0.2, 1.0))
             imgui.text_wrapped(f"fspy error: {pformat(e)}")
             import traceback
