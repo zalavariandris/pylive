@@ -12,7 +12,6 @@ def drag_point(label:str, point:Vec2T, *,  color:int=None)->Tuple[bool, Vec2T]:
     if color is None:
         color = imgui.color_convert_float4_to_u32((1.0,1.0,1.0,0.9))
 
-        
     change = False
     store_cursor_pos = imgui.get_cursor_pos()
     btn_size = imgui.ImVec2(28,28)
