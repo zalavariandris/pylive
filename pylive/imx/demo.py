@@ -1,6 +1,7 @@
 
 
 from typing import Any, List, Tuple, Dict
+import glm
 from imgui_bundle import imgui, immapp, imgui_ctx
 
 # Local application imports
@@ -35,7 +36,9 @@ def gui():
     if imx.viewer.begin_viewport("my_plot", None):
         # draw 2d points
         imx.viewer.setup_orthographic(0,0,100,100)
-        # single draggable 2D point handle
+        imx.viewer.setup_orthographic(0,0,100,100)
+
+        # draw lines
         _, gui.first_vanishing_lines = lines_handle("z", gui.first_vanishing_lines, color=colors.BLUE )
         imx.viewer.draw_lines(gui.first_vanishing_lines, color=colors.BLUE)
 
@@ -43,14 +46,22 @@ def gui():
         imx.viewer.draw_lines(gui.second_vanishing_lines, color=colors.RED)
 
         # draw 3d scene
-        imx.viewer.setup_perspective(fov_y_deg=60, aspect=1.0, near=0.1, far=100.0, fit_viewport=True)
+        # imx.viewer.setup_perspective(60)
+        imx.viewer.setup_orthographic(0,0,100,100)
+        tl = imx.viewer.project(imgui.ImVec2(10,10))
+        br = imx.viewer.project(imgui.ImVec2(90,90))
+        draw_list = imgui.get_window_draw_list()
+        draw_list.add_line(tl, br, colors.YELLOW, 2.0)
+        # imx.viewer.draw_lines([(tl, br)], color=colors.YELLOW)
+
+        # screen_pos = imx.viewer.project((0, 0, 0))
         # imx.viewer.draw_grid3D(size=10, step=1, color=colors.DARK_GRAY)
         # imx.viewer.draw_axes(...)
         # imx.viewer.draw_sphere(...)
         # imx.viewer.draw_trimesh(...)
 
         # draw margins
-        imx.viewer.setup_orthographic(0,0,100,100)
+        
         imx.viewer.draw_margins(imgui.ImVec2(0,0), imgui.ImVec2(100,100))
         
     imx.viewer.end_viewport()

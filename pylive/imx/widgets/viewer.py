@@ -20,7 +20,7 @@ def begin_viewport(label:str, size=imgui.ImVec2Like|None)->bool:
     _widget_rect = (int(x), int(y), int(w), int(h))
 
     # by default setup an orthographic projection matching the widget size
-    setup_orthographic(0,0,float(w),float(h), fit_viewport=True)
+    setup_orthographic(0,0,float(w),float(h))
 
 
     return True
@@ -36,31 +36,37 @@ def draw_margins(tl:imgui.ImVec2Like, br:imgui.ImVec2Like):
     draw_list.add_circle(br, 5, margin_color, 12, 2)
     window_tl = imgui.get_window_pos()
     window_br = window_tl + imgui.get_window_size()
+
+    draw_list.add_line(
+        imgui.ImVec2(tl.x, tl.y),
+        imgui.ImVec2(br.x, br.y),
+        margin_color, 2.0
+    )
     # imgui.text(f"Viewport size: {window_tl.x:.0f},{window_tl.y:.0f} - {window_br.x:.0f},{window_br.y:.0f}")
-    # left margin
-    draw_list.add_rect_filled(
-        imgui.ImVec2(window_tl.x, window_tl.y),
-        imgui.ImVec2(tl.x, window_br.y),
-        margin_color
-    )
-    # right margin
-    draw_list.add_rect_filled(
-        imgui.ImVec2(br.x, window_tl.y),
-        imgui.ImVec2(window_br.x, window_br.y),
-        margin_color
-    )
-    # top margin
-    draw_list.add_rect_filled(
-        imgui.ImVec2(tl.x, window_tl.y),
-        imgui.ImVec2(br.x, tl.y),
-        margin_color
-    )
-    # bottom margin
-    draw_list.add_rect_filled(
-        imgui.ImVec2(tl.x, br.y),
-        imgui.ImVec2(br.x, window_br.y),
-        margin_color
-    )
+    # # left margin
+    # draw_list.add_rect_filled(
+    #     imgui.ImVec2(window_tl.x, window_tl.y),
+    #     imgui.ImVec2(tl.x, window_br.y),
+    #     margin_color
+    # )
+    # # right margin
+    # draw_list.add_rect_filled(
+    #     imgui.ImVec2(br.x, window_tl.y),
+    #     imgui.ImVec2(window_br.x, window_br.y),
+    #     margin_color
+    # )
+    # # top margin
+    # draw_list.add_rect_filled(
+    #     imgui.ImVec2(tl.x, window_tl.y),
+    #     imgui.ImVec2(br.x, tl.y),
+    #     margin_color
+    # )
+    # # bottom margin
+    # draw_list.add_rect_filled(
+    #     imgui.ImVec2(tl.x, br.y),
+    #     imgui.ImVec2(br.x, window_br.y),
+    #     margin_color
+    # )
 
 def end_viewport():
     # Color for the outside area (darker)
@@ -95,7 +101,8 @@ def end_viewport():
 ##############
 def project(point:imgui.ImVec2Like)->imgui.ImVec2Like:
     global _projection, _view, _widget_rect
-    P = glm.project(glm.vec3(point.x,point.y,0), _view, _projection, _widget_rect)
+    assert len(point) == 2
+    P = glm.project(glm.vec3(*point,0), _view, _projection, _widget_rect)
     return imgui.ImVec2(P.x, P.y)
 
 def unproject(screen_point:imgui.ImVec2Like)->imgui.ImVec2Like:
@@ -112,7 +119,7 @@ def _project_lines(lines:List[Tuple[imgui.ImVec2Like, imgui.ImVec2Like]])->List[
         projected_lines.append((A_proj, B_proj))
     return projected_lines
 
-def setup_orthographic(xmin:float, ymin:float, xmax:float, ymax:float, fit_viewport=True):
+def setup_orthographic(xmin:float, ymin:float, xmax:float, ymax:float):
     global _projection, _view, _canvas_size
 
     x, y = imgui.get_cursor_screen_pos()
@@ -120,24 +127,32 @@ def setup_orthographic(xmin:float, ymin:float, xmax:float, ymax:float, fit_viewp
     _widget_rect = (int(x), int(y), int(w), int(h))
     widget_aspect = w/h
     content_width = xmax - xmin
-    content_height = (ymax-ymin)
+    content_height = ymax-ymin
     content_aspect = content_width/content_height
-    if fit_viewport:
-        if widget_aspect < content_aspect:
-            # viewport is narrower -> expand world height, center original canvas vertically
-            proj_h = float(content_width) / float(widget_aspect)
-            _projection = glm.ortho(0.0, float(content_width), 0.0, proj_h, -1.0, 1.0)
-            extra_y = proj_h - float(content_height)
-            _view = glm.translate(glm.identity(glm.mat4), glm.vec3(0.0, extra_y * 0.5, 0.0))
-        else:
-            # viewport is wider -> expand world width, center original canvas horizontally
-            proj_w = float(content_height) * float(widget_aspect)
-            _projection = glm.ortho(0.0, proj_w, 0.0, float(content_height), -1.0, 1.0)
-            extra_x = proj_w - float(content_width)
-            _view = glm.translate(glm.identity(glm.mat4), glm.vec3(extra_x * 0.5, 0.0, 0.0))
+    _canvas_size = (content_width, content_height)
+    if widget_aspect < content_aspect:
+        # viewport is narrower -> expand world height, center original canvas vertically
+        proj_h = float(content_width) / float(widget_aspect)
+        _projection = glm.ortho(0.0, float(content_width), 0.0, proj_h, -1.0, 1.0)
+        extra_y = proj_h - float(content_height)
+        _view = glm.translate(glm.identity(glm.mat4), glm.vec3(0.0, extra_y * 0.5, 0.0))
     else:
-        _projection = glm.ortho(xmin, xmax, ymin, ymax, -1.0, 1.0)
-        _view = glm.identity(glm.mat4)
+        # viewport is wider -> expand world width, center original canvas horizontally
+        proj_w = float(content_height) * float(widget_aspect)
+        _projection = glm.ortho(0.0, proj_w, 0.0, float(content_height), -1.0, 1.0)
+        extra_x = proj_w - float(content_width)
+        _view = glm.translate(glm.identity(glm.mat4), glm.vec3(extra_x * 0.5, 0.0, 0.0))
+
+
+def setup_perspective(fovy:float, position=glm.vec3(5,5,5), target=glm.vec3(0, 0, 0), near=0.1, far=100.0):
+    global _projection, _view, _canvas_size
+    aspect = float(_widget_rect[2]) / float(_widget_rect[3])
+    _projection = glm.perspective(math.radians(fovy), aspect, near, far)
+    _view = glm.lookAt(position, target, glm.vec3(0, 1, 0))
+
+def get_camera()->Tuple[glm.vec3, glm.vec3]:
+    return _view, _projection
+
 
 ########
 # DRAW #
