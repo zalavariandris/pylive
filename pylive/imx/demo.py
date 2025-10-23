@@ -42,9 +42,12 @@ def gui():
         _, gui.second_vanishing_lines = lines_handle("x", gui.second_vanishing_lines, color=colors.RED )
         imx.viewer.draw_lines(gui.second_vanishing_lines, color=colors.RED)
 
-        # draw 3d grid
+        # draw 3d scene
         imx.viewer.setup_perspective(fov_y_deg=60, aspect=1.0, near=0.1, far=100.0, fit_viewport=True)
-        ...
+        # imx.viewer.draw_grid3D(size=10, step=1, color=colors.DARK_GRAY)
+        # imx.viewer.draw_axes(...)
+        # imx.viewer.draw_sphere(...)
+        # imx.viewer.draw_trimesh(...)
 
         # draw margins
         imx.viewer.setup_orthographic(0,0,100,100)
