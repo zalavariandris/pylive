@@ -27,7 +27,7 @@ def begin_viewport(label:str, size=imgui.ImVec2Like|None)->bool:
 
 def draw_margins(tl:imgui.ImVec2Like, br:imgui.ImVec2Like):
     # draw margins
-    margin_color = imgui.color_convert_float4_to_u32((0.1, 0.1, 0.1, 0.95))
+    margin_color = imgui.color_convert_float4_to_u32((0.1, 0.1, 0.1, 0.66))
     tl = project(tl)
     br = project(br)
 
@@ -43,30 +43,30 @@ def draw_margins(tl:imgui.ImVec2Like, br:imgui.ImVec2Like):
         margin_color, 2.0
     )
     # imgui.text(f"Viewport size: {window_tl.x:.0f},{window_tl.y:.0f} - {window_br.x:.0f},{window_br.y:.0f}")
-    # # left margin
-    # draw_list.add_rect_filled(
-    #     imgui.ImVec2(window_tl.x, window_tl.y),
-    #     imgui.ImVec2(tl.x, window_br.y),
-    #     margin_color
-    # )
-    # # right margin
-    # draw_list.add_rect_filled(
-    #     imgui.ImVec2(br.x, window_tl.y),
-    #     imgui.ImVec2(window_br.x, window_br.y),
-    #     margin_color
-    # )
-    # # top margin
-    # draw_list.add_rect_filled(
-    #     imgui.ImVec2(tl.x, window_tl.y),
-    #     imgui.ImVec2(br.x, tl.y),
-    #     margin_color
-    # )
-    # # bottom margin
-    # draw_list.add_rect_filled(
-    #     imgui.ImVec2(tl.x, br.y),
-    #     imgui.ImVec2(br.x, window_br.y),
-    #     margin_color
-    # )
+    # left margin
+    draw_list.add_rect_filled(
+        imgui.ImVec2(window_tl.x, window_tl.y),
+        imgui.ImVec2(tl.x, window_br.y),
+        margin_color
+    )
+    # right margin
+    draw_list.add_rect_filled(
+        imgui.ImVec2(br.x, window_tl.y),
+        imgui.ImVec2(window_br.x, window_br.y),
+        margin_color
+    )
+    # top margin
+    draw_list.add_rect_filled(
+        imgui.ImVec2(tl.x, window_tl.y),
+        imgui.ImVec2(br.x, tl.y),
+        margin_color
+    )
+    # bottom margin
+    draw_list.add_rect_filled(
+        imgui.ImVec2(tl.x, br.y),
+        imgui.ImVec2(br.x, window_br.y),
+        margin_color
+    )
 
 def end_viewport():
     # Color for the outside area (darker)
@@ -101,9 +101,16 @@ def end_viewport():
 ##############
 def project(point:imgui.ImVec2Like)->imgui.ImVec2Like:
     global _projection, _view, _widget_rect
-    assert len(point) == 2
-    P = glm.project(glm.vec3(*point,0), _view, _projection, _widget_rect)
-    return imgui.ImVec2(P.x, P.y)
+    assert len(point) == 2 or len(point) == 3
+
+    match len(point):
+        case 2:
+            P = glm.project(glm.vec3(*point,0), _view, _projection, _widget_rect)
+            return imgui.ImVec2(P.x, P.y)
+        case 3:
+            P = glm.project(glm.vec3(*point), _view, _projection, _widget_rect)
+            return imgui.ImVec2(P.x, P.y)
+            
 
 def unproject(screen_point:imgui.ImVec2Like)->imgui.ImVec2Like:
     global _projection, _view, _widget_rect
@@ -112,18 +119,17 @@ def unproject(screen_point:imgui.ImVec2Like)->imgui.ImVec2Like:
 
 def _project_lines(lines:List[Tuple[imgui.ImVec2Like, imgui.ImVec2Like]])->List[Tuple[imgui.ImVec2Like, imgui.ImVec2Like]]:
     projected_lines = []
-    for A, B in lines:
-        A_proj = project(A)
-        B_proj = project(B)
+    for line in lines:
+        line_proj = tuple(map(project, line))
 
-        projected_lines.append((A_proj, B_proj))
+        projected_lines.append(line_proj)
     return projected_lines
 
 def setup_orthographic(xmin:float, ymin:float, xmax:float, ymax:float):
     global _projection, _view, _canvas_size
 
-    x, y = imgui.get_cursor_screen_pos()
-    w, h = imgui.get_content_region_avail()
+    x, y = imgui.get_window_pos()
+    w, h = imgui.get_window_size()
     _widget_rect = (int(x), int(y), int(w), int(h))
     widget_aspect = w/h
     content_width = xmax - xmin
@@ -144,14 +150,47 @@ def setup_orthographic(xmin:float, ymin:float, xmax:float, ymax:float):
         _view = glm.translate(glm.identity(glm.mat4), glm.vec3(extra_x * 0.5, 0.0, 0.0))
 
 
-def setup_perspective(fovy:float, position=glm.vec3(5,5,5), target=glm.vec3(0, 0, 0), near=0.1, far=100.0):
-    global _projection, _view, _canvas_size
+from pylive.glrenderer.utils.camera import Camera
+def setup_camera(camera:Camera)->None:
+    global _projection, _view
     aspect = float(_widget_rect[2]) / float(_widget_rect[3])
-    _projection = glm.perspective(math.radians(fovy), aspect, near, far)
-    _view = glm.lookAt(position, target, glm.vec3(0, 1, 0))
+    camera.setAspectRatio(aspect)
+    _projection = camera.projectionMatrix()
+    _view = camera.viewMatrix()
 
 def get_camera()->Tuple[glm.vec3, glm.vec3]:
     return _view, _projection
+
+import numpy as np
+def draw_grid(size: float = 10, step: float = 1, near: float = 0.1):
+    view = _view
+    projection = _projection
+    viewport = _widget_rect
+
+    # Compute number of steps from the center to edge
+    n_steps = int(np.floor(size/2 / step))
+    
+    # Generate coordinates starting from 0
+    xs = np.arange(-n_steps, n_steps + 1) * step
+    zs = np.arange(-n_steps, n_steps + 1) * step
+    
+    # If size is not exact multiple of step, extend outer lines slightly
+    # xs = np.clip(xs, -size, size)
+    # zs = np.clip(zs, -size, size)
+    
+    lines = []
+    
+    # Vertical lines (constant X, varying Z)
+    for x in xs:
+        lines.append((glm.vec3(x, 0, -size/2), glm.vec3(x, 0, size/2)))
+    
+    # Horizontal lines (constant Z, varying X)
+    for z in zs:
+        lines.append((glm.vec3(-size/2, 0, z), glm.vec3(size/2, 0, z)))
+    
+    draw_lines(lines,
+        color=imgui.color_convert_float4_to_u32((0.5, 0.5, 0.5, 1))
+    )
 
 
 ########
@@ -167,7 +206,6 @@ def _draw_annotations(centers:List[imgui.ImVec2Like], labels:List[str|None]):
             imgui.color_convert_float4_to_u32((1.0,1.0,1.0,1.0)),
             label
         )
-
 
 def draw_lines(lines:List[Tuple[imgui.ImVec2Like, imgui.ImVec2Like]], color:int=None):
     """Draw 2D lines in the scene.

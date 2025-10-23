@@ -17,6 +17,8 @@ import colors
 line_handle = imx.comp(imx.viewer.point_handle)
 lines_handle = imx.comp(line_handle)
 
+from pylive.glrenderer.utils.camera import Camera
+
 @immapp.static(
     my_point=imgui.ImVec2(50,50),
     first_vanishing_lines = [
@@ -27,7 +29,8 @@ lines_handle = imx.comp(line_handle)
     second_vanishing_lines = [
         (imgui.ImVec2(38,42), imgui.ImVec2(83,61)),
         (imgui.ImVec2(30,45), imgui.ImVec2(72,82)),
-    ]
+    ],
+    camera=Camera().setPosition(glm.vec3(5,-5,5)).lookAt(glm.vec3(0,0,0))
 )
 def gui():
     imgui.begin("MyPlotWindow", None)
@@ -46,12 +49,16 @@ def gui():
         imx.viewer.draw_lines(gui.second_vanishing_lines, color=colors.RED)
 
         # draw 3d scene
-        # imx.viewer.setup_perspective(60)
-        imx.viewer.setup_orthographic(0,0,100,100)
-        tl = imx.viewer.project(imgui.ImVec2(10,10))
-        br = imx.viewer.project(imgui.ImVec2(90,90))
-        draw_list = imgui.get_window_draw_list()
-        draw_list.add_line(tl, br, colors.YELLOW, 2.0)
+        # camera = Camera()
+        imx.viewer.setup_camera(gui.camera)
+        # draw grid
+        imx.viewer.draw_grid()
+        # draw axes
+        imx.viewer.draw_lines([((0,0,0), (1,0,0))], color=colors.RED)
+        imx.viewer.draw_lines([((0,0,0), (0,1,0))], color=colors.GREEN)
+        imx.viewer.draw_lines([((0,0,0), (0,0,1))], color=colors.BLUE)
+
+
         # imx.viewer.draw_lines([(tl, br)], color=colors.YELLOW)
 
         # screen_pos = imx.viewer.project((0, 0, 0))
@@ -61,7 +68,7 @@ def gui():
         # imx.viewer.draw_trimesh(...)
 
         # draw margins
-        
+        imx.viewer.setup_orthographic(0,0,100,100)
         imx.viewer.draw_margins(imgui.ImVec2(0,0), imgui.ImVec2(100,100))
         
     imx.viewer.end_viewport()

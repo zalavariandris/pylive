@@ -10,33 +10,49 @@ class Camera:
 		self.transform = glm.mat4(1.0)  # Identity matrix as the initial transform
 
 		# Camera parameters
-		self.fovy = 45.0  # Field of view in degrees
-		self.aspect_ratio = 1.0  # Aspect ratio (width / height)
 		self.near_plane = 0.1  # Near clipping plane
 		self.far_plane = 1000.0  # Far clipping plane
-		
+
+		# Lens parameters
+		self._focal_length = 50.0  # Focal length in mm
+		self._sensor_size = (36.0, 24.0)  # Default sensor size in mm (width, height)
+		self._fovy = 45.0  # Field of view in degrees
+	
 		# Perspective projection matrix
 		self._update_projection()
 
 	def _update_projection(self):
 		"""Updates the projection matrix based on current camera parameters."""
 		self.projection = glm.perspective(
-			glm.radians(self.fovy), 
+			glm.radians(self._fovy), 
 			self.aspect_ratio, 
 			self.near_plane, 
 			self.far_plane
 		)
 
+	@property
+	def aspect_ratio(self)->float:
+		"""Returns the current aspect ratio."""
+		return self._sensor_size[0] / self._sensor_size[1]
+
 	def setAspectRatio(self, aspect:float):
 		"""Sets the aspect ratio and updates the projection matrix."""
-		self.aspect_ratio = aspect
+		w, h = self._sensor_size
+		self._sensor_size = (aspect * h, h)
+		self._update_projection()
+
+	def setSensorSize(self, width:float, height:float):
+		"""
+		Sets the sensor size (width and height) and updates the aspect ratio and projection matrix.
+		"""
+		self._aspect_ratio = width / height
 		self._update_projection()
 
 	def setFoVY(self, fovy_degrees:float):
 		"""
 		Sets the field of view in degrees and updates the projection matrix.
 		"""
-		self.fovy = fovy_degrees
+		self._fovy = fovy_degrees
 		self._update_projection()
 
 	def viewMatrix(self):
@@ -57,6 +73,7 @@ class Camera:
 		"""
 		position = glm.vec3(position)
 		self.transform[3] = glm.vec4(position, 1.0)  # Update the translation part
+		return self
 
 	def getPosition(self)->glm.vec3:
 		"""
@@ -90,6 +107,7 @@ class Camera:
 	def lookAt(self, target:glm.vec3, up:Vec3=(0,1,0)):
 		up = glm.vec3(up)
 		self.transform = glm.inverse(glm.lookAt(self.getPosition(), target, up))
+		return self
 
 	def orbit(self, yaw:float, tilt:float, roll:float=0, target=(0,0,0)):
 		target = glm.vec3(target)

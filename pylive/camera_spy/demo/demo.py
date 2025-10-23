@@ -274,7 +274,7 @@ def gui():
 
         # Draw 3D grid
         view = camera.viewMatrix()
-        projection = glm.perspective(math.radians(camera.fovy), camera.aspect_ratio, 0.1, 100.0)
+        projection = glm.perspective(math.radians(camera._fovy), camera._aspect_ratio, 0.1, 100.0)
         viewport = (0, 0, int(widget_size.x), int(widget_size.y))
         imx.draw_grid3D(view, projection, viewport)
 
