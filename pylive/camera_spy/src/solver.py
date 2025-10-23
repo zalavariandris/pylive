@@ -961,7 +961,3 @@ def extract_euler_angle(M: glm.mat3, order: str = Literal["XYZ", "XZY", "YXZ", "
             return x,y,z
         case _:
             raise ValueError(f"Unsupported Euler angle order: {order}")
-
-
-
-

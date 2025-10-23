@@ -5,7 +5,6 @@ import trimesh
 import moderngl
 
 
-
 class RenderLayersExampleWindow(MGLCameraWindow):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

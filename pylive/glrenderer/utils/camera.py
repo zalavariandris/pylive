@@ -3,7 +3,7 @@ import glm
 
 Vec3 = glm.vec3 | Tuple[float, float, float]
 
-
+import math
 class Camera:
 	def __init__(self) -> None:
 		# The transformation matrix, combining position, rotation, and scale
@@ -14,9 +14,9 @@ class Camera:
 		self.far_plane = 1000.0  # Far clipping plane
 
 		# Lens parameters
-		self._focal_length = 50.0  # Focal length in mm
+		self._focal_length = 23.0  # Focal length in mm
 		self._sensor_size = (36.0, 24.0)  # Default sensor size in mm (width, height)
-		self._fovy = 45.0  # Field of view in degrees
+		# self._fovy = 45.0  # Field of view in degrees
 	
 		# Perspective projection matrix
 		self._update_projection()
@@ -24,7 +24,7 @@ class Camera:
 	def _update_projection(self):
 		"""Updates the projection matrix based on current camera parameters."""
 		self.projection = glm.perspective(
-			glm.radians(self._fovy), 
+			glm.radians(self.fovy), 
 			self.aspect_ratio, 
 			self.near_plane, 
 			self.far_plane
@@ -48,11 +48,20 @@ class Camera:
 		self._aspect_ratio = width / height
 		self._update_projection()
 
+	@property
+	def fovy(self)->float:
+		"""
+		Returns the field of view in degrees.
+		"""
+		w, h = self._sensor_size
+		return math.degrees(math.atan(h / 2 / self._focal_length) * 2)
+
 	def setFoVY(self, fovy_degrees:float):
 		"""
 		Sets the field of view in degrees and updates the projection matrix.
 		"""
-		self._fovy = fovy_degrees
+		w, h = self._sensor_size
+		self._focal_length = (h / 2) / math.tan(math.radians(fovy_degrees) / 2)
 		self._update_projection()
 
 	def viewMatrix(self):
