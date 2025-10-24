@@ -158,6 +158,11 @@ def setup_camera(camera:Camera)->None:
     _projection = camera.projectionMatrix()
     _view = camera.viewMatrix()
 
+def setup_view_projection(view:glm.mat4, projection:glm.mat4)->None:
+    global _projection, _view
+    _view = view
+    _projection = projection
+
 def get_camera()->Tuple[glm.vec3, glm.vec3]:
     return _view, _projection
 

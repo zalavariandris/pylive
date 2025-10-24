@@ -1,5 +1,6 @@
 
 
+import math
 from typing import Any, List, Tuple, Dict
 import glm
 from imgui_bundle import imgui, immapp, imgui_ctx
@@ -30,27 +31,41 @@ from pylive.glrenderer.utils.camera import Camera
         (imgui.ImVec2(38,42), imgui.ImVec2(83,61)),
         (imgui.ImVec2(30,45), imgui.ImVec2(72,82)),
     ],
+    fovy_degrees = 45.0,
     camera=Camera().setPosition(glm.vec3(5,-5,5)).lookAt(glm.vec3(0,0,0))
 )
 def gui():
     imgui.begin("MyPlotWindow", None)
-    _, gui.my_point.x = imgui.slider_float("x", gui.my_point.x, 0, 100)
-    _, gui.my_point.y = imgui.slider_float("y", gui.my_point.y, 0, 100)
+    _, gui.fovy_degrees = imgui.slider_float("Vertical Field of View", gui.fovy_degrees, 0, 180, "%.1f°")
     if imx.viewer.begin_viewport("my_plot", None):
-        # draw 2d points
-        imx.viewer.setup_orthographic(0,0,100,100)
-        imx.viewer.setup_orthographic(0,0,100,100)
+        sensor_size = glm.vec2(160, 90)  # in mm
+        # 1. Draw 2D GUI Overlay
+        imx.viewer.setup_orthographic(0,0,sensor_size.x,sensor_size.y)
 
-        # draw lines
         _, gui.first_vanishing_lines = lines_handle("z", gui.first_vanishing_lines, color=colors.BLUE )
         imx.viewer.draw_lines(gui.first_vanishing_lines, color=colors.BLUE)
 
         _, gui.second_vanishing_lines = lines_handle("x", gui.second_vanishing_lines, color=colors.RED )
         imx.viewer.draw_lines(gui.second_vanishing_lines, color=colors.RED)
 
-        # draw 3d scene
-        # camera = Camera()
-        imx.viewer.setup_camera(gui.camera)
+        # 2. Draw 3D Scene
+        # setup view projection
+        
+        w, h = imgui.get_window_size()
+        widget_aspect = w / h
+        sensor_aspect = sensor_size.x / sensor_size.y
+
+        fovy = math.radians(gui.fovy_degrees)
+        # Compute the fovy needed to fit the sensor width in the widget
+        required_fovy = 2 * glm.atan(glm.tan(fovy / 2) * (sensor_aspect / widget_aspect))
+        # Use the larger fovy to ensure full fit (overscan if needed)
+        overscan_fovy = max(fovy, required_fovy)
+
+        projection = glm.perspective(overscan_fovy, widget_aspect, 0.1, 100.0)
+
+        view = glm.lookAt(glm.vec3(5,-5,5), glm.vec3(0,0,0), glm.vec3(0,1,0))
+        imx.viewer.setup_view_projection(view, projection)
+        # imx.viewer.setup_camera(gui.camera)
         # draw grid
         imx.viewer.draw_grid()
         # draw axes
@@ -68,9 +83,9 @@ def gui():
         # imx.viewer.draw_trimesh(...)
 
         # draw margins
-        imx.viewer.setup_orthographic(0,0,100,100)
-        imx.viewer.draw_margins(imgui.ImVec2(0,0), imgui.ImVec2(100,100))
-        
+        imx.viewer.setup_orthographic(0,0,sensor_size.x,sensor_size.y)
+        imx.viewer.draw_margins(imgui.ImVec2(0,0), imgui.ImVec2(sensor_size.x,sensor_size.y))
+
     imx.viewer.end_viewport()
     
     imgui.end()
