@@ -7,22 +7,18 @@ import glm
 _view:glm.mat4 = glm.identity(glm.mat4)
 _projection:glm.mat4 = glm.ortho(0,512,0,512,-1,1) # this is the rect of the input coordinate system, the image topleft, bottomright
 _widget_rect:Tuple[int, int, int, int]=0, 0, 512, 512 # this is the rectangle of the target coord system, the widget pos and size essentially the gl viewport
-
 _region_br:imgui.ImVec2Like = imgui.ImVec2(0,0)
 _region_tl:imgui.ImVec2Like = imgui.ImVec2(0,0)
 
-_canvas_size:Tuple[float, float]=(512.0, 512.0)
 def begin_viewport(label:str, size=imgui.ImVec2Like|None)->bool:
-    global _widget_rect, _projection, _view, _region_tl, _region_br, _canvas_size
-    imgui.begin_child(label, size, imgui.ChildFlags_.borders)
+    global _widget_rect, _projection, _view, _region_tl, _region_br
+    imgui.begin_child(label, size, imgui.ChildFlags_.borders, imgui.WindowFlags_.no_scrollbar)
     x, y = imgui.get_cursor_screen_pos()
     w, h = imgui.get_content_region_avail()
     _widget_rect = (int(x), int(y), int(w), int(h))
 
     # by default setup an orthographic projection matching the widget size
     setup_orthographic(0,0,float(w),float(h))
-
-
     return True
 
 def draw_margins(tl:imgui.ImVec2Like, br:imgui.ImVec2Like):
@@ -34,6 +30,7 @@ def draw_margins(tl:imgui.ImVec2Like, br:imgui.ImVec2Like):
     draw_list = imgui.get_window_draw_list()
     draw_list.add_circle(tl, 5, margin_color, 12, 2)
     draw_list.add_circle(br, 5, margin_color, 12, 2)
+
     window_tl = imgui.get_window_pos()
     window_br = window_tl + imgui.get_window_size()
 
@@ -99,7 +96,8 @@ def end_viewport():
 ##############
 # PROJECTION #
 ##############
-def project(point:imgui.ImVec2Like)->imgui.ImVec2Like:
+from typing import Iterable
+def project(point:Iterable[int|float])->imgui.ImVec2Like:
     global _projection, _view, _widget_rect
     assert len(point) == 2 or len(point) == 3
 
@@ -110,6 +108,8 @@ def project(point:imgui.ImVec2Like)->imgui.ImVec2Like:
         case 3:
             P = glm.project(glm.vec3(*point), _view, _projection, _widget_rect)
             return imgui.ImVec2(P.x, P.y)
+        case _:
+            raise ValueError("point must be of length 2 or 3")
             
 
 def unproject(screen_point:imgui.ImVec2Like)->imgui.ImVec2Like:
@@ -126,7 +126,7 @@ def _project_lines(lines:List[Tuple[imgui.ImVec2Like, imgui.ImVec2Like]])->List[
     return projected_lines
 
 def setup_orthographic(xmin:float, ymin:float, xmax:float, ymax:float):
-    global _projection, _view, _canvas_size
+    global _projection, _view
 
     x, y = imgui.get_window_pos()
     w, h = imgui.get_window_size()
@@ -135,7 +135,6 @@ def setup_orthographic(xmin:float, ymin:float, xmax:float, ymax:float):
     content_width = xmax - xmin
     content_height = ymax-ymin
     content_aspect = content_width/content_height
-    _canvas_size = (content_width, content_height)
     if widget_aspect < content_aspect:
         # viewport is narrower -> expand world height, center original canvas vertically
         proj_h = float(content_width) / float(widget_aspect)
@@ -193,9 +192,8 @@ def draw_grid(size: float = 10, step: float = 1, near: float = 0.1):
     for z in zs:
         lines.append((glm.vec3(-size/2, 0, z), glm.vec3(size/2, 0, z)))
     
-    draw_lines(lines,
-        color=imgui.color_convert_float4_to_u32((0.5, 0.5, 0.5, 1))
-    )
+    for line in lines:
+        draw_line(line[0], line[1], color=imgui.color_convert_float4_to_u32((0.5, 0.5, 0.5, 1)))
 
 
 ########
@@ -212,32 +210,21 @@ def _draw_annotations(centers:List[imgui.ImVec2Like], labels:List[str|None]):
             label
         )
 
-def draw_lines(lines:List[Tuple[imgui.ImVec2Like, imgui.ImVec2Like]], color:int=None):
-    """Draw 2D lines in the scene.
+def draw_line(p1, p2, color:int=imgui.color_convert_float4_to_u32((1,1,1,1)), thickness:float=1.0):
+    """Draw a 2D line in the scene.
     Note: lines are clipped against the near plane before projection.
+    It is essentally a wrapper over draw_list.add_line, with projection
     """
-    # clip lines to near plane
-    # clipped_lines = []
-    # for A, B in lines:
-    #     clipped = _clip_line_near_plane_world(glm.vec3(A.x, A.y, 0), glm.vec3(B.x, B.y, 0), _view, near=-1.0)
-    #     if clipped is not None:
-    #         A_clipped, B_clipped = clipped
-    #         clipped_lines.append(
-    #             (imgui.ImVec2(A_clipped.x, A_clipped.y), imgui.ImVec2(B_clipped.x, B_clipped.y))
-    #         )
-
-    if color is None:
-        color = imgui.color_convert_float4_to_u32((1, 1, 1, 1))
-    # project lines to screen
-    lines = _project_lines(lines)
+    # TODO: clip line to near plane
     draw_list = imgui.get_window_draw_list()
-    for line in lines:
-        draw_list.add_line(
-            imgui.ImVec2(line[0].x, line[0].y),
-            imgui.ImVec2(line[1].x, line[1].y),
-            color,
-            1.0
-        )
+
+    draw_list.add_line(
+        project(p1),
+        project(p2),
+        color,
+        thickness
+    )
+
 
 ###########
 # HANDLES #

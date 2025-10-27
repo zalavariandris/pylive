@@ -118,10 +118,10 @@ def gui():
     with imgui_ctx.begin("MyPlotWindow", None):
         _, gui.my_point.x = imgui.slider_float("x", gui.my_point.x, 0, 100)
         _, gui.my_point.y = imgui.slider_float("y", gui.my_point.y, 0, 100)
-        if imx.viewer.begin_viewport("my_plot", (100,100), None):
-            imx.viewer.setup_orthographic(0,0,100,100)
-            _, gui.my_point = imx.viewer.point_handle("P1", gui.my_point)
-        imx.viewer.end_viewport()
+        if imx.viewport.begin_viewport("my_plot", (100,100)):
+            imx.viewport.setup_orthographic(0,0,100,100)
+            _, gui.my_point = imx.viewport.point_handle("P1", gui.my_point)
+        imx.viewport.end_viewport()
 
     # imgui.set_next_window_pos((side_panel_width,24))
     # imgui.set_next_window_size((display_size.x - side_panel_width*2, display_size.y))
@@ -274,7 +274,7 @@ def gui():
 
         # Draw 3D grid
         view = camera.viewMatrix()
-        projection = glm.perspective(math.radians(camera._fovy), camera._aspect_ratio, 0.1, 100.0)
+        projection = glm.perspective(math.radians(camera.fovy), camera._aspect_ratio, 0.1, 100.0)
         viewport = (0, 0, int(widget_size.x), int(widget_size.y))
         imx.draw_grid3D(view, projection, viewport)
 

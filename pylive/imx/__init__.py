@@ -5,7 +5,7 @@ from .compose.comp import comp
 from .compose.zip import zip
 from . import colors
 from .draw import draw_points, draw_lines, draw_lines3D, draw_grid3D
-from .widgets import viewer
+from .widgets import viewport
 
 __all__ = [
     "radio_group",
@@ -18,5 +18,5 @@ __all__ = [
     "draw_lines",
     "draw_lines3D",
     "draw_grid3D",
-    "viewer"
+    "viewport"
 ]
