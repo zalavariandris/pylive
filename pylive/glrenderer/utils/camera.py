@@ -21,6 +21,16 @@ class Camera:
 		# Perspective projection matrix
 		self._update_projection()
 
+	def __copy__(self):
+		new_camera = Camera()
+		new_camera.transform = glm.mat4(self.transform)
+		new_camera.near_plane = self.near_plane
+		new_camera.far_plane = self.far_plane
+		new_camera._focal_length = self._focal_length
+		new_camera._sensor_size = self._sensor_size
+		new_camera.projection = glm.mat4(self.projection)
+		return new_camera
+
 	def _update_projection(self):
 		"""Updates the projection matrix based on current camera parameters."""
 		self.projection = glm.perspective(

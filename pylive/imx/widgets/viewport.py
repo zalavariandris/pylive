@@ -2,21 +2,80 @@ import math
 from imgui_bundle import imgui
 from typing import TypeVar, Tuple, List
 import glm
+import numpy as np
 
 
+##############
+# PROJECTION #
+##############
 _view:glm.mat4 = glm.identity(glm.mat4)
 _projection:glm.mat4 = glm.ortho(0,512,0,512,-1,1) # this is the rect of the input coordinate system, the image topleft, bottomright
-_widget_rect:Tuple[int, int, int, int]=0, 0, 512, 512 # this is the rectangle of the target coord system, the widget pos and size essentially the gl viewport
-_region_br:imgui.ImVec2Like = imgui.ImVec2(0,0)
-_region_tl:imgui.ImVec2Like = imgui.ImVec2(0,0)
 
+from typing import Iterable
+def project(point:Iterable[int|float])->imgui.ImVec2Like:
+    global _projection, _view
+    assert len(point) == 2 or len(point) == 3
+
+    x, y = imgui.get_window_pos()
+    w, h = imgui.get_window_size()
+    widget_rect = (int(x), int(y), int(w), int(h))
+
+    match len(point):
+        case 2:
+            P = glm.project(glm.vec3(*point,0), _view, _projection, widget_rect)
+            return imgui.ImVec2(P.x, P.y)
+        case 3:
+            P = glm.project(glm.vec3(*point), _view, _projection, widget_rect)
+            return imgui.ImVec2(P.x, P.y)
+        case _:
+            raise ValueError("point must be of length 2 or 3")
+            
+def unproject(screen_point:imgui.ImVec2Like)->imgui.ImVec2Like:
+    global _projection, _view
+    x, y = imgui.get_window_pos()
+    w, h = imgui.get_window_size()
+    widget_rect = (int(x), int(y), int(w), int(h))
+    P = glm.unProject(glm.vec3(screen_point.x, screen_point.y, 0), _view, _projection, widget_rect)
+    return imgui.ImVec2(P.x, P.y)
+
+def setup_orthographic(xmin:float, ymin:float, xmax:float, ymax:float):
+    global _projection, _view
+
+    x, y = imgui.get_window_pos()
+    w, h = imgui.get_window_size()
+    widget_aspect = w/h
+    content_width = xmax - xmin
+    content_height = ymax-ymin
+    content_aspect = content_width/content_height
+    if widget_aspect < content_aspect:
+        # viewport is narrower -> expand world height, center original canvas vertically
+        proj_h = float(content_width) / float(widget_aspect)
+        top_margin = ( proj_h - float(content_height) ) * 0.5
+        _projection = glm.ortho(0.0, float(content_width), 0.0-top_margin, proj_h-top_margin, -1.0, 1.0)
+    else:
+        # viewport is wider -> expand world width, center original canvas horizontally
+        proj_w = float(content_height) * float(widget_aspect)
+        left_margin = (proj_w - float(content_width)) * 0.5
+        _projection = glm.ortho(0.0-left_margin, proj_w-left_margin, 0.0, float(content_height), -1.0, 1.0)
+    _view = glm.identity(glm.mat4)
+
+
+def setup_view_projection(view:glm.mat4, projection:glm.mat4)->None:
+    global _projection, _view
+    _view = view
+    _projection = projection
+
+def get_view_projection()->Tuple[glm.vec3, glm.vec3]:
+    return _view, _projection
+
+
+####################
+# VIEWPORT CONTEXT #
+####################
 def begin_viewport(label:str, size=imgui.ImVec2Like|None)->bool:
-    global _widget_rect, _projection, _view, _region_tl, _region_br
     imgui.begin_child(label, size, imgui.ChildFlags_.borders, imgui.WindowFlags_.no_scrollbar)
-    x, y = imgui.get_cursor_screen_pos()
     w, h = imgui.get_content_region_avail()
-    _widget_rect = (int(x), int(y), int(w), int(h))
-
+    imgui.slider_float2("viewport size", imgui.ImVec2(float(w), float(h)), 100.0, 2000.0, "%.0f")
     # by default setup an orthographic projection matching the widget size
     setup_orthographic(0,0,float(w),float(h))
     return True
@@ -66,220 +125,12 @@ def draw_margins(tl:imgui.ImVec2Like, br:imgui.ImVec2Like):
     )
 
 def end_viewport():
-    # Color for the outside area (darker)
-    # outside_color = imgui.color_convert_float4_to_u32((0.05, 0.05, 0.05, 0.1))
-    # drawlist = imgui.get_window_draw_list()
-
-    # tl = project(imgui.ImVec2(0, 0))
-    # br = project(imgui.ImVec2(*_canvas_size))
-
-    # # widget coords
-    # widget_tl = imgui.ImVec2(_widget_rect[0], _widget_rect[1])
-    # widget_br = imgui.ImVec2(_widget_rect[0]+_widget_rect[2], _widget_rect[1]+_widget_rect[3])
-    # # left margin
-    # drawlist.add_rect_filled(widget_tl, imgui.ImVec2(tl.x, br.y), outside_color)
-    # # right margin
-    # drawlist.add_rect_filled(imgui.ImVec2(br.x, tl.y), widget_br, outside_color)
-    # # top margin
-    # drawlist.add_rect_filled(widget_tl, imgui.ImVec2(widget_br.x, tl.y), outside_color)
-    # # bottom margin
-    # drawlist.add_rect_filled(imgui.ImVec2(tl.x, br.y), imgui.ImVec2(widget_br.x, widget_br.y), outside_color)
-
-    # imgui.set_cursor_screen_pos(_region_br-imgui.ImVec2(100,20))
-    # imgui.text(f"{_canvas_size[0]:.0f}x{_canvas_size[1]:.0f}")
     imgui.end_child()
-
-
-
-
-
-##############
-# PROJECTION #
-##############
-from typing import Iterable
-def project(point:Iterable[int|float])->imgui.ImVec2Like:
-    global _projection, _view, _widget_rect
-    assert len(point) == 2 or len(point) == 3
-
-    match len(point):
-        case 2:
-            P = glm.project(glm.vec3(*point,0), _view, _projection, _widget_rect)
-            return imgui.ImVec2(P.x, P.y)
-        case 3:
-            P = glm.project(glm.vec3(*point), _view, _projection, _widget_rect)
-            return imgui.ImVec2(P.x, P.y)
-        case _:
-            raise ValueError("point must be of length 2 or 3")
-            
-
-def unproject(screen_point:imgui.ImVec2Like)->imgui.ImVec2Like:
-    global _projection, _view, _widget_rect
-    P = glm.unProject(glm.vec3(screen_point.x, screen_point.y, 0), _view, _projection, _widget_rect)
-    return imgui.ImVec2(P.x, P.y)
-
-def _project_lines(lines:List[Tuple[imgui.ImVec2Like, imgui.ImVec2Like]])->List[Tuple[imgui.ImVec2Like, imgui.ImVec2Like]]:
-    projected_lines = []
-    for line in lines:
-        line_proj = tuple(map(project, line))
-
-        projected_lines.append(line_proj)
-    return projected_lines
-
-def setup_orthographic(xmin:float, ymin:float, xmax:float, ymax:float):
-    global _projection, _view
-
-    x, y = imgui.get_window_pos()
-    w, h = imgui.get_window_size()
-    _widget_rect = (int(x), int(y), int(w), int(h))
-    widget_aspect = w/h
-    content_width = xmax - xmin
-    content_height = ymax-ymin
-    content_aspect = content_width/content_height
-    if widget_aspect < content_aspect:
-        # viewport is narrower -> expand world height, center original canvas vertically
-        proj_h = float(content_width) / float(widget_aspect)
-        _projection = glm.ortho(0.0, float(content_width), 0.0, proj_h, -1.0, 1.0)
-        extra_y = proj_h - float(content_height)
-        _view = glm.translate(glm.identity(glm.mat4), glm.vec3(0.0, extra_y * 0.5, 0.0))
-    else:
-        # viewport is wider -> expand world width, center original canvas horizontally
-        proj_w = float(content_height) * float(widget_aspect)
-        _projection = glm.ortho(0.0, proj_w, 0.0, float(content_height), -1.0, 1.0)
-        extra_x = proj_w - float(content_width)
-        _view = glm.translate(glm.identity(glm.mat4), glm.vec3(extra_x * 0.5, 0.0, 0.0))
-
-
-from pylive.glrenderer.utils.camera import Camera
-def setup_camera(camera:Camera)->None:
-    global _projection, _view
-    aspect = float(_widget_rect[2]) / float(_widget_rect[3])
-    camera.setAspectRatio(aspect)
-    _projection = camera.projectionMatrix()
-    _view = camera.viewMatrix()
-
-def setup_view_projection(view:glm.mat4, projection:glm.mat4)->None:
-    global _projection, _view
-    _view = view
-    _projection = projection
-
-def get_camera()->Tuple[glm.vec3, glm.vec3]:
-    return _view, _projection
-
-import numpy as np
-def draw_grid(size: float = 10, step: float = 1, near: float = 0.1):
-    view = _view
-    projection = _projection
-    viewport = _widget_rect
-
-    # Compute number of steps from the center to edge
-    n_steps = int(np.floor(size/2 / step))
-    
-    # Generate coordinates starting from 0
-    xs = np.arange(-n_steps, n_steps + 1) * step
-    zs = np.arange(-n_steps, n_steps + 1) * step
-    
-    # If size is not exact multiple of step, extend outer lines slightly
-    # xs = np.clip(xs, -size, size)
-    # zs = np.clip(zs, -size, size)
-    
-    lines = []
-    
-    # Vertical lines (constant X, varying Z)
-    for x in xs:
-        lines.append((glm.vec3(x, 0, -size/2), glm.vec3(x, 0, size/2)))
-    
-    # Horizontal lines (constant Z, varying X)
-    for z in zs:
-        lines.append((glm.vec3(-size/2, 0, z), glm.vec3(size/2, 0, z)))
-    
-    for line in lines:
-        draw_line(line[0], line[1], color=imgui.color_convert_float4_to_u32((0.5, 0.5, 0.5, 1)))
 
 
 ########
 # DRAW #
 ########
-import itertools
-
-def _draw_annotations(centers:List[imgui.ImVec2Like], labels:List[str|None]):
-    draw_list = imgui.get_window_draw_list()
-    for C, label in zip(centers, labels):
-        draw_list.add_text(
-            (C.x, C.y),
-            imgui.color_convert_float4_to_u32((1.0,1.0,1.0,1.0)),
-            label
-        )
-
-def draw_line(p1, p2, color:int=imgui.color_convert_float4_to_u32((1,1,1,1)), thickness:float=1.0):
-    """Draw a 2D line in the scene.
-    Note: lines are clipped against the near plane before projection.
-    It is essentally a wrapper over draw_list.add_line, with projection
-    """
-    # TODO: clip line to near plane
-    draw_list = imgui.get_window_draw_list()
-
-    draw_list.add_line(
-        project(p1),
-        project(p2),
-        color,
-        thickness
-    )
-
-
-###########
-# HANDLES #
-###########
-def point_handle(label:str, point:imgui.ImVec2Like, *, color:int=None)->Tuple[bool, imgui.ImVec2Like]:
-    global _projection, _view, _widget_rect
-
-    if color is None:
-        color = imgui.color_convert_float4_to_u32((1.0,1.0,1.0,0.9))
-
-    # project the point to world coordinates
-    P = project(point)
-
-    # invisible button
-    btn_size = imgui.ImVec2(28,28)
-    imgui.set_cursor_screen_pos(imgui.ImVec2(P.x, P.y)-btn_size/2)
-    imgui.invisible_button(label, btn_size)
-
-    # draw the point
-    draw_list = imgui.get_window_draw_list()
-    text_offset = imgui.ImVec2(5, -5)
-    radius=3
-    if imgui.is_item_hovered() or imgui.is_item_active():
-        draw_list.add_circle_filled(P, radius+1, color, num_segments=0)
-        text = f"{label}".split("##")[0]
-        text += f"({point.x:.0f},{point.y:.0f})"
-        draw_list.add_text(P + text_offset, color, text)
-    else:
-        r, g, b, a = imgui.color_convert_u32_to_float4(color)
-        draw_list.add_circle_filled(P, radius, color, num_segments=8)
-
-    if imgui.is_item_active():
-        # Get mouse positions
-        mouse_pos = imgui.get_mouse_pos()
-        drag_delta = imgui.get_mouse_drag_delta()
-        prev_mouse_pos = mouse_pos - drag_delta
-
-        # Convert mouse positions to world coordinates
-        prev_world = unproject(prev_mouse_pos)
-        curr_world = unproject(mouse_pos)
-
-        # Compute world-space movement
-        move_delta = curr_world - prev_world
-
-        # Apply movement to the point
-        if math.fabs(move_delta.x) > 0.0 or math.fabs(move_delta.y) > 0.0:
-            imgui.reset_mouse_drag_delta()
-            new_point = type(point)(point.x, point.y)
-            new_point.x += move_delta.x
-            new_point.y += move_delta.y
-            return True, new_point
-
-    # imgui.set_cursor_pos(store_cursor_pos) # restore cursor pos?
-    return False, point
-
 
 def _clip_line_near_plane_world(A: glm.vec3, B: glm.vec3, view: glm.mat4, near=0.1):
     """Clip a line against the near plane in camera space, return world-space endpoints."""
@@ -326,3 +177,95 @@ def _clip_point_near_plane_world(A: glm.vec3, view: glm.mat4, near=0.1):
     
     else:
         return A
+
+def draw_line(p1, p2, color:int=imgui.color_convert_float4_to_u32((1,1,1,1)), thickness:float=1.0):
+    """Draw a 2D line in the scene.
+    Note: lines are clipped against the near plane before projection.
+    It is essentally a wrapper over draw_list.add_line, with projection
+    """
+    # TODO: clip line to near plane
+    draw_list = imgui.get_window_draw_list()
+
+    draw_list.add_line(
+        project(p1),
+        project(p2),
+        color,
+        thickness
+    )
+
+def draw_grid(size: float = 10, step: float = 1, near: float = 0.1):
+    """Draw a grid on the XZ plane centered at the origin."""
+
+    # Generate grid coordinates
+    n_steps = int(np.floor(size/2 / step)) # number of steps from the center to edge
+    xs = np.arange(-n_steps, n_steps + 1) * step
+    zs = np.arange(-n_steps, n_steps + 1) * step
+
+    # Create grid lines along X and Z axes
+    lines = []
+    for x in xs:
+        lines.append((glm.vec3(x, 0, -size/2), glm.vec3(x, 0, size/2)))
+    for z in zs:
+        lines.append((glm.vec3(-size/2, 0, z), glm.vec3(size/2, 0, z)))
+    
+    # draw grid lines
+    for line in lines:
+        draw_line(line[0], line[1], color=imgui.color_convert_float4_to_u32((0.5, 0.5, 0.5, 1)))
+
+def _draw_annotations(centers:List[imgui.ImVec2Like], labels:List[str|None]):
+    draw_list = imgui.get_window_draw_list()
+    for C, label in zip(centers, labels):
+        draw_list.add_text(
+            (C.x, C.y),
+            imgui.color_convert_float4_to_u32((1.0,1.0,1.0,1.0)),
+            label
+        )
+
+
+###########
+# HANDLES #
+###########
+def point_handle(label:str, point:imgui.ImVec2Like, *, color:int=None)->Tuple[bool, imgui.ImVec2Like]:
+    if color is None:
+        color = imgui.color_convert_float4_to_u32((1.0,1.0,1.0,0.9))
+
+    # project the point to world coordinates
+    P = project(point)
+
+    # invisible button to handle interaction
+    btn_size = imgui.ImVec2(28,28)
+    imgui.set_cursor_screen_pos(imgui.ImVec2(P.x, P.y)-btn_size/2)
+    imgui.invisible_button(label, btn_size)
+
+    # draw the point
+    draw_list = imgui.get_window_draw_list()
+    text_offset = imgui.ImVec2(5, -5)
+    radius=3
+    if imgui.is_item_hovered() or imgui.is_item_active():
+        draw_list.add_circle_filled(P, radius+1, color, num_segments=0)
+        text = f"{label}".split("##")[0]
+        text += f"({point.x:.0f},{point.y:.0f})"
+        draw_list.add_text(P + text_offset, color, text)
+    else:
+        r, g, b, a = imgui.color_convert_u32_to_float4(color)
+        draw_list.add_circle_filled(P, radius, color, num_segments=8)
+
+    # handle dragging
+    if imgui.is_item_active():
+        # Compute world-space movement
+        curr_mouse_pos = imgui.get_mouse_pos()
+        prev_mouse_pos = imgui.get_mouse_pos() - imgui.get_mouse_drag_delta()
+        prev_world = unproject(prev_mouse_pos)
+        curr_world = unproject(curr_mouse_pos)
+        move_delta = curr_world - prev_world
+
+        # Apply movement to the point
+        if math.fabs(move_delta.x) > 0.0 or math.fabs(move_delta.y) > 0.0:
+            imgui.reset_mouse_drag_delta()
+            new_point = type(point)(point.x, point.y)
+            new_point.x += move_delta.x
+            new_point.y += move_delta.y
+            return True, new_point
+
+    # imgui.set_cursor_pos(store_cursor_pos) # restore cursor pos?
+    return False, point

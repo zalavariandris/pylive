@@ -75,7 +75,7 @@ def gui():
         gui.camera.lookAt(glm.vec3(0,0,0))
         imx.viewport.setup_view_projection(glm.scale(glm.vec3(-1,-1,1)) * gui.camera.viewMatrix(), gui.camera.projectionMatrix())
 
-        # imx.viewer.setup_camera(gui.camera)
+
         # draw grid
         imx.viewport.draw_grid()
         # draw axes
