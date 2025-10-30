@@ -101,7 +101,7 @@ def gui():
     menu_bar_height = 30
     PANEL_FLAGS = imgui.WindowFlags_.always_auto_resize | imgui.WindowFlags_.no_move | imgui.WindowFlags_.no_resize | imgui.WindowFlags_.no_collapse | imgui.WindowFlags_.no_title_bar
     
-    side_panel_width = 300
+    side_panel_width = 550
     imgui.set_next_window_pos((0,menu_bar_height))
     imgui.set_next_window_size((side_panel_width, display_size.y))
     with imgui_ctx.begin("Parameters", None):
@@ -115,164 +115,18 @@ def gui():
                 _, gui.fov_degrees = imgui.slider_float("fov°", gui.fov_degrees, 1.0, 179.0, "%.1f°")
             case SolverMode.TwoVP:
                 _, gui.quad_mode = imgui.checkbox("quad", gui.quad_mode)
-
-    # imgui.set_next_window_pos((side_panel_width,menu_bar_height))
-    # imgui.set_next_window_size(((display_size.x - side_panel_width*2)/2, display_size.y))
-    # with imgui_ctx.begin("3d_viewport_child", None, PANEL_FLAGS):
-    #     widget_size = imgui.get_content_region_avail()
-    #     image_width, image_height = int(widget_size.x), int(widget_size.y)
-
-    #     #######################
-    #     # UI Viewport Handles #
-    #     #######################
-    #     # Control Points
-    #     drag_line = imx.comp(imx.drag_point)
-    #     drag_lines = imx.comp(drag_line)
-    #     _, gui.first_vanishing_lines_pixel = drag_lines("Z", gui.first_vanishing_lines_pixel, color=get_axis_color(gui.first_axis))
-    #     imx.draw.draw_lines(gui.first_vanishing_lines_pixel, "", get_axis_color(gui.first_axis))
-
-    #     # _, gui.principal_point_pixel = drag_point("principal_point", gui.principal_point_pixel)
-    #     gui.principal_point_pixel = glm.vec2(widget_size.x / 2, widget_size.y / 2)
-    #     _, gui.origin_pixel = imx.drag_point("origin", gui.origin_pixel)
-    #     match gui.solver_mode:
-    #         case SolverMode.OneVP:
-    #             _, gui.second_vanishing_lines_pixel[0] = drag_line("X", gui.second_vanishing_lines_pixel[0], color=get_axis_color(gui.second_axis))  
-    #             imx.draw.draw_lines(gui.second_vanishing_lines_pixel[:1], "", get_axis_color(gui.second_axis))
-    #         case SolverMode.TwoVP:
-    #             if gui.quad_mode:
-    #                 VL = gui.first_vanishing_lines_pixel
-    #                 gui.second_vanishing_lines_pixel = [
-    #                     (VL[0][0], VL[1][0]), 
-    #                     (VL[0][1], VL[1][1])
-    #                 ]
-    #             else:
-    #                 _, gui.second_vanishing_lines_pixel = drag_lines("X", gui.second_vanishing_lines_pixel, color=get_axis_color(gui.second_axis))
-    #             imx.draw.draw_lines(gui.second_vanishing_lines_pixel, "", get_axis_color(gui.second_axis, dim=True))
-
-    #     # with imgui_ctx.begin_drag_drop_target() as target:
-    #     #     print(target)
-    #         # payload = imgui.accept_drag_drop_payload("MY_PAYLOAD_TYPE")
-    #         # if payload is not None:
-    #             # print("Dropped payload:", payload.data.decode("utf-8"))
-
-    #     try:
-    #         match gui.solver_mode:
-    #             case SolverMode.OneVP: # 1VP
-    #                 ###############################
-    #                 # 1. COMPUTE vanishing points #
-    #                 ###############################
-    #                 first_vanishing_point_pixel =  solver.least_squares_intersection_of_lines(
-    #                     gui.first_vanishing_lines_pixel)
-                    
-    #                 # draw vanishing line to VP1
-    #                 VP1 = first_vanishing_point_pixel
-    #                 for A, B in gui.first_vanishing_lines_pixel:
-    #                     P = sorted([A, B], key=lambda P: glm.distance2(P, VP1))[0]
-    #                     imx.draw.draw_lines([(P, VP1)], "", get_axis_color(gui.first_axis, dim=True))
-
-    #                 ###################
-    #                 # 2. Solve Camera #
-    #                 ###################
-    #                 fovy = math.radians(gui.fov_degrees)
-    #                 focal_length_pixel = solver.focal_length_from_fov(fovy, image_height)
-    #                 camera_transform = solver.solve1vp(
-    #                     image_width, 
-    #                     image_height, 
-    #                     first_vanishing_point_pixel,
-    #                     gui.second_vanishing_lines_pixel[0],
-    #                     focal_length_pixel,
-    #                     gui.principal_point_pixel,
-    #                     gui.origin_pixel,
-    #                     gui.first_axis,
-    #                     gui.second_axis,
-    #                     gui.scene_scale
-    #                 )
-
-    #                 # create camera
-    #                 camera = Camera()
-    #                 camera.setFoVY(fovy)
-                    
-    #                 camera.transform = camera_transform
-    #                 camera.setAspectRatio(widget_size.x / widget_size.y)
-    #                 camera.setFoVY(math.degrees(fovy))
-
-    #             case SolverMode.TwoVP: # 2VP
-    #                 ###############################
-    #                 # 1. COMPUTE vanishing points #
-    #                 ###############################
-    #                 first_vanishing_point_pixel =  solver.least_squares_intersection_of_lines(
-    #                     gui.first_vanishing_lines_pixel)
-                    
-    #                 second_vanishing_point_pixel = solver.least_squares_intersection_of_lines(
-    #                     gui.second_vanishing_lines_pixel)
-                    
-    #                 # draw vanishing line to VP1
-    #                 VP1 = first_vanishing_point_pixel
-    #                 for A, B in gui.first_vanishing_lines_pixel:
-    #                     P = sorted([A, B], key=lambda P: glm.distance2(P, VP1))[0]
-    #                     imx.draw.draw_lines([(P, VP1)], "", get_axis_color(gui.first_axis, dim=True))
-    #                 VP2 = second_vanishing_point_pixel
-    #                 for A, B in gui.second_vanishing_lines_pixel:
-    #                     P = sorted([A, B], key=lambda P: glm.distance2(P, VP2))[0]
-    #                     imx.draw.draw_lines([(P, VP2)], "", get_axis_color(gui.second_axis, dim=True))
-
-    #                 ###################
-    #                 # 2. Solve Camera #
-    #                 ###################
-    #                 fovy, camera_transform = solver.solve2vp(
-    #                     image_width, 
-    #                     image_height, 
-    #                     first_vanishing_point_pixel,
-    #                     second_vanishing_point_pixel,
-    #                     gui.principal_point_pixel,
-    #                     gui.origin_pixel,
-    #                     gui.first_axis,
-    #                     gui.second_axis,
-    #                     gui.scene_scale
-    #                 )
-
-    #                 # create camera
-    #                 camera = Camera()
-    #                 camera.setFoVY(fovy)
-    #                 camera.transform = camera_transform
-    #                 camera.setAspectRatio(widget_size.x / widget_size.y)
-    #                 camera.setFoVY(math.degrees(fovy))            
-
-    #     except Exception as e:
-    #         imgui.push_style_color(imgui.Col_.text, (1.0, 0.2, 0.2, 1.0))
-    #         imgui.text_wrapped(f"fspy error: {pformat(e)}")
-    #         import traceback
-    #         traceback.print_exc()
-    #         imgui.pop_style_color()
-
-    #     # Render Scene
-    #     gl_size = widget_size * imgui.get_io().display_framebuffer_scale
-    #     # render_target.resize(int(gl_size.x), int(gl_size.y))
-    #     # with render_target:
-    #     #     render_target.clear(0.1, 0.1, 0.1, 0.0)  # Clear with dark gray background
-    #     #     scene_layer.render(camera)
-
-    #     # # Display the framebuffer texture in ImGui
-    #     # imgui.set_cursor_pos(imgui.ImVec2(0,0))
-    #     # image_ref = imgui.ImTextureRef(int(render_target.color_texture.glo))
-    #     # imgui.image(image_ref,imgui.ImVec2(widget_size.x, widget_size.y))
-
-    #     # Draw 3D grid
-    #     view = camera.viewMatrix()
-    #     projection = glm.perspective(math.radians(camera.fovy), camera.aspect_ratio, 0.1, 100.0)
-    #     viewport = (0, 0, int(widget_size.x), int(widget_size.y))
-    #     imx.draw_grid3D(view, projection, viewport)
         
 
-    imgui.set_next_window_pos((side_panel_width+(display_size.x - side_panel_width*2)/2, menu_bar_height))
-    imgui.set_next_window_size(((display_size.x - side_panel_width*2)/2, display_size.y))
+    imgui.set_next_window_pos((side_panel_width, menu_bar_height))
+    imgui.set_next_window_size((display_size.x - side_panel_width*2, display_size.y-menu_bar_height))
+    imgui.push_style_var(imgui.StyleVar_.window_padding, imgui.ImVec2(0, 0))
     with imgui_ctx.begin("Viewport2", None, PANEL_FLAGS):
         content_size = imgui.ImVec2(720,576)
-        imx.viewport.begin_viewport("Viewport2", None)
+        imx.viewport.begin_viewport("Viewport2", None, borders=False)
         imx.viewport.setup_orthographic(0,0,content_size.x,content_size.y)
 
         # principle point handle
-        _, gui.principal_point_pixel = imx.viewport.point_handle("p", gui.principal_point_pixel, color=get_axis_color(gui.first_axis))
+        _, gui.principal_point_pixel = imx.viewport.point_handle("p", gui.principal_point_pixel, color=imx.colors.YELLOW)
         # origin handle
         _, gui.origin_pixel = imx.viewport.point_handle("o", gui.origin_pixel, color=imx.colors.YELLOW)
 
@@ -300,7 +154,7 @@ def gui():
                     VP1 = first_vanishing_point_pixel
                     for A, B in gui.first_vanishing_lines_pixel:
                         P = sorted([A, B], key=lambda P: glm.distance2(P, VP1))[0]
-                        imx.draw.draw_lines([(P, VP1)], "", get_axis_color(gui.first_axis, dim=True))
+                        imx.viewport.draw_line(P, VP1, get_axis_color(gui.first_axis, dim=True))
                     ###################
                     # 2. Solve Camera #
                     ###################
@@ -339,23 +193,26 @@ def gui():
         
         # draw 3D scene
         from copy import copy
-        viewer_camera = copy(camera)
+        # viewer_camera = copy(camera)
         # Compute the fovy needed to fit the sensor width in the widget
         content_aspect = content_size.x / content_size.y
         widget_size = imgui.get_window_size()
         widget_aspect = widget_size.x / widget_size.y
         overscan_fovy = 2 * glm.atan(glm.tan(fovy / 2) * (content_aspect/widget_aspect))
-        viewer_camera.setFoVY(math.degrees(max(fovy, overscan_fovy)))
-        viewer_camera.setAspectRatio(widget_aspect)
-        imx.viewport.setup_view_projection(viewer_camera.viewMatrix(), viewer_camera.projectionMatrix())
+        # viewer_camera.setFoVY(math.degrees(max(fovy, overscan_fovy)))
+        # viewer_camera.setAspectRatio(widget_aspect)
+        # imx.viewport.setup_view_projection(viewer_camera.viewMatrix(), viewer_camera.projectionMatrix())
+
+
+        imx.viewport.setup_perspective(camera.viewMatrix(), overscan_fovy, widget_aspect, 0.1, 100.0)
+
         imx.viewport.draw_grid()
-        # imx.draw_grid3D(camera.viewMatrix(), camera.projectionMatrix(), (0,0,int(widget_size.x), int(widget_size.y)))
-        
+
         # draw margin overlay
         imx.viewport.setup_orthographic(0,0,content_size.x,content_size.y)
         imx.viewport.draw_margins(imgui.ImVec2(0,0), imgui.ImVec2(content_size.x,content_size.y))
         imx.viewport.end_viewport()
-
+    imgui.pop_style_var()  # WindowPadding
 
     imgui.set_next_window_pos((display_size.x - side_panel_width, menu_bar_height))
     imgui.set_next_window_size((side_panel_width, display_size.y))

@@ -10,6 +10,8 @@ import numpy as np
 ##############
 _view:glm.mat4 = glm.identity(glm.mat4)
 _projection:glm.mat4 = glm.ortho(0,512,0,512,-1,1) # this is the rect of the input coordinate system, the image topleft, bottomright
+_near:float = 0.1
+_far:float = 1000.0
 
 from typing import Iterable
 def project(point:Iterable[int|float])->imgui.ImVec2Like:
@@ -38,7 +40,7 @@ def unproject(screen_point:imgui.ImVec2Like)->imgui.ImVec2Like:
     P = glm.unProject(glm.vec3(screen_point.x, screen_point.y, 0), _view, _projection, widget_rect)
     return imgui.ImVec2(P.x, P.y)
 
-def setup_orthographic(xmin:float, ymin:float, xmax:float, ymax:float):
+def setup_orthographic(xmin:float, ymin:float, xmax:float, ymax:float, near:float=-1.0, far:float=1.0):
     global _projection, _view
 
     x, y = imgui.get_window_pos()
@@ -51,32 +53,43 @@ def setup_orthographic(xmin:float, ymin:float, xmax:float, ymax:float):
         # viewport is narrower -> expand world height, center original canvas vertically
         proj_h = float(content_width) / float(widget_aspect)
         top_margin = ( proj_h - float(content_height) ) * 0.5
-        _projection = glm.ortho(0.0, float(content_width), 0.0-top_margin, proj_h-top_margin, -1.0, 1.0)
+        _projection = glm.ortho(0.0, float(content_width), 0.0-top_margin, proj_h-top_margin, near, far)
+        _near, _far = near, far
+        _view = glm.identity(glm.mat4)
     else:
         # viewport is wider -> expand world width, center original canvas horizontally
         proj_w = float(content_height) * float(widget_aspect)
         left_margin = (proj_w - float(content_width)) * 0.5
-        _projection = glm.ortho(0.0-left_margin, proj_w-left_margin, 0.0, float(content_height), -1.0, 1.0)
-    _view = glm.identity(glm.mat4)
+        _projection = glm.ortho(0.0-left_margin, proj_w-left_margin, 0.0, float(content_height), near, far)
+        _near, _far = near, far
+        _view = glm.identity(glm.mat4)
 
-
-def setup_view_projection(view:glm.mat4, projection:glm.mat4)->None:
+def setup_perspective(view:glm.mat4, fovy:float, aspect:float, near:float, far:float):
     global _projection, _view
+    _projection = glm.perspective(fovy, aspect, near, far)
+    _near, _far = near, far
     _view = view
-    _projection = projection
 
-def get_view_projection()->Tuple[glm.vec3, glm.vec3]:
-    return _view, _projection
+# def setup_view_projection(view:glm.mat4, projection:glm.mat4)->None:
+#     global _projection, _view
+#     _view = view
+#     _projection = projection
+
+# def get_view_projection()->Tuple[glm.vec3, glm.vec3]:
+#     return _view, _projection
 
 
 ####################
 # VIEWPORT CONTEXT #
 ####################
-def begin_viewport(label:str, size=imgui.ImVec2Like|None)->bool:
-    imgui.begin_child(label, size, imgui.ChildFlags_.borders, imgui.WindowFlags_.no_scrollbar)
-    w, h = imgui.get_content_region_avail()
-    imgui.slider_float2("viewport size", imgui.ImVec2(float(w), float(h)), 100.0, 2000.0, "%.0f")
+def begin_viewport(label:str, size=imgui.ImVec2Like|None, borders=True)->bool:
+    imgui.begin_child(label, size, 
+        imgui.ChildFlags_.borders if borders else imgui.ChildFlags_.none,
+        imgui.WindowFlags_.no_scrollbar
+    )
+
     # by default setup an orthographic projection matching the widget size
+    w, h = imgui.get_content_region_avail()
     setup_orthographic(0,0,float(w),float(h))
     return True
 
@@ -93,11 +106,6 @@ def draw_margins(tl:imgui.ImVec2Like, br:imgui.ImVec2Like):
     window_tl = imgui.get_window_pos()
     window_br = window_tl + imgui.get_window_size()
 
-    draw_list.add_line(
-        imgui.ImVec2(tl.x, tl.y),
-        imgui.ImVec2(br.x, br.y),
-        margin_color, 2.0
-    )
     # imgui.text(f"Viewport size: {window_tl.x:.0f},{window_tl.y:.0f} - {window_br.x:.0f},{window_br.y:.0f}")
     # left margin
     draw_list.add_rect_filled(
@@ -132,51 +140,57 @@ def end_viewport():
 # DRAW #
 ########
 
-def _clip_line_near_plane_world(A: glm.vec3, B: glm.vec3, view: glm.mat4, near=0.1):
-    """Clip a line against the near plane in camera space, return world-space endpoints."""
-    A_cam = glm.vec3(view * glm.vec4(A, 1.0))
-    B_cam = glm.vec3(view * glm.vec4(B, 1.0))
+def _clip_line(A: glm.vec3, B: glm.vec3, view: glm.mat4, near=None, far=None):
+    """Clip a line against the near plane in camera space, return world-space endpoints.
+    A, B: world-space endpoints of the line
+    view: camera view matrix
+    near, far: near and far plane distances
+    """
+    if near is None:
+        near = _near
+    if far is None:
+        far = _far
 
-    zA, zB = A_cam.z, B_cam.z
+    A_cam = glm.vec3(view * glm.vec4(A, 1.0))
+    Az = A_cam.z
+    B_cam = glm.vec3(view * glm.vec4(B, 1.0))
+    Bz = B_cam.z
 
     # Both in front
-    if zA <= -near and zB <= -near:  # negative z is in front in OpenGL
+    if Az <= -near and Bz <= -near:  # negative z is in front in OpenGL
         return A, B
 
     # Both behind → discard
-    if zA > -near and zB > -near:
+    if Az > -near and Bz > -near:
         return None
 
     # Clip line to near plane
-    t = (-near - zA) / (zB - zA)
+    t = (-near - Az) / (Bz - Az)
     intersection_cam = A_cam + t * (B_cam - A_cam)
 
     # Transform intersection back to world space
     inv_view = glm.inverse(view)
     intersection_world = glm.vec3(inv_view * glm.vec4(intersection_cam, 1.0))
 
-    if zA > -near:
+    if Az > -near:
         return intersection_world, B
     else:
         return A, intersection_world
     
 
-def _clip_point_near_plane_world(A: glm.vec3, view: glm.mat4, near=0.1):
-    """Clip a line against the near plane in camera space, return world-space endpoints."""
-    A_cam = glm.vec3(view * glm.vec4(A, 1.0))
+def is_clipped(P: glm.vec3, view: glm.mat4, near=None, far=None)->bool:
+    """Check if a point is clipped by the near/far planes in camera space."""
+    if near is None:
+        near = _near
+    if far is None:
+        far = _far
 
-    zA = A_cam.z
+    P_cam = glm.vec3(view * glm.vec4(P, 1.0))
+    z = P_cam.z
 
-    # Both in front
-    if zA <= -near:  # negative z is in front in OpenGL
-        return A
-
-    # Both behind → discard
-    if zA > -near:
-        return None
-    
-    else:
-        return A
+    if z > -near or z < -far:
+        return True
+    return False
 
 def draw_line(p1, p2, color:int=imgui.color_convert_float4_to_u32((1,1,1,1)), thickness:float=1.0):
     """Draw a 2D line in the scene.
@@ -184,8 +198,13 @@ def draw_line(p1, p2, color:int=imgui.color_convert_float4_to_u32((1,1,1,1)), th
     It is essentally a wrapper over draw_list.add_line, with projection
     """
     # TODO: clip line to near plane
-    draw_list = imgui.get_window_draw_list()
+    if len(p1) == 3 and len(p2) == 3:
+        clipped = _clip_line(glm.vec3(*p1), glm.vec3(*p2), _view, _near, _far)
+        if clipped is None:
+            return
+        p1, p2 = clipped
 
+    draw_list = imgui.get_window_draw_list()
     draw_list.add_line(
         project(p1),
         project(p2),
