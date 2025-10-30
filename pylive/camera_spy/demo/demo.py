@@ -116,7 +116,6 @@ def gui():
             case SolverMode.TwoVP:
                 _, gui.quad_mode = imgui.checkbox("quad", gui.quad_mode)
         
-
     imgui.set_next_window_pos((side_panel_width, menu_bar_height))
     imgui.set_next_window_size((display_size.x - side_panel_width*2, display_size.y-menu_bar_height))
     imgui.push_style_var(imgui.StyleVar_.window_padding, imgui.ImVec2(0, 0))
@@ -219,22 +218,12 @@ def gui():
     with imgui_ctx.begin("Results", None, PANEL_FLAGS):
         x, y, z = solver.extract_euler_angle(camera.transform, order="ZXY")
         pos = camera.getPosition()
-        imgui.input_text_multiline("results", "text",size=None, flags=imgui.InputTextFlags_.read_only)
-        
         matrix = [camera.transform[j][i] for i in range(4) for j in range(4)]
+        imgui.input_text_multiline("results", f"{",\n".join([",".join([v for v in row]) for row in camera.transform])}", size=None, flags=imgui.InputTextFlags_.read_only)
         imgui.input_float4("matrix##row1", matrix[0:4], "%.3f", imgui.InputTextFlags_.read_only)
         imgui.input_float4("##matrixrow2", matrix[4:8], "%.3f", imgui.InputTextFlags_.read_only)
         imgui.input_float4("##matrixrow3", matrix[8:12], "%.3f", imgui.InputTextFlags_.read_only)
         imgui.input_float4("##matrixrow4", matrix[12:16], "%.3f", imgui.InputTextFlags_.read_only)
-
-        
-
-        imgui.input_text("translate", f"{pos.x:.2f}, {pos.y:.2f}, {pos.z:.2f}",                               flags=imgui.InputTextFlags_.read_only)
-        imgui.input_text("rotate",    f"{math.degrees(x):.0f}, {math.degrees(y):.0f}, {math.degrees(z):.0f}", flags=imgui.InputTextFlags_.read_only)
-        
-        imgui.text(f"translate: {pos.x:.2f}, {pos.y:.2f}, {pos.z:.2f}")
-        imgui.text(f"rotate:    {math.degrees(x):.0f}, {math.degrees(y):.0f}, {math.degrees(z):.0f}")
-
         imgui.input_float4("quaternion", (3,3,3,4), "%.3f", imgui.InputTextFlags_.read_only)
         imgui.input_float3("translate", camera.getPosition(), "%.3f", imgui.InputTextFlags_.read_only)
         imgui.input_float3("rotate", (x,y,z), "%.3f", imgui.InputTextFlags_.read_only)
