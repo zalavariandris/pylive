@@ -2,8 +2,7 @@ from imgui_bundle import imgui
 from typing import List, Tuple
 
 def radio_group(label:str, current_value:int, options:List[str]) -> Tuple[bool, int]:
-    imgui.text(f"{label}:")
-    imgui.same_line()
+    text, id = label.split("##") if "##" in label else (label, label)
     changed = False
     new_value = current_value
     imgui.push_id(label)
@@ -14,4 +13,9 @@ def radio_group(label:str, current_value:int, options:List[str]) -> Tuple[bool, 
         if i < len(options) - 1:
             imgui.same_line()
     imgui.pop_id()
+    
+    if label:
+        imgui.same_line()
+        imgui.text(f"{text}")
+    
     return changed, new_value

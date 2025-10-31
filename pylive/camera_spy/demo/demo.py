@@ -131,13 +131,34 @@ def gui():
     
     side_panel_width = 550
     with imgui_ctx.begin("Parameters", None):
-        _, gui.first_axis = imgui.combo("first axis",   gui.first_axis, solver.Axis._member_names_)
-        _, gui.second_axis = imgui.combo("second axis", gui.second_axis, solver.Axis._member_names_)
-        _, gui.scene_scale = imgui.slider_float("scene_scale", gui.scene_scale, 1.0, 100.0, "%.2f")
+        # imgui.text("First Axis")
+        # ui.radio_group("##1st axis", "X", ["X", "Y", "Z"])
+        # imgui.same_line()
+        # ui.radio_group("##1st axis sign", "+", ["+", "-"])
+        # imgui.new_line()
+
+        # imgui.text("Second Axis")
+        # ui.radio_group("##2nd axis", "X", ["X", "Y", "Z"])
+        # imgui.same_line()
+        # ui.radio_group("##2nd axis sign", "+", ["+", "-"])
+
+        # imgui.new_line()
+        # imgui.text("Solver Mode")
+        # ui.radio_group("##mode", "1VP", ["1VP", "2VP"])
+
+        imgui.set_next_item_width(150)
         _, gui.solver_mode = imgui.combo("mode", gui.solver_mode, SolverMode._member_names_)
+        imgui.set_next_item_width(150)
+        _, gui.first_axis = imgui.combo("first axis",   gui.first_axis, solver.Axis._member_names_)
+        imgui.set_next_item_width(150)
+        _, gui.second_axis = imgui.combo("second axis", gui.second_axis, solver.Axis._member_names_)
+        imgui.set_next_item_width(150)
+        _, gui.scene_scale = imgui.slider_float("scene_scale", gui.scene_scale, 1.0, 100.0, "%.2f")
+        
 
         match gui.solver_mode:
             case SolverMode.OneVP:
+                imgui.set_next_item_width(150)
                 _, gui.fov_degrees = imgui.slider_float("fov°", gui.fov_degrees, 1.0, 179.0, "%.1f°")
             case SolverMode.TwoVP:
                 _, gui.quad_mode = imgui.checkbox("quad", gui.quad_mode)
@@ -212,25 +233,18 @@ def gui():
             for line in gui.second_vanishing_lines_pixel:
                 ui.viewport.render_guide_line(line[0], line[1], color=get_axis_color(gui.second_axis, dim=True))
     
-    # draw 3D scene
-    from copy import copy
-    # viewer_camera = copy(camera)
-    # Compute the fovy needed to fit the sensor width in the widget
+    # 3D scene
+    # setup overscan perspective projection
     content_aspect = content_size.x / content_size.y
-    widget_size = imgui.get_window_size()
-    widget_aspect = widget_size.x / widget_size.y
-    overscan_fovy = 2 * glm.atan(glm.tan(fovy / 2) * (content_aspect/widget_aspect))
-    # viewer_camera.setFoVY(math.degrees(max(fovy, overscan_fovy)))
-    # viewer_camera.setAspectRatio(widget_aspect)
-    # imx.viewport.setup_view_projection(viewer_camera.viewMatrix(), viewer_camera.projectionMatrix())
+    widget_aspect = imgui.get_window_size().x / imgui.get_window_size().y
+    overscan_fovy = 2 * glm.atan(glm.tan(fovy / 2) * content_aspect/widget_aspect )
+    ui.viewport.setup_perspective(camera.viewMatrix(), max(fovy, overscan_fovy), widget_aspect, 0.1, 100.0)
 
-
-    ui.viewport.setup_perspective(camera.viewMatrix(), overscan_fovy, widget_aspect, 0.1, 100.0)
-
+    # draw grid and axes
     ui.viewport.render_grid_plane()
     ui.viewport.render_axes()
 
-    # draw margin overlay
+    # Render margins
     ui.viewport.setup_orthographic(0,0,content_size.x,content_size.y)
     ui.viewport.render_margins(imgui.ImVec2(0,0), imgui.ImVec2(content_size.x,content_size.y))
     ui.viewport.end_viewport()
@@ -257,9 +271,24 @@ def gui():
 
 
 if __name__ == "__main__":
-    immapp.run(gui, 
-               window_title="Camera Spy", 
-               window_size=(1200, 512), 
-               with_implot3d=True
+    from imgui_bundle import hello_imgui
+    runner_params = hello_imgui.RunnerParams()
+    runner_params.app_window_params.window_title = "Camera Spy"
+    runner_params.imgui_window_params.menu_app_title = "Camera Spy"
+    runner_params.app_window_params.window_geometry.size = (1200, 512)
+    runner_params.app_window_params.restore_previous_geometry = True
+    # runner_params.app_window_params.borderless = True
+    # runner_params.app_window_params.borderless_movable = True
+    # runner_params.app_window_params.borderless_resizable = True
+    # runner_params.app_window_params.borderless_closable = True
+    runner_params.callbacks.show_gui = gui
+    runner_params.imgui_window_params.default_imgui_window_type = (
+        hello_imgui.DefaultImGuiWindowType.provide_full_screen_dock_space
     )
+    hello_imgui.run(runner_params)
+    # immapp.run(gui, 
+    #            window_title="Camera Spy", 
+    #            window_size=(1200, 512), 
+    #            with_implot3d=True
+    # )
 
