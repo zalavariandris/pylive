@@ -3,7 +3,9 @@ from imgui_bundle import imgui
 from typing import TypeVar, Tuple, List
 import glm
 import numpy as np
-
+from . import colors
+from typing import Tuple
+from typing import Literal
 
 ##############
 # PROJECTION #
@@ -14,7 +16,7 @@ _near:float = 0.1
 _far:float = 1000.0
 
 from typing import Iterable
-def project(point:Iterable[int|float])->imgui.ImVec2Like:
+def _project(point:Iterable[int|float])->imgui.ImVec2Like:
     global _projection, _view
     assert len(point) == 2 or len(point) == 3
 
@@ -32,7 +34,7 @@ def project(point:Iterable[int|float])->imgui.ImVec2Like:
         case _:
             raise ValueError("point must be of length 2 or 3")
             
-def unproject(screen_point:imgui.ImVec2Like)->imgui.ImVec2Like:
+def _unproject(screen_point:imgui.ImVec2Like)->imgui.ImVec2Like:
     global _projection, _view
     x, y = imgui.get_window_pos()
     w, h = imgui.get_window_size()
@@ -70,13 +72,8 @@ def setup_perspective(view:glm.mat4, fovy:float, aspect:float, near:float, far:f
     _near, _far = near, far
     _view = view
 
-# def setup_view_projection(view:glm.mat4, projection:glm.mat4)->None:
-#     global _projection, _view
-#     _view = view
-#     _projection = projection
-
-# def get_view_projection()->Tuple[glm.vec3, glm.vec3]:
-#     return _view, _projection
+def get_view_projection()->Tuple[glm.vec3, glm.vec3]:
+    return _view, _projection
 
 
 ####################
@@ -93,11 +90,11 @@ def begin_viewport(label:str, size=imgui.ImVec2Like|None, borders=True)->bool:
     setup_orthographic(0,0,float(w),float(h))
     return True
 
-def draw_margins(tl:imgui.ImVec2Like, br:imgui.ImVec2Like):
+def render_margins(tl:imgui.ImVec2Like, br:imgui.ImVec2Like):
     # draw margins
     margin_color = imgui.color_convert_float4_to_u32((0.1, 0.1, 0.1, 0.66))
-    tl = project(tl)
-    br = project(br)
+    tl = _project(tl)
+    br = _project(br)
 
     draw_list = imgui.get_window_draw_list()
     draw_list.add_circle(tl, 5, margin_color, 12, 2)
@@ -120,6 +117,7 @@ def draw_margins(tl:imgui.ImVec2Like, br:imgui.ImVec2Like):
         margin_color
     )
     # top margin
+    
     draw_list.add_rect_filled(
         imgui.ImVec2(tl.x, window_tl.y),
         imgui.ImVec2(br.x, tl.y),
@@ -178,7 +176,7 @@ def _clip_line(A: glm.vec3, B: glm.vec3, view: glm.mat4, near=None, far=None):
         return A, intersection_world
     
 
-def is_clipped(P: glm.vec3, view: glm.mat4, near=None, far=None)->bool:
+def _is_clipped(P: glm.vec3, view: glm.mat4, near=None, far=None)->bool:
     """Check if a point is clipped by the near/far planes in camera space."""
     if near is None:
         near = _near
@@ -192,7 +190,7 @@ def is_clipped(P: glm.vec3, view: glm.mat4, near=None, far=None)->bool:
         return True
     return False
 
-def draw_line(p1, p2, color:int=imgui.color_convert_float4_to_u32((1,1,1,1)), thickness:float=1.0):
+def render_guide_line(p1, p2, color:int=imgui.color_convert_float4_to_u32((1,1,1,1)), thickness:float=1.0):
     """Draw a 2D line in the scene.
     Note: lines are clipped against the near plane before projection.
     It is essentally a wrapper over draw_list.add_line, with projection
@@ -206,13 +204,13 @@ def draw_line(p1, p2, color:int=imgui.color_convert_float4_to_u32((1,1,1,1)), th
 
     draw_list = imgui.get_window_draw_list()
     draw_list.add_line(
-        project(p1),
-        project(p2),
+        _project(p1),
+        _project(p2),
         color,
         thickness
     )
 
-def draw_grid(size: float = 10, step: float = 1, near: float = 0.1):
+def render_grid_plane(size: float = 10, step: float = 1, near: float = 0.1):
     """Draw a grid on the XZ plane centered at the origin."""
 
     # Generate grid coordinates
@@ -229,7 +227,18 @@ def draw_grid(size: float = 10, step: float = 1, near: float = 0.1):
     
     # draw grid lines
     for line in lines:
-        draw_line(line[0], line[1], color=imgui.color_convert_float4_to_u32((0.5, 0.5, 0.5, 1)))
+        render_guide_line(line[0], line[1], color=imgui.color_convert_float4_to_u32((0.5, 0.5, 0.5, 1)))
+
+def render_axes(length:float=1.0, thickness:float=2.0):
+    """Draw XYZ axes at the origin."""
+    origin = glm.vec3(0,0,0)
+    x_axis = glm.vec3(length, 0, 0)
+    y_axis = glm.vec3(0, length, 0)
+    z_axis = glm.vec3(0, 0, length)
+
+    render_guide_line(origin, x_axis, color=imgui.color_convert_float4_to_u32((1,0,0,0.5)), thickness=thickness) # X - red
+    render_guide_line(origin, y_axis, color=imgui.color_convert_float4_to_u32((0,1,0,0.5)), thickness=thickness) # Y - green
+    render_guide_line(origin, z_axis, color=imgui.color_convert_float4_to_u32((0,0,1,0.5)), thickness=thickness) # Z - blue
 
 def _draw_annotations(centers:List[imgui.ImVec2Like], labels:List[str|None]):
     draw_list = imgui.get_window_draw_list()
@@ -244,12 +253,10 @@ def _draw_annotations(centers:List[imgui.ImVec2Like], labels:List[str|None]):
 ###########
 # HANDLES #
 ###########
-def point_handle(label:str, point:imgui.ImVec2Like, *, color:int=None)->Tuple[bool, imgui.ImVec2Like]:
-    if color is None:
-        color = imgui.color_convert_float4_to_u32((1.0,1.0,1.0,0.9))
 
+def control_point(label:str, point:imgui.ImVec2Like, *, color:int=colors.WHITE)->Tuple[bool, imgui.ImVec2Like]:
     # project the point to world coordinates
-    P = project(point)
+    P = _project(point)
 
     # invisible button to handle interaction
     btn_size = imgui.ImVec2(28,28)
@@ -274,8 +281,8 @@ def point_handle(label:str, point:imgui.ImVec2Like, *, color:int=None)->Tuple[bo
         # Compute world-space movement
         curr_mouse_pos = imgui.get_mouse_pos()
         prev_mouse_pos = imgui.get_mouse_pos() - imgui.get_mouse_drag_delta()
-        prev_world = unproject(prev_mouse_pos)
-        curr_world = unproject(curr_mouse_pos)
+        prev_world = _unproject(prev_mouse_pos)
+        curr_world = _unproject(curr_mouse_pos)
         move_delta = curr_world - prev_world
 
         # Apply movement to the point

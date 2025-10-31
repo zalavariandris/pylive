@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 import colors
 
-line_handle = imx.comp(imx.viewport.point_handle)
+line_handle = imx.comp(imx.viewport.control_point)
 lines_handle = imx.comp(line_handle)
 
 from pylive.glrenderer.utils.camera import Camera
@@ -46,11 +46,11 @@ def gui():
 
         _, gui.first_vanishing_lines = lines_handle("z", gui.first_vanishing_lines, color=colors.BLUE )
         for line in gui.first_vanishing_lines:
-            imx.viewport.draw_line(line[0], line[1], color=colors.BLUE)
+            imx.viewport.render_guide_line(line[0], line[1], color=colors.BLUE)
 
         _, gui.second_vanishing_lines = lines_handle("x", gui.second_vanishing_lines, color=colors.RED )
         for line in gui.second_vanishing_lines:
-            imx.viewport.draw_line(line[0], line[1], color=colors.RED)
+            imx.viewport.render_guide_line(line[0], line[1], color=colors.RED)
 
         # 2. Draw 3D Scene
         # setup view projection
@@ -77,11 +77,11 @@ def gui():
 
 
         # draw grid
-        imx.viewport.draw_grid()
+        imx.viewport.render_grid_plane()
         # draw axes
-        imx.viewport.draw_line((0,0,0), (1,0,0), colors.RED)
-        imx.viewport.draw_line((0,0,0), (0,1,0), colors.GREEN)
-        imx.viewport.draw_line((0,0,0), (0,0,1), colors.BLUE)
+        imx.viewport.render_guide_line((0,0,0), (1,0,0), colors.RED)
+        imx.viewport.render_guide_line((0,0,0), (0,1,0), colors.GREEN)
+        imx.viewport.render_guide_line((0,0,0), (0,0,1), colors.BLUE)
 
         # imx.viewer.draw_lines([(tl, br)], color=colors.YELLOW)
 
@@ -93,7 +93,7 @@ def gui():
 
         # draw margins
         imx.viewport.setup_orthographic(0,0,sensor_size.x,sensor_size.y)
-        imx.viewport.draw_margins(imgui.ImVec2(0,0), imgui.ImVec2(sensor_size.x,sensor_size.y))
+        imx.viewport.render_margins(imgui.ImVec2(0,0), imgui.ImVec2(sensor_size.x,sensor_size.y))
 
         # dl.idx_buffer.extend(my_cached_draw_list.idx_buffer)
 
