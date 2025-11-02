@@ -37,7 +37,43 @@ def get_axis_color(axis:solver.Axis, dim:bool=False) -> Tuple[float, float, floa
 
 # ################# #
 # Application State #
-# ################# #
+# ################# #)
+
+
+class Rect:
+    def __init__(self, left:float, right:float, top:float, bottom:float):
+        self.left = left
+        self.right = right
+        self.top = top
+        self.bottom = bottom
+
+    @property
+    def width(self) -> float:
+        return self.right - self.left
+    
+    @property
+    def height(self) -> float:
+        return self.bottom - self.top
+
+    @property
+    def center(self) -> Tuple[float, float]:
+        return (self.left + self.right) / 2, (self.top + self.bottom) / 2
+
+    @property
+    def topleft(self) -> Tuple[float, float]:
+        return self.left, self.top
+
+    @property
+    def topright(self) -> Tuple[float, float]:
+        return self.right, self.top
+
+    @property
+    def bottomleft(self) -> Tuple[float, float]:
+        return self.left, self.bottom
+
+    @property
+    def bottomright(self) -> Tuple[float, float]:
+        return self.right, self.bottom
 
 class SolverMode(IntEnum):
     OneVP = 0
@@ -64,8 +100,8 @@ class SolverMode(IntEnum):
     startup_end_time = None,
     my_point=imgui.ImVec2(50,50),
     image_texture_ref=None,
-    content_size = imgui.ImVec2(512,512),
-    view_matrix = glm.identity(glm.mat4))
+    content_size = imgui.ImVec2(720,720),
+    pan_and_zoom_matrix = glm.identity(glm.mat4))
 def gui():
     if gui.startup_end_time is None:
         gui.startup_end_time = time.time()
@@ -171,8 +207,8 @@ def gui():
     imgui.begin("Viewport2", None)
     ui.viewport.begin_viewport("Viewport2", None, borders=False)
     ui.viewport.ortho(0,0,gui.content_size.x,gui.content_size.y)
-    _, gui.view_matrix = ui.viewport.pan_and_zoom(gui.view_matrix)
-    ui.viewport.setup_view(gui.view_matrix)
+    _, gui.pan_and_zoom_matrix = ui.viewport.pan_and_zoom(gui.pan_and_zoom_matrix)
+    ui.viewport.setup_view(gui.pan_and_zoom_matrix)
 
     # draw image
     if gui.image_texture_ref is not None:
@@ -245,41 +281,46 @@ def gui():
                 ui.viewport.render_guide_line(line[0], line[1], color=get_axis_color(gui.second_axis, dim=True))
     
     # 3D scene
-    # setup overscan perspective projection
+    # # setup overscan perspective projection
     content_aspect = gui.content_size.x / gui.content_size.y
     widget_aspect = imgui.get_window_size().x / imgui.get_window_size().y
-
-    overscan_fovy = 2 * glm.atan(glm.tan(fovy / 2) * content_aspect/widget_aspect )
-    
-    # Construct pan_and_zoom matrix from gui.view_matrix
     near = 0.1
+    ui.viewport.perspective(fovy, widget_aspect, near, 100.0)
     
-    # Extract scale and translation from gui.view_matrix
-    scale_x = glm.length(glm.vec3(gui.view_matrix[0]))
-    scale_y = glm.length(glm.vec3(gui.view_matrix[1]))
-    scale = (scale_x + scale_y) / 2.0
+    # create a perspective frusutm with the computed fov
+    top = near * math.tan(fovy / 2)
+    right = top * widget_aspect
+    bottom = -top
+    left = -right
     
-    offset_x = gui.view_matrix[3][0]
-    offset_y = gui.view_matrix[3][1]
+    # modify frustum according to pan_and_zoom (the pan and zoom works in screen space, so we need to map it to near plane space)
+    # The content has its own coordinate system (0 to content_size), we need to map this to NDC space first
+    # Then apply the frustum mapping
     
-    # Center the offset relative to image center
-    centered_offset_x = offset_x - gui.content_size.x / 2
-    centered_offset_y = offset_y - gui.content_size.y / 2
+    # Map content corners to NDC space [-1, 1]
+    content_left = 0.0
+    content_right = gui.content_size.x
+    content_top = 0.0
+    content_bottom = gui.content_size.y
     
-    # Normalize to near plane units (using base fovy, not overscan)
-    pixel_to_near_x = (2 * near * math.tan(fovy / 2) * content_aspect) / gui.content_size.x
-    pixel_to_near_y = (2 * near * math.tan(fovy / 2)) / gui.content_size.y
+    # Apply pan and zoom transform in content space
+    transformed_tl = glm.inverse(gui.pan_and_zoom_matrix) * glm.vec4(content_left, content_top, 0, 1)
+    transformed_br = glm.inverse(gui.pan_and_zoom_matrix) * glm.vec4(content_right, content_bottom, 0, 1)
     
-    # Don't divide by scale - the offset is already in the right units
-    normalized_offset_x = centered_offset_x * pixel_to_near_x
-    normalized_offset_y = centered_offset_y * pixel_to_near_y
+    # Map to NDC space based on widget dimensions (assuming content is centered)
+    # This assumes the ortho projection was set to (0, 0, content_size.x, content_size.y)
+    ndc_left = ((transformed_tl.x / gui.content_size.x) * 2.0 - 1.0)
+    ndc_right = ((transformed_br.x / gui.content_size.x) * 2.0 - 1.0)
+    ndc_top = ((transformed_tl.y / gui.content_size.y) * 2.0 - 1.0)
+    ndc_bottom = ((transformed_br.y / gui.content_size.y) * 2.0 - 1.0)
     
-    # Create normalized pan_and_zoom matrix
-    pan_and_zoom_matrix = glm.identity(glm.mat4)
-    pan_and_zoom_matrix = glm.scale(pan_and_zoom_matrix, glm.vec3(scale, scale, 1.0))
-    pan_and_zoom_matrix = glm.translate(pan_and_zoom_matrix, glm.vec3(normalized_offset_x, normalized_offset_y, 0))
+    # Map NDC to frustum space
+    frustum_left =   left +   (ndc_left + 1.0)   * 0.5 * (right - left)
+    frustum_right =  left +   (ndc_right + 1.0)  * 0.5 * (right - left)
+    frustum_top =    bottom + (ndc_top + 1.0)    * 0.5 * (top - bottom)
+    frustum_bottom = bottom + (ndc_bottom + 1.0) * 0.5 * (top - bottom)
     
-    ui.viewport.perspective(max(fovy, overscan_fovy), widget_aspect, near, 100.0, pan_and_zoom_matrix)
+    ui.viewport.frustum(frustum_left, frustum_right, frustum_top, frustum_bottom, near, 100.0)
     ui.viewport.setup_view(camera.viewMatrix())
 
     # draw grid and axes
@@ -288,7 +329,7 @@ def gui():
 
     # Render margins
     ui.viewport.ortho(0,0,gui.content_size.x,gui.content_size.y)
-    ui.viewport.setup_view(gui.view_matrix)
+    ui.viewport.setup_view(gui.pan_and_zoom_matrix)
     ui.viewport.render_margins(imgui.ImVec2(0,0), imgui.ImVec2(gui.content_size.x,gui.content_size.y))
     ui.viewport.end_viewport()
     imgui.end()

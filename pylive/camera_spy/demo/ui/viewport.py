@@ -43,7 +43,7 @@ def _unproject(screen_point:imgui.ImVec2Like)->imgui.ImVec2Like:
     return imgui.ImVec2(P.x, P.y)
 
 def ortho(xmin:float, ymin:float, xmax:float, ymax:float, near:float=-1.0, far:float=1.0):
-    global _projection
+    global _projection, _near, _far
 
     x, y = imgui.get_window_pos()
     w, h = imgui.get_window_size()
@@ -64,43 +64,13 @@ def ortho(xmin:float, ymin:float, xmax:float, ymax:float, near:float=-1.0, far:f
         _projection = glm.ortho(0.0-left_margin, proj_w-left_margin, 0.0, float(content_height), near, far)
         _near, _far = near, far
 
-def perspective(fovy:float, aspect:float, near:float, far:float, pan_and_zoom:glm.mat4):
+def perspective(fovy:float, aspect:float, near:float, far:float):
     global _projection, _near, _far
-    # Step 1: canonical frustum bounds at near plane
-    top = near * math.tan(fovy / 2)
-    bottom = -top
-    right = top * aspect
-    left = -right
-
-    # Step 2: extract translation and scale from pan_and_zoom
-    # Extract scale from the matrix (assumes uniform scale in x and y)
-    scale_x = glm.length(glm.vec3(pan_and_zoom[0]))
-    scale_y = glm.length(glm.vec3(pan_and_zoom[1]))
-    scale = (scale_x + scale_y) / 2.0  # average scale
-    
-    # Extract translation
-    offset_x = pan_and_zoom[3][0]
-    offset_y = pan_and_zoom[3][1]
-    
-    # Step 3: apply inverse transformations to frustum
-    # Inverse scale: divide frustum bounds
-    left /= scale
-    right /= scale
-    top /= scale
-    bottom /= scale
-    
-    # Inverse translation: shift frustum
-    left -= offset_x
-    right -= offset_x
-    top -= offset_y
-    bottom -= offset_y
-
-    # Step 4: create frustum with adjusted bounds
-    _projection = glm.frustum(left, right, bottom, top, near, far)
+    _projection = glm.perspective(fovy, aspect, near, far)
     _near, _far = near, far
 
 def frustum(left:float, right:float, bottom:float, top:float, near:float, far:float):
-    global _projection
+    global _projection, _near, _far
     _projection = glm.frustum(left, right, bottom, top, near, far)
     _near, _far = near, far
 
@@ -381,3 +351,12 @@ def control_point(label:str, point:imgui.ImVec2Like, *, color:int=colors.WHITE)-
 
     # imgui.set_cursor_pos(store_cursor_pos) # restore cursor pos?
     return False, point
+
+if __name__ == "__main__":
+    viewport = (0,0, 800,600)
+    viewer.begin_viewer("Viewport Demo", viewport, size=imgui.ImVec2(800,600))
+    ...
+    viewer.begin_perspective(math.radians(60.0), 800/600, 0.1, 100.0)
+    ...
+    viewer.end_perspective()
+    viewer.end_viewer()
