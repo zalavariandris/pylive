@@ -42,8 +42,8 @@ def _unproject(screen_point:imgui.ImVec2Like)->imgui.ImVec2Like:
     P = glm.unProject(glm.vec3(screen_point.x, screen_point.y, 0), _view, _projection, widget_rect)
     return imgui.ImVec2(P.x, P.y)
 
-def setup_orthographic(xmin:float, ymin:float, xmax:float, ymax:float, near:float=-1.0, far:float=1.0):
-    global _projection, _view
+def ortho(xmin:float, ymin:float, xmax:float, ymax:float, near:float=-1.0, far:float=1.0):
+    global _projection
 
     x, y = imgui.get_window_pos()
     w, h = imgui.get_window_size()
@@ -57,23 +57,106 @@ def setup_orthographic(xmin:float, ymin:float, xmax:float, ymax:float, near:floa
         top_margin = ( proj_h - float(content_height) ) * 0.5
         _projection = glm.ortho(0.0, float(content_width), 0.0-top_margin, proj_h-top_margin, near, far)
         _near, _far = near, far
-        _view = glm.identity(glm.mat4)
     else:
         # viewport is wider -> expand world width, center original canvas horizontally
         proj_w = float(content_height) * float(widget_aspect)
         left_margin = (proj_w - float(content_width)) * 0.5
         _projection = glm.ortho(0.0-left_margin, proj_w-left_margin, 0.0, float(content_height), near, far)
         _near, _far = near, far
-        _view = glm.identity(glm.mat4)
 
-def setup_perspective(view:glm.mat4, fovy:float, aspect:float, near:float, far:float):
-    global _projection, _view
-    _projection = glm.perspective(fovy, aspect, near, far)
+def perspective(fovy:float, aspect:float, near:float, far:float, pan_and_zoom:glm.mat4):
+    global _projection, _near, _far
+    # Step 1: canonical frustum bounds at near plane
+    top = near * math.tan(fovy / 2)
+    bottom = -top
+    right = top * aspect
+    left = -right
+
+    # Step 2: extract translation and scale from pan_and_zoom
+    # Extract scale from the matrix (assumes uniform scale in x and y)
+    scale_x = glm.length(glm.vec3(pan_and_zoom[0]))
+    scale_y = glm.length(glm.vec3(pan_and_zoom[1]))
+    scale = (scale_x + scale_y) / 2.0  # average scale
+    
+    # Extract translation
+    offset_x = pan_and_zoom[3][0]
+    offset_y = pan_and_zoom[3][1]
+    
+    # Step 3: apply inverse transformations to frustum
+    # Inverse scale: divide frustum bounds
+    left /= scale
+    right /= scale
+    top /= scale
+    bottom /= scale
+    
+    # Inverse translation: shift frustum
+    left -= offset_x
+    right -= offset_x
+    top -= offset_y
+    bottom -= offset_y
+
+    # Step 4: create frustum with adjusted bounds
+    _projection = glm.frustum(left, right, bottom, top, near, far)
     _near, _far = near, far
+
+def frustum(left:float, right:float, bottom:float, top:float, near:float, far:float):
+    global _projection
+    _projection = glm.frustum(left, right, bottom, top, near, far)
+    _near, _far = near, far
+
+def setup_view(view:glm.mat4):
+    global _view
     _view = view
 
 def get_view_projection()->Tuple[glm.vec3, glm.vec3]:
     return _view, _projection
+
+def pan_and_zoom(view:glm.mat4, zoom_speed:float=0.1, pan_speed:float=1.0)->Tuple[bool, glm.mat4]:
+    """Handle panning and zooming of the view matrix based on mouse input.
+    Returns (changed:bool, new_view:glm.mat4)
+    Zoom is centered around the mouse position in world space.
+    """
+    changed = False
+    translation = glm.vec3(0,0,0)
+    scale = 1.0
+
+    mouse_screen = imgui.get_mouse_pos()
+    mouse_world_before = _unproject(mouse_screen)
+
+    # Zooming
+    mouse_wheel = imgui.get_io().mouse_wheel
+    if mouse_wheel != 0.0:
+        scale_factor = 1.0 + mouse_wheel * zoom_speed
+        scale *= scale_factor
+        changed = True
+
+    # Panning
+    if imgui.is_mouse_dragging(imgui.MouseButton_.middle) or (imgui.is_key_down(imgui.Key.left_alt) and imgui.is_mouse_dragging(imgui.MouseButton_.left)):
+        drag_delta = _get_world_space_mouse_drag_delta(imgui.MouseButton_.middle if imgui.is_mouse_dragging(imgui.MouseButton_.middle) else imgui.MouseButton_.left)
+        translation.x += drag_delta.x * pan_speed
+        translation.y += drag_delta.y * pan_speed
+        imgui.reset_mouse_drag_delta(imgui.MouseButton_.middle if imgui.is_mouse_dragging(imgui.MouseButton_.middle) else imgui.MouseButton_.left)
+        changed = True
+
+    if changed:
+        # Apply translation and scaling to the view matrix
+        new_view = glm.translate(view, translation)
+        new_view = glm.scale(new_view, glm.vec3(scale, scale, scale))
+        # If zooming, keep mouse position fixed in world space
+        if mouse_wheel != 0.0:
+            # Unproject mouse position after scaling
+            # Use the new_view for unprojection
+            global _view
+            old_view = _view
+            _view = new_view
+            mouse_world_after = _unproject(mouse_screen)
+            _view = old_view
+            # Compute translation to keep mouse_world_before == mouse_world_after
+            offset = glm.vec3(mouse_world_before.x - mouse_world_after.x, mouse_world_before.y - mouse_world_after.y, 0)
+            new_view = glm.translate(new_view, -offset)
+        return True, new_view
+
+    return False, view
 
 
 ####################
@@ -87,7 +170,7 @@ def begin_viewport(label:str, size=imgui.ImVec2Like|None, borders=True)->bool:
 
     # by default setup an orthographic projection matching the widget size
     w, h = imgui.get_content_region_avail()
-    setup_orthographic(0,0,float(w),float(h))
+    ortho(0,0,float(w),float(h))
     return True
 
 def render_margins(tl:imgui.ImVec2Like, br:imgui.ImVec2Like):
@@ -175,7 +258,6 @@ def _clip_line(A: glm.vec3, B: glm.vec3, view: glm.mat4, near=None, far=None):
     else:
         return A, intersection_world
     
-
 def _is_clipped(P: glm.vec3, view: glm.mat4, near=None, far=None)->bool:
     """Check if a point is clipped by the near/far planes in camera space."""
     if near is None:
@@ -254,6 +336,14 @@ def _draw_annotations(centers:List[imgui.ImVec2Like], labels:List[str|None]):
 # HANDLES #
 ###########
 
+def _get_world_space_mouse_drag_delta(button: imgui.MouseButton_=0, lock_threshold: float=-1)->imgui.ImVec2Like:
+    curr_mouse_pos = imgui.get_mouse_pos()
+    prev_mouse_pos = imgui.get_mouse_pos() - imgui.get_mouse_drag_delta(button, lock_threshold)
+    prev_world = _unproject(prev_mouse_pos)
+    curr_world = _unproject(curr_mouse_pos)
+    world_space_delta = curr_world - prev_world
+    return world_space_delta
+
 def control_point(label:str, point:imgui.ImVec2Like, *, color:int=colors.WHITE)->Tuple[bool, imgui.ImVec2Like]:
     # project the point to world coordinates
     P = _project(point)
@@ -279,18 +369,14 @@ def control_point(label:str, point:imgui.ImVec2Like, *, color:int=colors.WHITE)-
     # handle dragging
     if imgui.is_item_active():
         # Compute world-space movement
-        curr_mouse_pos = imgui.get_mouse_pos()
-        prev_mouse_pos = imgui.get_mouse_pos() - imgui.get_mouse_drag_delta()
-        prev_world = _unproject(prev_mouse_pos)
-        curr_world = _unproject(curr_mouse_pos)
-        move_delta = curr_world - prev_world
+        world_space_delta = _get_world_space_mouse_drag_delta()
 
         # Apply movement to the point
-        if math.fabs(move_delta.x) > 0.0 or math.fabs(move_delta.y) > 0.0:
+        if math.fabs(world_space_delta.x) > 0.0 or math.fabs(world_space_delta.y) > 0.0:
             imgui.reset_mouse_drag_delta()
             new_point = type(point)(point.x, point.y)
-            new_point.x += move_delta.x
-            new_point.y += move_delta.y
+            new_point.x += world_space_delta.x
+            new_point.y += world_space_delta.y
             return True, new_point
 
     # imgui.set_cursor_pos(store_cursor_pos) # restore cursor pos?

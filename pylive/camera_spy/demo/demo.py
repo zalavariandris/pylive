@@ -6,6 +6,7 @@ import logging
 from pprint import pformat
 from typing import Any, List, Tuple, Dict
 from enum import IntEnum
+from PIL import Image
 
 # Third-party imports
 import glm
@@ -61,7 +62,10 @@ class SolverMode(IntEnum):
     first_axis=solver.Axis.PositiveZ,
     second_axis=solver.Axis.PositiveX,
     startup_end_time = None,
-    my_point=imgui.ImVec2(50,50))
+    my_point=imgui.ImVec2(50,50),
+    image_texture_ref=None,
+    content_size = imgui.ImVec2(512,512),
+    view_matrix = glm.identity(glm.mat4))
 def gui():
     if gui.startup_end_time is None:
         gui.startup_end_time = time.time()
@@ -72,32 +76,6 @@ def gui():
     style.anti_aliased_lines = True
     style.anti_aliased_lines_use_tex = True
     style.anti_aliased_fill = True
-
-    # setup main docking space
-    # Main viewport
-    # viewport = imgui.get_main_viewport()
-
-    # Setup main dockspace window
-    # imgui.set_next_window_pos(viewport.pos)
-    # imgui.set_next_window_size(viewport.size)
-    # imgui.set_next_window_viewport(viewport.id_)
-    # flags = (
-    #     imgui.WindowFlags_.no_title_bar
-    #     | imgui.WindowFlags_.no_collapse
-    #     | imgui.WindowFlags_.no_resize
-    #     | imgui.WindowFlags_.no_move
-    #     | imgui.WindowFlags_.no_bring_to_front_on_focus
-    #     | imgui.WindowFlags_.no_nav_focus
-    #     | imgui.WindowFlags_.menu_bar
-    # )
-    # imgui.push_style_var(imgui.StyleVar_.window_rounding, 0)
-    # imgui.push_style_var(imgui.StyleVar_.window_border_size, 0)
-    # imgui.begin("MainDockSpace", True)
-    # imgui.end()
-    # imgui.pop_style_var(2)
-
-    # dockspace_id = imgui.get_id("MyDockSpace")
-    # imgui.dock_space(dockspace_id, (0.0, 0.0), imgui.DockNodeFlags_.none)
     
     # Compute Camera
     camera = Camera()
@@ -110,7 +88,32 @@ def gui():
                     title="Open fspy file"
                 )
                 file_paths = file_object.result()
-                print("Selected file:", file_paths)
+                if file_paths:
+                    image_path = file_paths[0]
+                    try:
+                        # load image data
+                        image = Image.open(image_path).convert("RGBA")
+                        width, height = image.size
+                        image_data = image.tobytes()
+
+                        # Create OpenGL texture from image  
+                        # Add at the top of your file
+                        from OpenGL.GL import glGenTextures, glBindTexture, glTexImage2D, glTexParameteri, GL_TEXTURE_2D, GL_RGBA, GL_UNSIGNED_BYTE, GL_LINEAR
+
+                        def create_texture_rgba(image_data, width, height):
+                            tex_id = glGenTextures(1)
+                            glBindTexture(GL_TEXTURE_2D, tex_id)
+                            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image_data)
+                            glTexParameteri(GL_TEXTURE_2D, 0x2801, GL_LINEAR)  # GL_TEXTURE_MIN_FILTER
+                            glTexParameteri(GL_TEXTURE_2D, 0x2800, GL_LINEAR)  # GL_TEXTURE_MAG_FILTER
+                            return tex_id
+                        texture_id = create_texture_rgba(image_data, width, height)
+                        gui.content_size = imgui.ImVec2(width, height)
+                        gui.image_texture_ref = imgui.ImTextureRef(texture_id)
+
+
+                    except Exception as e:
+                        imgui.open_popup("Error##fspy_open")
             clicked_exit, _ = imgui.menu_item("Exit", "Alt+F4", False, True)
             if clicked_exit:
                 print("Exiting...")
@@ -166,9 +169,17 @@ def gui():
 
     imgui.push_style_var(imgui.StyleVar_.window_padding, imgui.ImVec2(0, 0))
     imgui.begin("Viewport2", None)
-    content_size = imgui.ImVec2(720,576)
     ui.viewport.begin_viewport("Viewport2", None, borders=False)
-    ui.viewport.setup_orthographic(0,0,content_size.x,content_size.y)
+    ui.viewport.ortho(0,0,gui.content_size.x,gui.content_size.y)
+    _, gui.view_matrix = ui.viewport.pan_and_zoom(gui.view_matrix)
+    ui.viewport.setup_view(gui.view_matrix)
+
+    # draw image
+    if gui.image_texture_ref is not None:
+        tl = ui.viewport._project((0,0))
+        br = ui.viewport._project((gui.content_size.x, gui.content_size.y))
+        imgui.set_cursor_screen_pos(tl)
+        imgui.image(gui.image_texture_ref, imgui.ImVec2(br.x - tl.x, br.y - tl.y))
 
     # origin CP
     _, gui.origin_pixel = ui.viewport.control_point("o", gui.origin_pixel)
@@ -180,7 +191,7 @@ def gui():
     for line in gui.first_vanishing_lines_pixel:
         ui.viewport.render_guide_line(line[0], line[1], color=get_axis_color(gui.first_axis))
 
-    gui.principal_point_pixel = glm.vec2(content_size.x / 2, content_size.y / 2)
+    gui.principal_point_pixel = glm.vec2(gui.content_size.x / 2, gui.content_size.y / 2)
     match gui.solver_mode:
         case SolverMode.OneVP:
             _, gui.second_vanishing_lines_pixel[0] = line_control("x", gui.second_vanishing_lines_pixel[0], color=get_axis_color(gui.second_axis))  
@@ -201,10 +212,10 @@ def gui():
                 # 2. Solve Camera #
                 ###################
                 fovy = math.radians(gui.fov_degrees)
-                focal_length_pixel = solver.focal_length_from_fov(fovy, content_size.y)
+                focal_length_pixel = solver.focal_length_from_fov(fovy, gui.content_size.y)
                 camera_transform = solver.solve1vp(
-                    content_size.x, 
-                    content_size.y, 
+                    gui.content_size.x, 
+                    gui.content_size.y, 
                     first_vanishing_point_pixel,
                     gui.second_vanishing_lines_pixel[0],
                     focal_length_pixel,
@@ -220,7 +231,7 @@ def gui():
                 camera.setFoVY(fovy)
                 
                 camera.transform = camera_transform
-                camera.setAspectRatio(content_size.x / content_size.y)
+                camera.setAspectRatio(gui.content_size.x / gui.content_size.y)
                 camera.setFoVY(math.degrees(fovy))
             except Exception as e:
                 imgui.push_style_color(imgui.Col_.text, (1.0, 0.2, 0.2, 1.0))
@@ -235,39 +246,72 @@ def gui():
     
     # 3D scene
     # setup overscan perspective projection
-    content_aspect = content_size.x / content_size.y
+    content_aspect = gui.content_size.x / gui.content_size.y
     widget_aspect = imgui.get_window_size().x / imgui.get_window_size().y
+
     overscan_fovy = 2 * glm.atan(glm.tan(fovy / 2) * content_aspect/widget_aspect )
-    ui.viewport.setup_perspective(camera.viewMatrix(), max(fovy, overscan_fovy), widget_aspect, 0.1, 100.0)
+    
+    # Construct pan_and_zoom matrix from gui.view_matrix
+    near = 0.1
+    
+    # Extract scale and translation from gui.view_matrix
+    scale_x = glm.length(glm.vec3(gui.view_matrix[0]))
+    scale_y = glm.length(glm.vec3(gui.view_matrix[1]))
+    scale = (scale_x + scale_y) / 2.0
+    
+    offset_x = gui.view_matrix[3][0]
+    offset_y = gui.view_matrix[3][1]
+    
+    # Center the offset relative to image center
+    centered_offset_x = offset_x - gui.content_size.x / 2
+    centered_offset_y = offset_y - gui.content_size.y / 2
+    
+    # Normalize to near plane units (using base fovy, not overscan)
+    pixel_to_near_x = (2 * near * math.tan(fovy / 2) * content_aspect) / gui.content_size.x
+    pixel_to_near_y = (2 * near * math.tan(fovy / 2)) / gui.content_size.y
+    
+    # Don't divide by scale - the offset is already in the right units
+    normalized_offset_x = centered_offset_x * pixel_to_near_x
+    normalized_offset_y = centered_offset_y * pixel_to_near_y
+    
+    # Create normalized pan_and_zoom matrix
+    pan_and_zoom_matrix = glm.identity(glm.mat4)
+    pan_and_zoom_matrix = glm.scale(pan_and_zoom_matrix, glm.vec3(scale, scale, 1.0))
+    pan_and_zoom_matrix = glm.translate(pan_and_zoom_matrix, glm.vec3(normalized_offset_x, normalized_offset_y, 0))
+    
+    ui.viewport.perspective(max(fovy, overscan_fovy), widget_aspect, near, 100.0, pan_and_zoom_matrix)
+    ui.viewport.setup_view(camera.viewMatrix())
 
     # draw grid and axes
     ui.viewport.render_grid_plane()
     ui.viewport.render_axes()
 
     # Render margins
-    ui.viewport.setup_orthographic(0,0,content_size.x,content_size.y)
-    ui.viewport.render_margins(imgui.ImVec2(0,0), imgui.ImVec2(content_size.x,content_size.y))
+    ui.viewport.ortho(0,0,gui.content_size.x,gui.content_size.y)
+    ui.viewport.setup_view(gui.view_matrix)
+    ui.viewport.render_margins(imgui.ImVec2(0,0), imgui.ImVec2(gui.content_size.x,gui.content_size.y))
     ui.viewport.end_viewport()
     imgui.end()
     imgui.pop_style_var()  # WindowPadding
 
     # imgui.set_next_window_pos((display_size.x - side_panel_width, menu_bar_height))
     # imgui.set_next_window_size((side_panel_width, display_size.y))
-    with imgui_ctx.begin("Results", None):
-        x, y, z = solver.extract_euler_angle(camera.transform, order="ZXY")
-        pos = camera.getPosition()
-        matrix = [camera.transform[j][i] for i in range(4) for j in range(4)]
-        imgui.input_text_multiline("results", f"{",\n".join([", ".join([f"{v:.3f}" for v in row]) for row in camera.transform])}", size=None, flags=imgui.InputTextFlags_.read_only)
-        imgui.input_float4("matrix##row1", matrix[0:4], "%.3f", imgui.InputTextFlags_.read_only)
-        imgui.input_float4("##matrixrow2", matrix[4:8], "%.3f", imgui.InputTextFlags_.read_only)
-        imgui.input_float4("##matrixrow3", matrix[8:12], "%.3f", imgui.InputTextFlags_.read_only)
-        imgui.input_float4("##matrixrow4", matrix[12:16], "%.3f", imgui.InputTextFlags_.read_only)
-        imgui.input_float4("quaternion", (3,3,3,4), "%.3f", imgui.InputTextFlags_.read_only)
-        imgui.input_float3("translate", camera.getPosition(), "%.3f", imgui.InputTextFlags_.read_only)
-        imgui.input_float3("rotate", (x,y,z), "%.3f", imgui.InputTextFlags_.read_only)
+    imgui.begin("Results", None)
+    x, y, z = solver.extract_euler_angle(camera.transform, order="ZXY")
+    pos = camera.getPosition()
+    matrix = [camera.transform[j][i] for i in range(4) for j in range(4)]
+    imgui.input_text_multiline("results", f"{",\n".join([", ".join([f"{v:.3f}" for v in row]) for row in camera.transform])}", size=None, flags=imgui.InputTextFlags_.read_only)
+    imgui.input_float4("matrix##row1", matrix[0:4], "%.3f", imgui.InputTextFlags_.read_only)
+    imgui.input_float4("##matrixrow2", matrix[4:8], "%.3f", imgui.InputTextFlags_.read_only)
+    imgui.input_float4("##matrixrow3", matrix[8:12], "%.3f", imgui.InputTextFlags_.read_only)
+    imgui.input_float4("##matrixrow4", matrix[12:16], "%.3f", imgui.InputTextFlags_.read_only)
+    imgui.input_float4("quaternion", (3,3,3,4), "%.3f", imgui.InputTextFlags_.read_only)
+    imgui.input_float3("translate", camera.getPosition(), "%.3f", imgui.InputTextFlags_.read_only)
+    imgui.input_float3("rotate", (x,y,z), "%.3f", imgui.InputTextFlags_.read_only)
 
-        
-    
+    if gui.image_texture_ref is not None:
+        imgui.image(gui.image_texture_ref, imgui.ImVec2(128, 128))
+    imgui.end()
 
 
 if __name__ == "__main__":
