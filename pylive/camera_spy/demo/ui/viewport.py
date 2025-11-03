@@ -132,7 +132,7 @@ def pan_and_zoom(view:glm.mat4, zoom_speed:float=0.1, pan_speed:float=1.0)->Tupl
 ####################
 # VIEWPORT CONTEXT #
 ####################
-def begin_viewport(label:str, size=imgui.ImVec2Like|None, borders=True)->bool:
+def begin_viewport(label:str, size:imgui.ImVec2Like|None=None, borders=True)->bool:
     imgui.begin_child(label, size, 
         imgui.ChildFlags_.borders if borders else imgui.ChildFlags_.none,
         imgui.WindowFlags_.no_scrollbar
@@ -262,6 +262,7 @@ def render_guide_line(p1, p2, color:int=imgui.color_convert_float4_to_u32((1,1,1
         thickness
     )
 
+
 def render_grid_plane(size: float = 10, step: float = 1, near: float = 0.1):
     """Draw a grid on the XZ plane centered at the origin."""
 
@@ -352,11 +353,75 @@ def control_point(label:str, point:imgui.ImVec2Like, *, color:int=colors.WHITE)-
     # imgui.set_cursor_pos(store_cursor_pos) # restore cursor pos?
     return False, point
 
+###############################
+# STATELESS UTILITY FUNCTIONS #
+###############################
+def make_perspective_projection(fovy, canvas_tl, canvas_br, widget_tl, widget_br, near=0.1, far=100.0)->glm.mat4:
+    principal = canvas_tl/2 + canvas_br/2
+    canvas_width = canvas_br.x - canvas_tl.x
+    canvas_height = canvas_br.y - canvas_tl.y
+    canvas_aspect = canvas_width / canvas_height
+    widget_width = widget_br.x - widget_tl.x
+    widget_height = widget_br.y - widget_tl.y
+    widget_aspect = widget_width / widget_height
+
+    # calculate ndc frustum for the canvas
+    ndc_canvas_top = near * math.tan(fovy / 2)
+    ndc_canvas_bottom = -ndc_canvas_top
+    fovx = fovy * canvas_aspect
+    ndc_canvas_left = - near * math.tan(fovx / 2)
+    ndc_canvas_right = -ndc_canvas_left
+
+    # imgui.text(f"{ndc_canvas_left:.2f} {ndc_canvas_right:.2f} {ndc_canvas_top:.2f} {ndc_canvas_bottom:.2f}")
+    # return glm.frustum(ndc_canvas_left, ndc_canvas_right, ndc_canvas_bottom, ndc_canvas_top, near, far)
+
+    # overscan frustrum for the widget
+    ndc_widget_top =    ndc_canvas_top *    (widget_tl.y - principal.y) / (canvas_tl.y - principal.y)
+    ndc_widget_bottom = ndc_canvas_bottom * (widget_br.y - principal.y) / (canvas_br.y - principal.y)
+    ndc_widget_left =   ndc_canvas_left *   (widget_tl.x - principal.x) / (canvas_tl.x - principal.x)
+    ndc_widget_right =  ndc_canvas_right *  (widget_br.x - principal.x) / (canvas_br.x - principal.x)
+
+    return glm.frustum(ndc_widget_left, ndc_widget_right, -ndc_widget_top, -ndc_widget_bottom, near, far)
+
+
+def make_grid_lines(size: float = 10, step: float = 1, near: float = 0.1):
+    """Draw a grid on the XZ plane centered at the origin."""
+
+    # Generate grid coordinates
+    n_steps = int(np.floor(size/2 / step)) # number of steps from the center to edge
+    xs = np.arange(-n_steps, n_steps + 1) * step
+    zs = np.arange(-n_steps, n_steps + 1) * step
+
+    # Create grid lines along X and Z axes
+    lines = []
+    for x in xs:
+        lines.append((glm.vec3(x, 0, -size/2), glm.vec3(x, 0, size/2)))
+    for z in zs:
+        lines.append((glm.vec3(-size/2, 0, z), glm.vec3(size/2, 0, z)))
+    return lines
+
 if __name__ == "__main__":
-    viewport = (0,0, 800,600)
-    viewer.begin_viewer("Viewport Demo", viewport, size=imgui.ImVec2(800,600))
-    ...
-    viewer.begin_perspective(math.radians(60.0), 800/600, 0.1, 100.0)
-    ...
-    viewer.end_perspective()
-    viewer.end_viewer()
+    from imgui_bundle import immapp
+
+    @immapp.static(
+        pan_and_zoom_matrix = glm.identity(glm.mat4)
+    )
+    def gui():
+        imgui.begin("window")
+        view_box = (0,0, 800,600)
+        imgui.begin_child("viewport area", None, 
+            imgui.ChildFlags_.borders,
+            imgui.WindowFlags_.no_scrollbar
+        )
+        w, h = imgui.get_content_region_avail()
+        ortho(0,0,float(w),float(h))
+        _, gui.pan_and_zoom_matrix = pan_and_zoom(gui.pan_and_zoom_matrix)
+        setup_view(gui.pan_and_zoom_matrix)
+        # draw a triangle
+        draw_list = imgui.get_window_draw_list()
+        render_margins(imgui.ImVec2(0,0), imgui.ImVec2(view_box[2],view_box[3]))
+        imgui.end_child()
+        # end_viewport()
+        imgui.end()
+    
+    immapp.run(gui, window_size=(1024,768), window_title="Viewport Demo")

@@ -282,50 +282,30 @@ def gui():
     
     # 3D scene
     # # setup overscan perspective projection
-    content_aspect = gui.content_size.x / gui.content_size.y
-    widget_aspect = imgui.get_window_size().x / imgui.get_window_size().y
-    near = 0.1
-    ui.viewport.perspective(fovy, widget_aspect, near, 100.0)
-    
-    # create a perspective frusutm with the computed fov
-    top = near * math.tan(fovy / 2)
-    right = top * widget_aspect
-    bottom = -top
-    left = -right
-    
-    # modify frustum according to pan_and_zoom (the pan and zoom works in screen space, so we need to map it to near plane space)
-    # The content has its own coordinate system (0 to content_size), we need to map this to NDC space first
-    # Then apply the frustum mapping
-    
-    # Map content corners to NDC space [-1, 1]
-    content_left = 0.0
-    content_right = gui.content_size.x
-    content_top = 0.0
-    content_bottom = gui.content_size.y
-    
-    # Apply pan and zoom transform in content space
-    transformed_tl = glm.inverse(gui.pan_and_zoom_matrix) * glm.vec4(content_left, content_top, 0, 1)
-    transformed_br = glm.inverse(gui.pan_and_zoom_matrix) * glm.vec4(content_right, content_bottom, 0, 1)
-    
-    # Map to NDC space based on widget dimensions (assuming content is centered)
-    # This assumes the ortho projection was set to (0, 0, content_size.x, content_size.y)
-    ndc_left = ((transformed_tl.x / gui.content_size.x) * 2.0 - 1.0)
-    ndc_right = ((transformed_br.x / gui.content_size.x) * 2.0 - 1.0)
-    ndc_top = ((transformed_tl.y / gui.content_size.y) * 2.0 - 1.0)
-    ndc_bottom = ((transformed_br.y / gui.content_size.y) * 2.0 - 1.0)
-    
-    # Map NDC to frustum space
-    frustum_left =   left +   (ndc_left + 1.0)   * 0.5 * (right - left)
-    frustum_right =  left +   (ndc_right + 1.0)  * 0.5 * (right - left)
-    frustum_top =    bottom + (ndc_top + 1.0)    * 0.5 * (top - bottom)
-    frustum_bottom = bottom + (ndc_bottom + 1.0) * 0.5 * (top - bottom)
-    
-    ui.viewport.frustum(frustum_left, frustum_right, frustum_top, frustum_bottom, near, 100.0)
-    ui.viewport.setup_view(camera.viewMatrix())
+    # draw the widget rect
+    draw_list = imgui.get_window_draw_list()
+    widget_screen_pos = imgui.get_window_pos()
+    widget_screen_size = imgui.get_window_size()
+    padding = imgui.ImVec2(16,16)
+    draw_list.add_rect(widget_screen_pos+padding, widget_screen_pos + widget_screen_size - padding, ui.colors.YELLOW)
+    # draw canvas rect
+    canvas_tl = ui.viewport._project((0,0))
+    canvas_br = ui.viewport._project((gui.content_size.x, gui.content_size.y))
+    draw_list.add_rect(canvas_tl, canvas_br, ui.colors.CYAN)
 
-    # draw grid and axes
-    ui.viewport.render_grid_plane()
-    ui.viewport.render_axes()
+
+    projection_3d = ui.viewport.make_perspective_projection(fovy, canvas_tl, canvas_br, widget_screen_pos, widget_screen_pos + widget_screen_size)
+    
+    for line in ui.viewport.make_grid_lines(step=1.0, size=10.0):
+        A, B = line
+        viewport = widget_screen_pos.x, widget_screen_pos.y, widget_screen_size.x, widget_screen_size.y
+        A_proj = glm.project(A, camera.viewMatrix(), projection_3d, glm.vec4(viewport))
+        B_proj = glm.project(B, camera.viewMatrix(), projection_3d, glm.vec4(viewport))
+        draw_list.add_line(
+            imgui.ImVec2(A_proj.x, A_proj.y), 
+            imgui.ImVec2(B_proj.x, B_proj.y), 
+            ui.colors.WHITE_DIMMED
+        )
 
     # Render margins
     ui.viewport.ortho(0,0,gui.content_size.x,gui.content_size.y)

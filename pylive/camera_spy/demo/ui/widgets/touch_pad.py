@@ -3,7 +3,7 @@ from typing import Tuple
 import math
 
 
-def touch_pad(label:str, size:imgui.ImVec2=imgui.ImVec2(200,200))->Tuple[bool, imgui.ImVec2]:
+def touch_pad(label:str, size:imgui.ImVec2=imgui.ImVec2(64,64))->Tuple[bool, imgui.ImVec2]:
     """A simple touch pad that returns the drag delta when active."""
     imgui.button(label, size)
     if imgui.is_item_active():
