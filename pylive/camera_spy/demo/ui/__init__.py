@@ -4,6 +4,7 @@ from .compose.comp import comp
 from .compose.zip import zip
 from . import colors
 from . import viewport
+from . import viewer
 
 __all__ = [
     "radio_group",
@@ -11,5 +12,6 @@ __all__ = [
     "comp",
     "zip",
     "colors",
-    "viewport"
+    "viewport",
+    "viewer"
 ]
