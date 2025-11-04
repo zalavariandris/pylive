@@ -6,7 +6,9 @@ import numpy as np
 import colors
 from typing import Tuple, Literal, Iterable
 
-
+##############################
+# Stateles utility functions #
+##############################
 def make_ortho(xmin:float, ymin:float, xmax:float, ymax:float, near:float=-1.0, far:float=1.0):
     x, y = imgui.get_window_pos()
     w, h = imgui.get_window_size()
@@ -28,59 +30,24 @@ def make_ortho(xmin:float, ymin:float, xmax:float, ymax:float, near:float=-1.0, 
     return projection, near, far
 
 def make_perspective_projection(fovy, canvas_tl, canvas_br, widget_tl, widget_br, near=0.1, far=100.0)->glm.mat4:
-    principal = canvas_tl/2 + canvas_br/2
+    """
+    Create a perspective projection matrix that accounts for overscan between canvas and widget.
+    """
+    
+    # calculate symmetric perspective projection
     canvas_width = canvas_br.x - canvas_tl.x
     canvas_height = canvas_br.y - canvas_tl.y
-    canvas_aspect = canvas_width / canvas_height
-    widget_width = widget_br.x - widget_tl.x
-    widget_height = widget_br.y - widget_tl.y
-    # widget_aspect = widget_width / widget_height
+    projection = glm.perspective(fovy, canvas_width / canvas_height, near, far)
 
-    # calculate ndc frustum for the canvas
-    projection = glm.perspective(fovy, canvas_aspect, near, far)
-    # flip the projection Y to match imgui coords
-
-    # ndc_canvas_top = near * math.tan(fovy / 2)
-    # ndc_canvas_bottom = -ndc_canvas_top
-    # fovx = fovy * canvas_aspect
-    # ndc_canvas_left = - near * math.tan(fovx / 2)
-    # ndc_canvas_right = -ndc_canvas_left
-
-    # # imgui.text(f"{ndc_canvas_left:.2f} {ndc_canvas_right:.2f} {ndc_canvas_top:.2f} {ndc_canvas_bottom:.2f}")
-    # # return glm.frustum(ndc_canvas_left, ndc_canvas_right, ndc_canvas_bottom, ndc_canvas_top, near, far)
-
-    # # overscan frustrum for the widget
-    # ndc_widget_top =    ndc_canvas_top *    (widget_tl.y - principal.y) / (canvas_tl.y - principal.y)
-    # ndc_widget_bottom = ndc_canvas_bottom * (widget_br.y - principal.y) / (canvas_br.y - principal.y)
-    # ndc_widget_left =   ndc_canvas_left *   (widget_tl.x - principal.x) / (canvas_tl.x - principal.x)
-    # ndc_widget_right =  ndc_canvas_right *  (widget_br.x - principal.x) / (canvas_br.x - principal.x)
-
-    # projection = glm.frustum(ndc_widget_left, ndc_widget_right, ndc_widget_bottom, ndc_widget_top, near, far)
+    # apply overscan to projection to render in the entire widget area
     projection = overscan_projection(projection,
                                   glm.vec2(canvas_tl.x, canvas_tl.y),
                                   glm.vec2(canvas_br.x, canvas_br.y),
                                   glm.vec2(widget_tl.x, widget_br.y), # flip Y
                                   glm.vec2(widget_br.x, widget_tl.y),
                                   near, far)
-    projection[1][1] *= -1
+    projection[1][1] *= -1 # flip Y for imgui coords
     return projection
-
-def _project(point:Iterable[int|float], projection:glm.mat4, view:glm.mat4, widget_rect:Tuple[int, int, int, int])->imgui.ImVec2Like:
-    assert len(point) == 2 or len(point) == 3
-
-    match len(point):
-        case 2:
-            P = glm.project(glm.vec3(*point,0), view, projection, widget_rect)
-            return imgui.ImVec2(P.x, P.y)
-        case 3:
-            P = glm.project(glm.vec3(*point), view, projection, widget_rect)
-            return imgui.ImVec2(P.x, P.y)
-        case _:
-            raise ValueError("point must be of length 2 or 3")
-
-def _unproject(screen_point:imgui.ImVec2Like, projection:glm.mat4, view:glm.mat4, widget_rect:Tuple[int, int, int, int])->imgui.ImVec2Like:
-    P = glm.unProject(glm.vec3(screen_point.x, screen_point.y, 0), view, projection, widget_rect)
-    return imgui.ImVec2(P.x, P.y)
 
 def overscan_projection(projection:glm.mat4, rect_tl, rect_br, overscan_tl, overscan_br)->glm.mat4:
     # Calculate canvas and widget dimensions
@@ -144,68 +111,65 @@ def make_gridXY_lines(size: float = 10, step: float = 1, near: float = 0.1):
         lines.append((glm.vec3(-size/2, y, 0), glm.vec3(size/2, y, 0)))
     return lines
 
-def touch_pad(label:str, size:imgui.ImVec2=imgui.ImVec2(64,64))->Tuple[bool, imgui.ImVec2]:
-    """A simple touch pad that returns the drag delta when active."""
-    imgui.button(label, size)
-    if imgui.is_item_active():
-        delta = imgui.get_mouse_drag_delta(lock_threshold=0.0)
-        imgui.reset_mouse_drag_delta()
-        if math.fabs(delta.x) < 1e-6 and math.fabs(delta.y) < 1e-6:
-            return False, imgui.ImVec2(0,0)
-
-        return True, delta
-    else:
-        return False, imgui.ImVec2(0,0)
-
-from pylive.glrenderer.utils.camera import Camera
+############################
+# Viewer Widget (stateful) #
+############################
 class ViewerWidget:
     def __init__(self, content_size:imgui.ImVec2):
         # canvas size in pixels (aka viewport?)
         self.content_size = content_size
 
         # 2D view
+        self.pan_and_zoom_matrix = glm.identity(glm.mat4)
         self.view_2d = glm.identity(glm.mat4)
         self.projection_2d = glm.identity(glm.mat4)
 
         # 3D view
         self.use_camera:bool = False
         self.camera_view_matrix = glm.identity(glm.mat4)
-        self.projection_view_matrix = glm.perspective(glm.radians(60.0), float(content_size.x)/float(content_size.y), 0.1, 100.0)
+        self.camera_projection_matrix = glm.perspective(glm.radians(60.0), float(content_size.x)/float(content_size.y), 0.1, 100.0)
         
         # updated every frame on begin_viewport
         self.pos:imgui.ImVec2 = None
         self.size:imgui.ImVec2 = None
 
-    def project(self, point: glm.vec3) -> glm.vec3:
+    def _project(self, point: glm.vec3) -> glm.vec3:
+        assert len(point) == 3, f"point must be of length 3, got {len(point)}"
         widget_rect = (self.pos.x, self.pos.y, self.size.x, self.size.y)
         # widget_rect = flip_widget_rect_y(widget_rect)
         if self.use_camera:
-            return _project(point, 
-                            self.projection_view_matrix, 
-                            self.camera_view_matrix,
-                             widget_rect=widget_rect
-                            )
+            P1 = glm.project(glm.vec3(*point), self.camera_view_matrix, self.camera_projection_matrix, widget_rect)
+            return imgui.ImVec2(P1.x, P1.y)
         else:
-            return _project(point, 
-                            self.projection_2d, 
-                            self.view_2d,
-                            widget_rect=widget_rect
-                            )
+            P1 = glm.project(glm.vec3(*point), self.view_2d, self.projection_2d, widget_rect)
+            return imgui.ImVec2(P1.x, P1.y)
 
-    def unproject(self, point: glm.vec3) -> glm.vec3:
+    def _unproject(self, screen_point: glm.vec3) -> glm.vec3:
+        assert len(screen_point) in (2,3), f"screen_point must be of length 2 or 3, got {len(screen_point)}"
+        if len(screen_point)==2:
+            screen_point = glm.vec3(*screen_point, 0)
+
         widget_rect = (self.pos.x, self.pos.y, self.size.x, self.size.y)
-        # widget_rect = flip_widget_rect_y(widget_rect)
         if self.use_camera:
-            return _unproject(point, self.projection_view_matrix, self.camera_view_matrix, widget_rect)
+            P1 = glm.unProject(screen_point, self.camera_view_matrix, self.camera_projection_matrix, widget_rect)
+            return P1
         else:
-            return _unproject(point, self.projection_2d, self.view_2d, widget_rect)
-        
+            P1 = glm.unProject(screen_point, self.view_2d, self.projection_2d, widget_rect)
+            return P1
+
+
+##########################
+# viewer imgui interface #
+##########################
+# note: imgui itself is a stateful library.
+
 from collections import defaultdict
-viewports:dict[int|str, ViewerWidget] = dict()
-current_viewport_name:str|None = None
+viewers:dict[int|str, ViewerWidget] = dict()
+current_viewer_name:str|None = None
 
-def begin_viewport(name: str, content_size: imgui.ImVec2, size:imgui.ImVec2=None, *, object_fit:Literal['none','contain', 'cover', 'fill']='none'):
-
+def begin_viewer(name: str, content_size: imgui.ImVec2, size:imgui.ImVec2=None, *, object_fit:Literal['none','contain', 'cover', 'fill']='none'):
+    global viewers, current_viewer_name
+    assert current_viewer_name is None, "Nested begin_viewer calls are not supported."
     if size is None:
         size = imgui.ImVec2(-1,-1)
 
@@ -220,13 +184,13 @@ def begin_viewport(name: str, content_size: imgui.ImVec2, size:imgui.ImVec2=None
         imgui.ChildFlags_.borders,
         imgui.WindowFlags_.no_scrollbar | imgui.WindowFlags_.no_scroll_with_mouse
     )
-    global viewports, current_viewport_name
-    current_viewport_name = name
-    if name not in viewports:
-        viewports[name] = ViewerWidget(content_size)
+
+    current_viewer_name = name
+    if name not in viewers:
+        viewers[name] = ViewerWidget(content_size)
 
     # update viewport info
-    current_viewport = viewports[current_viewport_name]
+    current_viewport = viewers[current_viewer_name]
     current_viewport.pos = imgui.get_window_pos()
     current_viewport.size = imgui.get_window_size()
     current_viewport.content_size = content_size
@@ -251,6 +215,26 @@ def begin_viewport(name: str, content_size: imgui.ImVec2, size:imgui.ImVec2=None
     )
     current_viewport.projection_2d = projection_2d
     
+    # Fit and center content according to widget
+    content_fit_matrix = glm.identity(glm.mat4)
+    # create a view  matrix that fits the content into the viewport
+    widget_aspect = current_viewport.size.x / current_viewport.size.y
+    content_aspect = current_viewport.content_size.x / current_viewport.content_size.y
+    if widget_aspect > content_aspect:
+        scale = current_viewport.size.y / current_viewport.content_size.y
+        content_fit_matrix = glm.scale(content_fit_matrix, glm.vec3(scale, scale, 1))
+    else:
+        scale = current_viewport.size.x / current_viewport.content_size.x
+        content_fit_matrix = glm.scale(content_fit_matrix, glm.vec3(scale, scale, 1))
+
+    # center content
+    content_screen_size = glm.vec2(current_viewport.content_size.x * scale, current_viewport.content_size.y * scale)
+    offset_x = (current_viewport.size.x - content_screen_size.x) * 0.5
+    offset_y = (current_viewport.size.y - content_screen_size.y) * 0.5
+    center_content_matrix = glm.translate(glm.mat4(), glm.vec3(offset_x/scale, offset_y/scale, 0))
+
+    content_fit_center_matrix = content_fit_matrix * center_content_matrix
+
     # Pan and Zoom handling
     imgui.set_cursor_screen_pos(imgui.get_window_pos())
     io = imgui.get_io()
@@ -260,122 +244,134 @@ def begin_viewport(name: str, content_size: imgui.ImVec2, size:imgui.ImVec2=None
     else:
         button_flags = imgui.ButtonFlags_.mouse_button_middle
     imgui.invisible_button("viewport_button",
-                           imgui.get_window_size(), 
-                           button_flags)
+                        imgui.get_window_size(), 
+                        button_flags)
     io = imgui.get_io()
     zoom_speed = 0.1
     
     if imgui.is_item_active():
-        # Panning
-        pan_speed = 1.0
-        translation = glm.vec3(0,0,0)        
-        prev_world = current_viewport.unproject(io.mouse_pos_prev)
-        curr_world = current_viewport.unproject(io.mouse_pos)
-        world_space_delta = curr_world - prev_world
-        translation.x += world_space_delta.x * pan_speed
-        translation.y += world_space_delta.y * pan_speed
-
-        # Apply translationto the view matrix
-        new_view = glm.translate(current_viewport.view_2d, translation)
-        current_viewport.view_2d = new_view
+        mouse_world_before = current_viewport._unproject(io.mouse_pos_prev)
+        current_viewport.view_2d = content_fit_center_matrix * current_viewport.pan_and_zoom_matrix # update view_2d
+        mouse_world_after = current_viewport._unproject(io.mouse_pos) # Unproject mouse position after scaling
+        # Apply translation to keep mouse position fixed in world space while panning
+        offset = glm.vec3(mouse_world_before.x - mouse_world_after.x, mouse_world_before.y - mouse_world_after.y, 0)
+        current_viewport.pan_and_zoom_matrix = glm.translate(current_viewport.pan_and_zoom_matrix, -offset)
+        current_viewport.view_2d = content_fit_center_matrix * current_viewport.pan_and_zoom_matrix # update view_2d
 
     elif imgui.is_item_hovered() and math.fabs(imgui.get_io().mouse_wheel) > 0.0:
-        # Zooming        
+        # Zooming
+        ...
         scale = 1.0
         mouse_wheel = io.mouse_wheel
         scale_factor = 1.0 + mouse_wheel * zoom_speed
         scale *= scale_factor
-        mouse_world_before = current_viewport.unproject(io.mouse_pos)
-        current_viewport.view_2d = glm.scale(current_viewport.view_2d, glm.vec3(scale, scale, scale))
-        # Keep mouse position fixed in world space
-        mouse_world_after = current_viewport.unproject(io.mouse_pos) # Unproject mouse position after scaling
-        offset = glm.vec3(mouse_world_before.x - mouse_world_after.x, mouse_world_before.y - mouse_world_after.y, 0)
-        current_viewport.view_2d = glm.translate(current_viewport.view_2d, -offset)
 
-def end_viewport():
-    global viewports, current_viewport_name
-    current_viewport = viewports[current_viewport_name]
+        mouse_world_before = current_viewport._unproject(io.mouse_pos_prev)
+        current_viewport.view_2d = content_fit_center_matrix * current_viewport.pan_and_zoom_matrix # update view_2d
+        
+        # Apply scale
+        current_viewport.pan_and_zoom_matrix = glm.scale(current_viewport.pan_and_zoom_matrix, glm.vec3(scale_factor, scale_factor, 1.0))
+        current_viewport.view_2d = content_fit_center_matrix * current_viewport.pan_and_zoom_matrix # update view_2d
+        mouse_world_after = current_viewport._unproject(io.mouse_pos) # Unproject mouse position after scaling
+
+        # keep the mouse position fixed in world space during zoom
+        offset = glm.vec3(mouse_world_before.x - mouse_world_after.x, mouse_world_before.y - mouse_world_after.y, 0)
+        current_viewport.pan_and_zoom_matrix = glm.translate(current_viewport.pan_and_zoom_matrix, -offset)
+        current_viewport.view_2d = content_fit_center_matrix * current_viewport.pan_and_zoom_matrix # update view_2d
+
+    current_viewport.view_2d = content_fit_center_matrix * current_viewport.pan_and_zoom_matrix
+
+def end_viewer():
+    global viewers, current_viewer_name
+    current_viewport = viewers[current_viewer_name]
 
     # draw content area margins
     draw_list = imgui.get_window_draw_list()
-    content_screen_tl = current_viewport.project( (0,0))
-    content_screen_br = current_viewport.project( (current_viewport.content_size.x, current_viewport.content_size.y))
+    content_screen_tl = current_viewport._project( (0,0,0))
+    content_screen_br = current_viewport._project( (current_viewport.content_size.x, current_viewport.content_size.y, 0))
     draw_list.add_rect(content_screen_tl, content_screen_br, colors.YELLOW_DIMMED, thickness=1.0)
+
+    # Dim area outside content
+    viewport_tl = current_viewport.pos
+    viewport_br = current_viewport.pos + current_viewport.size
+    # Top rectangle
+    style = imgui.get_style()
+    # Use window background with custom alpha for subtle dimming
+    bg_color = style.color_(imgui.Col_.window_bg)
+    bg_color.w = 0.7  # Set alpha to 70% for subtle dimming
+    margin_fill_color = imgui.color_convert_float4_to_u32(bg_color)
+    draw_list.add_rect_filled(
+        imgui.ImVec2(viewport_tl.x, viewport_tl.y),
+        imgui.ImVec2(viewport_br.x, content_screen_tl.y),
+        margin_fill_color
+    )
+    # Bottom rectangle
+    draw_list.add_rect_filled(
+        imgui.ImVec2(viewport_tl.x, content_screen_br.y),
+        imgui.ImVec2(viewport_br.x, viewport_br.y),
+        margin_fill_color
+    )
+    # Left rectangle
+    draw_list.add_rect_filled(
+        imgui.ImVec2(viewport_tl.x, content_screen_tl.y),
+        imgui.ImVec2(content_screen_tl.x, content_screen_br.y),
+        margin_fill_color
+    )
+    # Right rectangle
+    draw_list.add_rect_filled(
+        imgui.ImVec2(content_screen_br.x, content_screen_tl.y),
+        imgui.ImVec2(viewport_br.x, content_screen_br.y),
+        margin_fill_color
+    )
 
     # display viewport info
     style = imgui.get_style()
     x, y = current_viewport.pos.x, current_viewport.pos.y
     w, h = current_viewport.size.x, current_viewport.size.y
     imgui.set_cursor_pos(style.window_padding)
-    imgui.text(f"{current_viewport_name} — @({x:.0f}, {y:.0f}) — {w:.0f}×{h:.0f}px")
+    imgui.text(f"{current_viewer_name} — @({x:.0f}, {y:.0f}) — {w:.0f}×{h:.0f}px")
 
-    screen_tl = current_viewport.project((0,0))  # force update of widget rect in project function
-    screen_br = current_viewport.project((current_viewport.content_size.x, current_viewport.content_size.y))  # force update of widget rect in project function
-    
+    screen_tl = current_viewport._project((0,0,0))  # force update of widget rect in project function
+    screen_br = current_viewport._project((current_viewport.content_size.x, current_viewport.content_size.y, 0))  # force update of widget rect in project function
+
     text = f"{current_viewport.content_size.x:.0f}×{current_viewport.content_size.y:.0f}px"
     text_size = imgui.calc_text_size(text)
-    imgui.set_cursor_screen_pos(screen_br-text_size-style.window_padding)
+    imgui.set_cursor_screen_pos(screen_br-text_size)
     imgui.text(text)
 
-    
-
-    
     # end viewport widget
-    current_viewport_name = None
+    current_viewer_name = None
     imgui.end_child()
 
-def guide(A, B, color=colors.YELLOW_DIMMED):
-    global viewports, current_viewport_name
-    current_viewport = viewports[current_viewport_name]
+def guide(A:imgui.ImVec2Like, B:imgui.ImVec2Like, color=colors.YELLOW_DIMMED):
+    global viewers, current_viewer_name
+    current_viewport = viewers[current_viewer_name]
 
-    A_screen = current_viewport.project(A)
-    B_screen = current_viewport.project(B)
+    A_screen = current_viewport._project(A)
+    B_screen = current_viewport._project(B)
 
     draw_list = imgui.get_window_draw_list()
     draw_list.add_line(A_screen, B_screen, color)
 
 def axes(length:float=1.0):
-    global viewports, current_viewport_name
-    current_viewport = viewports[current_viewport_name]
+    global viewers, current_viewer_name
+    current_viewport = viewers[current_viewer_name]
 
     origin = glm.vec3(0,0,0)
     x_axis = glm.vec3(length,0,0)
     y_axis = glm.vec3(0,length,0)
     z_axis = glm.vec3(0,0,length)
 
-    A_screen = current_viewport.project(origin)
-    B_screen = current_viewport.project(x_axis)
+    A_screen = current_viewport._project(origin)
+    B_screen = current_viewport._project(x_axis)
     draw_list = imgui.get_window_draw_list()
     draw_list.add_line(A_screen, B_screen, colors.RED, 3.0)
 
-    B_screen = current_viewport.project(y_axis)
+    B_screen = current_viewport._project(y_axis)
     draw_list.add_line(A_screen, B_screen, colors.GREEN, 3.0)
 
-    B_screen = current_viewport.project(z_axis)
+    B_screen = current_viewport._project(z_axis)
     draw_list.add_line(A_screen, B_screen, colors.BLUE, 3.0)
-
-def begin_scene_old(fovy:float, position:glm.vec3, target:glm.vec3, up:glm.vec3=glm.vec3(0,1,0), near=0.1, far=100.0):
-    global viewports, current_viewport_name
-    current_viewport = viewports[current_viewport_name]
-
-    content_screen_tl = current_viewport.project( (0,0))
-    content_screen_br = current_viewport.project( (current_viewport.content_size.x, current_viewport.content_size.y))
-    viewport_tl = current_viewport.pos
-    viewport_br = current_viewport.pos + current_viewport.size
-
-    projection_3d = make_perspective_projection(
-        fovy,
-        glm.vec2(content_screen_tl.x, content_screen_tl.y),
-        glm.vec2(content_screen_br.x, content_screen_br.y),
-        glm.vec2(viewport_tl.x, viewport_br.y), # flip Y
-        glm.vec2(viewport_br.x, viewport_tl.y),
-        near,
-        far
-    )
-    current_viewport.projection_view_matrix = projection_3d
-    current_viewport.camera_view_matrix = glm.lookAt(position, target, up)
-    assert current_viewport.use_camera is False
-    current_viewport.use_camera = True
 
 def begin_scene(projection:glm.mat4, view:glm.mat4):
     """
@@ -387,15 +383,16 @@ def begin_scene(projection:glm.mat4, view:glm.mat4):
         camera.setAspectRatio(viewer_content_size.x / viewer_content_size.y)
         begin_scene(camera.projectionMatrix(), camera.viewMatrix())
     """
-    global viewports, current_viewport_name
-    current_viewport = viewports[current_viewport_name]
+    global viewers, current_viewer_name
+    current_viewport = viewers[current_viewer_name]
+    assert current_viewport.use_camera is False, "Nested begin_scene calls are not supported."
 
-    content_screen_tl = current_viewport.project( (0,0))
-    content_screen_br = current_viewport.project( (current_viewport.content_size.x, current_viewport.content_size.y))
+    content_screen_tl = current_viewport._project( (0,0, 0))
+    content_screen_br = current_viewport._project( (current_viewport.content_size.x, current_viewport.content_size.y, 0))
     viewport_tl = current_viewport.pos
     viewport_br = current_viewport.pos + current_viewport.size
 
-    # fli0p Y in projection to match imgui coords
+    # flip Y in projection to match imgui coords
     projection = glm.mat4(projection)
     projection[1][1] *= -1
 
@@ -405,27 +402,64 @@ def begin_scene(projection:glm.mat4, view:glm.mat4):
         glm.vec2(viewport_tl.x, viewport_tl.y),
         glm.vec2(viewport_br.x, viewport_br.y)
     )
-    current_viewport.projection_view_matrix = projection
+    current_viewport.camera_projection_matrix = projection
     current_viewport.camera_view_matrix = view
     assert current_viewport.use_camera is False
     current_viewport.use_camera = True
 
 def end_scene():
-    global viewports, current_viewport_name
-    current_viewport = viewports[current_viewport_name]
+    """End the current 3D scene."""
+    global viewers, current_viewer_name
+    current_viewport = viewers[current_viewer_name]
     assert current_viewport.use_camera is True
     current_viewport.use_camera = False
 
+def get_screen_coords(point: imgui.ImVec2Like | Tuple[float, float, float]) -> imgui.ImVec2:
+    """Project a 3D point to 2D screen space in the current viewer."""
+    if len(point) not in (2,3):
+        raise ValueError(f"point must be of length 2 or 3, got {len(point)}")
+    
+    global viewers, current_viewer_name
+    current_viewport = viewers[current_viewer_name]
+    if len(point) == 2:
+        point = (point[0], point[1], 0.0)
+    return current_viewport._project(point)
+
+def get_window_coords(point: imgui.ImVec2Like | Tuple[float, float, float]) -> imgui.ImVec2:
+    """Project a 3D point to 2D window space in the current viewer."""
+    if len(point) not in (2,3):
+        raise ValueError(f"point must be of length 2 or 3, got {len(point)}")
+    global viewers, current_viewer_name
+    current_viewport = viewers[current_viewer_name]
+    if len(point) == 2:
+        point = (point[0], point[1], 0.0)
+    screen_pos = current_viewport._project(point)
+    window_pos = imgui.get_window_pos()
+    return imgui.ImVec2(screen_pos.x - window_pos.x, screen_pos.y - window_pos.y)
+
 if __name__ == "__main__":
     from imgui_bundle import immapp
+    from pylive.glrenderer.utils.camera import Camera
+    def touch_pad(label:str, size:imgui.ImVec2=imgui.ImVec2(64,64))->Tuple[bool, imgui.ImVec2]:
+        """A simple touch pad that returns the drag delta when active."""
+        imgui.button(label, size)
+        if imgui.is_item_active():
+            delta = imgui.get_mouse_drag_delta(lock_threshold=0.0)
+            imgui.reset_mouse_drag_delta()
+            if math.fabs(delta.x) < 1e-6 and math.fabs(delta.y) < 1e-6:
+                return False, imgui.ImVec2(0,0)
 
-    viewports["viewport1"] = ViewerWidget(imgui.ImVec2(800,600))
+            return True, delta
+        else:
+            return False, imgui.ImVec2(0,0)
+
     camera = Camera().setPosition(glm.vec3(5,5,5)).lookAt(glm.vec3(0,0,0), glm.vec3(0,1,0))
     CONTENT_SIZE = [256,256]
-    
+
+    from pathlib import Path
     def gui():
         global CONTENT_SIZE
-        imgui.begin("Window1")
+        # imgui.begin("Window1")
         _, CONTENT_SIZE = imgui.slider_int2("Canvas Size", CONTENT_SIZE, 64, 512)
         _, delta = touch_pad("Orbit Camera", imgui.ImVec2(128,128))
         if _:
@@ -435,20 +469,27 @@ if __name__ == "__main__":
             zoom_speed = 0.2
             mouse_wheel = imgui.get_io().mouse_wheel
             camera.dolly(-mouse_wheel * zoom_speed, glm.vec3(0,0,0))
-        begin_viewport("viewport1", content_size=imgui.ImVec2(CONTENT_SIZE[0], CONTENT_SIZE[1]), size=imgui.ImVec2(-1,256))
+        begin_viewer("viewport1", 
+                       content_size=imgui.ImVec2(CONTENT_SIZE[0], CONTENT_SIZE[1]), 
+                       size=imgui.ImVec2(-1,-1))
         # 2d grid
         for A, B in make_gridXY_lines(step=10, size=256):
             guide(A, B)
         axes(length=100.0)
         # 3d scene
-
         camera.setAspectRatio(float(CONTENT_SIZE[0])/float(CONTENT_SIZE[1]))
         begin_scene(camera.projectionMatrix(), camera.viewMatrix())
         for A, B in make_gridXZ_lines(step=1, size=10):
             guide(A, B)
         axes(length=1.0)
         end_scene()
-        end_viewport()
-        imgui.end()
+        end_viewer()
+        # imgui.end()
+
+        # imgui.begin("Instructions")
+        # # imgui.show_style_editor()
+        # hello_imgui.show_theme_tweak_gui_window()
+        # # imgui.show_style_selector("Style")
+        # imgui.end()
 
     immapp.run(gui, window_size=(1024,768), window_title="Viewport Demo")

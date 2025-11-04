@@ -334,7 +334,6 @@ def gui():
         imgui.image(gui.image_texture_ref, imgui.ImVec2(128, 128))
     imgui.end()
 
-
 if __name__ == "__main__":
     from imgui_bundle import hello_imgui
     runner_params = hello_imgui.RunnerParams()
@@ -342,10 +341,88 @@ if __name__ == "__main__":
     runner_params.imgui_window_params.menu_app_title = "Camera Spy"
     runner_params.app_window_params.window_geometry.size = (1200, 512)
     runner_params.app_window_params.restore_previous_geometry = True
-    # runner_params.app_window_params.borderless = True
-    # runner_params.app_window_params.borderless_movable = True
-    # runner_params.app_window_params.borderless_resizable = True
-    # runner_params.app_window_params.borderless_closable = True
+    
+    # Enable continuous rendering during window resize
+    runner_params.fps_idling.enable_idling = False
+    runner_params.app_window_params.repaint_during_resize_gotcha_reentrant_repaint = True
+
+    # Font loading - use LoadAdditionalFonts callback instead
+    from pathlib import Path
+    def load_fonts():
+        cwd = Path.cwd()
+        print(f"Loading fonts... {cwd}")
+        io = imgui.get_io()
+        # Don't clear fonts - just add to them
+        # io.fonts.clear()
+        io.fonts.add_font_from_file_ttf("fonts/OpenSans-Light.ttf", 16)
+        io.fonts.add_font_from_file_ttf("fonts/OpenSans-Regular.ttf", 16)
+        io.fonts.add_font_from_file_ttf("fonts/OpenSans-Light.ttf", 32)
+        io.fonts.add_font_from_file_ttf("fonts/OpenSans-Regular.ttf", 11)
+        io.fonts.add_font_from_file_ttf("fonts/OpenSans-Bold.ttf", 11)
+
+    def setup_theme():
+        # Style configuration
+        style = imgui.get_style()
+        
+        style.window_padding = imgui.ImVec2(15, 15)
+        style.window_rounding = 5.0
+        style.frame_padding = imgui.ImVec2(5, 5)
+        style.frame_rounding = 4.0
+        style.item_spacing = imgui.ImVec2(12, 8)
+        style.item_inner_spacing = imgui.ImVec2(8, 6)
+        style.indent_spacing = 25.0
+        style.scrollbar_size = 15.0
+        style.scrollbar_rounding = 9.0
+        style.grab_min_size = 5.0
+        style.grab_rounding = 3.0
+        
+        # Colors - Light theme with green accents
+        style.set_color_(imgui.Col_.text, imgui.ImVec4(0.40, 0.39, 0.38, 1.00))
+        style.set_color_(imgui.Col_.text_disabled, imgui.ImVec4(0.40, 0.39, 0.38, 0.77))
+        style.set_color_(imgui.Col_.window_bg, imgui.ImVec4(0.92, 0.91, 0.88, 0.70))
+        style.set_color_(imgui.Col_.child_bg, imgui.ImVec4(1.00, 0.98, 0.95, 0.58))
+        style.set_color_(imgui.Col_.popup_bg, imgui.ImVec4(0.92, 0.91, 0.88, 0.92))
+        style.set_color_(imgui.Col_.border, imgui.ImVec4(0.84, 0.83, 0.80, 0.65))
+        style.set_color_(imgui.Col_.border_shadow, imgui.ImVec4(0.92, 0.91, 0.88, 0.00))
+        style.set_color_(imgui.Col_.frame_bg, imgui.ImVec4(1.00, 0.98, 0.95, 1.00))
+        style.set_color_(imgui.Col_.frame_bg_hovered, imgui.ImVec4(0.99, 1.00, 0.40, 0.78))
+        style.set_color_(imgui.Col_.frame_bg_active, imgui.ImVec4(0.26, 1.00, 0.00, 1.00))
+        style.set_color_(imgui.Col_.title_bg, imgui.ImVec4(1.00, 0.98, 0.95, 1.00))
+        style.set_color_(imgui.Col_.title_bg_collapsed, imgui.ImVec4(1.00, 0.98, 0.95, 0.75))
+        style.set_color_(imgui.Col_.title_bg_active, imgui.ImVec4(0.25, 1.00, 0.00, 1.00))
+        style.set_color_(imgui.Col_.menu_bar_bg, imgui.ImVec4(1.00, 0.98, 0.95, 0.47))
+        style.set_color_(imgui.Col_.scrollbar_bg, imgui.ImVec4(1.00, 0.98, 0.95, 1.00))
+        style.set_color_(imgui.Col_.scrollbar_grab, imgui.ImVec4(0.00, 0.00, 0.00, 0.21))
+        style.set_color_(imgui.Col_.scrollbar_grab_hovered, imgui.ImVec4(0.90, 0.91, 0.00, 0.78))
+        style.set_color_(imgui.Col_.scrollbar_grab_active, imgui.ImVec4(0.25, 1.00, 0.00, 1.00))
+        style.set_color_(imgui.Col_.check_mark, imgui.ImVec4(0.25, 1.00, 0.00, 0.80))
+        style.set_color_(imgui.Col_.slider_grab, imgui.ImVec4(0.00, 0.00, 0.00, 0.14))
+        style.set_color_(imgui.Col_.slider_grab_active, imgui.ImVec4(0.25, 1.00, 0.00, 1.00))
+        style.set_color_(imgui.Col_.button, imgui.ImVec4(0.00, 0.00, 0.00, 0.14))
+        style.set_color_(imgui.Col_.button_hovered, imgui.ImVec4(0.99, 1.00, 0.22, 0.86))
+        style.set_color_(imgui.Col_.button_active, imgui.ImVec4(0.25, 1.00, 0.00, 1.00))
+        style.set_color_(imgui.Col_.header, imgui.ImVec4(0.25, 1.00, 0.00, 0.76))
+        style.set_color_(imgui.Col_.header_hovered, imgui.ImVec4(0.25, 1.00, 0.00, 0.86))
+        style.set_color_(imgui.Col_.header_active, imgui.ImVec4(0.25, 1.00, 0.00, 1.00))
+        style.set_color_(imgui.Col_.separator, imgui.ImVec4(0.00, 0.00, 0.00, 0.32))
+        style.set_color_(imgui.Col_.separator_hovered, imgui.ImVec4(0.25, 1.00, 0.00, 0.78))
+        style.set_color_(imgui.Col_.separator_active, imgui.ImVec4(0.25, 1.00, 0.00, 1.00))
+        style.set_color_(imgui.Col_.resize_grip, imgui.ImVec4(0.00, 0.00, 0.00, 0.04))
+        style.set_color_(imgui.Col_.resize_grip_hovered, imgui.ImVec4(0.25, 1.00, 0.00, 0.78))
+        style.set_color_(imgui.Col_.resize_grip_active, imgui.ImVec4(0.25, 1.00, 0.00, 1.00))
+        style.set_color_(imgui.Col_.tab, imgui.ImVec4(0.40, 0.39, 0.38, 0.16))
+        style.set_color_(imgui.Col_.tab_hovered, imgui.ImVec4(0.40, 0.39, 0.38, 0.39))
+        style.set_color_(imgui.Col_.tab_selected, imgui.ImVec4(0.40, 0.39, 0.38, 1.00))
+        style.set_color_(imgui.Col_.plot_lines, imgui.ImVec4(0.40, 0.39, 0.38, 0.63))
+        style.set_color_(imgui.Col_.plot_lines_hovered, imgui.ImVec4(0.25, 1.00, 0.00, 1.00))
+        style.set_color_(imgui.Col_.plot_histogram, imgui.ImVec4(0.40, 0.39, 0.38, 0.63))
+        style.set_color_(imgui.Col_.plot_histogram_hovered, imgui.ImVec4(0.25, 1.00, 0.00, 1.00))
+        style.set_color_(imgui.Col_.text_selected_bg, imgui.ImVec4(0.25, 1.00, 0.00, 0.43))
+        style.set_color_(imgui.Col_.modal_window_dim_bg, imgui.ImVec4(1.00, 0.98, 0.95, 0.73))
+
+    # Use the proper callbacks
+    # runner_params.callbacks.load_additional_fonts = load_fonts
+    # runner_params.callbacks.setup_imgui_style = setup_theme  # This is the correct callback for styling
     runner_params.callbacks.show_gui = gui
     runner_params.imgui_window_params.default_imgui_window_type = (
         hello_imgui.DefaultImGuiWindowType.provide_full_screen_dock_space

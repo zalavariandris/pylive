@@ -19,6 +19,9 @@ GREEN_DIMMED = _set_alpha(GREEN, _dimmed_alpha)
 WHITE = imgui.color_convert_float4_to_u32((1,1,1, 1.0))
 WHITE_DIMMED = _set_alpha(WHITE, _dimmed_alpha)
 
+BLACK = imgui.color_convert_float4_to_u32((0,0,0, 1.0))
+BLACK_DIMMED = _set_alpha(BLACK, _dimmed_alpha)
+
 PINK = imgui.color_convert_float4_to_u32((1,0,1, 1.0))
 PINK_DIMMED = _set_alpha(PINK, _dimmed_alpha)
 
