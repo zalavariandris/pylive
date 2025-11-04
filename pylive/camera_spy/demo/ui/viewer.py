@@ -337,7 +337,7 @@ def axes(length:float=1.0):
     B_screen = current_viewport.project(z_axis)
     draw_list.add_line(A_screen, B_screen, colors.BLUE, 3.0)
 
-def begin_camera(fovy:float, position:glm.vec3, target:glm.vec3, up:glm.vec3=glm.vec3(0,1,0), near=0.1, far=100.0):
+def begin_scene(fovy:float, position:glm.vec3, target:glm.vec3, up:glm.vec3=glm.vec3(0,1,0), near=0.1, far=100.0):
     global viewports, current_viewport_name
     current_viewport = viewports[current_viewport_name]
 
@@ -360,7 +360,7 @@ def begin_camera(fovy:float, position:glm.vec3, target:glm.vec3, up:glm.vec3=glm
     assert current_viewport.use_camera is False
     current_viewport.use_camera = True
 
-def end_camera():
+def end_scene():
     global viewports, current_viewport_name
     current_viewport = viewports[current_viewport_name]
     assert current_viewport.use_camera is True
@@ -384,11 +384,11 @@ if __name__ == "__main__":
             guide(A, B)
         axes(length=100.0)
         # 3d scene
-        begin_camera(math.radians(24.0), glm.vec3(00,10,0.001), glm.vec3(0,0,0), glm.vec3(0,1,0))
+        begin_scene(math.radians(24.0), glm.vec3(00,10,0.001), glm.vec3(0,0,0), glm.vec3(0,1,0))
         for A, B in make_gridXZ_lines(step=1, size=10):
             guide(A, B)
         axes(length=1.0)
-        end_camera()
+        end_scene()
         end_viewport()
         imgui.end()
 
