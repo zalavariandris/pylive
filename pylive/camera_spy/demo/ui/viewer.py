@@ -56,7 +56,7 @@ def make_perspective_projection(fovy, canvas_tl, canvas_br, widget_tl, widget_br
     # ndc_widget_right =  ndc_canvas_right *  (widget_br.x - principal.x) / (canvas_br.x - principal.x)
 
     # projection = glm.frustum(ndc_widget_left, ndc_widget_right, ndc_widget_bottom, ndc_widget_top, near, far)
-    projection = make_overscan_frustum(projection,
+    projection = overscan_projection(projection,
                                   glm.vec2(canvas_tl.x, canvas_tl.y),
                                   glm.vec2(canvas_br.x, canvas_br.y),
                                   glm.vec2(widget_tl.x, widget_br.y), # flip Y
@@ -82,7 +82,7 @@ def _unproject(screen_point:imgui.ImVec2Like, projection:glm.mat4, view:glm.mat4
     P = glm.unProject(glm.vec3(screen_point.x, screen_point.y, 0), view, projection, widget_rect)
     return imgui.ImVec2(P.x, P.y)
 
-def make_overscan_frustum(projection:glm.mat4, rect_tl, rect_br, overscan_tl, overscan_br, near=0.1, far=100.0)->glm.mat4:
+def overscan_projection(projection:glm.mat4, rect_tl, rect_br, overscan_tl, overscan_br)->glm.mat4:
     # Calculate canvas and widget dimensions
     canvas_width = rect_br.x - rect_tl.x
     canvas_height = rect_br.y - rect_tl.y
@@ -204,7 +204,7 @@ from collections import defaultdict
 viewports:dict[int|str, ViewerWidget] = dict()
 current_viewport_name:str|None = None
 
-def begin_viewport(name: str, content_size: imgui.ImVec2, size:imgui.ImVec2=None):
+def begin_viewport(name: str, content_size: imgui.ImVec2, size:imgui.ImVec2=None, *, object_fit:Literal['none','contain', 'cover', 'fill']='none'):
 
     if size is None:
         size = imgui.ImVec2(-1,-1)
@@ -225,27 +225,30 @@ def begin_viewport(name: str, content_size: imgui.ImVec2, size:imgui.ImVec2=None
     if name not in viewports:
         viewports[name] = ViewerWidget(content_size)
 
+    # update viewport info
     current_viewport = viewports[current_viewport_name]
     current_viewport.pos = imgui.get_window_pos()
     current_viewport.size = imgui.get_window_size()
+    current_viewport.content_size = content_size
+
+    # Setup 2D projection with overscan
+    projection_2d = glm.ortho(
+        0, #left
+        current_viewport.content_size.x, #right
+        0, #bottom
+        current_viewport.content_size.y, #top
+        -1.0, #near
+        1.0 #far
+    )
 
     x, y = current_viewport.pos.x, current_viewport.pos.y
     w, h = current_viewport.size.x, current_viewport.size.y
-    imgui.text(f"Viewport: {name}")
-    imgui.text(f"{x},{y} / {w}x{h}")
-
-    # create 2d projection
-    # projection_2d = glm.ortho(0.0, current_viewport.content_size.x, 0.0, current_viewport.content_size.y, -1, 1)
-    # projection_2d = make_overscan_frustum(
-    #     projection_2d,
-    #     glm.vec2(0,0),
-    #     glm.vec2(float(current_viewport.content_size.x), float(current_viewport.content_size.y)),
-    #     glm.vec2(x, y), # flip Y
-    #     glm.vec2(x + w, y + h),
-    #     -1, 1
-    # )
-    projection_2d, near, far = make_ortho(0,0,float(current_viewport.content_size.x),float(current_viewport.content_size.y), -1,1)
-    # projection_2d, near, far = make_ortho(0,0,float(current_viewport.content_size.x),float(current_viewport.content_size.y))
+    projection_2d = overscan_projection(projection_2d,
+        glm.vec2(0,0),
+        glm.vec2(float(current_viewport.content_size.x), float(current_viewport.content_size.y)),
+        glm.vec2(0, 0),
+        glm.vec2(w, h),
+    )
     current_viewport.projection_2d = projection_2d
     
     # Pan and Zoom handling
@@ -289,19 +292,33 @@ def begin_viewport(name: str, content_size: imgui.ImVec2, size:imgui.ImVec2=None
         offset = glm.vec3(mouse_world_before.x - mouse_world_after.x, mouse_world_before.y - mouse_world_after.y, 0)
         current_viewport.view_2d = glm.translate(current_viewport.view_2d, -offset)
 
-    screen_tl = current_viewport.project((0,0))  # force update of widget rect in project function
-    imgui.set_cursor_screen_pos(imgui.ImVec2(screen_tl.x, screen_tl.y))
-    imgui.text(f"Canvas:\n{content_size.x:2f} x {content_size.y:2f}")
-
 def end_viewport():
     global viewports, current_viewport_name
     current_viewport = viewports[current_viewport_name]
 
-    # draw 2D in content area
+    # draw content area margins
     draw_list = imgui.get_window_draw_list()
     content_screen_tl = current_viewport.project( (0,0))
     content_screen_br = current_viewport.project( (current_viewport.content_size.x, current_viewport.content_size.y))
     draw_list.add_rect(content_screen_tl, content_screen_br, colors.YELLOW_DIMMED, thickness=1.0)
+
+    # display viewport info
+    style = imgui.get_style()
+    x, y = current_viewport.pos.x, current_viewport.pos.y
+    w, h = current_viewport.size.x, current_viewport.size.y
+    imgui.set_cursor_pos(style.window_padding)
+    imgui.text(f"{current_viewport_name} — @({x:.0f}, {y:.0f}) — {w:.0f}×{h:.0f}px")
+
+    screen_tl = current_viewport.project((0,0))  # force update of widget rect in project function
+    screen_br = current_viewport.project((current_viewport.content_size.x, current_viewport.content_size.y))  # force update of widget rect in project function
+    
+    text = f"{current_viewport.content_size.x:.0f}×{current_viewport.content_size.y:.0f}px"
+    text_size = imgui.calc_text_size(text)
+    imgui.set_cursor_screen_pos(screen_br-text_size-style.window_padding)
+    imgui.text(text)
+
+    
+
     
     # end viewport widget
     current_viewport_name = None
@@ -337,7 +354,7 @@ def axes(length:float=1.0):
     B_screen = current_viewport.project(z_axis)
     draw_list.add_line(A_screen, B_screen, colors.BLUE, 3.0)
 
-def begin_scene(fovy:float, position:glm.vec3, target:glm.vec3, up:glm.vec3=glm.vec3(0,1,0), near=0.1, far=100.0):
+def begin_scene_old(fovy:float, position:glm.vec3, target:glm.vec3, up:glm.vec3=glm.vec3(0,1,0), near=0.1, far=100.0):
     global viewports, current_viewport_name
     current_viewport = viewports[current_viewport_name]
 
@@ -360,6 +377,39 @@ def begin_scene(fovy:float, position:glm.vec3, target:glm.vec3, up:glm.vec3=glm.
     assert current_viewport.use_camera is False
     current_viewport.use_camera = True
 
+def begin_scene(projection:glm.mat4, view:glm.mat4):
+    """
+    Begin a 3D scene with given projection and view matrices.
+    The projection and view matrices are adjusted to account for the viewport's overscan.
+    example:
+        begin_scene(glm.perspective(glm.radians(60.0), 1.0, 0.1, 100.0), glm.lookAt(glm.vec3(10,10,10), glm.vec3(0,0,0), glm.vec3(0,1,0)))
+
+        camera.setAspectRatio(viewer_content_size.x / viewer_content_size.y)
+        begin_scene(camera.projectionMatrix(), camera.viewMatrix())
+    """
+    global viewports, current_viewport_name
+    current_viewport = viewports[current_viewport_name]
+
+    content_screen_tl = current_viewport.project( (0,0))
+    content_screen_br = current_viewport.project( (current_viewport.content_size.x, current_viewport.content_size.y))
+    viewport_tl = current_viewport.pos
+    viewport_br = current_viewport.pos + current_viewport.size
+
+    # fli0p Y in projection to match imgui coords
+    projection = glm.mat4(projection)
+    projection[1][1] *= -1
+
+    projection = overscan_projection(projection,
+        glm.vec2(content_screen_tl.x, content_screen_tl.y),
+        glm.vec2(content_screen_br.x, content_screen_br.y),
+        glm.vec2(viewport_tl.x, viewport_tl.y),
+        glm.vec2(viewport_br.x, viewport_br.y)
+    )
+    current_viewport.projection_view_matrix = projection
+    current_viewport.camera_view_matrix = view
+    assert current_viewport.use_camera is False
+    current_viewport.use_camera = True
+
 def end_scene():
     global viewports, current_viewport_name
     current_viewport = viewports[current_viewport_name]
@@ -376,15 +426,24 @@ if __name__ == "__main__":
     def gui():
         global CONTENT_SIZE
         imgui.begin("Window1")
-        _, CONTENT_SIZE = imgui.input_int2("Canvas Size", CONTENT_SIZE)
-
-        begin_viewport("viewport1", content_size=imgui.ImVec2(CONTENT_SIZE[0], CONTENT_SIZE[1]), size=imgui.ImVec2(800,600))
+        _, CONTENT_SIZE = imgui.slider_int2("Canvas Size", CONTENT_SIZE, 64, 512)
+        _, delta = touch_pad("Orbit Camera", imgui.ImVec2(128,128))
+        if _:
+            speed = 0.25
+            camera.orbit(-delta.x * speed, -delta.y * speed)
+        if imgui.is_item_hovered() and math.fabs(imgui.get_io().mouse_wheel) > 0.0:
+            zoom_speed = 0.2
+            mouse_wheel = imgui.get_io().mouse_wheel
+            camera.dolly(-mouse_wheel * zoom_speed, glm.vec3(0,0,0))
+        begin_viewport("viewport1", content_size=imgui.ImVec2(CONTENT_SIZE[0], CONTENT_SIZE[1]), size=imgui.ImVec2(-1,256))
         # 2d grid
-        for A, B in make_gridXY_lines(step=10, size=1024):
+        for A, B in make_gridXY_lines(step=10, size=256):
             guide(A, B)
         axes(length=100.0)
         # 3d scene
-        begin_scene(math.radians(24.0), glm.vec3(00,10,0.001), glm.vec3(0,0,0), glm.vec3(0,1,0))
+
+        camera.setAspectRatio(float(CONTENT_SIZE[0])/float(CONTENT_SIZE[1]))
+        begin_scene(camera.projectionMatrix(), camera.viewMatrix())
         for A, B in make_gridXZ_lines(step=1, size=10):
             guide(A, B)
         axes(length=1.0)

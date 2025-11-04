@@ -145,8 +145,16 @@ class Camera:
 		self.setPosition(pos)
 		self.lookAt(glm.vec3(0,0,0))
 
-	def dolly(self, delta:float):
+	def dolly(self, delta:float, target=None):
+		"""
+		Moves the camera forward or backward along its viewing direction.
+		Positive delta moves the camera forward, negative delta moves it backward.
+		If target is specified, the delta movement is relative to the distance to the target, otherwise it's in world units.
+		"""
 		pos = self.getPosition()
 		front_axis = glm.vec3(self.transform[2][0], self.transform[2][1], self.transform[2][2])
-		pos+=front_axis*delta
+		if target is not None:
+			target = glm.vec3(target)
+			delta = glm.length(target - pos) * delta
+		pos += front_axis * delta
 		self.setPosition(pos)
