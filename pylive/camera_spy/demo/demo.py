@@ -10,7 +10,8 @@ from PIL import Image
 
 # Third-party imports
 import glm
-from imgui_bundle import imgui, immapp, imgui_ctx, hello_imgui
+import numpy as np
+from imgui_bundle import imgui, immapp, imgui_ctx, hello_imgui, immvision, icons_fontawesome_4
 from imgui_bundle import portable_file_dialogs as pfd
 
 # Local application imports
@@ -120,7 +121,7 @@ class App:
         imgui.set_next_item_width(150)
         _, self.second_axis = imgui.combo("second axis", self.second_axis, solver.Axis._member_names_)
         imgui.set_next_item_width(150)
-        _, self.scene_scale = imgui.slider_float("scene scale", self.scene_scale, 1.0, 100.0, "%.2f")
+        _, self.scene_scale = imgui.slider_float("scene  scale", self.scene_scale, 1.0, 100.0, "%.2f")
         
 
         match self.solver_mode:
@@ -250,15 +251,40 @@ class App:
         ui.viewer.end_viewer()
 
     def show_results(self):
+        imgui.text(icons_fontawesome_4.ICON_FA_HEART+"Results")
         if self.camera is not None:
             x, y, z = solver.extract_euler_angle(self.camera.transform, order="ZXY")
             pos = self.camera.getPosition()
             matrix = [self.camera.transform[j][i] for i in range(4) for j in range(4)]
-            imgui.input_text_multiline("results", f"{",\n".join([", ".join([f"{v:.3f}" for v in row]) for row in self.camera.transform])}", size=None, flags=imgui.InputTextFlags_.read_only)
-            imgui.input_float4("matrix##row1", matrix[0:4], "%.3f", imgui.InputTextFlags_.read_only)
-            imgui.input_float4("##matrixrow2", matrix[4:8], "%.3f", imgui.InputTextFlags_.read_only)
-            imgui.input_float4("##matrixrow3", matrix[8:12], "%.3f", imgui.InputTextFlags_.read_only)
-            imgui.input_float4("##matrixrow4", matrix[12:16], "%.3f", imgui.InputTextFlags_.read_only)
+
+            matrix_text = ""
+            for i in range(4):
+                for j in range(4):
+                    value = self.camera.transform[i][j]
+                    # Round very small values to zero to avoid -0.000
+                    if abs(value) < 0.0005:  # Half of the display precision
+                        value = 0.0
+                    
+                    if value < 0:
+                        matrix_text += f"{value:.3f}"
+                    elif value > 0:
+                        matrix_text += f" {value:.3f}"
+                    else:
+                        matrix_text += f" {value:.3f}"
+                    if j < 3:
+                        matrix_text += ", "
+                matrix_text += "\n"
+            
+            # Calculate height for 4 lines of text
+            line_height = imgui.get_text_line_height_with_spacing()
+            text_height = line_height * 4
+            
+            imgui.input_text_multiline("results", matrix_text, size=imgui.ImVec2(-1, text_height), flags=imgui.InputTextFlags_.read_only)
+
+            # imgui.input_float4("matrix##row1", matrix[0:4], "%.3f", imgui.InputTextFlags_.read_only)
+            # imgui.input_float4("##matrixrow2", matrix[4:8], "%.3f", imgui.InputTextFlags_.read_only)
+            # imgui.input_float4("##matrixrow3", matrix[8:12], "%.3f", imgui.InputTextFlags_.read_only)
+            # imgui.input_float4("##matrixrow4", matrix[12:16], "%.3f", imgui.InputTextFlags_.read_only)
             imgui.input_float4("quaternion", (3,3,3,4), "%.3f", imgui.InputTextFlags_.read_only)
             imgui.input_float3("translate", self.camera.getPosition(), "%.3f", imgui.InputTextFlags_.read_only)
             imgui.input_float3("rotate", (x,y,z), "%.3f", imgui.InputTextFlags_.read_only)
@@ -269,11 +295,29 @@ class App:
         for path in paths:
             try:
                 img = Image.open(path)
-                app.content_size = imgui.ImVec2(img.width, img.height)
+                self.content_size = imgui.ImVec2(img.width, img.height)
                 logger.info(f"✓ Loaded: {path} ({img.width}x{img.height})")
+
+                # Convert to RGBA
+                if img.mode != 'RGBA':
+                    img = img.convert('RGBA')
+                
+                # Get raw image bytes
+                img_bytes = img.tobytes()
+                
+                # Use immapp to create texture from memory
+                self.image_texture_ref = hello_imgui.im_texture_id_from_asset().texture_from_memory(
+                    img_bytes, 
+                    img.width, 
+                    img.height
+                )
+                logger.info(f"✓ Created texture: {self.image_texture_ref}")
+                
             except Exception as e:
                 logger.error(f"Failed to load {path}: {e}")
-
+                import traceback
+                traceback.print_exc()
+                
 if __name__ == "__main__":
     
 
@@ -396,6 +440,7 @@ if __name__ == "__main__":
     runner_params.imgui_window_params.default_imgui_window_type = (
         hello_imgui.DefaultImGuiWindowType.provide_full_screen_dock_space
     )
+
     hello_imgui.run(runner_params)
     # immapp.run(app.gui, 
     #            window_title="Camera Spy", 
