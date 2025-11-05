@@ -227,6 +227,8 @@ def gui():
     for line in gui.first_vanishing_lines_pixel:
         ui.viewport.render_guide_line(line[0], line[1], color=get_axis_color(gui.first_axis))
 
+    viewer.widget(CP_POS, imgui.text, ...)
+
     gui.principal_point_pixel = glm.vec2(gui.content_size.x / 2, gui.content_size.y / 2)
     match gui.solver_mode:
         case SolverMode.OneVP:

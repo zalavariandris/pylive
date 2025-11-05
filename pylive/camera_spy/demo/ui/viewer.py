@@ -121,8 +121,8 @@ class ViewerWidget:
 
         # 2D canvas pan and zoom
         self.interactive_pan_and_zoom = glm.identity(glm.mat4)
-        self.canvas_view = glm.identity(glm.mat4)  # updated every frame on begin_viewport, TODO: make computed property?
-        self.canvas_projection = glm.identity(glm.mat4) # same as above
+        # self.canvas_view = glm.identity(glm.mat4)  # updated every frame on begin_viewport, TODO: make computed property?
+        # self.canvas_projection = glm.identity(glm.mat4) # same as above
 
         # 3D camera
         self.use_camera:bool = False
@@ -133,6 +133,52 @@ class ViewerWidget:
         self.pos:imgui.ImVec2 = None
         self.size:imgui.ImVec2 = None
 
+    def get_canvas_projection(self)->glm.mat4:
+        # Setup 2D projection with overscan
+        projection_2d = glm.ortho(
+            0, #left
+            self.content_size.x, #right
+            0, #bottom
+            self.content_size.y, #top
+            -1.0, #near
+            1.0 #far
+        )
+
+        x, y = self.pos.x, self.pos.y
+        w, h = self.size.x, self.size.y
+        projection_2d = overscan_projection(projection_2d,
+            glm.vec2(0,0),
+            glm.vec2(float(self.content_size.x), float(self.content_size.y)),
+            glm.vec2(0, 0),
+            glm.vec2(w, h),
+        )
+        return projection_2d
+
+    def content_fit_center_matrix(self)->glm.mat4:
+        # Fit and center content according to widget
+        content_fit_matrix = glm.identity(glm.mat4)
+        # create a view  matrix that fits the content into the viewport
+        widget_aspect = self.size.x / self.size.y
+        content_aspect = self.content_size.x / self.content_size.y
+        if widget_aspect > content_aspect:
+            scale = self.size.y / self.content_size.y
+            content_fit_matrix = glm.scale(content_fit_matrix, glm.vec3(scale, scale, 1))
+        else:
+            scale = self.size.x / self.content_size.x
+            content_fit_matrix = glm.scale(content_fit_matrix, glm.vec3(scale, scale, 1))
+
+        # center content
+        content_screen_size = glm.vec2(self.content_size.x * scale, self.content_size.y * scale)
+        offset_x = (self.size.x - content_screen_size.x) * 0.5
+        offset_y = (self.size.y - content_screen_size.y) * 0.5
+        center_content_matrix = glm.translate(glm.mat4(), glm.vec3(offset_x/scale, offset_y/scale, 0))
+
+        content_fit_center_matrix = content_fit_matrix * center_content_matrix
+        return content_fit_center_matrix
+
+    def get_canvas_view(self)->glm.mat4:
+        return self.content_fit_center_matrix() * self.interactive_pan_and_zoom # update view_2d
+
     def _project(self, point: glm.vec3) -> glm.vec3:
         assert len(point) == 3, f"point must be of length 3, got {len(point)}"
         widget_rect = (self.pos.x, self.pos.y, self.size.x, self.size.y)
@@ -141,7 +187,7 @@ class ViewerWidget:
             P1 = glm.project(glm.vec3(*point), self.camera_view_matrix, self.camera_projection_matrix, widget_rect)
             return imgui.ImVec2(P1.x, P1.y)
         else:
-            P1 = glm.project(glm.vec3(*point), self.canvas_view, self.canvas_projection, widget_rect)
+            P1 = glm.project(glm.vec3(*point), self.get_canvas_view(), self.get_canvas_projection(), widget_rect)
             return imgui.ImVec2(P1.x, P1.y)
 
     def _unproject(self, screen_point: glm.vec3) -> glm.vec3:
@@ -154,7 +200,7 @@ class ViewerWidget:
             P1 = glm.unProject(screen_point, self.camera_view_matrix, self.camera_projection_matrix, widget_rect)
             return P1
         else:
-            P1 = glm.unProject(screen_point, self.canvas_view, self.canvas_projection, widget_rect)
+            P1 = glm.unProject(screen_point, self.get_canvas_view(), self.get_canvas_projection(), widget_rect)
             return P1
 
 
@@ -198,47 +244,8 @@ def begin_viewer(name: str, content_size: imgui.ImVec2, size:imgui.ImVec2=None, 
     current_viewport.size = imgui.get_window_size()
     current_viewport.content_size = content_size
 
-    # Setup 2D projection with overscan
-    projection_2d = glm.ortho(
-        0, #left
-        current_viewport.content_size.x, #right
-        0, #bottom
-        current_viewport.content_size.y, #top
-        -1.0, #near
-        1.0 #far
-    )
-
-    x, y = current_viewport.pos.x, current_viewport.pos.y
-    w, h = current_viewport.size.x, current_viewport.size.y
-    projection_2d = overscan_projection(projection_2d,
-        glm.vec2(0,0),
-        glm.vec2(float(current_viewport.content_size.x), float(current_viewport.content_size.y)),
-        glm.vec2(0, 0),
-        glm.vec2(w, h),
-    )
-    current_viewport.canvas_projection = projection_2d
-    
-    # Fit and center content according to widget
-    content_fit_matrix = glm.identity(glm.mat4)
-    # create a view  matrix that fits the content into the viewport
-    widget_aspect = current_viewport.size.x / current_viewport.size.y
-    content_aspect = current_viewport.content_size.x / current_viewport.content_size.y
-    if widget_aspect > content_aspect:
-        scale = current_viewport.size.y / current_viewport.content_size.y
-        content_fit_matrix = glm.scale(content_fit_matrix, glm.vec3(scale, scale, 1))
-    else:
-        scale = current_viewport.size.x / current_viewport.content_size.x
-        content_fit_matrix = glm.scale(content_fit_matrix, glm.vec3(scale, scale, 1))
-
-    # center content
-    content_screen_size = glm.vec2(current_viewport.content_size.x * scale, current_viewport.content_size.y * scale)
-    offset_x = (current_viewport.size.x - content_screen_size.x) * 0.5
-    offset_y = (current_viewport.size.y - content_screen_size.y) * 0.5
-    center_content_matrix = glm.translate(glm.mat4(), glm.vec3(offset_x/scale, offset_y/scale, 0))
-
-    content_fit_center_matrix = content_fit_matrix * center_content_matrix
-
     # Pan and Zoom handling
+    
     imgui.set_cursor_screen_pos(imgui.get_window_pos())
     io = imgui.get_io()
 
@@ -246,43 +253,39 @@ def begin_viewer(name: str, content_size: imgui.ImVec2, size:imgui.ImVec2=None, 
         button_flags = imgui.ButtonFlags_.mouse_button_left
     else:
         button_flags = imgui.ButtonFlags_.mouse_button_middle
+    
+    imgui.set_next_item_allow_overlap()
     imgui.invisible_button("viewport_button",
                         imgui.get_window_size(), 
                         button_flags)
-    io = imgui.get_io()
-    zoom_speed = 0.1
+
     
+    window_hovered = imgui.is_window_hovered(imgui.HoveredFlags_.child_windows)
+    imgui.is_any_item_focused()
     if imgui.is_item_active():
         mouse_world_before = current_viewport._unproject(io.mouse_pos_prev)
-        current_viewport.canvas_view = content_fit_center_matrix * current_viewport.interactive_pan_and_zoom # update view_2d
-        mouse_world_after = current_viewport._unproject(io.mouse_pos) # Unproject mouse position after scaling
-        # Apply translation to keep mouse position fixed in world space while panning
+        
+        mouse_world_after = current_viewport._unproject(io.mouse_pos)
         offset = glm.vec3(mouse_world_before.x - mouse_world_after.x, mouse_world_before.y - mouse_world_after.y, 0)
         current_viewport.interactive_pan_and_zoom = glm.translate(current_viewport.interactive_pan_and_zoom, -offset)
-        current_viewport.canvas_view = content_fit_center_matrix * current_viewport.interactive_pan_and_zoom # update view_2d
 
-    elif imgui.is_item_hovered() and math.fabs(imgui.get_io().mouse_wheel) > 0.0:
+    elif window_hovered and not imgui.is_any_item_active() and not imgui.is_any_item_focused() and math.fabs(imgui.get_io().mouse_wheel) > 0.0:
         # Zooming
-        ...
+        zoom_speed = 0.1
         scale = 1.0
         mouse_wheel = io.mouse_wheel
         scale_factor = 1.0 + mouse_wheel * zoom_speed
         scale *= scale_factor
 
         mouse_world_before = current_viewport._unproject(io.mouse_pos_prev)
-        current_viewport.canvas_view = content_fit_center_matrix * current_viewport.interactive_pan_and_zoom # update view_2d
         
         # Apply scale
         current_viewport.interactive_pan_and_zoom = glm.scale(current_viewport.interactive_pan_and_zoom, glm.vec3(scale_factor, scale_factor, 1.0))
-        current_viewport.canvas_view = content_fit_center_matrix * current_viewport.interactive_pan_and_zoom # update view_2d
-        mouse_world_after = current_viewport._unproject(io.mouse_pos) # Unproject mouse position after scaling
+        mouse_world_after = current_viewport._unproject(io.mouse_pos)
 
         # keep the mouse position fixed in world space during zoom
         offset = glm.vec3(mouse_world_before.x - mouse_world_after.x, mouse_world_before.y - mouse_world_after.y, 0)
         current_viewport.interactive_pan_and_zoom = glm.translate(current_viewport.interactive_pan_and_zoom, -offset)
-        current_viewport.canvas_view = content_fit_center_matrix * current_viewport.interactive_pan_and_zoom # update view_2d
-
-    current_viewport.canvas_view = content_fit_center_matrix * current_viewport.interactive_pan_and_zoom
 
 def end_viewer():
     global viewers, current_viewer_name
@@ -417,7 +420,7 @@ def end_scene():
     assert current_viewport.use_camera is True
     current_viewport.use_camera = False
 
-def get_screen_coords(point: imgui.ImVec2Like | Tuple[float, float, float]) -> imgui.ImVec2:
+def _get_screen_coords(point: imgui.ImVec2Like | Tuple[float, float, float]) -> imgui.ImVec2:
     """Project a 3D point to 2D screen space in the current viewer."""
     if len(point) not in (2,3):
         raise ValueError(f"point must be of length 2 or 3, got {len(point)}")
@@ -428,7 +431,7 @@ def get_screen_coords(point: imgui.ImVec2Like | Tuple[float, float, float]) -> i
         point = (point[0], point[1], 0.0)
     return current_viewport._project(point)
 
-def get_window_coords(point: imgui.ImVec2Like | Tuple[float, float, float]) -> imgui.ImVec2:
+def _get_window_coords(point: imgui.ImVec2Like | Tuple[float, float, float]) -> imgui.ImVec2:
     """Project a 3D point to 2D window space in the current viewer."""
     if len(point) not in (2,3):
         raise ValueError(f"point must be of length 2 or 3, got {len(point)}")
@@ -442,45 +445,50 @@ def get_window_coords(point: imgui.ImVec2Like | Tuple[float, float, float]) -> i
 
 def control_point(label:str, point:imgui.ImVec2Like, *, color:int=colors.WHITE)->Tuple[bool, imgui.ImVec2Like]:
     # project the point to world coordinates
-    P = get_screen_coords(point)  # ensure widget rect is updated
+    P = _get_screen_coords(point)  # ensure widget rect is updated
 
     # invisible button to handle interaction
     btn_size = imgui.ImVec2(28,28)
     imgui.set_cursor_screen_pos(imgui.ImVec2(P.x, P.y)-btn_size/2)
-    imgui.button(label, btn_size)
+    imgui.invisible_button(label, btn_size)
 
-    # # draw the point
-    # draw_list = imgui.get_window_draw_list()
-    # text_offset = imgui.ImVec2(5, -5)
-    # radius=3
-    # if imgui.is_item_hovered() or imgui.is_item_active():
-    #     draw_list.add_circle_filled(P, radius+1, color, num_segments=0)
-    #     text = f"{label}".split("##")[0]
-    #     text += f"({point.x:.0f},{point.y:.0f})"
-    #     draw_list.add_text(P + text_offset, color, text)
-    # else:
-    #     r, g, b, a = imgui.color_convert_u32_to_float4(color)
-    #     draw_list.add_circle_filled(P, radius, color, num_segments=8)
+    # draw the point
+    draw_list = imgui.get_window_draw_list()
+    text_offset = imgui.ImVec2(5, -5)
+    radius=3
+    if imgui.is_item_hovered() or imgui.is_item_active():
+        draw_list.add_circle_filled(P, radius+1, color, num_segments=0)
+        text = f"{label}".split("##")[0]
+        text += f"({point.x:.0f},{point.y:.0f})"
+        draw_list.add_text(P + text_offset, color, text)
+    else:
+        r, g, b, a = imgui.color_convert_u32_to_float4(color)
+        draw_list.add_circle_filled(P, radius, color, num_segments=8)
 
-    # # handle dragging
-    # if imgui.is_item_active():
-    #     # Compute world-space movement
-    #     current_viewport = viewers[current_viewer_name]
-    #     io = imgui.get_io()
-    #     mouse_world_pos_prev = current_viewport._unproject(io.mouse_pos_prev)  # ensure widget rect is updated
-    #     mouse_world_pos = current_viewport._unproject(io.mouse_pos)  # ensure widget rect is updated
-    #     world_space_delta = mouse_world_pos - mouse_world_pos_prev
+    # handle dragging
+    if imgui.is_item_active():
+        # Compute world-space movement
+        current_viewport = viewers[current_viewer_name]
+        io = imgui.get_io()
+        mouse_world_pos_prev = current_viewport._unproject(io.mouse_pos_prev)  # ensure widget rect is updated
+        mouse_world_pos = current_viewport._unproject(io.mouse_pos)  # ensure widget rect is updated
+        world_space_delta = mouse_world_pos - mouse_world_pos_prev
 
-    #     # Apply movement to the point
-    #     if math.fabs(world_space_delta.x) > 0.0 or math.fabs(world_space_delta.y) > 0.0:
-    #         imgui.reset_mouse_drag_delta()
-    #         new_point = type(point)(point.x, point.y)
-    #         new_point.x += world_space_delta.x
-    #         new_point.y += world_space_delta.y
-    #         return True, new_point
+        # Apply movement to the point
+        if math.fabs(world_space_delta.x) > 0.0 or math.fabs(world_space_delta.y) > 0.0:
+            imgui.reset_mouse_drag_delta()
+            new_point = type(point)(point.x, point.y)
+            new_point.x += world_space_delta.x
+            new_point.y += world_space_delta.y
+            return True, new_point
 
     # imgui.set_cursor_pos(store_cursor_pos) # restore cursor pos?
     return False, point
+
+def set_cursor_to_point(point: imgui.ImVec2Like | Tuple[float, float, float]):
+    """Set the imgui cursor position to the projected position of the given 3D point in the current viewer."""
+    P = _get_screen_coords(point)
+    imgui.set_cursor_screen_pos(P)
 
 if __name__ == "__main__":
     from imgui_bundle import immapp
@@ -505,7 +513,6 @@ if __name__ == "__main__":
     CP_POS = glm.vec2(50,50)
     def gui():
         global CONTENT_SIZE, CP_POS
-        # imgui.begin("Window1")
         _, CONTENT_SIZE = imgui.slider_int2("Canvas Size", CONTENT_SIZE, 64, 512)
         _, delta = touch_pad("Orbit Camera", imgui.ImVec2(128,128))
         if _:
@@ -515,6 +522,7 @@ if __name__ == "__main__":
             zoom_speed = 0.2
             mouse_wheel = imgui.get_io().mouse_wheel
             camera.dolly(-mouse_wheel * zoom_speed, glm.vec3(0,0,0))
+
         begin_viewer("viewport1", 
                        content_size=imgui.ImVec2(CONTENT_SIZE[0], CONTENT_SIZE[1]), 
                        size=imgui.ImVec2(-1,-1))
@@ -522,21 +530,18 @@ if __name__ == "__main__":
         for A, B in make_gridXY_lines(step=10, size=256):
             guide(A, B)
         axes(length=100.0)
+        _, CP_POS = control_point("CP##1", CP_POS, color=colors.CYAN)
+        set_cursor_to_point(CP_POS)
+        imgui.button("imgui button positioned in the viewer")
         # 3d scene
         camera.setAspectRatio(float(CONTENT_SIZE[0])/float(CONTENT_SIZE[1]))
-        _, CP_POS = control_point("control_point_1", CP_POS, color=colors.CYAN)
         begin_scene(camera.projectionMatrix(), camera.viewMatrix())
         for A, B in make_gridXZ_lines(step=1, size=10):
             guide(A, B)
         axes(length=1.0)
+        set_cursor_to_point((0,0,0))
+        imgui.text("imgui.text at (0,0,0) in 3D space")
         end_scene()
         end_viewer()
-        # imgui.end()
-
-        # imgui.begin("Instructions")
-        # # imgui.show_style_editor()
-        # hello_imgui.show_theme_tweak_gui_window()
-        # # imgui.show_style_selector("Style")
-        # imgui.end()
 
     immapp.run(gui, window_size=(1024,768), window_title="Viewport Demo")
