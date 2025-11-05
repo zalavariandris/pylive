@@ -321,7 +321,7 @@ def end_viewer():
     content_screen_tl = current_viewport._project( (0,0,0))
     content_screen_br = current_viewport._project( (current_viewport.content_size.x, current_viewport.content_size.y, 0))
     
-    margin_stroke_color = style.color_(imgui.Col_.border)
+    margin_stroke_color = imgui.ImVec4(style.color_(imgui.Col_.border))
     margin_stroke_color.w = 0.40
     margin_stroke_color = imgui.color_convert_float4_to_u32(margin_stroke_color)
     draw_list.add_rect(content_screen_tl, content_screen_br, margin_stroke_color, thickness=1.0)
@@ -329,7 +329,7 @@ def end_viewer():
 
     viewport_tl = current_viewport.pos
     viewport_br = current_viewport.pos + current_viewport.size
-    margin_fill_color = style.color_(imgui.Col_.window_bg)
+    margin_fill_color = imgui.ImVec4(style.color_(imgui.Col_.window_bg))
     margin_fill_color.w = 0.70
     margin_fill_color = imgui.color_convert_float4_to_u32(margin_fill_color)
 

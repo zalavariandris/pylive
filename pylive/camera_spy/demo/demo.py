@@ -335,6 +335,10 @@ def gui():
                 imgui.image(gui.image_texture_ref, imgui.ImVec2(128, 128))
     imgui.end()
 
+    imgui.begin("style editor")
+    imgui.show_style_editor()
+    imgui.end()
+
 if __name__ == "__main__":
     from imgui_bundle import hello_imgui
     runner_params = hello_imgui.RunnerParams()
@@ -347,9 +351,25 @@ if __name__ == "__main__":
     runner_params.fps_idling.enable_idling = False
     runner_params.app_window_params.repaint_during_resize_gotcha_reentrant_repaint = True
 
+    def setup_theme():
+        style = imgui.get_style()
+
+        style.set_color_(imgui.Col_.window_bg,       imgui.ImVec4(0.16, 0.16, 0.16, 1.00))
+        style.set_color_(imgui.Col_.frame_bg,        imgui.ImVec4(0.00, 0.00, 0.00, 0.18))
+        style.set_color_(imgui.Col_.title_bg_active, imgui.ImVec4(0.12, 0.12, 0.12, 1.00))
+        style.set_color_(imgui.Col_.border, imgui.ImVec4(0.12, 0.12, 0.12, 1.00))
+        style.child_border_size = 0
+        style.frame_border_size = 0
+        style.window_border_size = 0
+        style.popup_border_size = 0
+
+        style.window_title_align = imgui.ImVec2(0.5, 0.5)
+        style.window_menu_button_position = imgui.Dir.right
+
+
     # Use the proper callbacks
     # runner_params.callbacks.load_additional_fonts = load_fonts
-    # runner_params.callbacks.setup_imgui_style = setup_theme  # This is the correct callback for styling
+    runner_params.callbacks.setup_imgui_style = setup_theme  # This is the correct callback for styling
     runner_params.callbacks.show_gui = gui
     runner_params.imgui_window_params.default_imgui_window_type = (
         hello_imgui.DefaultImGuiWindowType.provide_full_screen_dock_space
