@@ -409,7 +409,12 @@ def _clip_line(A: glm.vec3, B: glm.vec3, view: glm.mat4, near, far):
     else:
         return A, intersection_world
 
-def guide(A:imgui.ImVec2Like, B:imgui.ImVec2Like, color=colors.YELLOW_DIMMED):
+def guide(A:imgui.ImVec2Like, B:imgui.ImVec2Like, color=None):
+    if color is None:
+        style = imgui.get_style()
+        color = imgui.ImVec4(style.color_(imgui.Col_.text_disabled))
+        color = imgui.color_convert_float4_to_u32(color)
+
     global viewers, current_viewer_name
     current_viewport = viewers[current_viewer_name]
 
@@ -456,13 +461,13 @@ def axes(length:float=1.0, thickness:float=1.0):
     A_screen = current_viewport._project(origin)
     B_screen = current_viewport._project(x_axis)
     draw_list = imgui.get_window_draw_list()
-    draw_list.add_line(A_screen, B_screen, colors.RED, thickness)
+    draw_list.add_line(A_screen, B_screen, colors.RED_DIMMED, thickness)
 
     B_screen = current_viewport._project(y_axis)
-    draw_list.add_line(A_screen, B_screen, colors.GREEN, thickness)
+    draw_list.add_line(A_screen, B_screen, colors.GREEN_DIMMED, thickness)
 
     B_screen = current_viewport._project(z_axis)
-    draw_list.add_line(A_screen, B_screen, colors.BLUE, thickness)
+    draw_list.add_line(A_screen, B_screen, colors.BLUE_DIMMED, thickness)
 
 def begin_scene(projection:glm.mat4, view:glm.mat4):
     """
@@ -534,7 +539,11 @@ def _get_window_coords(point: imgui.ImVec2Like | Tuple[float, float, float]) -> 
     window_pos = imgui.get_window_pos()
     return imgui.ImVec2(screen_pos.x - window_pos.x, screen_pos.y - window_pos.y)
 
-def control_point(label:str, point:imgui.ImVec2Like, *, color:int=colors.WHITE)->Tuple[bool, imgui.ImVec2Like]:
+def control_point(label:str, point:imgui.ImVec2Like, *, color:int=None)->Tuple[bool, imgui.ImVec2Like]:
+    if color is None:
+        style = imgui.get_style()
+        color = style.color_(imgui.Col_.text)
+        color = imgui.color_convert_float4_to_u32(color)
     # project the point to world coordinates
     P = _get_screen_coords(point)  # ensure widget rect is updated
 
