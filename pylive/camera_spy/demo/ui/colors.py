@@ -7,10 +7,10 @@ def _set_alpha(color:int, alpha:float) -> int:
 
 # COLOR CONSTANTS
 _dimmed_alpha = 0.4
-RED = imgui.color_convert_float4_to_u32((1,0,0, 1.0))
+RED = imgui.color_convert_float4_to_u32((1,0.1,0, 1.0))
 RED_DIMMED = _set_alpha(RED, _dimmed_alpha)
 
-BLUE = imgui.color_convert_float4_to_u32((0.2,0.2,1, 1.0))
+BLUE = imgui.color_convert_float4_to_u32((0.0,0.5,1, 1.0))
 BLUE_DIMMED = _set_alpha(BLUE, _dimmed_alpha)
 
 GREEN = imgui.color_convert_float4_to_u32((0,1,0, 1.0))

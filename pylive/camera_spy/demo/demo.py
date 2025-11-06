@@ -1,3 +1,58 @@
+"""
+Camera Spy Demo Application
+TODO:
+- parameters:
+  - [x] if no image is loaded, allow setting image size
+  - [x] open image button,
+  - [x] show the image size
+  - [x] dim background image
+
+- [ ] landing page. when no image is loaded, show instructions to load an image.
+- [ ] disable docking
+
+- [x] allow setting the image size, and let user place control points freely.
+      => allow setting the image size, and play with the vanishing lines
+  
+- [x] quad controls for TwoVP solver
+
+- [x] the blue controls are not saturated enough against dark background
+      => added some green to the blue and a little to the red as well. these colors now a lot more pleasant on the dark background.
+
+- simplify variable names. 
+  - eg _pixels unit does not needed anymore.
+  - consider using vp1 instead of first_vanishing_point_pixel, etc.
+
+- show real world size units
+- show horizon line
+
+- "help?" menu
+- about menu with links to github, author info
+
+- camera sensor size?
+  - presets
+  - custom size
+  - by default field of view is used to compute focal length.
+    if sensor size is set, use that to compute focal length instead of fov.
+    by default the sensor size is 36x24mm (full frame)
+
+- results panel
+  - [x] include quaternion values
+  - allow specifying rotation order for euler angles
+
+export
+  - copy to clipboard (if pasting to destination is possible)
+  - save to file (json yaml, if possible create destination specific format)
+  - formats: json, yaml, fspy. Applications: blender? after? Maya, Max, houdini nuke?
+
+- consider a log window to show messages
+- also show error in results window if camera cant be solved...
+- allow emojis! :)
+
+BUGS
+- [ ] review axis settings (currently twoVP mode, seem to be flipped on Y)
+- [ ] when opening a combo box, the selectable items are in an awkward position.
+
+"""
 # Standard library imports
 import time
 startup_start_time = time.time()
@@ -168,26 +223,30 @@ def setup_light_theme():
 
     logger.info("✓ ImGui theme applied")
 
+
+static = dict()
+
 class App:
     def __init__(self):
         # content image
-        self.content_size = imgui.ImVec2(720,720)
+        self.content_size = imgui.ImVec2(1280,720)
         self.pan_and_zoom_matrix = glm.identity(glm.mat4)
         self.image_texture_ref:imgui.ImTextureRef|None = None
         self.image_texture_id: int|None = None
+        self.dim_background: bool = True
 
         # control points
         self.first_vanishing_lines_pixel = [
-            (glm.vec2(240, 408), glm.vec2(355, 305)),
-            (glm.vec2(501, 462), glm.vec2(502, 325))
+            (glm.vec2(296, 417), glm.vec2(633, 291)),
+            (glm.vec2(654, 660), glm.vec2(826, 344))
         ]
         self.second_vanishing_lines_pixel = [
-            [glm.vec2(350, 260), glm.vec2(550, 330)],
-            [glm.vec2(440, 480), glm.vec2(240, 300)]
+            [glm.vec2(381, 363), glm.vec2(884, 451)],
+            [glm.vec2(511, 311), glm.vec2(879, 356)]
         ]
 
-        self.origin_pixel=glm.vec2(400, 300)
-        self.principal_point_pixel=glm.vec2(400, 300)
+        self.origin_pixel=self.content_size/2
+        self.principal_point_pixel=self.content_size/2
 
         # solver params
         self.solver_mode=SolverMode.OneVP
@@ -251,29 +310,31 @@ class App:
                                "Adjust parameters in the sidebar to compute the camera.\n\n"
                                "Developed with ❤ by András Zalavári\n"
                                "https://github.com/yourusername/camera-spy")
-        
-
-            
-            # if begin_attribute_editor("res"):
-            #     next_attribute("transform")
-            #     imgui.input_text("##" + "transform", f"{"VALUE"}")
-
-            #     next_attribute("position")
-            #     imgui.input_text("##" + "pos", f"{"VALUE"}")
-
-            #     next_attribute("rotation")
-            #     imgui.slider_float("##" + "rot", 5, 0, 10)
-
-            #     end_attribute_editor()
-
-            # if imgui.button("Light"):
-            #     setup_light_theme()
-            # if imgui.button("Dark"):
-            #     setup_dark_theme()
 
         imgui.end()
         
     def show_parameters(self):
+        imgui.separator_text("Image")
+        imgui.set_next_item_width(150)
+        if self.image_texture_ref is None:
+            if imgui.button("open image", size=imgui.ImVec2(-1,0)):
+                self.open_image_file()
+            imgui.set_next_item_width(150)
+            _, value = imgui.input_int2("image size", [int(self.content_size.x), int(self.content_size.y)])
+            if _:
+                self.content_size = imgui.ImVec2(value[0], value[1])
+        else:
+            image_aspect = self.content_size.x / self.content_size.y
+            width = imgui.get_content_region_avail().x-imgui.get_style().frame_padding.x*2
+            if imgui.image_button("open", self.image_texture_ref, imgui.ImVec2(width, width/image_aspect)):
+                self.open_image_file()
+            imgui.set_next_item_width(150)
+            imgui.input_int2("image size", [int(self.content_size.x), int(self.content_size.y)], imgui.InputTextFlags_.read_only)
+
+        _, self.dim_background = imgui.checkbox("dim background", self.dim_background)
+
+        # imgui.bullet_text("Warning: Font scaling will NOT be smooth, because\nImGuiBackendFlags_RendererHasTextures is not set!")
+        imgui.separator_text("Solver Parameters")
         imgui.set_next_item_width(150)
         _, self.solver_mode = imgui.combo("mode", self.solver_mode, SolverMode._member_names_)
         imgui.set_next_item_width(150)
@@ -283,14 +344,11 @@ class App:
         imgui.set_next_item_width(150)
         _, self.scene_scale = imgui.slider_float("scene  scale", self.scene_scale, 1.0, 100.0, "%.2f")
         
-        if self.image_texture_ref is not None:
-            image_aspect = self.content_size.x / self.content_size.y
-            imgui.image(self.image_texture_ref, imgui.ImVec2(64*image_aspect, 64))
-
         match self.solver_mode:
             case SolverMode.OneVP:
                 imgui.set_next_item_width(150)
                 _, self.fov_degrees = imgui.slider_float("fov°", self.fov_degrees, 1.0, 179.0, "%.1f°")
+
             case SolverMode.TwoVP:
                 _, self.quad_mode = imgui.checkbox("quad", self.quad_mode)
 
@@ -346,14 +404,14 @@ class App:
                     # compute vanishing points
                     self.first_vanishing_point_pixel =  solver.least_squares_intersection_of_lines(
                         self.first_vanishing_lines_pixel)
-                    second_vanishing_point_pixel = solver.least_squares_intersection_of_lines(
+                    self.second_vanishing_point_pixel = solver.least_squares_intersection_of_lines(
                         self.second_vanishing_lines_pixel)
 
                     fovy, camera_transform = solver.solve2vp(
                         self.content_size.x, 
                         self.content_size.y, 
                         self.first_vanishing_point_pixel,
-                        second_vanishing_point_pixel,
+                        self.second_vanishing_point_pixel,
                         self.principal_point_pixel,
                         self.origin_pixel,
                         self.first_axis,
@@ -376,14 +434,39 @@ class App:
 
     def show_viewer(self):
         if ui.viewer.begin_viewer("viewer3", content_size=self.content_size, size=imgui.ImVec2(-1,-1), coordinate_system="top-left"):
-
             if self.image_texture_ref is not None:
                 tl = ui.viewer._get_window_coords(imgui.ImVec2(0,0))
                 br = ui.viewer._get_window_coords(imgui.ImVec2(self.content_size.x, self.content_size.y))
                 image_size = br - tl
                 imgui.set_cursor_pos(tl)
-                imgui.image(self.image_texture_ref, image_size)
+                if self.dim_background:
+                    style = imgui.get_style()
+            
+                    # imgui.set_cursor_pos(style.window_padding)
+                    # static.setdefault('bg_color',   [0.33,0.33,0.33,1.0])
+                    # static.setdefault('tint_color', [0.33,0.33,0.33,1.0])
 
+                    # _, static['bg_color'] = imgui.color_edit4("bg color", static['bg_color'], imgui.ColorEditFlags_.no_inputs | imgui.ColorEditFlags_.no_label | imgui.ColorEditFlags_.alpha_bar)
+                    # _, static['tint_color'] = imgui.color_edit4("tint color", static['tint_color'], imgui.ColorEditFlags_.no_inputs | imgui.ColorEditFlags_.no_label | imgui.ColorEditFlags_.alpha_bar)
+                    
+                    imgui.image_with_bg(self.image_texture_ref, image_size, None, None, 
+                                        bg_col=  (0.33,0.33,0.33,1.0),
+                                        tint_col=(0.33,0.33,0.33,1.0)
+                    )
+                else:
+                    imgui.image(self.image_texture_ref, image_size)
+            else:
+                center = ui.viewer._get_window_coords(self.content_size/2)
+                
+                # imgui.set_cursor_pos(center)
+                imgui.set_next_window_pos(center, imgui.Cond_.always, imgui.ImVec2(0.5, 0.5))
+                imgui.push_style_var(imgui.StyleVar_.window_padding, imgui.ImVec2(20, 20))
+                imgui.push_style_color(imgui.Col_.window_bg, (0,0,0, 0.3))
+                if imgui.begin("##dropzone", None, imgui.WindowFlags_.always_auto_resize | imgui.WindowFlags_.no_title_bar | imgui.WindowFlags_.no_inputs | imgui.WindowFlags_.no_move | imgui.WindowFlags_.no_resize | imgui.WindowFlags_.no_scrollbar):
+                    imgui.text("Drop an image file here to load it as background")
+                imgui.end()
+                imgui.pop_style_color()
+                imgui.pop_style_var()
 
             # control points
             _, self.origin_pixel = ui.viewer.control_point("o", self.origin_pixel)
@@ -399,10 +482,19 @@ class App:
                     ui.viewer.guide(self.second_vanishing_lines_pixel[0][0], self.second_vanishing_lines_pixel[0][1], color=get_axis_color(self.second_axis))
                 
                 case SolverMode.TwoVP:
-                    _, self.second_vanishing_lines_pixel = control_lines("x", self.second_vanishing_lines_pixel, color=get_axis_color(self.second_axis) )
+                    if self.quad_mode:
+                        z0, z1 = self.first_vanishing_lines_pixel
+                        self.second_vanishing_lines_pixel = [
+                            (z0[0], z1[0]),
+                            (z0[1], z1[1])
+                        ]
+                    else:
+                        _, self.second_vanishing_lines_pixel = control_lines("x", self.second_vanishing_lines_pixel, color=get_axis_color(self.second_axis) )
+                    
                     for line in self.second_vanishing_lines_pixel:
                         ui.viewer.guide(line[0], line[1], color=get_axis_color(self.second_axis))
 
+            # draw vanishing lines to vanishing points
             if self.first_vanishing_point_pixel is not None:
                 for line in self.first_vanishing_lines_pixel:
                     P = sorted([line[0], line[1]], key=lambda P: glm.distance2(P, self.first_vanishing_point_pixel))[0]
@@ -420,6 +512,7 @@ class App:
                         ui.viewer.guide(A, B)
                     ui.viewer.axes(length=1.0)
                 ui.viewer.end_scene()
+
         ui.viewer.end_viewer()
 
     def show_results(self):
@@ -440,115 +533,120 @@ class App:
             text = dedent(text).strip()
             text = text.replace('+', ' ')
             return text
-        
-        def output_field(label:str, str:str, separator:str='\t'):
-
-            style = imgui.get_style()
-            text_size = imgui.calc_text_size(text) + style.frame_padding * 2
-            imgui.input_text_multiline(label, text, size=text_size, flags=imgui.InputTextFlags_.read_only)
             
         if self.camera is not None:
+            scale = glm.vec3()
+            quat = glm.quat()  # This will be our quaternion
+            translation = glm.vec3()
+            skew = glm.vec3()
+            perspective = glm.vec4()
+            success = glm.decompose(self.camera.transform, scale, quat, translation, skew, perspective)
+
             pos = self.camera.getPosition()
             matrix = [self.camera.transform[j][i] for i in range(4) for j in range(4)]
+
             transform_text = pretty_matrix(np.array(matrix).reshape(4,4), separator="\t")
-            position_text = pretty_matrix(np.array(self.camera.getPosition()), separator="\t")
+            position_text = pretty_matrix(np.array(translation), separator="\t")
+            quat_text = pretty_matrix(np.array([quat.x, quat.y, quat.z, quat.w]), separator="\t")
+
             x, y, z = solver.extract_euler_angle(self.camera.transform, order="ZXY")
-            rotation_text = pretty_matrix(np.array([x, y, z]), separator="\t")
-
-
-            style = imgui.get_style()
-            # imgui.push_style_var(imgui.StyleVar_.item_spacing, imgui.ImVec2(style.item_spacing.x,2))
-
-            # imgui.text("Transform")
-            # imgui.same_line()
-            
-            # style = imgui.get_style()
-            transform_text_size = imgui.calc_text_size(transform_text) + style.frame_padding * 2
-            # imgui.input_text_multiline("##transform", transform_text, size=text_size, flags=imgui.InputTextFlags_.read_only)
-
-            # imgui.text("Position")
-            # imgui.same_line()
-            
-            # style = imgui.get_style()
-            # line_height = imgui.get_text_line_height()+style.frame_padding.y*2
-            # # text_size = imgui.calc_text_size(position_text) + style.frame_padding * 2
-            # imgui.input_text_multiline("##position", position_text, size=imgui.ImVec2(text_size.x,line_height), flags=imgui.InputTextFlags_.read_only)
-
-            # imgui.text("Rotation (ZXY)")
-            # imgui.same_line()
-
-            # imgui.input_text_multiline("##rotation", rotation_text, size=imgui.ImVec2(text_size.x,line_height), flags=imgui.InputTextFlags_.read_only)
-            # imgui.pop_style_var()
+            euler_text = pretty_matrix(np.array([x, y, z]), separator="\t")
 
             if begin_attribute_editor("res props"):
                 next_attribute("transform")
+                style = imgui.get_style()
+                transform_text_size = imgui.calc_text_size(transform_text) + style.frame_padding * 2
                 imgui.input_text_multiline("##transform", transform_text, size=transform_text_size, flags=imgui.InputTextFlags_.read_only)
 
                 next_attribute("position")
                 imgui.input_text("##position", position_text, flags=imgui.InputTextFlags_.read_only)
+                
+                # imgui.begin_tooltip()
+                next_attribute("quaternion (xyzw)")
+                imgui.input_text("##quaternion", quat_text, flags=imgui.InputTextFlags_.read_only)
+                imgui.set_item_tooltip("Quaternion representing camera rotation (x, y, z, w)")
 
-                next_attribute("rotation")
-                imgui.input_text("##rotation", rotation_text, flags=imgui.InputTextFlags_.read_only)
+                next_attribute("euler (ZXY)°")
+                imgui.input_text("##euler", euler_text, flags=imgui.InputTextFlags_.read_only)
+                imgui.set_item_tooltip("Euler angles in degrees (x,y,z).\nNote: Rotation is applied in order order: ZXY (Yaw, Pitch, Roll)")
 
                 next_attribute("fov")
                 imgui.input_text("##fov", f"{self.camera.fovy:.2f}°")
                 end_attribute_editor()
 
+    def open_image_file(self, path:str|None=None):
+        from pathlib import Path
+        try:
+            if path is None:
+                filters = [
+                    "Image Files", "*.png *.jpg *.jpeg *.bmp *.tiff *.tif *.gif", 
+                    "All Files", "*.*"
+                ]
+                open_file_dialog = pfd.open_file("Select Image", "", filters, pfd.opt.none)
+                paths = open_file_dialog.result()
+                print("results: ", paths)
+                if len(paths)>0:
+                    path = paths[0]
+                else:
+                    return
+
+            if not Path(path).exists():
+                logger.error(f"File not found: {Path(path).absolute()}")
+                return
+            else:
+                logger.info(f"✓ Found file: {Path(path).absolute()}")
+
+            # Load image with PIL
+            img = Image.open(path)
+            self.content_size = imgui.ImVec2(img.width, img.height)
+            logger.info(f"✓ Loaded: {path} ({img.width}x{img.height})")
+            
+            if img.mode != 'RGBA':
+                # Convert to RGBA if needed
+                img = img.convert('RGBA')
+
+            img_data = np.frombuffer(img.tobytes(), dtype=np.uint8)
+            if self.image_texture_id is not None:
+                gl.glDeleteTextures(1, [self.image_texture_id])
+                self.image_texture_ref = None
+                self.image_texture_id = None
+            
+            texture_id = gl.glGenTextures(1)
+            gl.glBindTexture(gl.GL_TEXTURE_2D, texture_id)
+            
+            # Set texture parameters
+            gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_LINEAR)
+            gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_LINEAR)
+            gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_S, gl.GL_CLAMP_TO_EDGE)
+            gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_T, gl.GL_CLAMP_TO_EDGE)
+            
+            # Upload texture data
+            gl.glTexImage2D(
+                gl.GL_TEXTURE_2D, 0, gl.GL_RGBA,
+                img.width, img.height, 0,
+                gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, img_data
+            )
+            
+            # Unbind texture
+            gl.glBindTexture(gl.GL_TEXTURE_2D, 0)
+            
+            self.image_texture_id = texture_id
+            self.image_texture_ref = imgui.ImTextureRef(texture_id)
+            logger.info(f"✓ Created OpenGL texture: {texture_id}")
+            
+        except Exception as e:
+            logger.error(f"Failed to load {path}: {e}")
+            import traceback
+            traceback.print_exc()
+
     def on_file_drop(self, window, paths):
         from pathlib import Path
         """GLFW drop callback - receives list of paths"""
         logger.info(f"Files dropped: {paths}")
-        for path in paths:
-            try:
-                if not Path(path).exists():
-                    logger.error(f"File not found: {Path(path).absolute()}")
-                    return
-                else:
-                    logger.info(f"✓ Found file: {Path(path).absolute()}")
+        if len(paths) > 0:
+            first_path = paths[0]
+            self.open_image_file(first_path)
 
-                # Load image with PIL
-                img = Image.open(path)
-                self.content_size = imgui.ImVec2(img.width, img.height)
-                logger.info(f"✓ Loaded: {path} ({img.width}x{img.height})")
-                
-                if img.mode != 'RGBA':
-                    # Convert to RGBA if needed
-                    img = img.convert('RGBA')
-
-                img_data = np.frombuffer(img.tobytes(), dtype=np.uint8)
-                if self.image_texture_id is not None:
-                    gl.glDeleteTextures(1, [self.image_texture_id])
-                    self.image_texture_ref = None
-                    self.image_texture_id = None
-                
-                texture_id = gl.glGenTextures(1)
-                gl.glBindTexture(gl.GL_TEXTURE_2D, texture_id)
-                
-                # Set texture parameters
-                gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_LINEAR)
-                gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_LINEAR)
-                gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_S, gl.GL_CLAMP_TO_EDGE)
-                gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_T, gl.GL_CLAMP_TO_EDGE)
-                
-                # Upload texture data
-                gl.glTexImage2D(
-                    gl.GL_TEXTURE_2D, 0, gl.GL_RGBA,
-                    img.width, img.height, 0,
-                    gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, img_data
-                )
-                
-                # Unbind texture
-                gl.glBindTexture(gl.GL_TEXTURE_2D, 0)
-                
-                self.image_texture_id = texture_id
-                self.image_texture_ref = imgui.ImTextureRef(texture_id)
-                logger.info(f"✓ Created OpenGL texture: {texture_id}")
-                
-            except Exception as e:
-                logger.error(f"Failed to load {path}: {e}")
-                import traceback
-                traceback.print_exc()
-                
 if __name__ == "__main__":
     from imgui_bundle import hello_imgui
     runner_params = hello_imgui.RunnerParams()
@@ -556,12 +654,13 @@ if __name__ == "__main__":
     runner_params.imgui_window_params.menu_app_title = "Camera Spy"
     runner_params.app_window_params.window_geometry.size = (1200, 512)
     runner_params.app_window_params.restore_previous_geometry = True
+
     # Enable DPI awareness
     runner_params.dpi_aware_params.dpi_window_size_factor = 1.0  # Auto-detect
     
     # Enable continuous rendering during window resize
-    # runner_params.fps_idling.enable_idling = False
-    # runner_params.app_window_params.repaint_during_resize_gotcha_reentrant_repaint = True
+    runner_params.fps_idling.enable_idling = True
+    runner_params.app_window_params.repaint_during_resize_gotcha_reentrant_repaint = True
 
 
 
@@ -631,14 +730,19 @@ if __name__ == "__main__":
 
     app = App()
     def post_init():
+        # Disable docking
+        io = imgui.get_io()
+        io.config_flags &= ~imgui.ConfigFlags_.docking_enable
         setup_file_drop_callback(app.on_file_drop)
 
     runner_params.callbacks.setup_imgui_style = setup_dark_theme
     runner_params.callbacks.post_init = lambda: post_init()
     runner_params.callbacks.show_gui = lambda: app.gui()
     runner_params.imgui_window_params.default_imgui_window_type = (
-        hello_imgui.DefaultImGuiWindowType.provide_full_screen_dock_space
+        hello_imgui.DefaultImGuiWindowType.no_default_window
+        # hello_imgui.DefaultImGuiWindowType.provide_full_screen_dock_space
     )
+
 
     hello_imgui.run(runner_params)
     # immapp.run(app.gui, 
