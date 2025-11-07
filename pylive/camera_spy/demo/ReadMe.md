@@ -21,6 +21,7 @@
 - [x] the blue controls are not saturated enough against dark background
       => added some green to the blue and a little to the red as well. these colors now a lot more pleasant on the dark background.
 
+THEMING
 - [x] adjusted style for windows dark mode.
       force window title bar to darkmmode on windows. (note: blender on windows seem to force the dark mode titlebar, that fits its own colorscheme)
 - [ ] adjust style for osx, potentially force dark mode for native window.
@@ -28,7 +29,7 @@
 
 - [x] about menu with links to github, author info
 
-- camera sensor size?
+- [ ] camera sensor settings
   - presets
   - custom size
   - by default field of view is used to compute focal length.
@@ -37,7 +38,7 @@
 
 - results panel
   - [x] include quaternion values
-  - [ ] allow specifying rotation order for euler angles
+  - [x] allow specifying rotation order for euler angles
 
 - [ ] export
   - [ ] copy to clipboard (if pasting to destination is possible)

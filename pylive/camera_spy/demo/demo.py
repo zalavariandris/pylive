@@ -78,9 +78,12 @@ class SolverMode(IntEnum):
     OneVP = 0
     TwoVP = 1
 
+
+
+
 # ################# #
 # Application State #
-# ################# #)
+# ################# #
 
 def setup_dark_theme():
     style = imgui.get_style()
@@ -287,6 +290,7 @@ class App:
         self.second_axis=solver.Axis.PositiveX
 
         # solver results
+        self.current_euler_order = solver.EulerOrder.ZXY
         self.first_vanishing_point_pixel:glm.vec2|None = None
         self.second_vanishing_point_pixel:glm.vec2|None = None
         self.camera:Camera|None = None
@@ -645,7 +649,7 @@ class App:
             position_text = pretty_matrix(np.array(translation), separator="\t")
             quat_text = pretty_matrix(np.array([quat.x, quat.y, quat.z, quat.w]), separator="\t")
 
-            x, y, z = solver.extract_euler_angle(self.camera.transform, order="ZXY")
+            x, y, z = solver.extract_euler_angle(self.camera.transform, order=self.current_euler_order)
             euler_text = pretty_matrix(np.array([x, y, z]), separator="\t")
 
             if begin_attribute_editor("res props"):
@@ -662,7 +666,9 @@ class App:
                 imgui.input_text("##quaternion", quat_text, flags=imgui.InputTextFlags_.read_only)
                 imgui.set_item_tooltip("Quaternion representing camera rotation (x, y, z, w)")
 
-                next_attribute("euler (ZXY)°")
+                next_attribute("euler order")
+                _, self.current_euler_order = imgui.combo("##euler_order", self.current_euler_order, solver.EulerOrder._member_names_)
+                next_attribute(f"euler ({solver.EulerOrder._member_names_[self.current_euler_order]})°")
                 imgui.input_text("##euler", euler_text, flags=imgui.InputTextFlags_.read_only)
                 imgui.set_item_tooltip("Euler angles in degrees (x,y,z).\nNote: Rotation is applied in order order: ZXY (Yaw, Pitch, Roll)")
 

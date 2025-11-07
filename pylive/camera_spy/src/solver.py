@@ -14,6 +14,14 @@ class Axis(IntEnum):
     PositiveZ = 4
     NegativeZ = 5
 
+class EulerOrder(IntEnum):
+    XYZ = 0
+    XZY = 1
+    YZX = 2
+    YXZ = 3
+    ZXY = 4
+    ZYX = 5
+
 
 import inspect
 from functools import wraps
@@ -935,29 +943,30 @@ def extract_euler_angle_ZXY(M: glm.mat4) -> Tuple[float, float, float]:
     T3 = math.atan2(C1 * M[2][0] + S1 * M[2][1], C1 * M[0][0] + S1 * M[0][1])
     return T1, T2, T3
 
-def extract_euler_angle(M: glm.mat3, order: str = Literal["XYZ", "XZY", "YXZ", "YZX", "ZXY", "ZYX"]) -> Tuple[float, float, float]:
+def extract_euler_angle(M: glm.mat3, order: EulerOrder) -> Tuple[float, float, float]:
     """
-    Convert a glm.mat3 rotation matrix to Euler angles (radians)
-    for the specified rotation order.
+    Convert a glm.mat3 rotation matrix
+    to Euler angles (radians) for the specified rotation order.
     Supported orders: "XYZ", "XZY", "YXZ", "YZX", "ZXY", "ZYX"
+    return x, y, z angles in radians.
     """
     match order:
-        case "XYZ":
+        case EulerOrder.XYZ:
             x,y,z = extract_euler_angle_XYZ(M)
             return x,y,z
-        case "XZY":
+        case EulerOrder.XZY:
             x,z,y = extract_euler_angle_XZY(M)
             return x,y,z
-        case "YXZ":
+        case EulerOrder.YXZ:
             y,x,z = extract_euler_angle_YXZ(M)
             return x,y,z
-        case "YZX":
+        case EulerOrder.YZX:
             y,z,x = extract_euler_angle_YZX(M)
             return x,y,z
-        case "ZXY":
+        case EulerOrder.ZXY:
             z,x,y = extract_euler_angle_ZXY(M)
             return x,y,z
-        case "ZYX":
+        case EulerOrder.ZYX:
             z,y,x = extract_euler_angle_ZYX(M)
             return x,y,z
         case _:
