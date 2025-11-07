@@ -29,7 +29,7 @@ def begin_sidebar(name:str, p_open:bool|None=None, flags:int=0):
     SIDEBAR_FLAGS = imgui.WindowFlags_.always_auto_resize | imgui.WindowFlags_.no_move | imgui.WindowFlags_.no_resize | imgui.WindowFlags_.no_collapse
     
     style = imgui.get_style()
-    imgui.push_style_var(imgui.StyleVar_.window_padding, imgui.ImVec2(style.window_padding.x, 0))
+    # imgui.push_style_var(imgui.StyleVar_.window_padding, imgui.ImVec2(style.window_padding.x, 0))
     # imgui.push_style_color(imgui.Col_.window_bg, (0.2, 0.2, 0.2, 0.0))
     # imgui.push_style_color(imgui.Col_.title_bg, (0.2, 0.2, 0.2, 0.0))
     # imgui.push_style_color(imgui.Col_.border   , (0.08, 0.08, 0.08, 0.00))
@@ -38,7 +38,7 @@ def begin_sidebar(name:str, p_open:bool|None=None, flags:int=0):
 def end_sidebar():
     imgui.end()
     # imgui.pop_style_color(3)
-    imgui.pop_style_var()
+    # imgui.pop_style_var()
 
 def begin_attribute_editor(str_id:str):
     imgui.set_next_item_width(200)
@@ -78,68 +78,9 @@ class SolverMode(IntEnum):
     OneVP = 0
     TwoVP = 1
 
-
-
-
 # ################# #
 # Application State #
 # ################# #
-
-def setup_dark_theme():
-    style = imgui.get_style()
-    imgui.style_colors_dark(style)
-
-    style.anti_aliased_lines = True
-    style.anti_aliased_lines_use_tex = True
-    style.anti_aliased_fill = True
-
-    levels = [
-        0.08,   # really deep
-        0.09,   # deep
-        0.11,   # medium
-        0.15,   # shallow
-    ]
-
-    windows_dark_titlebar_color = [32/255, 32/255, 32/255, 1.0]
-    windows_dark_text_color = [255/255, 255/255, 255/255, 1.0]
-    windows_light_titlebar_color = [243/255.0]*3 + [1.0]
-    windows_light_text_color = [25/255.0]*3 + [1.0]
-
-    style.set_color_(imgui.Col_.text ,               windows_dark_text_color)
-    style.set_color_(imgui.Col_.title_bg ,           imgui.ImVec4(*[levels[1]]*3,1.00))
-    style.set_color_(imgui.Col_.title_bg_active ,    imgui.ImVec4(*[levels[1]]*3,1.00))
-    style.set_color_(imgui.Col_.title_bg_collapsed , imgui.ImVec4(*[levels[1]]*3,1.00))
-    style.set_color_(imgui.Col_.window_bg,           imgui.ImVec4(*[levels[1]]*3,1.00))
-    style.set_color_(imgui.Col_.child_bg ,           imgui.ImVec4(*[levels[2]]*3,1.00))
-    style.set_color_(imgui.Col_.frame_bg ,           imgui.ImVec4(*[levels[3]]*3,1.00))
-    style.set_color_(imgui.Col_.button   ,           imgui.ImVec4(*[levels[3]]*3,1.00))
-
-    # Remove the dark border by setting menu bar background to match the menu bar
-    style.set_color_(imgui.Col_.menu_bar_bg,         windows_dark_titlebar_color)
-    
-    style.window_padding = imgui.ImVec2(12, 12)
-    style.frame_padding = imgui.ImVec2(12, 6)
-    style.item_spacing = imgui.ImVec2(12, 16)
-
-    style.frame_border_size = 0
-
-    style.child_border_size = 1
-    style.window_border_size = 1
-    style.set_color_(imgui.Col_.border   , imgui.ImVec4(*[levels[0]]*3,1.00))
-    style.popup_border_size = 1
-
-    style.grab_min_size = 4
-    style.grab_rounding = 4
-    style.frame_rounding = 4
-
-    style.separator_text_align = imgui.ImVec2(0.0, 0.5)
-    style.separator_text_border_size = 1
-
-    style.window_title_align = imgui.ImVec2(0.5, 0.5)
-    style.window_menu_button_position = imgui.Dir.right
-
-    logger.info("✓ ImGui theme applied")
-
 
 def setup_windows_dark_theme():
     style = imgui.get_style()
@@ -173,6 +114,9 @@ def setup_windows_dark_theme():
     style.set_color_(imgui.Col_.title_bg_active ,    imgui.ImVec4(*[levels[1]]*3,1.00))
     style.set_color_(imgui.Col_.title_bg_collapsed , imgui.ImVec4(*[levels[1]]*3,1.00))
     style.set_color_(imgui.Col_.window_bg,           imgui.ImVec4(*[levels[1]]*3,1.00))
+    style.set_color_(imgui.Col_.scrollbar_bg,         imgui.ImVec4(*[levels[1]]*3,1.00))
+
+
     style.set_color_(imgui.Col_.child_bg ,           imgui.ImVec4(*[levels[2]]*3,1.00))
     style.set_color_(imgui.Col_.frame_bg ,           imgui.ImVec4(*[levels[3]]*3,1.00))
     style.set_color_(imgui.Col_.button   ,           imgui.ImVec4(*[levels[3]]*3,1.00))
@@ -209,53 +153,6 @@ def setup_windows_dark_theme():
     logger.info("✓ ImGui theme applied")
 
 
-
-def setup_light_theme():
-    style = imgui.get_style()
-    imgui.style_colors_light(style)
-
-    style.anti_aliased_lines = True
-    style.anti_aliased_lines_use_tex = True
-    style.anti_aliased_fill = True
-
-    levels = [
-        1-0.08,   # really deep
-       1-0.09,   # deep
-       1-0.11,   # medium
-       1-0.15,   # shallow
-    ]
-
-    style.set_color_(imgui.Col_.title_bg ,           imgui.ImVec4(*[levels[1]]*3,1.00))
-    style.set_color_(imgui.Col_.title_bg_active ,    imgui.ImVec4(*[levels[1]]*3,1.00))
-    style.set_color_(imgui.Col_.title_bg_collapsed , imgui.ImVec4(*[levels[1]]*3,1.00))
-    style.set_color_(imgui.Col_.window_bg,           imgui.ImVec4(*[levels[1]]*3,1.00))
-    style.set_color_(imgui.Col_.child_bg ,           imgui.ImVec4(*[levels[2]]*3,1.00))
-    style.set_color_(imgui.Col_.frame_bg ,           imgui.ImVec4(*[levels[3]]*3,1.00))
-    style.set_color_(imgui.Col_.button   ,           imgui.ImVec4(*[levels[3]]*3,1.00))
-
-    style.window_padding = imgui.ImVec2(12, 12)
-    style.frame_padding = imgui.ImVec2(12, 6)
-    style.item_spacing = imgui.ImVec2(12, 16)
-
-    style.frame_border_size = 0
-
-    style.child_border_size = 1
-    style.window_border_size = 1
-    style.set_color_(imgui.Col_.border   , imgui.ImVec4(*[levels[0]]*3,1.00))
-    style.popup_border_size = 1
-
-    style.grab_min_size = 4
-    style.grab_rounding = 4
-    style.frame_rounding = 4
-
-    style.window_title_align = imgui.ImVec2(0.5, 0.5)
-    style.window_menu_button_position = imgui.Dir.right
-
-    logger.info("✓ ImGui theme applied")
-
-
-static = dict()
-
 class App:
     def __init__(self):
         # content image
@@ -265,8 +162,12 @@ class App:
         self.image_texture_id: int|None = None
         self.dim_background: bool = True
 
-        # UI state for popup from menu
+        # manage windows
         self.show_about_popup: bool = False
+        self.show_emoji_window: bool = False
+        self.show_fontawesome_window: bool = False
+        self.show_data_window: bool = False
+        self.show_styleeditor_window: bool = False
 
         # control points
         self.first_vanishing_lines_pixel = [
@@ -297,13 +198,17 @@ class App:
 
         # misc
         self.theme=hello_imgui.ImGuiTheme_.darcula_darker
-        self.startup_end_time = None
 
-    def gui(self):
-        if self.startup_end_time is None:
-            self.startup_end_time = time.time()
-            logger.info(f"Startup time: {self.startup_end_time - startup_start_time:.2f} seconds")
+        """
+        Can be used to define inline variables, similarly how static vars used in C/C++ with imgui.
         
+        Example:
+        self.misc.setdefault('my_var', 0)
+        _, self.misc['my_var'] = imgui.slider_float("my var", self.misc['my_var'], 0.0, 1.0)
+        """
+        self.misc:Dict[str, Any] = dict() # miscellaneous state variables for development. 
+
+    def gui(self):        
         # Compute Camera
         self.camera = Camera()
 
@@ -315,22 +220,47 @@ class App:
         # imgui.push_style_var(imgui.StyleVar_.frame_border_size, 0.0)
         if imgui.begin_main_menu_bar():
             if imgui.begin_menu("File"):
-                if imgui.menu_item_simple("Open Image", "Ctrl+O"):
+                folder_icon = getattr(icons_fontawesome_4, 'ICON_FA_FOLDER_OPEN', getattr(icons_fontawesome_4, 'ICON_FA_FOLDER', ''))
+                quit_icon = getattr(icons_fontawesome_4, 'ICON_FA_TIMES', getattr(icons_fontawesome_4, 'ICON_FA_CLOSE', ''))
+                
+                if imgui.menu_item_simple(f"{folder_icon} Open Image", "Ctrl+O"):
                     self.open_image_file()
                 
                 imgui.separator()
-                if imgui.menu_item_simple("Quit", "Ctrl+Q"):
+                if imgui.menu_item_simple(f"{quit_icon} Quit", "Ctrl+Q"):
                     # Exit the application
                     import sys
                     sys.exit(0)
                 
                 imgui.end_menu()
 
+            if imgui.begin_menu("Windows"):
+                smile_icon = getattr(icons_fontawesome_4, 'ICON_FA_SMILE_O', getattr(icons_fontawesome_4, 'ICON_FA_SMILE', ''))
+                star_icon = getattr(icons_fontawesome_4, 'ICON_FA_STAR', '')
+
+                if imgui.menu_item_simple(f"{smile_icon} Emoji Test", None, self.show_emoji_window):
+                    self.show_emoji_window = not self.show_emoji_window
+
+                if imgui.menu_item_simple(f"{star_icon} FontAwesome Icons", None, self.show_fontawesome_window):
+                    self.show_fontawesome_window = not self.show_fontawesome_window
+
+                if imgui.menu_item_simple("Style Window", None, self.show_styleeditor_window):
+                    self.show_styleeditor_window = not self.show_styleeditor_window
+
+                if imgui.menu_item_simple("Data Window", None, self.show_data_window):
+                    self.show_data_window = not self.show_data_window
+                imgui.end_menu()
+
             if imgui.begin_menu("Help"):
-                if imgui.menu_item_simple("Manual"):
+                # Use safe icon access with fallback
+                book_icon = getattr(icons_fontawesome_4, 'ICON_FA_BOOK', '')
+                info_icon = getattr(icons_fontawesome_4, 'ICON_FA_INFO_CIRCLE', getattr(icons_fontawesome_4, 'ICON_FA_INFO', ''))
+                
+                if imgui.menu_item_simple(f"{book_icon} Manual"):
                     ...
-                if imgui.menu_item_simple("About"):
+                if imgui.menu_item_simple(f"{info_icon} About"):
                     self.show_about_popup = True
+
                 
                 imgui.end_menu()
             
@@ -365,6 +295,20 @@ class App:
                 
             imgui.end()
 
+        # Emoji Test Window
+        if self.show_emoji_window:
+            expanded, self.show_emoji_window = imgui.begin("Emoji Test Window", self.show_emoji_window)
+            if expanded:
+                self.show_emoji_test()
+            imgui.end()
+
+        # FontAwesome Test Window
+        if self.show_fontawesome_window:
+            expanded, self.show_fontawesome_window = imgui.begin("FontAwesome Icons", self.show_fontawesome_window, imgui.WindowFlags_.always_auto_resize)
+            if expanded:
+                self.show_fontawesome_test()
+            imgui.end()
+
         # Parameters Window
         style = imgui.get_style()
         display_size = imgui.get_io().display_size
@@ -390,9 +334,11 @@ class App:
         end_sidebar()
 
         # Style Editor Window
-        if imgui.begin("style editor"):
-            imgui.show_style_editor()
-        imgui.end()
+        if self.show_styleeditor_window:
+            expanded, self.show_styleeditor_window = imgui.begin("style editor", self.show_styleeditor_window)
+            if expanded:
+                imgui.show_style_editor()
+            imgui.end()
 
     def show_about(self):
         imgui.text("Camera Spy Demo")
@@ -403,6 +349,359 @@ class App:
         imgui.separator()
         imgui.text("Developed with ❤ by András Zalavári")
         imgui.text_link_open_url("https://github.com/yourusername/camera-spy")
+
+    def show_emoji_test(self):
+        imgui.text("Emoji Font Test")
+        imgui.separator()
+        
+        # Calculate total emoji count
+        total_sample_emojis = 0
+        
+        # Extended emoji categories with more comprehensive coverage
+        emoji_categories = {
+            "Smileys & Emotion (😀-😿)": [
+                "😀", "😃", "😄", "😁", "😆", "😅", "🤣", "😂", "🙂", "🙃", "🫠",
+                "😉", "😊", "😇", "🥰", "😍", "🤩", "😘", "😗", "☺", "😚", "😙",
+                "🥲", "😋", "😛", "😜", "🤪", "😝", "🤑", "🤗", "🤭", "🫢", "🫣",
+                "🤫", "🤔", "🫡", "🤐", "🤨", "😐", "😑", "😶", "🫥", "😶‍🌫", "😏",
+                "😒", "🙄", "😬", "😮‍💨", "🤥", "😔", "😪", "🤤", "😴", "😷",
+                "🤒", "🤕", "🤢", "🤮", "🤧", "🥵", "🥶", "🥴", "😵", "😵‍💫",
+                "🤯", "🤠", "🥳", "🥸", "😎", "🤓", "🧐", "😕", "🫤", "😟",
+                "🙁", "☹", "😮", "😯", "😲", "😳", "🥺", "🥹", "😦", "😧",
+                "😨", "😰", "😥", "😢", "😭", "😱", "😖", "😣", "😞", "😓",
+                "😩", "😫", "🥱", "😤", "😡", "😠", "🤬", "😈", "👿", "💀",
+                "☠", "�", "🤡", "👹", "👺", "👻", "👽", "👾", "🤖", "😺",
+                "😸", "😹", "😻", "😼", "😽", "🙀", "😿", "😾"
+            ],
+            "People & Body (�👋-🫶)": [
+                "👋", "🤚", "🖐", "✋", "🖖", "🫱", "�", "🫳", "�", "👌",
+                "�", "🤏", "✌", "🤞", "🫰", "🤟", "�🤘", "🤙", "👈", "👉",
+                "👆", "🖕", "👇", "☝", "🫵", "👍", "👎", "👊", "✊", "🤛",
+                "🤜", "👏", "🙌", "🫶", "👐", "🤲", "🤝", "🙏", "✍", "💅",
+                "🤳", "💪", "🦾", "🦿", "🦵", "🦶", "👂", "🦻", "👃", "🧠",
+                "🫀", "🫁", "🦷", "🦴", "👀", "👁", "👅", "👄", "🫦", "👶",
+                "🧒", "👦", "👧", "🧑", "👱", "👨", "🧔", "👨‍🦰", "👨‍🦱", "👨‍🦳",
+                "👨‍🦲", "👩", "👩‍🦰", "👩‍🦱", "👩‍🦳", "👩‍🦲", "🧓", "👴", "👵"
+            ],
+            "Animals & Nature (🐵-🦎)": [
+                "🐵", "🐒", "🦍", "🦧", "🐶", "🐕", "🦮", "🐕‍🦺", "�", "🐺",
+                "🦊", "🦝", "�🐱", "🐈", "🐈‍⬛", "🦁", "🐯", "🐅", "🐆", "🐴",
+                "🐎", "🦄", "🦓", "🦌", "🦬", "🐮", "🐂", "🐃", "🐄", "🐷",
+                "🐖", "�", "🐽", "🐏", "🐑", "🐐", "🐪", "🐫", "🦙", "🦒",
+                "🐘", "🦣", "🦏", "🦛", "�🐭", "🐁", "🐀", "🐹", "🐰", "🐇",
+                "🐿", "�", "🦔", "🦇", "🐻", "�‍❄", "🐨", "�", "🦥", "🦦",
+                "�", "🦘", "🦡", "🐾", "🦃", "🐔", "�", "�", "�", "�",
+                "�", "🐧", "🕊", "🦅", "🦆", "🦢", "🦉", "🦤", "🪶", "🦩",
+                "🦚", "🦜", "�", "�", "�", "🦎", "🐍", "🐲", "🐉", "🦕",
+                "🦖", "🐳", "🐋", "🐬", "🦭", "🐟", "🐠", "�", "🦈", "🐙"
+            ],
+            "Food & Drink (🍎-🍷)": [
+                "🍎", "🍊", "🍋", "🍌", "🍉", "🍇", "🍓", "🫐", "🍈", "🍒",
+                "🍑", "🥭", "🍍", "🥥", "🥝", "🍅", "🍆", "🥑", "🥦", "🥒",
+                "🌶", "🫑", "🌽", "🥕", "🫒", "🧄", "🧅", "🥔", "🍠", "🫘",
+                "🥐", "🍞", "🥖", "🥨", "🧀", "🥚", "🍳", "🧈", "🥞", "🧇",
+                "🥓", "🥩", "🍗", "🍖", "🦴", "🌭", "🍔", "🍟", "🍕", "🫓",
+                "🥙", "🧆", "🌮", "🌯", "🫔", "🥗", "🥘", "🫕", "🍝", "🍜",
+                "🍲", "🍛", "🍣", "🍱", "🥟", "🦪", "🍤", "🍙", "🍚", "🍘",
+                "🍥", "🥠", "🥮", "🍢", "🍡", "🍧", "🍨", "🍦", "🥧", "🧁",
+                "🍰", "🎂", "🍮", "🍭", "🍬", "🍫", "🍿", "🍩", "🍪", "🌰",
+                "🥜", "🍯", "🥛", "🍼", "🫖", "☕", "🍵", "🧃", "🥤", "🧋",
+                "🍶", "🍺", "🍻", "🥂", "🍷", "🥃", "🍸", "🍹", "🧉", "🍾"
+            ],
+            "Travel & Places (🚗-🏰)": [
+                "🚗", "🚕", "🚙", "🚌", "🚎", "🏎", "🚓", "🚑", "🚒", "🚐",
+                "🛻", "🚚", "🚛", "🚜", "🏍", "🛵", "🚲", "🛴", "🛹", "🛼",
+                "🚁", "🛸", "✈", "🛩", "🛫", "🛬", "🪂", "⛵", "🚤", "🛥",
+                "🛳", "⛴", "🚢", "⚓", "🪝", "⛽", "🚧", "🚦", "🚥", "🗺",
+                "🗿", "🗽", "🗼", "🏰", "🏯", "🏟", "🎡", "🎢", "🎠", "⛲",
+                "⛱", "🏖", "🏝", "🏜", "🌋", "⛰", "🏔", "🗻", "🏕", "⛺"
+            ],
+            "Activities & Sports (⚽-🥇)": [
+                "⚽", "🏀", "🏈", "⚾", "🥎", "🎾", "🏐", "🏉", "🥏", "🎱",
+                "🪀", "🏓", "🏸", "🏒", "🏑", "🥍", "🏏", "🪃", "🥅", "⛳",
+                "🪁", "🏹", "🎣", "🤿", "🥊", "🥋", "🎽", "🛹", "🛷", "⛸",
+                "🥌", "🎿", "⛷", "🏂", "🪂", "🏋", "🤼", "🤸", "⛹", "🤺",
+                "🏇", "🧘", "🏄", "🏊", "🤽", "🚣", "🧗", "🚵", "🚴", "🏆",
+                "🥇", "🥈", "🥉", "🏅", "🎖", "🏵", "🎗", "🎫", "🎟", "🎪"
+            ],
+            "Objects & Technology (💻-📱)": [
+                "💻", "🖥", "🖨", "⌨", "🖱", "🖲", "💽", "💾", "💿", "📀",
+                "🧮", "📱", "📞", "☎", "📟", "📠", "📺", "📻", "🎙", "🎚",
+                "🎛", "🧭", "⏱", "⏲", "⏰", "🕰", "⌛", "⏳", "📡", "🔋",
+                "🪫", "🔌", "💡", "🔦", "🕯", "🪔", "🧯", "🛢", "💸", "💵",
+                "💴", "💶", "💷", "🪙", "💰", "💳", "💎", "⚖", "🪜", "🧰"
+            ],
+            "Symbols & Flags (❤-🏁)": [
+                "❤", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "🤎", "💔",
+                "❣", "💕", "💞", "💓", "💗", "💖", "💘", "💝", "💟", "☮",
+                "✝", "☪", "🕉", "☸", "✡", "🔯", "🕎", "☯", "☦", "🛐",
+                "⛎", "♈", "♉", "♊", "♋", "♌", "♍", "♎", "♏", "♐",
+                "♑", "♒", "♓", "🆔", "⚛", "🉑", "☢", "☣", "📴", "📳",
+                "🈶", "🈚", "🈸", "🈺", "🈷", "✴", "🆚", "💮", "🉐", "㊙",
+                "㊗", "🈴", "🈵", "🈹", "🈲", "🅰", "🅱", "🆎", "🆑", "🅾",
+                "🆘", "❌", "⭕", "🛑", "⛔", "📛", "🚫", "💯", "💢", "♨",
+                "🚷", "🚯", "🚳", "🚱", "🔞", "📵", "🚭", "❗", "❕", "❓",
+                "❔", "‼", "⁉", "🔅", "🔆", "〽", "⚠", "🚸", "🔱", "⚜",
+                "🔰", "♻", "✅", "🈯", "💹", "❇", "✳", "❎", "🌐", "💠",
+                "Ⓜ", "🌀", "💤", "🏧", "🚾", "♿", "🅿", "🈳", "🈂", "🛂",
+                "🛃", "🛄", "🛅", "🚹", "🚺", "🚼", "⚧", "🚻", "🚮", "🎦",
+                "📶", "🈁", "🔣", "ℹ", "🔤", "🔡", "🔠", "🆖", "🆗", "🆙",
+                "🆒", "🆕", "🆓", "0️⃣", "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣",
+                "7️⃣", "8️⃣", "9️⃣", "🔟", "🔢", "#️⃣", "*️⃣", "⏏", "▶", "⏸",
+                "⏯", "⏹", "⏺", "⏭", "⏮", "⏩", "⏪", "⏫", "⏬", "◀",
+                "🔼", "🔽", "➡", "⬅", "⬆", "⬇", "↗", "↘", "↙", "↖",
+                "↕", "↔", "↪", "↩", "⤴", "⤵", "🔀", "🔁", "🔂", "🔄",
+                "🔃", "🎵", "🎶", "➕", "➖", "➗", "✖", "🟰", "♾", "💲",
+                "💱", "™", "©", "®", "〰", "➰", "➿", "🔚", "🔙", "🔛",
+                "🔝", "🔜", "✔", "☑", "🔘", "🔴", "🟠", "🟡", "🟢", "🔵",
+                "🟣", "⚫", "⚪", "🟤", "🔺", "🔻", "🔸", "🔹", "🔶", "🔷",
+                "🔳", "🔲", "▪", "▫", "◾", "◽", "◼", "◻", "🟥", "🟧",
+                "🟨", "🟩", "🟦", "🟪", "⬛", "⬜", "🟫", "🔈", "🔇", "🔉",
+                "🔊", "🔔", "🔕", "📣", "📢", "💬", "💭", "🗯", "♠", "♣",
+                "♥", "♦", "🃏", "🎴", "🀄", "🕐", "🕑", "🕒", "🕓", "🕔",
+                "🕕", "🕖", "🕗", "🕘", "🕙", "🕚", "🕛", "🕜", "🕝", "🕞",
+                "🕟", "🕠", "🕡", "🕢", "🕣", "🕤", "🕥", "🕦", "🕧", "🏁"
+            ]
+        }
+        
+        # Count total emojis for statistics
+        for category, emojis in emoji_categories.items():
+            total_sample_emojis += len(emojis)
+        
+        # Show statistics
+        imgui.text(f"Sample Coverage: {total_sample_emojis:,} emojis shown")
+        imgui.text("📊 Unicode Emoji Statistics:")
+        imgui.bullet_text("Total Unicode emojis: ~3,600+ (as of Unicode 15.1)")
+        imgui.bullet_text("This sample shows major categories")
+        imgui.bullet_text("Actual coverage depends on your system's emoji font")
+        imgui.separator()
+        
+        # Show categories with emoji grids
+        for category, emojis in emoji_categories.items():
+            emoji_count = len(emojis)
+            header_text = f"{category} ({emoji_count} emojis)"
+            
+            if imgui.collapsing_header(header_text):
+                # Display emojis in a grid
+                columns = 12  # More columns for better space usage
+                for i, emoji in enumerate(emojis):
+                    if i > 0 and i % columns != 0:
+                        imgui.same_line()
+                    
+                    # Make emoji buttons for better interaction
+                    if imgui.button(emoji, imgui.ImVec2(30, 30)):
+                        # Copy emoji to clipboard (if supported)
+                        pass
+                    
+                    if imgui.is_item_hovered():
+                        # Try to get the actual Unicode codepoint(s)
+                        try:
+                            if len(emoji) == 1:
+                                codepoint = ord(emoji)
+                                imgui.set_tooltip(f"Unicode: U+{codepoint:04X}\nClick to copy")
+                            else:
+                                # Multi-codepoint emoji (like skin tones, ZWJ sequences)
+                                codepoints = [f"U+{ord(c):04X}" for c in emoji]
+                                imgui.set_tooltip(f"Unicode: {' '.join(codepoints)}\nClick to copy")
+                        except:
+                            imgui.set_tooltip(f"Emoji: {emoji}\nClick to copy")
+                
+                imgui.spacing()
+        
+        imgui.separator()
+        imgui.text("🧪 Font Rendering Tests:")
+        
+        # Test different emoji types
+        test_cases = [
+            ("Basic Emojis", "😀 😃 😄 😁 😆 😅 🤣 😂"),
+            ("Skin Tones", "👋 👋🏻 👋🏼 👋🏽 👋🏾 👋�"),
+            ("Compound Emojis", "👨‍💻 👩‍🎓 🧑‍🚀 👩‍⚕️ 👨‍🍳"),
+            ("Flags", "🏁 🏳️ 🏳️‍🌈 🏳️‍⚧️ 🏴‍☠️"),
+            ("Recent Additions", "🫠 🫡 🫥 🫤 🫣 🫢 🫱 🫲"),
+            ("Mixed Content", "Code: -> ≤ ≥ ≠ == /* */ // && || 🔥 💻"),
+        ]
+        
+        for test_name, test_emoji in test_cases:
+            imgui.text(f"{test_name}:")
+            imgui.text(test_emoji)
+            imgui.spacing()
+        
+        imgui.separator()
+        imgui.text_colored((0.7, 0.7, 0.7, 1.0), "💡 Note: Emoji rendering depends on your system's emoji font.")
+        imgui.text_colored((0.7, 0.7, 0.7, 1.0), "Some emojis may appear as □ if not supported.")
+
+    def show_fontawesome_test(self):
+        imgui.text("FontAwesome 4 Icons Test")
+        imgui.separator()
+        
+        # Helper function to safely get FontAwesome icons
+        def safe_icon(name, fallback=""):
+            return getattr(icons_fontawesome_4, name, fallback)
+        
+        # FontAwesome icon categories with safe access
+        icon_categories = {
+            "Interface Icons": [
+                (safe_icon('ICON_FA_HOME'), "Home"),
+                (safe_icon('ICON_FA_USER'), "User"),
+                (safe_icon('ICON_FA_SEARCH'), "Search"),
+                (safe_icon('ICON_FA_COG', safe_icon('ICON_FA_GEAR')), "Settings"),
+                (safe_icon('ICON_FA_BARS'), "Menu"),
+                (safe_icon('ICON_FA_TIMES', safe_icon('ICON_FA_CLOSE')), "Close"),
+                (safe_icon('ICON_FA_PLUS'), "Add"),
+                (safe_icon('ICON_FA_MINUS'), "Remove"),
+                (safe_icon('ICON_FA_EDIT', safe_icon('ICON_FA_PENCIL')), "Edit"),
+                (safe_icon('ICON_FA_TRASH', safe_icon('ICON_FA_TRASH_O')), "Delete"),
+                (safe_icon('ICON_FA_SAVE', safe_icon('ICON_FA_FLOPPY_O')), "Save"),
+                (safe_icon('ICON_FA_UNDO'), "Undo"),
+                (safe_icon('ICON_FA_REFRESH'), "Refresh"),
+                (safe_icon('ICON_FA_DOWNLOAD'), "Download"),
+                (safe_icon('ICON_FA_UPLOAD'), "Upload"),
+            ],
+            "Media & Files": [
+                (safe_icon('ICON_FA_FILE', safe_icon('ICON_FA_FILE_O')), "File"),
+                (safe_icon('ICON_FA_FOLDER', safe_icon('ICON_FA_FOLDER_O')), "Folder"),
+                (safe_icon('ICON_FA_IMAGE', safe_icon('ICON_FA_PICTURE_O')), "Image"),
+                (safe_icon('ICON_FA_VIDEO_CAMERA', safe_icon('ICON_FA_VIDEO')), "Video"),
+                (safe_icon('ICON_FA_MUSIC'), "Music"),
+                (safe_icon('ICON_FA_PLAY'), "Play"),
+                (safe_icon('ICON_FA_PAUSE'), "Pause"),
+                (safe_icon('ICON_FA_STOP'), "Stop"),
+                (safe_icon('ICON_FA_VOLUME_UP'), "Volume Up"),
+                (safe_icon('ICON_FA_VOLUME_DOWN'), "Volume Down"),
+                (safe_icon('ICON_FA_VOLUME_OFF'), "Mute"),
+            ],
+            "Navigation": [
+                (safe_icon('ICON_FA_ARROW_LEFT'), "Left"),
+                (safe_icon('ICON_FA_ARROW_RIGHT'), "Right"),
+                (safe_icon('ICON_FA_ARROW_UP'), "Up"),
+                (safe_icon('ICON_FA_ARROW_DOWN'), "Down"),
+                (safe_icon('ICON_FA_CHEVRON_LEFT'), "Chevron Left"),
+                (safe_icon('ICON_FA_CHEVRON_RIGHT'), "Chevron Right"),
+                (safe_icon('ICON_FA_CHEVRON_UP'), "Chevron Up"),
+                (safe_icon('ICON_FA_CHEVRON_DOWN'), "Chevron Down"),
+                (safe_icon('ICON_FA_ANGLE_LEFT'), "Angle Left"),
+                (safe_icon('ICON_FA_ANGLE_RIGHT'), "Angle Right"),
+            ],
+            "Communication": [
+                (safe_icon('ICON_FA_ENVELOPE', safe_icon('ICON_FA_ENVELOPE_O')), "Email"),
+                (safe_icon('ICON_FA_PHONE'), "Phone"),
+                (safe_icon('ICON_FA_COMMENT', safe_icon('ICON_FA_COMMENT_O')), "Comment"),
+                (safe_icon('ICON_FA_COMMENTS', safe_icon('ICON_FA_COMMENTS_O')), "Comments"),
+                (safe_icon('ICON_FA_BELL', safe_icon('ICON_FA_BELL_O')), "Bell"),
+                (safe_icon('ICON_FA_HEART', safe_icon('ICON_FA_HEART_O')), "Heart"),
+                (safe_icon('ICON_FA_STAR', safe_icon('ICON_FA_STAR_O')), "Star"),
+                (safe_icon('ICON_FA_THUMBS_UP', safe_icon('ICON_FA_THUMBS_O_UP')), "Thumbs Up"),
+                (safe_icon('ICON_FA_THUMBS_DOWN', safe_icon('ICON_FA_THUMBS_O_DOWN')), "Thumbs Down"),
+            ],
+            "Status & Indicators": [
+                (safe_icon('ICON_FA_CHECK'), "Check"),
+                (safe_icon('ICON_FA_TIMES'), "X/Cross"),
+                (safe_icon('ICON_FA_EXCLAMATION'), "Exclamation"),
+                (safe_icon('ICON_FA_QUESTION'), "Question"),
+                (safe_icon('ICON_FA_INFO'), "Info"),
+                (safe_icon('ICON_FA_WARNING', safe_icon('ICON_FA_EXCLAMATION_TRIANGLE')), "Warning"),
+                (safe_icon('ICON_FA_BAN'), "Ban"),
+                (safe_icon('ICON_FA_LOCK'), "Lock"),
+                (safe_icon('ICON_FA_UNLOCK', safe_icon('ICON_FA_UNLOCK_ALT')), "Unlock"),
+                (safe_icon('ICON_FA_EYE'), "Eye"),
+                (safe_icon('ICON_FA_EYE_SLASH'), "Eye Slash"),
+            ]
+        }
+        
+        total_icons = sum(len(icons) for icons in icon_categories.values())
+        imgui.text(f"FontAwesome 4 Sample: {total_icons} icons")
+        imgui.text("Icons are vector-based and scale perfectly!")
+        imgui.separator()
+        
+        for category, icons in icon_categories.items():
+            if imgui.collapsing_header(category):
+                columns = 5
+                for i, (icon, name) in enumerate(icons):
+                    if i > 0 and i % columns != 0:
+                        imgui.same_line()
+                    
+                    # Create button with icon
+                    button_size = imgui.ImVec2(80, 40)
+                    if imgui.button(f"{icon}###{name}", button_size):
+                        logger.info(f"Clicked {name} icon")
+                    
+                    if imgui.is_item_hovered():
+                        imgui.set_tooltip(f"{name}\nIcon: {icon}")
+                
+                imgui.spacing()
+        
+        imgui.separator()
+        imgui.text("Icon Integration Examples:")
+        
+        # Example usage in UI elements
+        play_icon = safe_icon('ICON_FA_PLAY')
+        pause_icon = safe_icon('ICON_FA_PAUSE')
+        stop_icon = safe_icon('ICON_FA_STOP')
+        info_icon = safe_icon('ICON_FA_INFO')
+        home_icon = safe_icon('ICON_FA_HOME')
+        chevron_icon = safe_icon('ICON_FA_CHEVRON_RIGHT')
+        check_icon = safe_icon('ICON_FA_CHECK')
+        
+        if imgui.button(f"{play_icon} Play"):
+            logger.info("Play button clicked")
+        imgui.same_line()
+        
+        if imgui.button(f"{pause_icon} Pause"):
+            logger.info("Pause button clicked")
+        imgui.same_line()
+        
+        if imgui.button(f"{stop_icon} Stop"):
+            logger.info("Stop button clicked")
+        
+        imgui.spacing()
+        imgui.text(f"{info_icon} Mixed text with icons")
+        imgui.text(f"{home_icon} Home {chevron_icon} Settings {chevron_icon} Display")
+        
+        imgui.separator()
+        
+        # Show available icons information
+        available_icons = [attr for attr in dir(icons_fontawesome_4) if attr.startswith('ICON_FA_')]
+        imgui.text(f"Available FontAwesome constants: {len(available_icons)}")
+        
+        # Debug: Show first few icon constants and their values
+        imgui.separator()
+        imgui.text("Debug: First 10 FontAwesome constants:")
+        for i, icon_name in enumerate(available_icons[:10]):
+            icon_value = getattr(icons_fontawesome_4, icon_name, "")
+            # Show both the constant name and its Unicode value
+            if icon_value:
+                try:
+                    unicode_val = ord(icon_value) if len(icon_value) == 1 else "multi-char"
+                    imgui.text(f"{icon_name}: '{icon_value}' (U+{unicode_val:04X})" if unicode_val != "multi-char" else f"{icon_name}: '{icon_value}' (multi-char)")
+                except:
+                    imgui.text(f"{icon_name}: '{icon_value}' (unknown)")
+            else:
+                imgui.text(f"{icon_name}: (empty)")
+        
+        imgui.separator()
+        imgui.text("Raw icon test (should show Unicode characters):")
+        # Test some basic icons directly
+        test_icons = ['ICON_FA_HOME', 'ICON_FA_USER', 'ICON_FA_SEARCH', 'ICON_FA_STAR']
+        for icon_name in test_icons:
+            if hasattr(icons_fontawesome_4, icon_name):
+                icon_char = getattr(icons_fontawesome_4, icon_name)
+                imgui.text(f"{icon_name}: -> {icon_char} <-")
+                imgui.same_line()
+                imgui.text_colored((0.7, 0.7, 0.7, 1.0), f"(should be an icon)")
+            else:
+                imgui.text(f"{icon_name}: NOT FOUND")
+        
+        imgui.separator()
+        imgui.text_colored((1.0, 0.8, 0.3, 1.0), "If you see boxes □ or empty spaces, the FontAwesome font isn't loaded.")
+        imgui.text_colored((0.7, 0.7, 0.7, 1.0), "The Unicode characters exist, but need the FontAwesome font to display properly.")
+        
+        imgui.separator()
+        if check_icon:
+            imgui.text_colored((0.3, 0.8, 0.3, 1.0), f"{check_icon} FontAwesome constants are loaded")
+        else:
+            imgui.text_colored((1.0, 0.7, 0.3, 1.0), "FontAwesome constants may be missing")
+        
+        imgui.text_colored((0.7, 0.7, 0.7, 1.0), "Note: Icons need proper font loading to render correctly")
         
     def show_parameters(self):
         imgui.separator_text("Image")
@@ -434,6 +733,17 @@ class App:
         _, self.second_axis = imgui.combo("second axis", self.second_axis, solver.Axis._member_names_)
         imgui.set_next_item_width(150)
         _, self.scene_scale = imgui.slider_float("scene  scale", self.scene_scale, 1.0, 100.0, "%.2f")
+        
+        imgui.separator()
+        # Quick FontAwesome test
+        home_icon = getattr(icons_fontawesome_4, 'ICON_FA_HOME', '')
+        star_icon = getattr(icons_fontawesome_4, 'ICON_FA_STAR', '')
+        if imgui.button(f"FontAwesome Test: {home_icon} {star_icon}"):
+            logger.info(f"FontAwesome test - Home: '{home_icon}' Star: '{star_icon}'")
+        
+        # FontAwesome setup helper
+        if imgui.button("Create FontAwesome Assets Folder"):
+            self.create_fontawesome_assets_folder()
         
         match self.solver_mode:
             case SolverMode.OneVP:
@@ -531,15 +841,6 @@ class App:
                 image_size = br - tl
                 imgui.set_cursor_pos(tl)
                 if self.dim_background:
-                    style = imgui.get_style()
-            
-                    # imgui.set_cursor_pos(style.window_padding)
-                    # static.setdefault('bg_color',   [0.33,0.33,0.33,1.0])
-                    # static.setdefault('tint_color', [0.33,0.33,0.33,1.0])
-
-                    # _, static['bg_color'] = imgui.color_edit4("bg color", static['bg_color'], imgui.ColorEditFlags_.no_inputs | imgui.ColorEditFlags_.no_label | imgui.ColorEditFlags_.alpha_bar)
-                    # _, static['tint_color'] = imgui.color_edit4("tint color", static['tint_color'], imgui.ColorEditFlags_.no_inputs | imgui.ColorEditFlags_.no_label | imgui.ColorEditFlags_.alpha_bar)
-                    
                     imgui.image_with_bg(self.image_texture_ref, image_size, None, None, 
                                         bg_col=  (0.33,0.33,0.33,1.0),
                                         tint_col=(0.33,0.33,0.33,1.0)
@@ -662,19 +963,82 @@ class App:
                 imgui.input_text("##position", position_text, flags=imgui.InputTextFlags_.read_only)
                 
                 # imgui.begin_tooltip()
+                
                 next_attribute("quaternion (xyzw)")
                 imgui.input_text("##quaternion", quat_text, flags=imgui.InputTextFlags_.read_only)
                 imgui.set_item_tooltip("Quaternion representing camera rotation (x, y, z, w)")
 
-                next_attribute("euler order")
+                # next_attribute("euler order")
+                
+                next_attribute(f"euler")
+                imgui.push_style_var(imgui.StyleVar_.item_spacing, imgui.ImVec2(2, style.item_spacing.y))
+                euler_order_options = solver.EulerOrder._member_names_
+                max_text_width = max([imgui.calc_text_size(text).x for text in euler_order_options])
+                total_width = max_text_width + style.frame_padding.x * 2.0
+                total_width+=imgui.get_frame_height() # for the arrow button todo: is it square for sure?
+                imgui.set_next_item_width(total_width)
+                # if imgui.begin_combo("##euler_order", solver.EulerOrder._member_names_[self.current_euler_order], imgui.ComboFlags_.no_arrow_button):
+                #     for i, option in enumerate(euler_order_options):
+                #         is_selected = (i == self.current_euler_order)
+                #         _, selected_event =  imgui.selectable(option, is_selected)
+                #         if selected_event:
+                #             self.current_euler_order = i
+                #         if is_selected:
+                #             imgui.set_item_default_focus()
+                #     imgui.end_combo()
                 _, self.current_euler_order = imgui.combo("##euler_order", self.current_euler_order, solver.EulerOrder._member_names_)
-                next_attribute(f"euler ({solver.EulerOrder._member_names_[self.current_euler_order]})°")
+                imgui.set_item_tooltip("Select the Euler angle rotation order used for decomposition.")
+                imgui.same_line()
+                imgui.set_next_item_width(-1)
                 imgui.input_text("##euler", euler_text, flags=imgui.InputTextFlags_.read_only)
                 imgui.set_item_tooltip("Euler angles in degrees (x,y,z).\nNote: Rotation is applied in order order: ZXY (Yaw, Pitch, Roll)")
-
+                imgui.pop_style_var()
                 next_attribute("fov")
                 imgui.input_text("##fov", f"{self.camera.fovy:.2f}°")
+
                 end_attribute_editor()
+
+        if self.camera is not None:
+            data = {
+                "viewTransform": {
+                    "rows": [[col for col in self.camera.viewMatrix()[j]] for j in range(4)]
+                },
+                "projectionTransform": {
+                    "rows": [[col for col in self.camera.projectionMatrix()[j]] for j in range(4)]
+                },
+                "verticalFieldOfView": self.camera.fovy
+            }
+            # additional_data = {
+            #     "principalPoint": {
+            #         'x': self.principal_point_pixel.x, 
+            #         'y': self.principal_point_pixel.y
+            #     },
+            #     "vanishingPoints": [
+            #         {
+            #             'x': self.first_vanishing_point_pixel.x, 
+            #             'y': self.first_vanishing_point_pixel.y
+            #         },
+            #         {
+            #             'x': self.second_vanishing_point_pixel.x, 
+            #             'y': self.second_vanishing_point_pixel.y
+            #         },
+            #         "TODO:calculate third VP"
+            #     ],
+            #     "vanishingPointAxes": [
+            #         solver.Axis._member_map_[self.first_axis], 
+            #         solver.Axis._member_map_[self.second_axis],
+            #         "TODO:thirdAxis"
+            #     ],
+            #     'focalLength': "todo: calculate from fov with the camera sensor size in mind",
+            #     "imageWidth": int(self.content_size.x),
+            #     "imageHeight": int(self.content_size.y)
+            # }
+
+            import json
+            json_string = json.dumps(data, indent=4)
+            imgui.text(json_string)
+            if imgui.button("export camera parameters", imgui.ImVec2(-1,0)):
+                ...
 
     def open_image_file(self, path:str|None=None):
         from pathlib import Path
@@ -741,6 +1105,59 @@ class App:
             import traceback
             traceback.print_exc()
 
+    def create_fontawesome_assets_folder(self):
+        """Create the proper assets folder structure for FontAwesome fonts"""
+        from pathlib import Path
+        
+        # Create the assets/fonts directory structure
+        demo_dir = Path(__file__).parent
+        assets_fonts_dir = demo_dir / "assets" / "fonts"
+        
+        try:
+            assets_fonts_dir.mkdir(parents=True, exist_ok=True)
+            logger.info(f"✓ Created directory: {assets_fonts_dir}")
+            
+            # Create a README file with instructions
+            readme_file = assets_fonts_dir / "README_FontAwesome.txt"
+            readme_content = """FontAwesome Font Setup for ImGui Bundle
+
+This folder should contain: fontawesome-webfont.ttf
+
+HOW TO GET FontAwesome FONT:
+
+1. Download FontAwesome 4 Web Font:
+   Visit: https://fontawesome.com/v4/get-started/
+   Download the web font package
+   Extract fontawesome-webfont.ttf from the fonts/ folder
+
+2. Download ImGui Bundle default assets (includes FontAwesome):
+   Visit: https://traineq.org/ImGuiBundle/assets.zip
+   Extract to get the complete assets folder with fonts
+
+3. Use wget/curl (if available):
+   wget https://github.com/FortAwesome/Font-Awesome/raw/v4.7.0/fonts/fontawesome-webfont.ttf
+
+Once you have fontawesome-webfont.ttf, place it in this folder.
+Then restart your application to load FontAwesome icons!
+"""
+            
+            with open(readme_file, 'w', encoding='utf-8') as f:
+                f.write(readme_content)
+            
+            logger.info(f"✓ Created instructions: {readme_file}")
+            logger.info("📁 Assets folder structure created!")
+            logger.info("📋 Check README_FontAwesome.txt for detailed instructions")
+            logger.info("")
+            logger.info("🚀 Next steps:")
+            logger.info("   1. Download fontawesome-webfont.ttf (see README)")
+            logger.info(f"   2. Place it in: {assets_fonts_dir}/")
+            logger.info("   3. Restart the application")
+            
+        except Exception as e:
+            logger.error(f"Failed to create assets folder: {e}")
+            import traceback
+            traceback.print_exc()
+
     def on_file_drop(self, window, paths):
         from pathlib import Path
         """GLFW drop callback - receives list of paths"""
@@ -769,7 +1186,7 @@ if __name__ == "__main__":
     runner_params.app_window_params.repaint_during_resize_gotcha_reentrant_repaint = True
 
     def load_fonts():
-        """Load FiraCode fonts"""
+        """Load FiraCode fonts with emoji support"""
         from pathlib import Path
         try:
             # Get the fonts directory
@@ -790,9 +1207,173 @@ if __name__ == "__main__":
             fira_bold = fonts_dir / "FiraCode-Bold.ttf"
             
             if fira_regular.exists():
-                # Add FiraCode as default font (40px) - this will be the primary font
-                io.fonts.add_font_from_file_ttf(str(fira_regular), base_size)
+                # Configure font to merge with system emoji font
+                font_cfg = imgui.ImFontConfig()
+                font_cfg.merge_mode = False  # First font, don't merge
+                
+                # Add FiraCode as primary font
+                font = io.fonts.add_font_from_file_ttf(str(fira_regular), base_size, font_cfg)
                 logger.info(f"✓ Loaded FiraCode Regular from {fira_regular} at {base_size}px")
+                
+                # Add FontAwesome icons as merged font
+                # Try different FontAwesome loading methods based on imgui_bundle version
+                fa_loaded = False
+                
+                try:
+                    # Method 1: Check if immapp has FontAwesome functions
+                    from imgui_bundle import immapp
+                    if hasattr(immapp, 'add_font_awesome_to_font_atlas'):
+                        immapp.add_font_awesome_to_font_atlas()
+                        fa_loaded = True
+                        logger.info("✓ Loaded FontAwesome via immapp.add_font_awesome_to_font_atlas()")
+                    elif hasattr(immapp, 'load_font_awesome'):
+                        immapp.load_font_awesome(base_size)
+                        fa_loaded = True
+                        logger.info("✓ Loaded FontAwesome via immapp.load_font_awesome()")
+                except Exception as e1:
+                    logger.warning(f"immapp FontAwesome loading failed: {e1}")
+                
+                if not fa_loaded:
+                    try:
+                        # Method 2: Try manual font file approach
+                        import os
+                        from pathlib import Path
+                        
+                        # Look for FontAwesome font file per imgui_bundle conventions
+                        script_dir = Path(__file__).parent
+                        possible_fa_paths = [
+                            # imgui_bundle expects FontAwesome in assets/fonts/ folder
+                            script_dir / "assets" / "fonts" / "fontawesome-webfont.ttf",
+                            script_dir / "assets" / "fonts" / "fa-solid-900.ttf",  # FontAwesome 5/6
+                            script_dir / "assets" / "fonts" / "FontAwesome.ttf",
+                            # Also check the fonts/ folder you already have
+                            script_dir / "fonts" / "fontawesome-webfont.ttf",
+                            script_dir / "fonts" / "FontAwesome.ttf",
+                            # Check parent directory assets (common pattern)
+                            script_dir.parent / "assets" / "fonts" / "fontawesome-webfont.ttf",
+                            # Try system fonts
+                            Path("C:/Windows/Fonts/fontawesome-webfont.ttf"),
+                        ]
+                        
+                        fa_font_loaded = False
+                        for fa_path in possible_fa_paths:
+                            if fa_path.exists():
+                                try:
+                                    # Method 1: Try with glyph ranges
+                                    fa_config = imgui.ImFontConfig()
+                                    fa_config.merge_mode = True
+                                    
+                                    # Create glyph ranges properly for imgui_bundle
+                                    fa_ranges = imgui.GlyphRangesBuilder()
+                                    fa_ranges.add_ranges(imgui.get_io().fonts.get_glyph_ranges_default())
+                                    # Add FontAwesome range
+                                    fa_ranges.add_char(ord(icons_fontawesome_4.ICON_MIN_FA))
+                                    fa_ranges.add_char(ord(icons_fontawesome_4.ICON_MAX_FA))
+                                    ranges = fa_ranges.build_ranges()
+                                    
+                                    font = io.fonts.add_font_from_file_ttf(str(fa_path), base_size, fa_config, ranges)
+                                    if font:
+                                        logger.info(f"✓ Loaded FontAwesome from file (with ranges): {fa_path}")
+                                        fa_font_loaded = True
+                                        fa_loaded = True
+                                        break
+                                except Exception as e3a:
+                                    logger.warning(f"Failed to load FontAwesome with ranges from {fa_path}: {e3a}")
+                                    try:
+                                        # Method 2: Try without ranges (simpler)
+                                        fa_config_simple = imgui.ImFontConfig()
+                                        fa_config_simple.merge_mode = True
+                                        font = io.fonts.add_font_from_file_ttf(str(fa_path), base_size, fa_config_simple)
+                                        if font:
+                                            logger.info(f"✓ Loaded FontAwesome from file (no ranges): {fa_path}")
+                                            fa_font_loaded = True
+                                            fa_loaded = True
+                                            break
+                                    except Exception as e3b:
+                                        logger.warning(f"Failed to load FontAwesome without ranges from {fa_path}: {e3b}")
+                                        try:
+                                            # Method 3: Try with None config (most basic)
+                                            font = io.fonts.add_font_from_file_ttf(str(fa_path), base_size)
+                                            if font:
+                                                logger.info(f"✓ Loaded FontAwesome from file (basic): {fa_path}")
+                                                fa_font_loaded = True
+                                                fa_loaded = True
+                                                break
+                                        except Exception as e3c:
+                                            logger.warning(f"All FontAwesome loading methods failed for {fa_path}: {e3c}")
+                        
+                        if not fa_font_loaded and not fa_loaded:
+                            logger.warning("No FontAwesome font loaded. Icons will appear as boxes or empty spaces.")
+                            logger.info("FontAwesome constants are available but need the font file to render properly.")
+                            logger.info("")
+                            logger.info("📁 WHERE TO PLACE FontAwesome FONT:")
+                            demo_dir = Path(__file__).parent
+                            logger.info(f"   Create: {demo_dir}/assets/fonts/")
+                            logger.info(f"   Place fontawesome-webfont.ttf in that folder")
+                            logger.info("")
+                            logger.info("📦 HOW TO GET FontAwesome FONT:")
+                            logger.info("   1. Download from: https://fontawesome.com/v4/get-started/")
+                            logger.info("   2. Or download default assets: https://traineq.org/ImGuiBundle/assets.zip")
+                            logger.info("   3. Or pip install fonttools and get from CDN")
+                            logger.info("")
+                            logger.info("🔧 CHECKED THESE LOCATIONS:")
+                            for path in possible_fa_paths:
+                                exists_str = "✓" if path.exists() else "✗"
+                                logger.info(f"   {exists_str} {path}")
+                            logger.info("")
+                            logger.info("💡 Alternative: Use Unicode symbols instead of FontAwesome icons")
+                            
+                    except Exception as e2:
+                        logger.warning(f"Manual FontAwesome loading failed: {e2}")
+                        logger.info("FontAwesome icons will not be available")
+                
+                # Try to add system emoji font as fallback
+                try:
+                    import platform
+                    system = platform.system()
+                    
+                    emoji_font_cfg = imgui.ImFontConfig()
+                    emoji_font_cfg.merge_mode = True  # Merge with previous font
+                    emoji_font_cfg.pixel_snap_h = True
+                    
+                    emoji_font_path = None
+                    if system == "Windows":
+                        # Try Windows emoji fonts
+                        for font_name in ["seguiemj.ttf", "NotoColorEmoji.ttf"]:
+                            font_path = Path(f"C:/Windows/Fonts/{font_name}")
+                            if font_path.exists():
+                                emoji_font_path = str(font_path)
+                                break
+                    elif system == "Darwin":  # macOS
+                        emoji_font_path = "/System/Library/Fonts/Apple Color Emoji.ttc"
+                    elif system == "Linux":
+                        # Try common Linux emoji fonts
+                        for font_path in ["/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf",
+                                        "/usr/share/fonts/TTF/NotoColorEmoji.ttf"]:
+                            if Path(font_path).exists():
+                                emoji_font_path = font_path
+                                break
+                    
+                    if emoji_font_path and Path(emoji_font_path).exists():
+                        # Try to load emoji font without specific ranges first (simpler approach)
+                        try:
+                            io.fonts.add_font_from_file_ttf(emoji_font_path, base_size, emoji_font_cfg)
+                            logger.info(f"✓ Loaded emoji font: {emoji_font_path}")
+                        except Exception as e:
+                            logger.warning(f"Could not load emoji font {emoji_font_path}: {e}")
+                            # Fallback: try with default glyph ranges
+                            try:
+                                emoji_font_cfg_simple = imgui.ImFontConfig()
+                                emoji_font_cfg_simple.merge_mode = True
+                                io.fonts.add_font_from_file_ttf(emoji_font_path, base_size, emoji_font_cfg_simple)
+                                logger.info(f"✓ Loaded emoji font (fallback): {emoji_font_path}")
+                            except Exception as e2:
+                                logger.warning(f"Emoji font fallback also failed: {e2}")
+                    else:
+                        logger.warning(f"No emoji font found for {system}")
+                        
+                except Exception as e:
+                    logger.warning(f"Could not load emoji font: {e}")
                 
                 if fira_bold.exists():
                     io.fonts.add_font_from_file_ttf(str(fira_bold), base_size)

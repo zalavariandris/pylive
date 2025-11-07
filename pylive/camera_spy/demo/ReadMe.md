@@ -9,6 +9,7 @@
 
 - [x] show horizon line
 - [ ] show real world size units
+- [ ] add a tape measure on the grid floor? or on a specific axis?
 
 - [?] landing page. when no image is loaded, show instructions to load an image.
 - [x] disable docking
@@ -40,20 +41,32 @@ THEMING
   - [x] include quaternion values
   - [x] allow specifying rotation order for euler angles
 
-- [ ] export
-  - [ ] copy to clipboard (if pasting to destination is possible)
-  - [ ] save to file (json yaml, if possible create destination specific format)
-  - [ ] formats: json, yaml, fspy. Applications: blender? after? Maya, Max, houdini nuke?
+- [ ] save and load project
+
+- [-] export
+  - [ ] export to json
+  - [ ] copy to clipboard json
+  - [ ] copy to clipboard for destination app,  (if pasting to destination is even possible, or create a script for them?)
+        - AE
+        - blender
+        - max
+        - houdini
+        - nuke?
+  - [ ] consider other formats: yaml, fspy.
+  - [ ] consider creating destination specific applications: blender? after? Maya, Max, houdini nuke?
+  - [ ] consider additional data like sensor size, vanishing points, computed vanishing points, sensor size based focal length etc.
+
 
 - [ ] consider a log window to show messages
 - [ ] also show error in results window if camera cant be solved...
-- [ ] allow emojis! :)
+- [x] allow emojis! :)
 
 ## Code Quality
 - [ ] simplify variable names. 
       eg _pixels unit does not needed anymore.
       consider using vp1 instead of first_vanishing_point_pixel, etc.
 - [ ] clenup hello_imgui mess and potentially move it into a wrapper function.
+- [ ] cleanup font loading with FA and emojis. it is a mess now.
 - [ ] consider writing a helper run-like function without using hello_imgui. (this coul be more problematic eg: dpi awarness, docking options, etc...)
 
 - [ ] COLLECT TODOS from Code Comments, and consider fixing or dropping them.
