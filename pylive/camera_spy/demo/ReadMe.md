@@ -21,18 +21,12 @@
 - [x] the blue controls are not saturated enough against dark background
       => added some green to the blue and a little to the red as well. these colors now a lot more pleasant on the dark background.
 
-- [ ] simplify variable names. 
-      eg _pixels unit does not needed anymore.
-      consider using vp1 instead of first_vanishing_point_pixel, etc.
-
 - [x] adjusted style for windows dark mode.
       force window title bar to darkmmode on windows. (note: blender on windows seem to force the dark mode titlebar, that fits its own colorscheme)
 - [ ] adjust style for osx, potentially force dark mode for native window.
 - [ ] linux?
 
-
-- [ ] "help?" menu
-- [ ] about menu with links to github, author info
+- [x] about menu with links to github, author info
 
 - camera sensor size?
   - presets
@@ -53,6 +47,13 @@
 - [ ] consider a log window to show messages
 - [ ] also show error in results window if camera cant be solved...
 - [ ] allow emojis! :)
+
+## Code Quality
+- [ ] simplify variable names. 
+      eg _pixels unit does not needed anymore.
+      consider using vp1 instead of first_vanishing_point_pixel, etc.
+- [ ] clenup hello_imgui mess and potentially move it into a wrapper function.
+- [ ] consider writing a helper run-like function without using hello_imgui. (this coul be more problematic eg: dpi awarness, docking options, etc...)
 
 - [ ] COLLECT TODOS from Code Comments, and consider fixing or dropping them.
 

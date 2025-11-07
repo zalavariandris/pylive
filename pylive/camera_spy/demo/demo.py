@@ -262,6 +262,9 @@ class App:
         self.image_texture_id: int|None = None
         self.dim_background: bool = True
 
+        # UI state for popup from menu
+        self.show_about_popup: bool = False
+
         # control points
         self.first_vanishing_lines_pixel = [
             (glm.vec2(296, 417), glm.vec2(633, 291)),
@@ -323,18 +326,42 @@ class App:
                 if imgui.menu_item_simple("Manual"):
                     ...
                 if imgui.menu_item_simple("About"):
-                    ...
+                    self.show_about_popup = True
                 
                 imgui.end_menu()
             
-            # Get the actual height of the menu bar
+            # Store the actual height of the menu bar
             menu_bar_height = imgui.get_frame_height()
             imgui.end_main_menu_bar()
-        
-        # Pop the style variables we pushed
-        # imgui.pop_style_var(2)
 
-        # Parameters
+        # Model About window
+        if self.show_about_popup:
+            imgui.set_next_window_pos(imgui.ImVec2(0,0), imgui.Cond_.always)
+            imgui.set_next_window_size(imgui.get_io().display_size, imgui.Cond_.always)
+            imgui.set_next_window_bg_alpha(0.75)
+            # imgui.set_next_window_focus()
+            if imgui.begin("about##modal", None, imgui.WindowFlags_.no_title_bar | imgui.WindowFlags_.no_scrollbar | imgui.WindowFlags_.no_collapse | imgui.WindowFlags_.no_move | imgui.WindowFlags_.no_resize | imgui.WindowFlags_.no_collapse):
+                modal_window_pos = imgui.get_window_pos()
+                modal_window_size = imgui.get_window_size()
+                imgui.set_next_window_pos(modal_window_size/2+modal_window_pos, imgui.Cond_.always, imgui.ImVec2(0.5,0.5))
+                style = imgui.get_style()
+                imgui.push_style_color(imgui.Col_.child_bg, style.color_(imgui.Col_.window_bg))
+                if imgui.begin_child("about##content", None, imgui.ChildFlags_.always_use_window_padding | imgui.ChildFlags_.always_auto_resize | imgui.ChildFlags_.auto_resize_x | imgui.ChildFlags_.auto_resize_y):
+                    self.show_about()
+                    # if imgui.button("Close", imgui.ImVec2(0, 0)):
+                    #     self.show_about_popup = False
+                imgui.end_child()
+                imgui.pop_style_color()
+
+                # Close popup on Escape or outside click
+                if imgui.is_key_pressed(imgui.Key.escape):
+                    self.show_about_popup = False
+                if not imgui.is_any_item_active() and imgui.get_io().mouse_clicked[0]:
+                    self.show_about_popup = False
+                
+            imgui.end()
+
+        # Parameters Window
         style = imgui.get_style()
         display_size = imgui.get_io().display_size
 
@@ -345,32 +372,33 @@ class App:
 
         self.solve()
 
-        # fullscreen viewer
+        # fullscreen viewer Window
         imgui.set_next_window_pos(imgui.ImVec2(0, menu_bar_height))
         imgui.set_next_window_size(imgui.ImVec2(display_size.x, display_size.y - menu_bar_height))       
         if imgui.begin("MainViewport", None, imgui.WindowFlags_.no_bring_to_front_on_focus | imgui.WindowFlags_.no_move | imgui.WindowFlags_.no_resize | imgui.WindowFlags_.no_collapse | imgui.WindowFlags_.no_title_bar):
             self.show_viewer()
         imgui.end()
 
+        # Results Window
         imgui.set_next_window_pos(imgui.ImVec2(display_size.x-style.window_padding.x, display_size.y/2), imgui.Cond_.always, imgui.ImVec2(1.0, 0.5))
         if begin_sidebar("Results"):
             self.show_results()
         end_sidebar()
 
-        
+        # Style Editor Window
         if imgui.begin("style editor"):
             imgui.show_style_editor()
         imgui.end()
 
-        if imgui.begin("about"):
-            imgui.text_wrapped("Camera Spy Demo\n\n"
-                               "Drop an image file (jpg, png, etc) into the window to load it as background.\n\n"
-                               "Define vanishing lines by dragging the control points.\n\n"
-                               "Adjust parameters in the sidebar to compute the camera.\n\n"
-                               "Developed with ❤ by András Zalavári\n"
-                               "https://github.com/yourusername/camera-spy")
-
-        imgui.end()
+    def show_about(self):
+        imgui.text("Camera Spy Demo")
+        imgui.separator()
+        imgui.text("Drop an image file (jpg, png, etc) into the window to load it as background.")
+        imgui.text("Define vanishing lines by dragging the control points.")
+        imgui.text("Adjust parameters in the sidebar to compute the camera.")
+        imgui.separator()
+        imgui.text("Developed with ❤ by András Zalavári")
+        imgui.text_link_open_url("https://github.com/yourusername/camera-spy")
         
     def show_parameters(self):
         imgui.separator_text("Image")
