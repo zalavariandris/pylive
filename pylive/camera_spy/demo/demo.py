@@ -1,4 +1,3 @@
-
 # Standard library imports
 import time
 startup_start_time = time.time()
@@ -55,12 +54,12 @@ def end_attribute_editor():
 def next_attribute(string:str=""):
     imgui.table_next_row()
     imgui.table_next_column()
-    avail_width = imgui.get_content_region_avail().x
-    text_size = imgui.calc_text_size(string)
-    item_width = text_size.x - imgui.get_style().cell_padding.x*2
-    if avail_width > item_width+1:
-        imgui.set_cursor_pos_x(avail_width - item_width+imgui.get_style().cell_padding.x)
-    imgui.text(string)
+    imgui.push_style_var(imgui.StyleVar_.selectable_text_align, imgui.ImVec2(1.0,0))
+    imgui.push_style_color(imgui.Col_.header_hovered, (0, 0, 0, 0))
+    imgui.push_style_color(imgui.Col_.header_active,  (0, 0, 0, 0))
+    imgui.selectable(string, False)
+    imgui.pop_style_var()
+    imgui.pop_style_color(2)
     imgui.table_next_column()
     imgui.set_next_item_width(-1) # stretch item to fill cell
 
@@ -98,6 +97,12 @@ def setup_dark_theme():
         0.15,   # shallow
     ]
 
+    windows_dark_titlebar_color = [32/255, 32/255, 32/255, 1.0]
+    windows_dark_text_color = [255/255, 255/255, 255/255, 1.0]
+    windows_light_titlebar_color = [243/255.0]*3 + [1.0]
+    windows_light_text_color = [25/255.0]*3 + [1.0]
+
+    style.set_color_(imgui.Col_.text ,               windows_dark_text_color)
     style.set_color_(imgui.Col_.title_bg ,           imgui.ImVec4(*[levels[1]]*3,1.00))
     style.set_color_(imgui.Col_.title_bg_active ,    imgui.ImVec4(*[levels[1]]*3,1.00))
     style.set_color_(imgui.Col_.title_bg_collapsed , imgui.ImVec4(*[levels[1]]*3,1.00))
@@ -106,6 +111,9 @@ def setup_dark_theme():
     style.set_color_(imgui.Col_.frame_bg ,           imgui.ImVec4(*[levels[3]]*3,1.00))
     style.set_color_(imgui.Col_.button   ,           imgui.ImVec4(*[levels[3]]*3,1.00))
 
+    # Remove the dark border by setting menu bar background to match the menu bar
+    style.set_color_(imgui.Col_.menu_bar_bg,         windows_dark_titlebar_color)
+    
     style.window_padding = imgui.ImVec2(12, 12)
     style.frame_padding = imgui.ImVec2(12, 6)
     style.item_spacing = imgui.ImVec2(12, 16)
@@ -121,10 +129,83 @@ def setup_dark_theme():
     style.grab_rounding = 4
     style.frame_rounding = 4
 
+    style.separator_text_align = imgui.ImVec2(0.0, 0.5)
+    style.separator_text_border_size = 1
+
     style.window_title_align = imgui.ImVec2(0.5, 0.5)
     style.window_menu_button_position = imgui.Dir.right
 
     logger.info("✓ ImGui theme applied")
+
+
+def setup_windows_dark_theme():
+    style = imgui.get_style()
+    imgui.style_colors_dark(style)
+
+    style.anti_aliased_lines = True
+    style.anti_aliased_lines_use_tex = True
+    style.anti_aliased_fill = True
+
+    levels = [
+        0.08,   # really deep
+        0.09,   # deep
+        0.11,   # medium
+        0.15,   # shallow
+    ]
+
+    windows_dark_titlebar_color = [ 32/255,  32/255, 32/255, 1.0]
+    levels = [
+        22/255,   # really deep
+        32/255,   # deep
+        43/255,   # medium
+        57/255,   # shallow
+    ]
+    windows_dark_text_color =     [255/255, 255/255, 255/255, 1.0]
+
+    windows_light_titlebar_color = [243/255.0]*3 + [1.0]
+    windows_light_text_color = [25/255.0]*3 + [1.0]
+
+    style.set_color_(imgui.Col_.text ,               windows_dark_text_color)
+    style.set_color_(imgui.Col_.title_bg ,           imgui.ImVec4(*[levels[1]]*3,1.00))
+    style.set_color_(imgui.Col_.title_bg_active ,    imgui.ImVec4(*[levels[1]]*3,1.00))
+    style.set_color_(imgui.Col_.title_bg_collapsed , imgui.ImVec4(*[levels[1]]*3,1.00))
+    style.set_color_(imgui.Col_.window_bg,           imgui.ImVec4(*[levels[1]]*3,1.00))
+    style.set_color_(imgui.Col_.child_bg ,           imgui.ImVec4(*[levels[2]]*3,1.00))
+    style.set_color_(imgui.Col_.frame_bg ,           imgui.ImVec4(*[levels[3]]*3,1.00))
+    style.set_color_(imgui.Col_.button   ,           imgui.ImVec4(*[levels[3]]*3,1.00))
+    style.set_color_(imgui.Col_.popup_bg ,           imgui.ImVec4(*[levels[1]]*3,1.00))
+
+    # Remove the dark border by setting menu bar background to match the menu bar
+    style.set_color_(imgui.Col_.menu_bar_bg,         windows_dark_titlebar_color)
+    
+    style.window_padding = imgui.ImVec2(12, 12)
+    style.frame_padding = imgui.ImVec2(6, 6)
+    style.item_spacing = imgui.ImVec2(12, 12)
+
+    style.frame_border_size = 0
+
+    style.child_border_size = 0
+    style.window_border_size = 0
+    style.set_color_(imgui.Col_.border   , imgui.ImVec4(*[levels[2]]*3,1.00))
+    style.popup_border_size = 1
+
+    style.grab_min_size = 4
+
+    
+    style.grab_rounding = 4
+    style.frame_rounding = 4
+    style.frame_rounding = 4
+    style.popup_rounding = 4
+    style.child_rounding = 4
+    style.window_rounding = 4
+    style.scrollbar_rounding = 4
+
+    style.window_title_align = imgui.ImVec2(0.5, 0.5)
+    style.window_menu_button_position = imgui.Dir.right
+
+    logger.info("✓ ImGui theme applied")
+
+
 
 def setup_light_theme():
     style = imgui.get_style()
@@ -219,16 +300,48 @@ class App:
         # Compute Camera
         self.camera = Camera()
 
+        # Create main menu bar (independent of any window)
+        menu_bar_height = 0
+        
+        # Push styling to eliminate border between title bar and menu bar
+        # imgui.push_style_var(imgui.StyleVar_.window_border_size, 0.0)
+        # imgui.push_style_var(imgui.StyleVar_.frame_border_size, 0.0)
+        if imgui.begin_main_menu_bar():
+            if imgui.begin_menu("File"):
+                if imgui.menu_item_simple("Open Image", "Ctrl+O"):
+                    self.open_image_file()
+                
+                imgui.separator()
+                if imgui.menu_item_simple("Quit", "Ctrl+Q"):
+                    # Exit the application
+                    import sys
+                    sys.exit(0)
+                
+                imgui.end_menu()
+
+            if imgui.begin_menu("Help"):
+                if imgui.menu_item_simple("Manual"):
+                    ...
+                if imgui.menu_item_simple("About"):
+                    ...
+                
+                imgui.end_menu()
+            
+            # Get the actual height of the menu bar
+            menu_bar_height = imgui.get_frame_height()
+            imgui.end_main_menu_bar()
+        
+        # Pop the style variables we pushed
+        # imgui.pop_style_var(2)
+
         # Parameters
         style = imgui.get_style()
         display_size = imgui.get_io().display_size
-        menu_bar_height = 0
 
         imgui.set_next_window_pos(imgui.ImVec2(style.window_padding.x, display_size.y/2), imgui.Cond_.always, imgui.ImVec2(0.0, 0.5))
         if begin_sidebar("Parameters", None):
             self.show_parameters()
         end_sidebar()
-
 
         self.solve()
 
@@ -609,6 +722,10 @@ if __name__ == "__main__":
     runner_params.imgui_window_params.menu_app_title = "Camera Spy"
     runner_params.app_window_params.window_geometry.size = (1200, 512)
     runner_params.app_window_params.restore_previous_geometry = True
+    
+    # Set background color to match menu bar to eliminate dark border
+    windows_dark_titlebar_color = [32/255, 32/255, 32/255, 1.0]
+    runner_params.imgui_window_params.background_color = windows_dark_titlebar_color
 
     # Enable DPI awareness
     runner_params.dpi_aware_params.dpi_window_size_factor = 1.0  # Auto-detect
@@ -616,8 +733,6 @@ if __name__ == "__main__":
     # Enable continuous rendering during window resize
     runner_params.fps_idling.enable_idling = True
     runner_params.app_window_params.repaint_during_resize_gotcha_reentrant_repaint = True
-
-
 
     def load_fonts():
         """Load FiraCode fonts"""
@@ -684,20 +799,130 @@ if __name__ == "__main__":
             traceback.print_exc()
 
     app = App()
-    def post_init():
-        # Disable docking
+    
+    def setup_imgui_config():
+        """Setup ImGui configuration before initialization"""
         io = imgui.get_io()
+        # Disable docking completely
         io.config_flags &= ~imgui.ConfigFlags_.docking_enable
-        setup_file_drop_callback(app.on_file_drop)
+        io.config_flags &= ~imgui.ConfigFlags_.viewports_enable  # Also disable viewports
 
-    runner_params.callbacks.setup_imgui_style = setup_dark_theme
-    runner_params.callbacks.post_init = lambda: post_init()
+    def enable_windows_dark_mode(enable: bool | None = None):
+        """Enable or disable Windows dark mode for the application window
+        
+        Args:
+            enable: True for dark mode, False for light mode, None to detect system settings
+        """
+        import platform
+        
+        if platform.system() != "Windows":
+            logger.info("Dark mode API only available on Windows")
+            return
+            
+        try:
+            import ctypes
+            from ctypes import wintypes
+            import winreg
+            import glfw
+            
+            # Determine which mode to use
+            if enable is None:
+                # Auto-detect system dark mode setting
+                def is_system_dark_mode():
+                    try:
+                        # Check registry for current theme
+                        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize")
+                        value, _ = winreg.QueryValueEx(key, "AppsUseLightTheme")
+                        winreg.CloseKey(key)
+                        # Value is 0 for dark mode, 1 for light mode
+                        return value == 0
+                    except Exception:
+                        # Fallback: assume light mode if we can't read registry
+                        return False
+                
+                use_dark_mode_bool = is_system_dark_mode()
+                logger.info(f"System dark mode detected: {use_dark_mode_bool}")
+            else:
+                # Use explicitly provided setting
+                use_dark_mode_bool = bool(enable)
+                source = "explicit setting" if enable is not None else "system detection"
+                logger.info(f"Dark mode set to {use_dark_mode_bool} via {source}")
+            
+            # Get the GLFW window handle
+            window = glfw.get_current_context()
+            if not window:
+                logger.warning("Could not get GLFW window for dark mode setup")
+                return
+                
+            # Get the native Windows window handle (HWND)
+            hwnd = glfw.get_win32_window(window)
+            if not hwnd:
+                logger.warning("Could not get Windows HWND")
+                return
+            
+            # Define Windows constants for dark mode
+            DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1 = 19
+            DWMWA_USE_IMMERSIVE_DARK_MODE = 20
+            
+            # Load DWM library
+            dwmapi = ctypes.windll.dwmapi
+            
+            # Set up DwmSetWindowAttribute function
+            dwmapi.DwmSetWindowAttribute.argtypes = [
+                wintypes.HWND,      # hwnd
+                wintypes.DWORD,     # dwAttribute  
+                ctypes.c_void_p,    # pvAttribute
+                wintypes.DWORD      # cbAttribute
+            ]
+            
+            # Set dark mode based on determined setting
+            use_dark_mode = wintypes.BOOL(use_dark_mode_bool)
+            
+            # Try the newer attribute first (Windows 10 build 20H1+)
+            result = dwmapi.DwmSetWindowAttribute(
+                hwnd,
+                DWMWA_USE_IMMERSIVE_DARK_MODE,
+                ctypes.byref(use_dark_mode),
+                ctypes.sizeof(use_dark_mode)
+            )
+            
+            # If that fails, try the older attribute (Windows 10 earlier builds)
+            if result != 0:
+                result = dwmapi.DwmSetWindowAttribute(
+                    hwnd,
+                    DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1,
+                    ctypes.byref(use_dark_mode),
+                    ctypes.sizeof(use_dark_mode)
+                )
+            
+            if result == 0:  # S_OK
+                mode_str = "dark" if use_dark_mode_bool else "light"
+                logger.info(f"✓ Windows {mode_str} mode applied to title bar")
+            else:
+                logger.warning(f"Failed to set window theme: DWM error {result}")
+                
+        except ImportError as e:
+            logger.warning(f"Windows API not available: {e}")
+        except Exception as e:
+            logger.warning(f"Failed to setup window theme: {e}")
+            import traceback
+            traceback.print_exc()
+
+    def post_init():
+        setup_file_drop_callback(app.on_file_drop)
+        enable_windows_dark_mode(True)
+
+    # Completely disable docking at the hello_imgui level
+    runner_params.docking_params.layout_condition = hello_imgui.DockingLayoutCondition.never
+    
+    runner_params.callbacks.setup_imgui_config = setup_imgui_config
+    runner_params.callbacks.setup_imgui_style = setup_windows_dark_theme
+    runner_params.callbacks.post_init = post_init
     runner_params.callbacks.show_gui = lambda: app.gui()
     runner_params.imgui_window_params.default_imgui_window_type = (
         hello_imgui.DefaultImGuiWindowType.no_default_window
         # hello_imgui.DefaultImGuiWindowType.provide_full_screen_dock_space
     )
-
 
     hello_imgui.run(runner_params)
     # immapp.run(app.gui, 

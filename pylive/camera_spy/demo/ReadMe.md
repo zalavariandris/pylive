@@ -11,7 +11,7 @@
 - [ ] show real world size units
 
 - [?] landing page. when no image is loaded, show instructions to load an image.
-- [ ] disable docking
+- [x] disable docking
 
 - [x] allow setting the image size, and let user place control points freely.
       => allow setting the image size, and play with the vanishing lines
@@ -24,6 +24,11 @@
 - [ ] simplify variable names. 
       eg _pixels unit does not needed anymore.
       consider using vp1 instead of first_vanishing_point_pixel, etc.
+
+- [x] adjusted style for windows dark mode.
+      force window title bar to darkmmode on windows. (note: blender on windows seem to force the dark mode titlebar, that fits its own colorscheme)
+- [ ] adjust style for osx, potentially force dark mode for native window.
+- [ ] linux?
 
 
 - [ ] "help?" menu
@@ -54,6 +59,7 @@
 ## BUGS
 - [ ] review axis settings (currently twoVP mode, seem to be flipped on Y)
 - [ ] when opening a combo box, the selectable items are in an awkward position.
+- [ ] combo popup is a little off. might be dpi scaling, or font. investigate later.
 
 ## Solver
 - [ ] documentation
