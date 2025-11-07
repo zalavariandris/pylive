@@ -633,6 +633,7 @@ def cast_ray(
 ) -> Tuple[glm.vec3, glm.vec3]:
     """
     Cast a ray from the camera through a pixel in screen space.
+    returns the ray origin and target.
     
     Args:
         screen_x: X coordinate in pixel space
@@ -642,17 +643,17 @@ def cast_ray(
         viewport: Viewport (x, y, width, height)
     """
 
-    world_near = glm.unProject(
+    ray_origin = glm.unProject(
         glm.vec3(pos.x, pos.y, 0.0),
         view_matrix, projection_matrix, viewport
     )
 
-    world_far = glm.unProject(
+    ray_direction = glm.unProject(
         glm.vec3(pos.x, pos.y, 1.0),
         view_matrix, projection_matrix, viewport
     )
 
-    return world_near, world_far
+    return ray_origin, ray_direction
 
 def _world_depth_to_ndc_z(distance:float, near:float, far:float, clamp=False) -> float:
     """Convert world depth to NDC z-coordinate using perspective-correct mapping

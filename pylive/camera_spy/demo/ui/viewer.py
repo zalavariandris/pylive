@@ -1,3 +1,4 @@
+import logging
 import math
 from imgui_bundle import imgui
 from typing import TypeVar, Tuple, List
@@ -363,7 +364,9 @@ def end_viewer():
     x, y = current_viewport.pos.x, current_viewport.pos.y
     w, h = current_viewport.size.x, current_viewport.size.y
     imgui.set_cursor_pos(style.window_padding)
+    imgui.push_style_color(imgui.Col_.text, style.color_(imgui.Col_.text_disabled))
     imgui.text(f"{current_viewer_name} — @({x:.0f}, {y:.0f}) — {w:.0f}×{h:.0f}px")
+    
 
     screen_tl = current_viewport._project((0,0,0))  # force update of widget rect in project function
     screen_br = current_viewport._project((current_viewport.content_size.x, current_viewport.content_size.y, 0))  # force update of widget rect in project function
@@ -372,6 +375,7 @@ def end_viewer():
     text_size = imgui.calc_text_size(text)
     imgui.set_cursor_screen_pos(screen_br-text_size)
     imgui.text(text)
+    imgui.pop_style_color()
 
     # end viewport widget
     current_viewer_name = None
@@ -468,6 +472,84 @@ def axes(length:float=1.0, thickness:float=1.0):
 
     B_screen = current_viewport._project(z_axis)
     draw_list.add_line(A_screen, B_screen, colors.BLUE_DIMMED, thickness)
+
+def _cast_ray(
+    pos: glm.vec2, 
+    view_matrix: glm.mat4, 
+    projection_matrix: glm.mat4, 
+    viewport: glm.vec4
+) -> Tuple[glm.vec3, glm.vec3]:
+    """
+    Cast a ray from the camera through a pixel in screen space.
+    returns the ray origin and target.
+    
+    Args:
+        screen_x: X coordinate in pixel space
+        screen_y: Y coordinate in pixel space
+        view_matrix: Camera view matrix
+        projection_matrix: Camera projection matrix
+        viewport: Viewport (x, y, width, height)
+    """
+
+    ray_origin = glm.unProject(
+        glm.vec3(pos.x, pos.y, 0.0),
+        view_matrix, projection_matrix, viewport
+    )
+
+    ray_direction = glm.unProject(
+        glm.vec3(pos.x, pos.y, 1.0),
+        view_matrix, projection_matrix, viewport
+    )
+
+    return ray_origin, ray_direction
+
+def horizon_line(color:int=None):
+    """Draw the horizon line in the current viewer scene.
+    note: current implementation draws a line at a large (but not infinite) distance on the XZ plane.
+    """
+    #todo: draw infinite line by: eg.: intersecting with near plane, or by using the view direction and up vector to compute the line in screen space directly.
+    at_distance:float=10000.0
+    if color is None:
+        style = imgui.get_style()
+        color = imgui.ImVec4(style.color_(imgui.Col_.text_disabled))
+        color = imgui.color_convert_float4_to_u32(color)
+
+    global viewers, current_viewer_name
+    current_viewer = viewers[current_viewer_name]
+
+    if current_viewer is None:
+        logging.warning("horizon_line: no current viewer")
+        return
+    
+    if current_viewer.use_camera is False:
+        logging.warning("horizon_line: current viewer is not using a camera. Must call _begin_scene_ first")
+        return
+    
+    view = current_viewer.camera_view_matrix
+    projection = current_viewer.camera_projection_matrix
+
+    # horizon
+    left_origin, left_target = _cast_ray(
+        imgui.ImVec2(0, current_viewer.content_size.y/2), 
+        view, 
+        projection,
+        (0,0,current_viewer.content_size.x, current_viewer.content_size.y)
+    )
+    direction_on_left_side = left_target-left_origin
+    direction_on_left_side.y = 0
+    direction_on_left_side = glm.normalize(direction_on_left_side) * at_distance
+
+    right_origin, right_target = _cast_ray(
+        imgui.ImVec2(current_viewer.content_size.x, current_viewer.content_size.y/2), 
+        view, 
+        projection,
+        (0,0,current_viewer.content_size.x, current_viewer.content_size.y)
+    )
+    direction_on_right_side = right_target-right_origin
+    direction_on_right_side.y = 0
+    direction_on_right_side = glm.normalize(direction_on_right_side) * at_distance
+
+    guide(direction_on_left_side, direction_on_right_side, color)
 
 def begin_scene(projection:glm.mat4, view:glm.mat4):
     """

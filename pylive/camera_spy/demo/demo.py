@@ -1,58 +1,4 @@
-"""
-Camera Spy Demo Application
-TODO:
-- parameters:
-  - [x] if no image is loaded, allow setting image size
-  - [x] open image button,
-  - [x] show the image size
-  - [x] dim background image
 
-- [ ] landing page. when no image is loaded, show instructions to load an image.
-- [ ] disable docking
-
-- [x] allow setting the image size, and let user place control points freely.
-      => allow setting the image size, and play with the vanishing lines
-  
-- [x] quad controls for TwoVP solver
-
-- [x] the blue controls are not saturated enough against dark background
-      => added some green to the blue and a little to the red as well. these colors now a lot more pleasant on the dark background.
-
-- simplify variable names. 
-  - eg _pixels unit does not needed anymore.
-  - consider using vp1 instead of first_vanishing_point_pixel, etc.
-
-- show real world size units
-- show horizon line
-
-- "help?" menu
-- about menu with links to github, author info
-
-- camera sensor size?
-  - presets
-  - custom size
-  - by default field of view is used to compute focal length.
-    if sensor size is set, use that to compute focal length instead of fov.
-    by default the sensor size is 36x24mm (full frame)
-
-- results panel
-  - [x] include quaternion values
-  - allow specifying rotation order for euler angles
-
-export
-  - copy to clipboard (if pasting to destination is possible)
-  - save to file (json yaml, if possible create destination specific format)
-  - formats: json, yaml, fspy. Applications: blender? after? Maya, Max, houdini nuke?
-
-- consider a log window to show messages
-- also show error in results window if camera cant be solved...
-- allow emojis! :)
-
-BUGS
-- [ ] review axis settings (currently twoVP mode, seem to be flipped on Y)
-- [ ] when opening a combo box, the selectable items are in an awkward position.
-
-"""
 # Standard library imports
 import time
 startup_start_time = time.time()
@@ -289,7 +235,7 @@ class App:
         # fullscreen viewer
         imgui.set_next_window_pos(imgui.ImVec2(0, menu_bar_height))
         imgui.set_next_window_size(imgui.ImVec2(display_size.x, display_size.y - menu_bar_height))       
-        if imgui.begin("Viewport3", None, imgui.WindowFlags_.no_bring_to_front_on_focus | imgui.WindowFlags_.no_move | imgui.WindowFlags_.no_resize | imgui.WindowFlags_.no_collapse | imgui.WindowFlags_.no_title_bar):
+        if imgui.begin("MainViewport", None, imgui.WindowFlags_.no_bring_to_front_on_focus | imgui.WindowFlags_.no_move | imgui.WindowFlags_.no_resize | imgui.WindowFlags_.no_collapse | imgui.WindowFlags_.no_title_bar):
             self.show_viewer()
         imgui.end()
 
@@ -433,7 +379,7 @@ class App:
                     imgui.pop_style_color()
 
     def show_viewer(self):
-        if ui.viewer.begin_viewer("viewer3", content_size=self.content_size, size=imgui.ImVec2(-1,-1), coordinate_system="top-left"):
+        if ui.viewer.begin_viewer("viewer1", content_size=self.content_size, size=imgui.ImVec2(-1,-1), coordinate_system="top-left"):
             if self.image_texture_ref is not None:
                 tl = ui.viewer._get_window_coords(imgui.ImVec2(0,0))
                 br = ui.viewer._get_window_coords(imgui.ImVec2(self.content_size.x, self.content_size.y))
@@ -456,17 +402,20 @@ class App:
                 else:
                     imgui.image(self.image_texture_ref, image_size)
             else:
-                center = ui.viewer._get_window_coords(self.content_size/2)
+                io = imgui.get_io()
+                center = io.display_size / 2
                 
-                # imgui.set_cursor_pos(center)
-                imgui.set_next_window_pos(center, imgui.Cond_.always, imgui.ImVec2(0.5, 0.5))
-                imgui.push_style_var(imgui.StyleVar_.window_padding, imgui.ImVec2(20, 20))
-                imgui.push_style_color(imgui.Col_.window_bg, (0,0,0, 0.3))
-                if imgui.begin("##dropzone", None, imgui.WindowFlags_.always_auto_resize | imgui.WindowFlags_.no_title_bar | imgui.WindowFlags_.no_inputs | imgui.WindowFlags_.no_move | imgui.WindowFlags_.no_resize | imgui.WindowFlags_.no_scrollbar):
-                    imgui.text("Drop an image file here to load it as background")
-                imgui.end()
-                imgui.pop_style_color()
-                imgui.pop_style_var()
+                # # imgui.set_cursor_pos(center)
+                # imgui.set_next_window_pos(center, imgui.Cond_.always, imgui.ImVec2(0.5, 0.5))
+                # imgui.push_style_var(imgui.StyleVar_.window_padding, imgui.ImVec2(20, 20))
+                # imgui.push_style_color(imgui.Col_.window_bg, (0,0,0, 0.7))
+                # if imgui.begin("##dropzone", None, imgui.WindowFlags_.always_auto_resize | imgui.WindowFlags_.no_title_bar | imgui.WindowFlags_.no_inputs | imgui.WindowFlags_.no_move | imgui.WindowFlags_.no_resize | imgui.WindowFlags_.no_scrollbar):
+                #     imgui.push_style_color(imgui.Col_.text, imgui.get_style().color_(imgui.Col_.text_disabled))
+                #     imgui.bullet_text("Drop an image file here to load it as background")
+                #     imgui.pop_style_color()
+                # imgui.end()
+                # imgui.pop_style_color()
+                # imgui.pop_style_var()
 
             # control points
             _, self.origin_pixel = ui.viewer.control_point("o", self.origin_pixel)
@@ -511,7 +460,13 @@ class App:
                     for A, B in ui.viewer.make_gridXZ_lines(step=1, size=10):
                         ui.viewer.guide(A, B)
                     ui.viewer.axes(length=1.0)
+                    ui.viewer.horizon_line()
+
                 ui.viewer.end_scene()
+
+
+
+
 
         ui.viewer.end_viewer()
 
