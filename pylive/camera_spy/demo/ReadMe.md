@@ -25,7 +25,9 @@
 THEMING
 - [x] adjusted style for windows dark mode.
       force window title bar to darkmmode on windows. (note: blender on windows seem to force the dark mode titlebar, that fits its own colorscheme)
-- [ ] adjust style for osx, potentially force dark mode for native window.
+- [x] adjust style for osx, potentially force dark mode for native window.
+      =>set the titlebar color myself. 
+      - [ ] consider setting the theme a little lighter to match the native titlebar color?
 - [ ] linux?
 
 - [x] about menu with links to github, author info

@@ -218,6 +218,8 @@ class App:
         # Push styling to eliminate border between title bar and menu bar
         # imgui.push_style_var(imgui.StyleVar_.window_border_size, 0.0)
         # imgui.push_style_var(imgui.StyleVar_.frame_border_size, 0.0)
+        style = imgui.get_style()
+        # imgui.push_style_var(imgui.StyleVar_.frame_padding, imgui.ImVec2(style.frame_padding.x, 12))
         if imgui.begin_main_menu_bar():
             if imgui.begin_menu("File"):
                 folder_icon = getattr(icons_fontawesome_4, 'ICON_FA_FOLDER_OPEN', getattr(icons_fontawesome_4, 'ICON_FA_FOLDER', ''))
@@ -267,6 +269,7 @@ class App:
             # Store the actual height of the menu bar
             menu_bar_height = imgui.get_frame_height()
             imgui.end_main_menu_bar()
+        # imgui.pop_style_var()
 
         # Model About window
         if self.show_about_popup:
@@ -734,17 +737,6 @@ class App:
         imgui.set_next_item_width(150)
         _, self.scene_scale = imgui.slider_float("scene  scale", self.scene_scale, 1.0, 100.0, "%.2f")
         
-        imgui.separator()
-        # Quick FontAwesome test
-        home_icon = getattr(icons_fontawesome_4, 'ICON_FA_HOME', '')
-        star_icon = getattr(icons_fontawesome_4, 'ICON_FA_STAR', '')
-        if imgui.button(f"FontAwesome Test: {home_icon} {star_icon}"):
-            logger.info(f"FontAwesome test - Home: '{home_icon}' Star: '{star_icon}'")
-        
-        # FontAwesome setup helper
-        if imgui.button("Create FontAwesome Assets Folder"):
-            self.create_fontawesome_assets_folder()
-        
         match self.solver_mode:
             case SolverMode.OneVP:
                 imgui.set_next_item_width(150)
@@ -1034,11 +1026,11 @@ class App:
             #     "imageHeight": int(self.content_size.y)
             # }
 
-            import json
-            json_string = json.dumps(data, indent=4)
-            imgui.text(json_string)
-            if imgui.button("export camera parameters", imgui.ImVec2(-1,0)):
-                ...
+            # import json
+            # json_string = json.dumps(data, indent=4)
+            # imgui.text(json_string)
+            # if imgui.button("export camera parameters", imgui.ImVec2(-1,0)):
+            #     ...
 
     def open_image_file(self, path:str|None=None):
         from pathlib import Path
@@ -1168,22 +1160,8 @@ Then restart your application to load FontAwesome icons!
 
 if __name__ == "__main__":
     from imgui_bundle import hello_imgui
-    runner_params = hello_imgui.RunnerParams()
-    runner_params.app_window_params.window_title = "Camera Spy"
-    runner_params.imgui_window_params.menu_app_title = "Camera Spy"
-    runner_params.app_window_params.window_geometry.size = (1200, 512)
-    runner_params.app_window_params.restore_previous_geometry = True
-    
-    # Set background color to match menu bar to eliminate dark border
-    windows_dark_titlebar_color = [32/255, 32/255, 32/255, 1.0]
-    runner_params.imgui_window_params.background_color = windows_dark_titlebar_color
 
-    # Enable DPI awareness
-    runner_params.dpi_aware_params.dpi_window_size_factor = 1.0  # Auto-detect
-    
-    # Enable continuous rendering during window resize
-    runner_params.fps_idling.enable_idling = True
-    runner_params.app_window_params.repaint_during_resize_gotcha_reentrant_repaint = True
+    app = App()
 
     def load_fonts():
         """Load FiraCode fonts with emoji support"""
@@ -1291,16 +1269,16 @@ if __name__ == "__main__":
                                             break
                                     except Exception as e3b:
                                         logger.warning(f"Failed to load FontAwesome without ranges from {fa_path}: {e3b}")
-                                        try:
-                                            # Method 3: Try with None config (most basic)
-                                            font = io.fonts.add_font_from_file_ttf(str(fa_path), base_size)
-                                            if font:
-                                                logger.info(f"✓ Loaded FontAwesome from file (basic): {fa_path}")
-                                                fa_font_loaded = True
-                                                fa_loaded = True
-                                                break
-                                        except Exception as e3c:
-                                            logger.warning(f"All FontAwesome loading methods failed for {fa_path}: {e3c}")
+                                    try:
+                                        # Method 3: Try with None config (most basic)
+                                        font = io.fonts.add_font_from_file_ttf(str(fa_path), base_size)
+                                        if font:
+                                            logger.info(f"✓ Loaded FontAwesome from file (basic): {fa_path}")
+                                            fa_font_loaded = True
+                                            fa_loaded = True
+                                            break
+                                    except Exception as e3c:
+                                        logger.warning(f"All FontAwesome loading methods failed for {fa_path}: {e3c}")
                         
                         if not fa_font_loaded and not fa_loaded:
                             logger.warning("No FontAwesome font loaded. Icons will appear as boxes or empty spaces.")
@@ -1388,9 +1366,6 @@ if __name__ == "__main__":
             import traceback
             traceback.print_exc()
 
-    # Use the proper callbacks
-    runner_params.callbacks.load_additional_fonts = load_fonts
-
     def setup_file_drop_callback(callback):
         """Setup GLFW file drop callback"""
         try:
@@ -1412,8 +1387,6 @@ if __name__ == "__main__":
             logger.warning(f"Could not setup file drop: {e}")
             import traceback
             traceback.print_exc()
-
-    app = App()
     
     def setup_imgui_config():
         """Setup ImGui configuration before initialization"""
@@ -1523,16 +1496,136 @@ if __name__ == "__main__":
             import traceback
             traceback.print_exc()
 
+    def enable_macos_window_style():
+        """Enable macOS-specific window styling for borderless windows
+        
+        macOS automatically provides rounded corners for native windows.
+        This function ensures proper window styling and transparency.
+        """
+        import platform
+        
+        if platform.system() != "Darwin":
+            logger.info("macOS window styling only available on macOS")
+            return
+            
+        try:
+            import glfw
+            
+            # Get the GLFW window handle
+            window = glfw.get_current_context()
+            if not window:
+                logger.warning("Could not get GLFW window for macOS styling")
+                return
+            
+            # Access the native NSWindow through pyobjc
+            try:
+                from AppKit import NSApp, NSColor, NSWindowStyleMaskFullSizeContentView
+                import objc
+                
+                
+                def get_ns_window():
+                    """Try multiple methods to get the NSWindow"""
+                    # Method 1: Get main window
+                    ns_window = NSApp.mainWindow()
+                    if ns_window:
+                        logger.info("Got NSWindow from NSApp mainWindow")
+                        return ns_window
+                    
+                    # Method 2: Try key window if main window is None
+                    ns_window = NSApp.keyWindow()
+                    if ns_window:
+                        logger.info("Got NSWindow from NSApp keyWindow")
+                        return ns_window
+
+                    # Method 3: Get from windows array
+                    windows = NSApp.windows()
+                    if windows and len(windows) > 0:
+                        ns_window = windows[0]
+                        if ns_window:
+                            logger.info("Got NSWindow from NSApp windows array")
+                            return ns_window
+                    
+                    # Method 4: Use GLFW's Cocoa window directly
+                    try:
+                        cocoa_window = glfw.get_cocoa_window(window)
+                        if cocoa_window:
+                            ns_window = objc.objc_object(c_void_p=cocoa_window)
+                            if ns_window:
+                                logger.info("Got NSWindow from GLFW Cocoa window")
+                                return ns_window
+                    except Exception as e:
+                        logger.warning(f"Failed to get NSWindow from GLFW Cocoa window: {e}")
+                    
+                    if not ns_window:
+                        logger.warning("Could not get NSWindow - window may not be fully initialized yet")
+                        logger.info("Titlebar styling skipped - window will use default appearance")
+                        return
+                    
+                ns_window = get_ns_window()
+                if not ns_window:
+                    logger.warning("NSWindow is None - cannot apply macOS styling")
+                    return
+                
+                # Remove titlebar border and set custom color
+                ns_window.setTitlebarAppearsTransparent_(True) # setting titlebar transparent removes the little border between titlebar and content
+                dark_gray = NSColor.colorWithRed_green_blue_alpha_(32/255, 32/255, 32/255, 1.0) # we can also set our own color.
+                ns_window.setBackgroundColor_(dark_gray)
+                
+            except ImportError:
+                logger.warning("pyobjc not available. Install with: pip install pyobjc-framework-Cocoa")
+                logger.info("Basic window styling still applied via GLFW")
+            except Exception as e:
+                logger.warning(f"Advanced macOS styling failed: {e}")
+                import traceback
+                traceback.print_exc()
+                
+        except ImportError as e:
+            logger.warning(f"GLFW not available: {e}")
+        except Exception as e:
+            logger.warning(f"Failed to setup macOS window styling: {e}")
+            import traceback
+            traceback.print_exc()
+
     def post_init():
         setup_file_drop_callback(app.on_file_drop)
-        enable_windows_dark_mode(True)
-
-    # Completely disable docking at the hello_imgui level
-    runner_params.docking_params.layout_condition = hello_imgui.DockingLayoutCondition.never
     
+    def post_init_add_platform_backend_callbacks():
+        """Called after platform backend is initialized - best time for native window customization"""
+        import platform
+        if platform.system() == "Darwin":
+            ...
+            enable_macos_window_style()
+        elif platform.system() == "Windows":
+            enable_windows_dark_mode(True)
+
+
+    runner_params = hello_imgui.RunnerParams()
+    runner_params.app_window_params.window_title = "Camera Spy"
+    runner_params.imgui_window_params.menu_app_title = "Camera Spy"
+    runner_params.app_window_params.window_geometry.size = (1200, 512)
+    runner_params.app_window_params.restore_previous_geometry = True
+    
+    # Set background color to match menu bar to eliminate dark border
+    windows_dark_titlebar_color = [32/255, 32/255, 32/255, 1.0]
+    runner_params.imgui_window_params.background_color = windows_dark_titlebar_color
+    runner_params.dpi_aware_params.dpi_window_size_factor = 1.0  # # Enable DPI awareness: 1.0 is Auto-detect?
+    runner_params.docking_params.layout_condition = hello_imgui.DockingLayoutCondition.never # Completely disable docking at the hello_imgui level
+    # runner_params.fps_idling.enable_idling = True
+    # runner_params.app_window_params.repaint_during_resize_gotcha_reentrant_repaint = True
+
+    # Add borderless window flag
+    # runner_params.app_window_params.borderless = True
+    # runner_params.app_window_params.borderless_movable = True  # Allow moving the window
+    # runner_params.app_window_params.borderless_resizable = True  # Allow resizing the window
+    # runner_params.app_window_params.borderless_closable = True  # Show close button
+
+
+    # Callbacks
+    runner_params.callbacks.load_additional_fonts = load_fonts
     runner_params.callbacks.setup_imgui_config = setup_imgui_config
     runner_params.callbacks.setup_imgui_style = setup_windows_dark_theme
     runner_params.callbacks.post_init = post_init
+    runner_params.callbacks.post_init_add_platform_backend_callbacks = post_init_add_platform_backend_callbacks
     runner_params.callbacks.show_gui = lambda: app.gui()
     runner_params.imgui_window_params.default_imgui_window_type = (
         hello_imgui.DefaultImGuiWindowType.no_default_window
@@ -1541,7 +1634,7 @@ if __name__ == "__main__":
 
     hello_imgui.run(runner_params)
     # immapp.run(app.gui, 
-    #            window_title="Camera Spy", 
+    #            window_title="Perspy", 
     #            window_size=(1200, 512), 
     #            with_implot3d=True
     # )
