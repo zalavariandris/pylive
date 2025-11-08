@@ -61,7 +61,7 @@ class SolverMode(IntEnum):
 # Application #
 # ########### #
 
-class PerspyApp:
+class PerspyDocument:
     def __init__(self):
         # solver inputs
         # - content image
@@ -91,36 +91,9 @@ class PerspyApp:
             [glm.vec2(511, 311), glm.vec2(879, 356)]
         ]
 
-        # solver results
-        self.current_euler_order = solver.EulerOrder.ZXY
-        self.first_vanishing_point_pixel:glm.vec2|None = None
-        self.second_vanishing_point_pixel:glm.vec2|None = None
-        self.camera:Camera|None = None
-
-        # ui state
-        self.pan_and_zoom_matrix = glm.identity(glm.mat4)
-        self.dim_background: bool = True
-
-        # - manage windows
-        self.show_about_popup: bool = False
-        self.show_emoji_window: bool = False
-        self.show_fontawesome_window: bool = False
-        self.show_data_window: bool = True
-        self.show_styleeditor_window: bool = False
-
         # - manage view
         self.view_grid: bool = True
         self.view_horizon: bool = True
-
-        # misc
-        """
-        Can be used to define inline variables, similarly how static vars used in C/C++ with imgui.
-        
-        Example:
-        self.misc.setdefault('my_var', 0)
-        _, self.misc['my_var'] = imgui.slider_float("my var", self.misc['my_var'], 0.0, 1.0)
-        """
-        self.misc:Dict[str, Any] = dict() # miscellaneous state variables for development. 
 
     # Document manager
     def serialize(self)->str:
@@ -212,72 +185,38 @@ class PerspyApp:
 
     def deserialize(self, json_text: str):
         raise NotImplementedError("Deserialization from JSON is not implemented yet.")
-        # """
-        # Restore app state from JSON text.
+    
+
+class PerspyApp(PerspyDocument):
+    def __init__(self):
+        super().__init__()
+
+        # solver results
+        self.current_euler_order = solver.EulerOrder.ZXY
+        self.first_vanishing_point_pixel:glm.vec2|None = None
+        self.second_vanishing_point_pixel:glm.vec2|None = None
+        self.camera:Camera|None = None
+
+        # ui state
+        self.pan_and_zoom_matrix = glm.identity(glm.mat4)
+        self.dim_background: bool = True
+
+        # - manage windows
+        self.show_about_popup: bool = False
+        self.show_emoji_window: bool = False
+        self.show_fontawesome_window: bool = False
+        self.show_data_window: bool = True
+        self.show_styleeditor_window: bool = False
+
+        # misc
+        """
+        Can be used to define inline variables, similarly how static vars used in C/C++ with imgui.
         
-        # Args:
-        #     json_text: JSON string containing the serialized state
-        # """
-        # import json
-        
-        # state = json.loads(json_text)
-        
-        # # Helper to convert dict to glm.vec2
-        # def vec2_from_dict(d):
-        #     if isinstance(d, dict) and 'x' in d and 'y' in d:
-        #         return glm.vec2(d['x'], d['y'])
-        #     return d
-        
-        # # Restore basic properties
-        # if 'image_path' in state:
-        #     self.image_path = state['image_path']
-        
-        # if 'image_dimensions' in state:
-        #     w, h = state['image_dimensions']
-        #     self.content_size = imgui.ImVec2(float(w), float(h))
-        
-        # # Restore solver params
-        # if 'solver_mode' in state:
-        #     self.solver_mode = SolverMode[state['solver_mode']]
-        
-        # if 'first_axis' in state:
-        #     self.first_axis = solver.Axis[state['first_axis']]
-        # if 'second_axis' in state:
-        #     self.second_axis = solver.Axis[state['second_axis']]
-        
-        # if 'dim_background' in state:
-        #     self.dim_background = state['dim_background']
-        # if 'scene_scale' in state:
-        #     self.scene_scale = state['scene_scale']
-        
-        # # Restore control points
-        # if 'origin_pixel' in state:
-        #     self.origin_pixel = vec2_from_dict(state['origin_pixel'])
-        # if 'principal_point_pixel' in state:
-        #     self.principal_point_pixel = vec2_from_dict(state['principal_point_pixel'])
-        
-        # # Restore vanishing lines
-        # if 'first_vanishing_lines_pixel' in state:
-        #     self.first_vanishing_lines_pixel = [
-        #         (vec2_from_dict(line[0]), vec2_from_dict(line[1]))
-        #         for line in state['first_vanishing_lines_pixel']
-        #     ]
-        
-        # if 'second_vanishing_lines_pixel' in state:
-        #     self.second_vanishing_lines_pixel = [
-        #         [vec2_from_dict(line[0]), vec2_from_dict(line[1])]
-        #         for line in state['second_vanishing_lines_pixel']
-        #     ]
-        
-        # # Mode-specific params
-        # if self.solver_mode == SolverMode.OneVP:
-        #     if 'fovy' in state:
-        #         self.fov_degrees = state['fovy']
-        # elif self.solver_mode == SolverMode.TwoVP:
-        #     if 'quad_mode' in state:
-        #         self.quad_mode = state['quad_mode']
-        
-        # logger.info("✓ Deserialized state from JSON")
+        Example:
+        self.misc.setdefault('my_var', 0)
+        _, self.misc['my_var'] = imgui.slider_float("my var", self.misc['my_var'], 0.0, 1.0)
+        """
+        self.misc:Dict[str, Any] = dict() # miscellaneous state variables for development. 
 
     def save(self, filepath: str|None):
         """
