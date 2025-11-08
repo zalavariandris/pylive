@@ -1,67 +1,46 @@
 # Standard library imports
-import time
-startup_start_time = time.time()
 import math
-import logging
 from pprint import pformat
 from typing import Any, List, Tuple, Dict
 from enum import IntEnum
-from PIL import Image
+import json
+import base64
+import logging
 
 # Third-party imports
+from PIL import Image
+import OpenGL.GL as gl
 import glm
 import numpy as np
-from imgui_bundle import imgui, immapp, imgui_ctx, hello_imgui, immvision, icons_fontawesome_4
+from imgui_bundle import imgui, icons_fontawesome_4
 from imgui_bundle import portable_file_dialogs as pfd
 
 # Local application imports
 from pylive.glrenderer.utils.camera import Camera
-from pylive.camera_spy import solver
-
+from pylive.perspy import solver
 import ui
-import OpenGL.GL as gl
 
 # Configure logging to see shader compilation logs
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-def begin_sidebar(name:str, p_open:bool|None=None, flags:int=0):
+sidebar_opacity = 0.8
+def begin_sidebar(name:str, p_open:bool|None=None, flags:int=0) -> bool:
     SIDEBAR_FLAGS = imgui.WindowFlags_.always_auto_resize | imgui.WindowFlags_.no_move | imgui.WindowFlags_.no_resize | imgui.WindowFlags_.no_collapse
-    
     style = imgui.get_style()
-    # imgui.push_style_var(imgui.StyleVar_.window_padding, imgui.ImVec2(style.window_padding.x, 0))
-    # imgui.push_style_color(imgui.Col_.window_bg, (0.2, 0.2, 0.2, 0.0))
-    # imgui.push_style_color(imgui.Col_.title_bg, (0.2, 0.2, 0.2, 0.0))
-    # imgui.push_style_color(imgui.Col_.border   , (0.08, 0.08, 0.08, 0.00))
+    window_bg = style.color_(imgui.Col_.window_bg)
+    title_bg = style.color_(imgui.Col_.title_bg)
+    title_bg = style.color_(imgui.Col_.title_bg_active)
+    border   = style.color_(imgui.Col_.border)
+    imgui.push_style_color(imgui.Col_.window_bg, (*list(window_bg)[:3], sidebar_opacity))
+    imgui.push_style_color(imgui.Col_.title_bg,  (*list(title_bg)[:3], sidebar_opacity))
+    imgui.push_style_color(imgui.Col_.border,    (*list(border)[:3], sidebar_opacity))
     return imgui.begin(name, None, SIDEBAR_FLAGS)
 
 def end_sidebar():
     imgui.end()
-    # imgui.pop_style_color(3)
+    imgui.pop_style_color(3)
     # imgui.pop_style_var()
-
-def begin_attribute_editor(str_id:str):
-    imgui.set_next_item_width(200)
-    if imgui.begin_table(str_id, 2):
-        imgui.table_setup_column("name", imgui.TableColumnFlags_.width_fixed)
-        imgui.table_setup_column("value", imgui.TableColumnFlags_.width_stretch | imgui.TableColumnFlags_.no_clip)
-        return True
-    return False
-
-def end_attribute_editor():
-    imgui.end_table()
-
-def next_attribute(string:str=""):
-    imgui.table_next_row()
-    imgui.table_next_column()
-    imgui.push_style_var(imgui.StyleVar_.selectable_text_align, imgui.ImVec2(1.0,0))
-    imgui.push_style_color(imgui.Col_.header_hovered, (0, 0, 0, 0))
-    imgui.push_style_color(imgui.Col_.header_active,  (0, 0, 0, 0))
-    imgui.selectable(string, False)
-    imgui.pop_style_var()
-    imgui.pop_style_color(2)
-    imgui.table_next_column()
-    imgui.set_next_item_width(-1) # stretch item to fill cell
 
 def get_axis_color(axis:solver.Axis, dim:bool=False) -> Tuple[float, float, float]:
     match axis:
@@ -78,98 +57,31 @@ class SolverMode(IntEnum):
     OneVP = 0
     TwoVP = 1
 
-# ################# #
-# Application State #
-# ################# #
+# ########### #
+# Application #
+# ########### #
 
-def setup_windows_dark_theme():
-    style = imgui.get_style()
-    imgui.style_colors_dark(style)
-
-    style.anti_aliased_lines = True
-    style.anti_aliased_lines_use_tex = True
-    style.anti_aliased_fill = True
-
-    levels = [
-        0.08,   # really deep
-        0.09,   # deep
-        0.11,   # medium
-        0.15,   # shallow
-    ]
-
-    windows_dark_titlebar_color = [ 32/255,  32/255, 32/255, 1.0]
-    levels = [
-        22/255,   # really deep
-        32/255,   # deep
-        43/255,   # medium
-        57/255,   # shallow
-    ]
-    windows_dark_text_color =     [255/255, 255/255, 255/255, 1.0]
-
-    windows_light_titlebar_color = [243/255.0]*3 + [1.0]
-    windows_light_text_color = [25/255.0]*3 + [1.0]
-
-    style.set_color_(imgui.Col_.text ,               windows_dark_text_color)
-    style.set_color_(imgui.Col_.title_bg ,           imgui.ImVec4(*[levels[1]]*3,1.00))
-    style.set_color_(imgui.Col_.title_bg_active ,    imgui.ImVec4(*[levels[1]]*3,1.00))
-    style.set_color_(imgui.Col_.title_bg_collapsed , imgui.ImVec4(*[levels[1]]*3,1.00))
-    style.set_color_(imgui.Col_.window_bg,           imgui.ImVec4(*[levels[1]]*3,1.00))
-    style.set_color_(imgui.Col_.scrollbar_bg,         imgui.ImVec4(*[levels[1]]*3,1.00))
-
-
-    style.set_color_(imgui.Col_.child_bg ,           imgui.ImVec4(*[levels[2]]*3,1.00))
-    style.set_color_(imgui.Col_.frame_bg ,           imgui.ImVec4(*[levels[3]]*3,1.00))
-    style.set_color_(imgui.Col_.button   ,           imgui.ImVec4(*[levels[3]]*3,1.00))
-    style.set_color_(imgui.Col_.popup_bg ,           imgui.ImVec4(*[levels[1]]*3,1.00))
-
-    # Remove the dark border by setting menu bar background to match the menu bar
-    style.set_color_(imgui.Col_.menu_bar_bg,         windows_dark_titlebar_color)
-    
-    style.window_padding = imgui.ImVec2(12, 12)
-    style.frame_padding = imgui.ImVec2(6, 6)
-    style.item_spacing = imgui.ImVec2(12, 12)
-
-    style.frame_border_size = 0
-
-    style.child_border_size = 0
-    style.window_border_size = 0
-    style.set_color_(imgui.Col_.border   , imgui.ImVec4(*[levels[2]]*3,1.00))
-    style.popup_border_size = 1
-
-    style.grab_min_size = 4
-
-    
-    style.grab_rounding = 4
-    style.frame_rounding = 4
-    style.frame_rounding = 4
-    style.popup_rounding = 4
-    style.child_rounding = 4
-    style.window_rounding = 4
-    style.scrollbar_rounding = 4
-
-    style.window_title_align = imgui.ImVec2(0.5, 0.5)
-    style.window_menu_button_position = imgui.Dir.right
-
-    logger.info("✓ ImGui theme applied")
-
-
-class App:
+class PerspyApp:
     def __init__(self):
-        # content image
+        # solver inputs
+        # - content image
+        self.image_path: str|None = None
         self.content_size = imgui.ImVec2(1280,720)
-        self.pan_and_zoom_matrix = glm.identity(glm.mat4)
+        self.image: Image = None
         self.image_texture_ref:imgui.ImTextureRef|None = None
         self.image_texture_id: int|None = None
-        self.dim_background: bool = True
 
-        # manage windows
-        self.show_about_popup: bool = False
-        self.show_emoji_window: bool = False
-        self.show_fontawesome_window: bool = False
-        self.show_data_window: bool = False
-        self.show_styleeditor_window: bool = False
+        # - solver params
+        self.solver_mode=SolverMode.OneVP
+        self.scene_scale=5.0
+        self.first_axis=solver.Axis.PositiveZ
+        self.second_axis=solver.Axis.PositiveX
+        self.fov_degrees=60.0 # only for OneVP mode
+        self.quad_mode=False # only for TwoVP mode. is this a ui state?
 
-        # control points
+        # - control points
+        self.origin_pixel=self.content_size/2
+        self.principal_point_pixel=self.content_size/2
         self.first_vanishing_lines_pixel = [
             (glm.vec2(296, 417), glm.vec2(633, 291)),
             (glm.vec2(654, 660), glm.vec2(826, 344))
@@ -179,26 +91,28 @@ class App:
             [glm.vec2(511, 311), glm.vec2(879, 356)]
         ]
 
-        self.origin_pixel=self.content_size/2
-        self.principal_point_pixel=self.content_size/2
-
-        # solver params
-        self.solver_mode=SolverMode.OneVP
-        self.fov_degrees=60.0
-        self.quad_mode=False
-        self.scene_scale=5.0
-        self.first_axis=solver.Axis.PositiveZ
-        self.second_axis=solver.Axis.PositiveX
-
         # solver results
         self.current_euler_order = solver.EulerOrder.ZXY
         self.first_vanishing_point_pixel:glm.vec2|None = None
         self.second_vanishing_point_pixel:glm.vec2|None = None
         self.camera:Camera|None = None
 
-        # misc
-        self.theme=hello_imgui.ImGuiTheme_.darcula_darker
+        # ui state
+        self.pan_and_zoom_matrix = glm.identity(glm.mat4)
+        self.dim_background: bool = True
 
+        # - manage windows
+        self.show_about_popup: bool = False
+        self.show_emoji_window: bool = False
+        self.show_fontawesome_window: bool = False
+        self.show_data_window: bool = True
+        self.show_styleeditor_window: bool = False
+
+        # - manage view
+        self.view_grid: bool = True
+        self.view_horizon: bool = True
+
+        # misc
         """
         Can be used to define inline variables, similarly how static vars used in C/C++ with imgui.
         
@@ -208,68 +122,289 @@ class App:
         """
         self.misc:Dict[str, Any] = dict() # miscellaneous state variables for development. 
 
+    # Document manager
+    def serialize(self)->str:
+        def serializer(obj):
+            """Custom JSON serializer for glm types."""
+            match obj:
+                case glm.vec2():
+                    return {'x': obj.x, 'y': obj.y}
+                case glm.vec3():
+                    return {'x': obj.x, 'y': obj.y, 'z': obj.z}
+                case glm.vec4():
+                    return {'x': obj.x, 'y': obj.y, 'z': obj.z, 'w': obj.w}
+                case glm.mat4():
+                    return {"rows": [
+                        [obj[col][row] for col in range(4)]
+                        for row in range(4)
+                    ]}
+                case imgui.ImVec2():
+                    return {'x': obj.x, 'y': obj.y}
+                case imgui.ImVec4():
+                    return {'x': obj.x, 'y': obj.y, 'z': obj.z, 'w': obj.w}
+                case Image():
+                    image_embed_data = b''
+                    import io
+                    buffer = io.BytesIO()
+                    self.image.save(buffer, format='PNG') # Save as PNG to preserve quality, consider using other image formats
+                    image_embed_data = buffer.getvalue()
+                    return base64.b64encode(obj).decode('ascii')
+                case _:
+                    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
+
+        _, quat, _, _, _ = solver.decompose(self.camera.transform)
+        euler = solver.extract_euler(self.camera.transform, order=self.current_euler_order)
+
+        data = {
+            'version': '0.5.0',
+            'solver_params': {
+                "mode": SolverMode(self.solver_mode).name,
+                "first_axis": solver.Axis(self.first_axis).name,
+                "second_axis": solver.Axis(self.second_axis).name,
+                "scene_scale": self.scene_scale,
+                "fov_degrees": 60.0,
+                "quad_mode": False
+            },
+
+            'control_points': {
+                "origin": self.origin_pixel,
+                "principal_point": self.principal_point_pixel,
+                "first_vanishing_lines": self.first_vanishing_lines_pixel,
+                "second_vanishing_lines": self.second_vanishing_lines_pixel
+            },
+
+            'image_params': {
+                "path": self.image_path,
+                "width": int(self.content_size.x),
+                "height": int(self.content_size.y)
+            },
+
+            'results': {
+                "camera": {
+                    "view": self.camera.viewMatrix(),
+                    "projection": self.camera.projectionMatrix(),
+                    "fovy_degrees": self.camera.fovy,
+                    "position": self.camera.getPosition(),
+                    "rotation_euler": {"x": euler[0], "y": euler[1], "z": euler[2], "order": solver.EulerOrder(self.current_euler_order).name},
+                    "rotation_quaternion": {"x": quat.x, "y": quat.y, "z": quat.z, "w": quat.w}
+                },
+                "vanishing_points": {
+                    "first": self.first_vanishing_point_pixel,
+                    "second": self.second_vanishing_point_pixel
+                }
+            },
+
+            'guides_params': {
+                "show_grid": self.view_grid,
+                "show_horizon": self.view_horizon
+            },
+
+            'ui_state': {
+                "dim_background": self.dim_background,
+                "windows": {
+                    "show_data": self.show_data_window,
+                    "show_style_editor": self.show_styleeditor_window
+                }
+            }
+        }
+
+        return json.dumps(data, indent=4, default=serializer)
+
+    def deserialize(self, json_text: str):
+        raise NotImplementedError("Deserialization from JSON is not implemented yet.")
+        # """
+        # Restore app state from JSON text.
+        
+        # Args:
+        #     json_text: JSON string containing the serialized state
+        # """
+        # import json
+        
+        # state = json.loads(json_text)
+        
+        # # Helper to convert dict to glm.vec2
+        # def vec2_from_dict(d):
+        #     if isinstance(d, dict) and 'x' in d and 'y' in d:
+        #         return glm.vec2(d['x'], d['y'])
+        #     return d
+        
+        # # Restore basic properties
+        # if 'image_path' in state:
+        #     self.image_path = state['image_path']
+        
+        # if 'image_dimensions' in state:
+        #     w, h = state['image_dimensions']
+        #     self.content_size = imgui.ImVec2(float(w), float(h))
+        
+        # # Restore solver params
+        # if 'solver_mode' in state:
+        #     self.solver_mode = SolverMode[state['solver_mode']]
+        
+        # if 'first_axis' in state:
+        #     self.first_axis = solver.Axis[state['first_axis']]
+        # if 'second_axis' in state:
+        #     self.second_axis = solver.Axis[state['second_axis']]
+        
+        # if 'dim_background' in state:
+        #     self.dim_background = state['dim_background']
+        # if 'scene_scale' in state:
+        #     self.scene_scale = state['scene_scale']
+        
+        # # Restore control points
+        # if 'origin_pixel' in state:
+        #     self.origin_pixel = vec2_from_dict(state['origin_pixel'])
+        # if 'principal_point_pixel' in state:
+        #     self.principal_point_pixel = vec2_from_dict(state['principal_point_pixel'])
+        
+        # # Restore vanishing lines
+        # if 'first_vanishing_lines_pixel' in state:
+        #     self.first_vanishing_lines_pixel = [
+        #         (vec2_from_dict(line[0]), vec2_from_dict(line[1]))
+        #         for line in state['first_vanishing_lines_pixel']
+        #     ]
+        
+        # if 'second_vanishing_lines_pixel' in state:
+        #     self.second_vanishing_lines_pixel = [
+        #         [vec2_from_dict(line[0]), vec2_from_dict(line[1])]
+        #         for line in state['second_vanishing_lines_pixel']
+        #     ]
+        
+        # # Mode-specific params
+        # if self.solver_mode == SolverMode.OneVP:
+        #     if 'fovy' in state:
+        #         self.fov_degrees = state['fovy']
+        # elif self.solver_mode == SolverMode.TwoVP:
+        #     if 'quad_mode' in state:
+        #         self.quad_mode = state['quad_mode']
+        
+        # logger.info("✓ Deserialized state from JSON")
+
+    def save(self, filepath: str|None):
+        """
+        Save the app state to a custom .perspy file format.
+        
+        File structure:
+        - Magic number (4 bytes): b'prsp' (perspective spy)
+        - Version (4 bytes): version number
+        - JSON size (4 bytes): size of the state JSON
+        - Image size (4 bytes): size of the image data
+        - JSON data: serialized app state
+        - Image data: raw image bytes (if available)
+        """
+
+        if filepath is None:
+            """Prompt for file location"""
+            save_dialog = pfd.save_file(
+                title="Save Project As", 
+                default_path="project.perspy", 
+                file_types=["perspy files (*.perspy)"]
+            )
+            if path:=save_dialog.result():
+                filepath = path
+
+        import json
+        from struct import pack
+        
+        # Get JSON state
+        state_json = self.serialize().encode('utf-8')
+        state_size = len(state_json)
+        
+        # Get image data
+        image_data = b''
+        if self.image is not None:
+            import io
+            buffer = io.BytesIO()
+            # Save as PNG to preserve quality
+            self.image.save(buffer, format='PNG')
+            image_data = buffer.getvalue()
+        image_size = len(image_data)
+        
+        # Write file
+        magic = int.from_bytes(b'prsy', byteorder='little')  # 'prsy'
+        version = 1
+        
+        with open(filepath, 'wb') as f:
+            # Write header (16 bytes)
+            f.write(pack('<I', magic))        # 4 bytes: magic number
+            f.write(pack('<I', version))      # 4 bytes: version
+            f.write(pack('<I', state_size))   # 4 bytes: JSON size
+            f.write(pack('<I', image_size))   # 4 bytes: image size
+            
+            # Write data
+            f.write(state_json)
+            if image_data:
+                f.write(image_data)
+        
+        logger.info(f"✓ Saved to {filepath}")
+        logger.info(f"  State size: {state_size} bytes, Image size: {image_size} bytes")
+
+    def open(self, filepath: str|None):
+        """
+        Load app state from a .perspy file.
+        """
+        import json
+        from struct import unpack
+        import io
+
+        if filepath is None:
+            """Prompt for file location"""
+            open_file_dialog = pfd.open_file(
+                title="Open Project", 
+                default_path="", 
+                file_types=["perspy files (*.perspy)"]
+            )
+            paths = open_file_dialog.result()
+            if len(paths) > 0:
+                filepath = paths[0]
+            else:
+                return
+        
+        with open(filepath, 'rb') as f:
+            # Read header
+            magic_bytes = f.read(4)
+            if magic_bytes != b'prsp':
+                raise ValueError(f"Not a valid .perspy file (got magic: {magic_bytes})")
+            
+            version = unpack('<I', f.read(4))[0]
+            if version != 1:
+                raise ValueError(f"Unsupported version: {version}")
+            
+            state_size = unpack('<I', f.read(4))[0]
+            image_size = unpack('<I', f.read(4))[0]
+            
+            # Read state JSON
+            state_json = f.read(state_size).decode('utf-8')
+            
+            # Read image data
+            image_data = None
+            if image_size > 0:
+                image_data = f.read(image_size)
+        
+        # Use deserialize to restore state from JSON
+        self.deserialize(state_json)
+        
+        # Load image
+        if image_data:
+            import io
+            self.image = Image.open(io.BytesIO(image_data))
+            self.content_size = imgui.ImVec2(float(self.image.width), float(self.image.height))
+            
+            # Create OpenGL texture
+            self._upload_image_texture(self.image)
+            
+            logger.info(f"✓ Loaded from {filepath}")
+            logger.info(f"  Image: {self.image.width}x{self.image.height}")
+        else:
+            logger.warning("No image data in file")
+    
+    # Windows
     def gui(self):        
         # Compute Camera
         self.camera = Camera()
 
         # Create main menu bar (independent of any window)
-        menu_bar_height = 0
-        
-        # Push styling to eliminate border between title bar and menu bar
-        # imgui.push_style_var(imgui.StyleVar_.window_border_size, 0.0)
-        # imgui.push_style_var(imgui.StyleVar_.frame_border_size, 0.0)
-        style = imgui.get_style()
-        # imgui.push_style_var(imgui.StyleVar_.frame_padding, imgui.ImVec2(style.frame_padding.x, 12))
-        if imgui.begin_main_menu_bar():
-            if imgui.begin_menu("File"):
-                folder_icon = getattr(icons_fontawesome_4, 'ICON_FA_FOLDER_OPEN', getattr(icons_fontawesome_4, 'ICON_FA_FOLDER', ''))
-                quit_icon = getattr(icons_fontawesome_4, 'ICON_FA_TIMES', getattr(icons_fontawesome_4, 'ICON_FA_CLOSE', ''))
-                
-                if imgui.menu_item_simple(f"{folder_icon} Open Image", "Ctrl+O"):
-                    self.open_image_file()
-                
-                imgui.separator()
-                if imgui.menu_item_simple(f"{quit_icon} Quit", "Ctrl+Q"):
-                    # Exit the application
-                    import sys
-                    sys.exit(0)
-                
-                imgui.end_menu()
-
-            if imgui.begin_menu("Windows"):
-                smile_icon = getattr(icons_fontawesome_4, 'ICON_FA_SMILE_O', getattr(icons_fontawesome_4, 'ICON_FA_SMILE', ''))
-                star_icon = getattr(icons_fontawesome_4, 'ICON_FA_STAR', '')
-
-                if imgui.menu_item_simple(f"{smile_icon} Emoji Test", None, self.show_emoji_window):
-                    self.show_emoji_window = not self.show_emoji_window
-
-                if imgui.menu_item_simple(f"{star_icon} FontAwesome Icons", None, self.show_fontawesome_window):
-                    self.show_fontawesome_window = not self.show_fontawesome_window
-
-                if imgui.menu_item_simple("Style Window", None, self.show_styleeditor_window):
-                    self.show_styleeditor_window = not self.show_styleeditor_window
-
-                if imgui.menu_item_simple("Data Window", None, self.show_data_window):
-                    self.show_data_window = not self.show_data_window
-                imgui.end_menu()
-
-            if imgui.begin_menu("Help"):
-                # Use safe icon access with fallback
-                book_icon = getattr(icons_fontawesome_4, 'ICON_FA_BOOK', '')
-                info_icon = getattr(icons_fontawesome_4, 'ICON_FA_INFO_CIRCLE', getattr(icons_fontawesome_4, 'ICON_FA_INFO', ''))
-                
-                if imgui.menu_item_simple(f"{book_icon} Manual"):
-                    ...
-                if imgui.menu_item_simple(f"{info_icon} About"):
-                    self.show_about_popup = True
-
-                
-                imgui.end_menu()
-            
-            # Store the actual height of the menu bar
-            menu_bar_height = imgui.get_frame_height()
-            imgui.end_main_menu_bar()
-        # imgui.pop_style_var()
+        self.show_main_menu_bar()
+        menu_bar_height = imgui.get_frame_height()
 
         # Model About window
         if self.show_about_popup:
@@ -321,6 +456,7 @@ class App:
             self.show_parameters()
         end_sidebar()
 
+        # Solve the camera
         self.solve()
 
         # fullscreen viewer Window
@@ -336,12 +472,105 @@ class App:
             self.show_results()
         end_sidebar()
 
+        if self.show_data_window:
+            expanded, self.show_data_window = imgui.begin("data window", self.show_data_window)
+            if expanded:
+                self.show_file()
+            imgui.end()
+
         # Style Editor Window
         if self.show_styleeditor_window:
             expanded, self.show_styleeditor_window = imgui.begin("style editor", self.show_styleeditor_window)
             if expanded:
                 imgui.show_style_editor()
             imgui.end()
+
+    def show_main_menu_bar(self):
+        # Push styling to eliminate border between title bar and menu bar
+        # imgui.push_style_var(imgui.StyleVar_.window_border_size, 0.0)
+        # imgui.push_style_var(imgui.StyleVar_.frame_border_size, 0.0)
+        style = imgui.get_style()
+        # imgui.push_style_var(imgui.StyleVar_.frame_padding, imgui.ImVec2(style.frame_padding.x, 12))
+        if imgui.begin_main_menu_bar():
+            if imgui.begin_menu("File"):
+                folder_icon = getattr(icons_fontawesome_4, 'ICON_FA_FOLDER_OPEN', getattr(icons_fontawesome_4, 'ICON_FA_FOLDER', ''))
+                save_icon = getattr(icons_fontawesome_4, 'ICON_FA_SAVE', getattr(icons_fontawesome_4, 'ICON_FA_FLOPPY_O', ''))
+                quit_icon = getattr(icons_fontawesome_4, 'ICON_FA_TIMES', getattr(icons_fontawesome_4, 'ICON_FA_CLOSE', ''))
+                
+                if imgui.menu_item_simple(f"{folder_icon} New", "Ctrl+N"):
+                    ...
+                
+                if imgui.menu_item_simple(f"{folder_icon} Open", "Ctrl+O"):
+                    self.open_project_file()
+                
+                if imgui.menu_item_simple(f"{save_icon} Save", "Ctrl+S"):
+                    self.save_project_file()
+                
+                if imgui.menu_item_simple(f"{save_icon} Save As...", "Ctrl+Shift+S"):
+                    self.save_project_file_as()
+
+                imgui.separator()
+
+                if imgui.menu_item_simple(f"{folder_icon} Load Image", "Ctrl+O"):
+                    self.load_image_file()
+                
+                imgui.separator()
+                if imgui.menu_item_simple(f"{quit_icon} Quit", "Ctrl+Q"):
+                    # Exit the application
+                    import sys
+                    sys.exit(0)
+                
+                imgui.end_menu()
+
+            if imgui.begin_menu("View"):
+
+                if imgui.menu_item_simple(f"dim background", None, self.dim_background):
+                    self.dim_background = not self.dim_background
+
+                if imgui.menu_item_simple(f"grid", None, self.view_grid):
+                    self.view_grid = not self.view_grid
+
+                if imgui.menu_item_simple(f"horizon", None, self.view_horizon):
+                    self.view_horizon = not self.view_horizon
+
+                global sidebar_opacity
+                _, sidebar_opacity = imgui.slider_float("sidebar opacity", sidebar_opacity, 0.0, 1.0, "%.2f")
+
+                imgui.end_menu()
+            
+            if imgui.begin_menu("Windows"):
+                smile_icon = getattr(icons_fontawesome_4, 'ICON_FA_SMILE_O', getattr(icons_fontawesome_4, 'ICON_FA_SMILE', ''))
+                star_icon = getattr(icons_fontawesome_4, 'ICON_FA_STAR', '')
+
+                if imgui.menu_item_simple(f"{smile_icon} Emoji Test", None, self.show_emoji_window):
+                    self.show_emoji_window = not self.show_emoji_window
+
+                if imgui.menu_item_simple(f"{star_icon} FontAwesome Icons", None, self.show_fontawesome_window):
+                    self.show_fontawesome_window = not self.show_fontawesome_window
+
+                if imgui.menu_item_simple("Style Window", None, self.show_styleeditor_window):
+                    self.show_styleeditor_window = not self.show_styleeditor_window
+
+                if imgui.menu_item_simple("Data Window", None, self.show_data_window):
+                    self.show_data_window = not self.show_data_window
+                imgui.end_menu()
+
+            if imgui.begin_menu("Help"):
+                # Use safe icon access with fallback
+                book_icon = getattr(icons_fontawesome_4, 'ICON_FA_BOOK', '')
+                info_icon = getattr(icons_fontawesome_4, 'ICON_FA_INFO_CIRCLE', getattr(icons_fontawesome_4, 'ICON_FA_INFO', ''))
+                
+                if imgui.menu_item_simple(f"{book_icon} Manual"):
+                    ...
+                if imgui.menu_item_simple(f"{info_icon} About"):
+                    self.show_about_popup = True
+
+                
+                imgui.end_menu()
+            
+            # Store the actual height of the menu bar
+            imgui.end_main_menu_bar()
+        # imgui.pop_style_var()
 
     def show_about(self):
         imgui.text("Camera Spy Demo")
@@ -353,6 +582,267 @@ class App:
         imgui.text("Developed with ❤ by András Zalavári")
         imgui.text_link_open_url("https://github.com/yourusername/camera-spy")
 
+    def show_parameters(self):
+        imgui.separator_text("Image")
+        imgui.set_next_item_width(150)
+        if self.image_texture_ref is None:
+            if imgui.button("open image", size=imgui.ImVec2(-1,0)):
+                self.load_image_file()
+            imgui.set_next_item_width(150)
+            _, value = imgui.input_int2("image size", [int(self.content_size.x), int(self.content_size.y)])
+            if _:
+                self.content_size = imgui.ImVec2(value[0], value[1])
+        else:
+            image_aspect = self.content_size.x / self.content_size.y
+            width = imgui.get_content_region_avail().x-imgui.get_style().frame_padding.x*2
+            if imgui.image_button("open", self.image_texture_ref, imgui.ImVec2(width, width/image_aspect)):
+                self.load_image_file()
+            imgui.set_next_item_width(150)
+            imgui.input_int2("image size", [int(self.content_size.x), int(self.content_size.y)], imgui.InputTextFlags_.read_only)
+
+        _, self.dim_background = imgui.checkbox("dim background", self.dim_background)
+
+        # imgui.bullet_text("Warning: Font scaling will NOT be smooth, because\nImGuiBackendFlags_RendererHasTextures is not set!")
+        imgui.separator_text("Solver Parameters")
+        imgui.set_next_item_width(150)
+        _, self.solver_mode = imgui.combo("mode", self.solver_mode, SolverMode._member_names_)
+        imgui.set_next_item_width(150)
+        _, self.first_axis = imgui.combo("first axis",   self.first_axis, solver.Axis._member_names_)
+        imgui.set_next_item_width(150)
+        _, self.second_axis = imgui.combo("second axis", self.second_axis, solver.Axis._member_names_)
+        imgui.set_next_item_width(150)
+        _, self.scene_scale = imgui.slider_float("scene  scale", self.scene_scale, 1.0, 100.0, "%.2f")
+        
+        match self.solver_mode:
+            case SolverMode.OneVP:
+                imgui.set_next_item_width(150)
+                _, self.fov_degrees = imgui.slider_float("fov°", self.fov_degrees, 1.0, 179.0, "%.1f°")
+
+            case SolverMode.TwoVP:
+                _, self.quad_mode = imgui.checkbox("quad", self.quad_mode)
+
+    def show_viewer(self):
+        if ui.viewer.begin_viewer("viewer1", content_size=self.content_size, size=imgui.ImVec2(-1,-1), coordinate_system="top-left"):
+            if self.image_texture_ref is not None:
+                tl = ui.viewer._get_window_coords(imgui.ImVec2(0,0))
+                br = ui.viewer._get_window_coords(imgui.ImVec2(self.content_size.x, self.content_size.y))
+                image_size = br - tl
+                imgui.set_cursor_pos(tl)
+                if self.dim_background:
+                    imgui.image_with_bg(self.image_texture_ref, image_size, None, None, 
+                                        bg_col=  (0.33,0.33,0.33,1.0),
+                                        tint_col=(0.33,0.33,0.33,1.0)
+                    )
+                else:
+                    imgui.image(self.image_texture_ref, image_size)
+            else:
+                io = imgui.get_io()
+                center = io.display_size / 2
+                
+                # # imgui.set_cursor_pos(center)
+                # imgui.set_next_window_pos(center, imgui.Cond_.always, imgui.ImVec2(0.5, 0.5))
+                # imgui.push_style_var(imgui.StyleVar_.window_padding, imgui.ImVec2(20, 20))
+                # imgui.push_style_color(imgui.Col_.window_bg, (0,0,0, 0.7))
+                # if imgui.begin("##dropzone", None, imgui.WindowFlags_.always_auto_resize | imgui.WindowFlags_.no_title_bar | imgui.WindowFlags_.no_inputs | imgui.WindowFlags_.no_move | imgui.WindowFlags_.no_resize | imgui.WindowFlags_.no_scrollbar):
+                #     imgui.push_style_color(imgui.Col_.text, imgui.get_style().color_(imgui.Col_.text_disabled))
+                #     imgui.bullet_text("Drop an image file here to load it as background")
+                #     imgui.pop_style_color()
+                # imgui.end()
+                # imgui.pop_style_color()
+                # imgui.pop_style_var()
+
+            # control points
+            _, self.origin_pixel = ui.viewer.control_point("o", self.origin_pixel)
+            control_line = ui.comp(ui.viewer.control_point)
+            control_lines = ui.comp(control_line)
+            _, self.first_vanishing_lines_pixel = control_lines("z", self.first_vanishing_lines_pixel, color=get_axis_color(self.first_axis) )
+            for line in self.first_vanishing_lines_pixel:
+                ui.viewer.guide(line[0], line[1], color=get_axis_color(self.first_axis))
+
+            match self.solver_mode:
+                case SolverMode.OneVP:
+                    _, self.second_vanishing_lines_pixel[0] = control_line("x", self.second_vanishing_lines_pixel[0], color=get_axis_color(self.second_axis))  
+                    ui.viewer.guide(self.second_vanishing_lines_pixel[0][0], self.second_vanishing_lines_pixel[0][1], color=get_axis_color(self.second_axis))
+                
+                case SolverMode.TwoVP:
+                    if self.quad_mode:
+                        z0, z1 = self.first_vanishing_lines_pixel
+                        self.second_vanishing_lines_pixel = [
+                            (z0[0], z1[0]),
+                            (z0[1], z1[1])
+                        ]
+                    else:
+                        _, self.second_vanishing_lines_pixel = control_lines("x", self.second_vanishing_lines_pixel, color=get_axis_color(self.second_axis) )
+                    
+                    for line in self.second_vanishing_lines_pixel:
+                        ui.viewer.guide(line[0], line[1], color=get_axis_color(self.second_axis))
+
+            # draw vanishing lines to vanishing points
+            if self.first_vanishing_point_pixel is not None:
+                for line in self.first_vanishing_lines_pixel:
+                    P = sorted([line[0], line[1]], key=lambda P: glm.distance2(P, self.first_vanishing_point_pixel))[0]
+                    ui.viewer.guide(P, self.first_vanishing_point_pixel, get_axis_color(self.first_axis, dim=True))
+
+            if self.second_vanishing_point_pixel is not None:
+                for line in self.second_vanishing_lines_pixel:
+                    P = sorted([line[0], line[1]], key=lambda P: glm.distance2(P, self.second_vanishing_point_pixel))[0]
+                    ui.viewer.guide(P, self.second_vanishing_point_pixel, get_axis_color(self.second_axis, dim=True))
+
+            if self.camera is not None:
+                if ui.viewer.begin_scene(glm.scale(self.camera.projectionMatrix(), glm.vec3(1.0, -1.0, 1.0)), self.camera.viewMatrix()):
+                    if self.view_grid:
+                        # draw the grid
+                        for A, B in ui.viewer.make_gridXZ_lines(step=1, size=10):
+                            ui.viewer.guide(A, B)
+                    ui.viewer.axes(length=1.0)
+                    if self.view_horizon:
+                        ui.viewer.horizon_line()
+
+                ui.viewer.end_scene()
+
+
+
+
+
+        ui.viewer.end_viewer()
+
+    def show_results(self):
+        def pretty_matrix(value:np.array, separator:str='\t') -> str:
+            # Format with numpy's array2string for better control
+            text = np.array2string(
+                value,
+                precision=3,
+                suppress_small=True,
+                separator=separator,  # Use double space as separator
+                prefix='',
+                suffix='',
+                formatter={'float_kind': lambda x: f"{'+' if np.sign(x)>=0 else '-'}{abs(x):.3f}"}  # Right-aligned with 8 characters width
+            )
+            
+            text = text.replace('[', ' ').replace(']', '')
+            from textwrap import dedent
+            text = dedent(text).strip()
+            text = text.replace('+', ' ')
+            return text
+            
+        if self.camera is not None:
+            scale = glm.vec3()
+            quat = glm.quat()  # This will be our quaternion
+            translation = glm.vec3()
+            skew = glm.vec3()
+            perspective = glm.vec4()
+            success = glm.decompose(self.camera.transform, scale, quat, translation, skew, perspective)
+            if not success:
+                imgui.text("Error: Could not decompose camera transform matrix.")
+                return
+            pos = self.camera.getPosition()
+            transform = [self.camera.transform[j][i] for i in range(4) for j in range(4)]
+            euler = solver.extract_euler(self.camera.transform, order=self.current_euler_order)
+
+            transform_text = pretty_matrix(np.array(transform).reshape(4,4), separator="\t")
+            position_text = pretty_matrix(np.array(translation), separator="\t")
+            quat_text = pretty_matrix(np.array([quat.x, quat.y, quat.z, quat.w]), separator="\t")
+            euler_text = pretty_matrix(np.array(euler), separator="\t")
+
+            if ui.begin_attribute_editor("res props"):
+                ui.next_attribute("transform")
+                style = imgui.get_style()
+                transform_text_size = imgui.calc_text_size(transform_text) + style.frame_padding * 2
+                imgui.input_text_multiline("##transform", transform_text, size=transform_text_size, flags=imgui.InputTextFlags_.read_only)
+
+                ui.next_attribute("position")
+                imgui.input_text("##position", position_text, flags=imgui.InputTextFlags_.read_only)
+                
+                # imgui.begin_tooltip()
+
+                ui.next_attribute("quaternion (xyzw)")
+                imgui.input_text("##quaternion", quat_text, flags=imgui.InputTextFlags_.read_only)
+                imgui.set_item_tooltip("Quaternion representing camera rotation (x, y, z, w)")
+
+                # next_attribute("euler order")
+                
+                ui.next_attribute(f"euler")
+                imgui.push_style_var(imgui.StyleVar_.item_spacing, imgui.ImVec2(2, style.item_spacing.y))
+                euler_order_options = solver.EulerOrder._member_names_
+                max_text_width = max([imgui.calc_text_size(text).x for text in euler_order_options])
+                total_width = max_text_width + style.frame_padding.x * 2.0
+                total_width+=imgui.get_frame_height() # for the arrow button todo: is it square for sure?
+                imgui.set_next_item_width(total_width)
+                # if imgui.begin_combo("##euler_order", solver.EulerOrder._member_names_[self.current_euler_order], imgui.ComboFlags_.no_arrow_button):
+                #     for i, option in enumerate(euler_order_options):
+                #         is_selected = (i == self.current_euler_order)
+                #         _, selected_event =  imgui.selectable(option, is_selected)
+                #         if selected_event:
+                #             self.current_euler_order = i
+                #         if is_selected:
+                #             imgui.set_item_default_focus()
+                #     imgui.end_combo()
+                _, self.current_euler_order = imgui.combo("##euler_order", self.current_euler_order, solver.EulerOrder._member_names_)
+                imgui.set_item_tooltip("Select the Euler angle rotation order used for decomposition.")
+                imgui.same_line()
+                imgui.set_next_item_width(-1)
+                imgui.input_text("##euler", euler_text, flags=imgui.InputTextFlags_.read_only)
+                imgui.set_item_tooltip("Euler angles in degrees (x,y,z).\nNote: Rotation is applied in order order: ZXY (Yaw, Pitch, Roll)")
+                imgui.pop_style_var()
+                ui.next_attribute("fov")
+                imgui.input_text("##fov", f"{self.camera.fovy:.2f}°")
+
+                ui.end_attribute_editor()
+
+        if self.camera is not None:
+            data = {
+                "viewTransform": {
+                    "rows": [[col for col in self.camera.viewMatrix()[j]] for j in range(4)]
+                },
+                "projectionTransform": {
+                    "rows": [[col for col in self.camera.projectionMatrix()[j]] for j in range(4)]
+                },
+                "verticalFieldOfView": self.camera.fovy
+            }
+            # additional_data = {
+            #     "principalPoint": {
+            #         'x': self.principal_point_pixel.x, 
+            #         'y': self.principal_point_pixel.y
+            #     },
+            #     "vanishingPoints": [
+            #         {
+            #             'x': self.first_vanishing_point_pixel.x, 
+            #             'y': self.first_vanishing_point_pixel.y
+            #         },
+            #         {
+            #             'x': self.second_vanishing_point_pixel.x, 
+            #             'y': self.second_vanishing_point_pixel.y
+            #         },
+            #         "TODO:calculate third VP"
+            #     ],
+            #     "vanishingPointAxes": [
+            #         solver.Axis._member_map_[self.first_axis], 
+            #         solver.Axis._member_map_[self.second_axis],
+            #         "TODO:thirdAxis"
+            #     ],
+            #     'focalLength': "todo: calculate from fov with the camera sensor size in mind",
+            #     "imageWidth": int(self.content_size.x),
+            #     "imageHeight": int(self.content_size.y)
+            # }
+
+            # import json
+            # json_string = json.dumps(data, indent=4)
+            # imgui.text(json_string)
+            # if imgui.button("export camera parameters", imgui.ImVec2(-1,0)):
+            #     ...
+
+    def show_file(self):
+        from textwrap import dedent
+        if imgui.collapsing_header("Serialized", imgui.TreeNodeFlags_.default_open):
+            text = self.serialize()
+            imgui.text_unformatted(text)
+        # if imgui.collapsing_header("Parameters", imgui.TreeNodeFlags_.default_open):
+        #     text = self.serialize()
+        #     imgui.text_unformatted=(text)
+
+        # if imgui.collapsing_header("Computed", imgui.TreeNodeFlags_.default_open):
+        #     imgui.text("...")
+       
     def show_emoji_test(self):
         imgui.text("Emoji Font Test")
         imgui.separator()
@@ -706,46 +1196,18 @@ class App:
         
         imgui.text_colored((0.7, 0.7, 0.7, 1.0), "Note: Icons need proper font loading to render correctly")
         
-    def show_parameters(self):
-        imgui.separator_text("Image")
-        imgui.set_next_item_width(150)
-        if self.image_texture_ref is None:
-            if imgui.button("open image", size=imgui.ImVec2(-1,0)):
-                self.open_image_file()
-            imgui.set_next_item_width(150)
-            _, value = imgui.input_int2("image size", [int(self.content_size.x), int(self.content_size.y)])
-            if _:
-                self.content_size = imgui.ImVec2(value[0], value[1])
-        else:
-            image_aspect = self.content_size.x / self.content_size.y
-            width = imgui.get_content_region_avail().x-imgui.get_style().frame_padding.x*2
-            if imgui.image_button("open", self.image_texture_ref, imgui.ImVec2(width, width/image_aspect)):
-                self.open_image_file()
-            imgui.set_next_item_width(150)
-            imgui.input_int2("image size", [int(self.content_size.x), int(self.content_size.y)], imgui.InputTextFlags_.read_only)
+    # Events
+    def on_file_drop(self, window, paths):
+        from pathlib import Path
+        """GLFW drop callback - receives list of paths"""
+        logger.info(f"Files dropped: {paths}")
+        if len(paths) > 0:
+            first_path = paths[0]
+            self.load_image_file(first_path)
 
-        _, self.dim_background = imgui.checkbox("dim background", self.dim_background)
-
-        # imgui.bullet_text("Warning: Font scaling will NOT be smooth, because\nImGuiBackendFlags_RendererHasTextures is not set!")
-        imgui.separator_text("Solver Parameters")
-        imgui.set_next_item_width(150)
-        _, self.solver_mode = imgui.combo("mode", self.solver_mode, SolverMode._member_names_)
-        imgui.set_next_item_width(150)
-        _, self.first_axis = imgui.combo("first axis",   self.first_axis, solver.Axis._member_names_)
-        imgui.set_next_item_width(150)
-        _, self.second_axis = imgui.combo("second axis", self.second_axis, solver.Axis._member_names_)
-        imgui.set_next_item_width(150)
-        _, self.scene_scale = imgui.slider_float("scene  scale", self.scene_scale, 1.0, 100.0, "%.2f")
-        
-        match self.solver_mode:
-            case SolverMode.OneVP:
-                imgui.set_next_item_width(150)
-                _, self.fov_degrees = imgui.slider_float("fov°", self.fov_degrees, 1.0, 179.0, "%.1f°")
-
-            case SolverMode.TwoVP:
-                _, self.quad_mode = imgui.checkbox("quad", self.quad_mode)
-
+    # Actions
     def solve(self):
+        self.data = json.loads(self.serialize())
         # Solve for camera
         self.first_vanishing_point_pixel:glm.vec2|None = None
         self.second_vanishing_point_pixel:glm.vec2|None = None
@@ -825,214 +1287,7 @@ class App:
                     traceback.print_exc()
                     imgui.pop_style_color()
 
-    def show_viewer(self):
-        if ui.viewer.begin_viewer("viewer1", content_size=self.content_size, size=imgui.ImVec2(-1,-1), coordinate_system="top-left"):
-            if self.image_texture_ref is not None:
-                tl = ui.viewer._get_window_coords(imgui.ImVec2(0,0))
-                br = ui.viewer._get_window_coords(imgui.ImVec2(self.content_size.x, self.content_size.y))
-                image_size = br - tl
-                imgui.set_cursor_pos(tl)
-                if self.dim_background:
-                    imgui.image_with_bg(self.image_texture_ref, image_size, None, None, 
-                                        bg_col=  (0.33,0.33,0.33,1.0),
-                                        tint_col=(0.33,0.33,0.33,1.0)
-                    )
-                else:
-                    imgui.image(self.image_texture_ref, image_size)
-            else:
-                io = imgui.get_io()
-                center = io.display_size / 2
-                
-                # # imgui.set_cursor_pos(center)
-                # imgui.set_next_window_pos(center, imgui.Cond_.always, imgui.ImVec2(0.5, 0.5))
-                # imgui.push_style_var(imgui.StyleVar_.window_padding, imgui.ImVec2(20, 20))
-                # imgui.push_style_color(imgui.Col_.window_bg, (0,0,0, 0.7))
-                # if imgui.begin("##dropzone", None, imgui.WindowFlags_.always_auto_resize | imgui.WindowFlags_.no_title_bar | imgui.WindowFlags_.no_inputs | imgui.WindowFlags_.no_move | imgui.WindowFlags_.no_resize | imgui.WindowFlags_.no_scrollbar):
-                #     imgui.push_style_color(imgui.Col_.text, imgui.get_style().color_(imgui.Col_.text_disabled))
-                #     imgui.bullet_text("Drop an image file here to load it as background")
-                #     imgui.pop_style_color()
-                # imgui.end()
-                # imgui.pop_style_color()
-                # imgui.pop_style_var()
-
-            # control points
-            _, self.origin_pixel = ui.viewer.control_point("o", self.origin_pixel)
-            control_line = ui.comp(ui.viewer.control_point)
-            control_lines = ui.comp(control_line)
-            _, self.first_vanishing_lines_pixel = control_lines("z", self.first_vanishing_lines_pixel, color=get_axis_color(self.first_axis) )
-            for line in self.first_vanishing_lines_pixel:
-                ui.viewer.guide(line[0], line[1], color=get_axis_color(self.first_axis))
-
-            match self.solver_mode:
-                case SolverMode.OneVP:
-                    _, self.second_vanishing_lines_pixel[0] = control_line("x", self.second_vanishing_lines_pixel[0], color=get_axis_color(self.second_axis))  
-                    ui.viewer.guide(self.second_vanishing_lines_pixel[0][0], self.second_vanishing_lines_pixel[0][1], color=get_axis_color(self.second_axis))
-                
-                case SolverMode.TwoVP:
-                    if self.quad_mode:
-                        z0, z1 = self.first_vanishing_lines_pixel
-                        self.second_vanishing_lines_pixel = [
-                            (z0[0], z1[0]),
-                            (z0[1], z1[1])
-                        ]
-                    else:
-                        _, self.second_vanishing_lines_pixel = control_lines("x", self.second_vanishing_lines_pixel, color=get_axis_color(self.second_axis) )
-                    
-                    for line in self.second_vanishing_lines_pixel:
-                        ui.viewer.guide(line[0], line[1], color=get_axis_color(self.second_axis))
-
-            # draw vanishing lines to vanishing points
-            if self.first_vanishing_point_pixel is not None:
-                for line in self.first_vanishing_lines_pixel:
-                    P = sorted([line[0], line[1]], key=lambda P: glm.distance2(P, self.first_vanishing_point_pixel))[0]
-                    ui.viewer.guide(P, self.first_vanishing_point_pixel, get_axis_color(self.first_axis, dim=True))
-
-            if self.second_vanishing_point_pixel is not None:
-                for line in self.second_vanishing_lines_pixel:
-                    P = sorted([line[0], line[1]], key=lambda P: glm.distance2(P, self.second_vanishing_point_pixel))[0]
-                    ui.viewer.guide(P, self.second_vanishing_point_pixel, get_axis_color(self.second_axis, dim=True))
-
-            if self.camera is not None:
-                if ui.viewer.begin_scene(glm.scale(self.camera.projectionMatrix(), glm.vec3(1.0, -1.0, 1.0)), self.camera.viewMatrix()):
-                    # draw the grid
-                    for A, B in ui.viewer.make_gridXZ_lines(step=1, size=10):
-                        ui.viewer.guide(A, B)
-                    ui.viewer.axes(length=1.0)
-                    ui.viewer.horizon_line()
-
-                ui.viewer.end_scene()
-
-
-
-
-
-        ui.viewer.end_viewer()
-
-    def show_results(self):
-        def pretty_matrix(value:np.array, separator:str='\t') -> str:
-            # Format with numpy's array2string for better control
-            text = np.array2string(
-                value,
-                precision=3,
-                suppress_small=True,
-                separator=separator,  # Use double space as separator
-                prefix='',
-                suffix='',
-                formatter={'float_kind': lambda x: f"{'+' if np.sign(x)>=0 else '-'}{abs(x):.3f}"}  # Right-aligned with 8 characters width
-            )
-            
-            text = text.replace('[', ' ').replace(']', '')
-            from textwrap import dedent
-            text = dedent(text).strip()
-            text = text.replace('+', ' ')
-            return text
-            
-        if self.camera is not None:
-            scale = glm.vec3()
-            quat = glm.quat()  # This will be our quaternion
-            translation = glm.vec3()
-            skew = glm.vec3()
-            perspective = glm.vec4()
-            success = glm.decompose(self.camera.transform, scale, quat, translation, skew, perspective)
-
-            pos = self.camera.getPosition()
-            matrix = [self.camera.transform[j][i] for i in range(4) for j in range(4)]
-
-            transform_text = pretty_matrix(np.array(matrix).reshape(4,4), separator="\t")
-            position_text = pretty_matrix(np.array(translation), separator="\t")
-            quat_text = pretty_matrix(np.array([quat.x, quat.y, quat.z, quat.w]), separator="\t")
-
-            x, y, z = solver.extract_euler_angle(self.camera.transform, order=self.current_euler_order)
-            euler_text = pretty_matrix(np.array([x, y, z]), separator="\t")
-
-            if begin_attribute_editor("res props"):
-                next_attribute("transform")
-                style = imgui.get_style()
-                transform_text_size = imgui.calc_text_size(transform_text) + style.frame_padding * 2
-                imgui.input_text_multiline("##transform", transform_text, size=transform_text_size, flags=imgui.InputTextFlags_.read_only)
-
-                next_attribute("position")
-                imgui.input_text("##position", position_text, flags=imgui.InputTextFlags_.read_only)
-                
-                # imgui.begin_tooltip()
-                
-                next_attribute("quaternion (xyzw)")
-                imgui.input_text("##quaternion", quat_text, flags=imgui.InputTextFlags_.read_only)
-                imgui.set_item_tooltip("Quaternion representing camera rotation (x, y, z, w)")
-
-                # next_attribute("euler order")
-                
-                next_attribute(f"euler")
-                imgui.push_style_var(imgui.StyleVar_.item_spacing, imgui.ImVec2(2, style.item_spacing.y))
-                euler_order_options = solver.EulerOrder._member_names_
-                max_text_width = max([imgui.calc_text_size(text).x for text in euler_order_options])
-                total_width = max_text_width + style.frame_padding.x * 2.0
-                total_width+=imgui.get_frame_height() # for the arrow button todo: is it square for sure?
-                imgui.set_next_item_width(total_width)
-                # if imgui.begin_combo("##euler_order", solver.EulerOrder._member_names_[self.current_euler_order], imgui.ComboFlags_.no_arrow_button):
-                #     for i, option in enumerate(euler_order_options):
-                #         is_selected = (i == self.current_euler_order)
-                #         _, selected_event =  imgui.selectable(option, is_selected)
-                #         if selected_event:
-                #             self.current_euler_order = i
-                #         if is_selected:
-                #             imgui.set_item_default_focus()
-                #     imgui.end_combo()
-                _, self.current_euler_order = imgui.combo("##euler_order", self.current_euler_order, solver.EulerOrder._member_names_)
-                imgui.set_item_tooltip("Select the Euler angle rotation order used for decomposition.")
-                imgui.same_line()
-                imgui.set_next_item_width(-1)
-                imgui.input_text("##euler", euler_text, flags=imgui.InputTextFlags_.read_only)
-                imgui.set_item_tooltip("Euler angles in degrees (x,y,z).\nNote: Rotation is applied in order order: ZXY (Yaw, Pitch, Roll)")
-                imgui.pop_style_var()
-                next_attribute("fov")
-                imgui.input_text("##fov", f"{self.camera.fovy:.2f}°")
-
-                end_attribute_editor()
-
-        if self.camera is not None:
-            data = {
-                "viewTransform": {
-                    "rows": [[col for col in self.camera.viewMatrix()[j]] for j in range(4)]
-                },
-                "projectionTransform": {
-                    "rows": [[col for col in self.camera.projectionMatrix()[j]] for j in range(4)]
-                },
-                "verticalFieldOfView": self.camera.fovy
-            }
-            # additional_data = {
-            #     "principalPoint": {
-            #         'x': self.principal_point_pixel.x, 
-            #         'y': self.principal_point_pixel.y
-            #     },
-            #     "vanishingPoints": [
-            #         {
-            #             'x': self.first_vanishing_point_pixel.x, 
-            #             'y': self.first_vanishing_point_pixel.y
-            #         },
-            #         {
-            #             'x': self.second_vanishing_point_pixel.x, 
-            #             'y': self.second_vanishing_point_pixel.y
-            #         },
-            #         "TODO:calculate third VP"
-            #     ],
-            #     "vanishingPointAxes": [
-            #         solver.Axis._member_map_[self.first_axis], 
-            #         solver.Axis._member_map_[self.second_axis],
-            #         "TODO:thirdAxis"
-            #     ],
-            #     'focalLength': "todo: calculate from fov with the camera sensor size in mind",
-            #     "imageWidth": int(self.content_size.x),
-            #     "imageHeight": int(self.content_size.y)
-            # }
-
-            # import json
-            # json_string = json.dumps(data, indent=4)
-            # imgui.text(json_string)
-            # if imgui.button("export camera parameters", imgui.ImVec2(-1,0)):
-            #     ...
-
-    def open_image_file(self, path:str|None=None):
+    def load_image_file(self, path:str|None=None):
         from pathlib import Path
         try:
             if path is None:
@@ -1054,8 +1309,11 @@ class App:
             else:
                 logger.info(f"✓ Found file: {Path(path).absolute()}")
 
+            self.image_path = path
+
             # Load image with PIL
             img = Image.open(path)
+            self.image = img
             self.content_size = imgui.ImVec2(img.width, img.height)
             logger.info(f"✓ Loaded: {path} ({img.width}x{img.height})")
             
@@ -1097,6 +1355,50 @@ class App:
             import traceback
             traceback.print_exc()
 
+    def _upload_image_texture(self, img: Image):
+        """Helper to upload PIL image to OpenGL texture."""
+        # Convert to RGBA if needed
+        if img.mode != 'RGBA':
+            img = img.convert('RGBA')
+        
+        img_data = np.array(img, dtype=np.uint8)
+        
+        # Delete old texture if exists
+        if self.image_texture_id is not None:
+            gl.glDeleteTextures(1, [self.image_texture_id])
+        
+        # Generate new texture
+        texture_id = gl.glGenTextures(1)
+        gl.glBindTexture(gl.GL_TEXTURE_2D, texture_id)
+        
+        # Set texture parameters
+        gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_LINEAR)
+        gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_LINEAR)
+        gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_S, gl.GL_CLAMP_TO_EDGE)
+        gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_T, gl.GL_CLAMP_TO_EDGE)
+        
+        # Upload texture data
+        gl.glTexImage2D(
+            gl.GL_TEXTURE_2D,
+            0,
+            gl.GL_RGBA,
+            img.width,
+            img.height,
+            0,
+            gl.GL_RGBA,
+            gl.GL_UNSIGNED_BYTE,
+            img_data
+        )
+        
+        self.image_texture_id = texture_id
+        logger.info(f"✓ Uploaded texture (ID: {texture_id})")
+
+
+if __name__ == "__main__":
+    from imgui_bundle import hello_imgui
+    app = PerspyApp()
+
+    # Setup HelloImGui application parameters
     def create_fontawesome_assets_folder(self):
         """Create the proper assets folder structure for FontAwesome fonts"""
         from pathlib import Path
@@ -1113,25 +1415,25 @@ class App:
             readme_file = assets_fonts_dir / "README_FontAwesome.txt"
             readme_content = """FontAwesome Font Setup for ImGui Bundle
 
-This folder should contain: fontawesome-webfont.ttf
+    This folder should contain: fontawesome-webfont.ttf
 
-HOW TO GET FontAwesome FONT:
+    HOW TO GET FontAwesome FONT:
 
-1. Download FontAwesome 4 Web Font:
-   Visit: https://fontawesome.com/v4/get-started/
-   Download the web font package
-   Extract fontawesome-webfont.ttf from the fonts/ folder
+    1. Download FontAwesome 4 Web Font:
+    Visit: https://fontawesome.com/v4/get-started/
+    Download the web font package
+    Extract fontawesome-webfont.ttf from the fonts/ folder
 
-2. Download ImGui Bundle default assets (includes FontAwesome):
-   Visit: https://traineq.org/ImGuiBundle/assets.zip
-   Extract to get the complete assets folder with fonts
+    2. Download ImGui Bundle default assets (includes FontAwesome):
+    Visit: https://traineq.org/ImGuiBundle/assets.zip
+    Extract to get the complete assets folder with fonts
 
-3. Use wget/curl (if available):
-   wget https://github.com/FortAwesome/Font-Awesome/raw/v4.7.0/fonts/fontawesome-webfont.ttf
+    3. Use wget/curl (if available):
+    wget https://github.com/FortAwesome/Font-Awesome/raw/v4.7.0/fonts/fontawesome-webfont.ttf
 
-Once you have fontawesome-webfont.ttf, place it in this folder.
-Then restart your application to load FontAwesome icons!
-"""
+    Once you have fontawesome-webfont.ttf, place it in this folder.
+    Then restart your application to load FontAwesome icons!
+    """
             
             with open(readme_file, 'w', encoding='utf-8') as f:
                 f.write(readme_content)
@@ -1150,20 +1452,7 @@ Then restart your application to load FontAwesome icons!
             import traceback
             traceback.print_exc()
 
-    def on_file_drop(self, window, paths):
-        from pathlib import Path
-        """GLFW drop callback - receives list of paths"""
-        logger.info(f"Files dropped: {paths}")
-        if len(paths) > 0:
-            first_path = paths[0]
-            self.open_image_file(first_path)
-
-if __name__ == "__main__":
-    from imgui_bundle import hello_imgui
-
-    app = App()
-
-    def load_fonts():
+    def load_additional_fonts():
         """Load FiraCode fonts with emoji support"""
         from pathlib import Path
         try:
@@ -1366,7 +1655,81 @@ if __name__ == "__main__":
             import traceback
             traceback.print_exc()
 
-    def setup_file_drop_callback(callback):
+    def setup_imgui_config():
+        """Setup ImGui configuration before initialization"""
+        io = imgui.get_io()
+        # Disable docking completely
+        io.config_flags &= ~imgui.ConfigFlags_.docking_enable
+        io.config_flags &= ~imgui.ConfigFlags_.viewports_enable  # Also disable viewports
+
+    def setup_imgui_style():
+        style = imgui.get_style()
+        imgui.style_colors_dark(style)
+
+        style.anti_aliased_lines = True
+        style.anti_aliased_lines_use_tex = True
+        style.anti_aliased_fill = True
+
+        levels = [
+            0.08,   # really deep
+            0.09,   # deep
+            0.11,   # medium
+            0.15,   # shallow
+        ]
+
+        windows_dark_titlebar_color = [ 32/255,  32/255, 32/255, 1.0]
+        levels = [
+            22/255,   # really deep
+            32/255,   # deep
+            43/255,   # medium
+            57/255,   # shallow
+        ]
+        windows_dark_text_color =     [255/255, 255/255, 255/255, 1.0]
+
+        style.set_color_(imgui.Col_.text ,               windows_dark_text_color)
+        style.set_color_(imgui.Col_.title_bg ,           imgui.ImVec4(*[levels[1]]*3,1.00))
+        style.set_color_(imgui.Col_.title_bg_active ,    imgui.ImVec4(*[levels[1]]*3,1.00))
+        style.set_color_(imgui.Col_.title_bg_collapsed , imgui.ImVec4(*[levels[1]]*3,1.00))
+        style.set_color_(imgui.Col_.window_bg,           imgui.ImVec4(*[levels[1]]*3,1.00))
+        style.set_color_(imgui.Col_.scrollbar_bg,         imgui.ImVec4(*[levels[1]]*3,1.00))
+
+
+        style.set_color_(imgui.Col_.child_bg ,           imgui.ImVec4(*[levels[2]]*3,1.00))
+        style.set_color_(imgui.Col_.frame_bg ,           imgui.ImVec4(*[levels[3]]*3,1.00))
+        style.set_color_(imgui.Col_.button   ,           imgui.ImVec4(*[levels[3]]*3,1.00))
+        style.set_color_(imgui.Col_.popup_bg ,           imgui.ImVec4(*[levels[1]]*3,1.00))
+
+        # Remove the dark border by setting menu bar background to match the menu bar
+        style.set_color_(imgui.Col_.menu_bar_bg,         windows_dark_titlebar_color)
+        
+        style.window_padding = imgui.ImVec2(12, 12)
+        style.frame_padding = imgui.ImVec2(6, 6)
+        style.item_spacing = imgui.ImVec2(12, 12)
+
+        style.frame_border_size = 0
+
+        style.child_border_size = 0
+        style.window_border_size = 0
+        style.set_color_(imgui.Col_.border   , imgui.ImVec4(*[levels[2]]*3,1.00))
+        style.popup_border_size = 1
+
+        style.grab_min_size = 4
+
+        
+        style.grab_rounding = 4
+        style.frame_rounding = 4
+        style.frame_rounding = 4
+        style.popup_rounding = 4
+        style.child_rounding = 4
+        style.window_rounding = 4
+        style.scrollbar_rounding = 4
+
+        style.window_title_align = imgui.ImVec2(0.5, 0.5)
+        style.window_menu_button_position = imgui.Dir.right
+
+        logger.info("✓ ImGui theme applied")
+
+    def _setup_file_drop_callback_for_glfw(callback):
         """Setup GLFW file drop callback"""
         try:
             import glfw
@@ -1388,21 +1751,16 @@ if __name__ == "__main__":
             import traceback
             traceback.print_exc()
     
-    def setup_imgui_config():
-        """Setup ImGui configuration before initialization"""
-        io = imgui.get_io()
-        # Disable docking completely
-        io.config_flags &= ~imgui.ConfigFlags_.docking_enable
-        io.config_flags &= ~imgui.ConfigFlags_.viewports_enable  # Also disable viewports
-
-    def enable_windows_dark_mode(enable: bool | None = None):
-        """Enable or disable Windows dark mode for the application window
+    def post_init():
+        _setup_file_drop_callback_for_glfw(app.on_file_drop)
+    
+    def _set_dark_mode_on_windows(enable: bool | None = None):
+        """Set dark mode on Windows for the application window
         
         Args:
             enable: True for dark mode, False for light mode, None to detect system settings
         """
         import platform
-        
         if platform.system() != "Windows":
             logger.info("Dark mode API only available on Windows")
             return
@@ -1496,14 +1854,9 @@ if __name__ == "__main__":
             import traceback
             traceback.print_exc()
 
-    def enable_macos_window_style():
-        """Enable macOS-specific window styling for borderless windows
-        
-        macOS automatically provides rounded corners for native windows.
-        This function ensures proper window styling and transparency.
-        """
+    def _set_titlebar_color_on_macos():
+        """Set custom titlebar color for the application window macOS"""
         import platform
-        
         if platform.system() != "Darwin":
             logger.info("macOS window styling only available on macOS")
             return
@@ -1570,6 +1923,20 @@ if __name__ == "__main__":
                 ns_window.setTitlebarAppearsTransparent_(True) # setting titlebar transparent removes the little border between titlebar and content
                 dark_gray = NSColor.colorWithRed_green_blue_alpha_(32/255, 32/255, 32/255, 1.0) # we can also set our own color.
                 ns_window.setBackgroundColor_(dark_gray)
+
+                default_titlebar_color = NSColor.controlBackgroundColor() 
+                
+                # Set titlebar appearance (dark or light) - this affects text color
+                # NSAppearance options: 
+                # - NSAppearanceNameAqua (light mode - dark text)
+                # - NSAppearanceNameDarkAqua (dark mode - light text)
+                from AppKit import NSAppearance
+                dark_appearance = NSAppearance.appearanceNamed_("NSAppearanceNameDarkAqua")
+                ns_window.setAppearance_(dark_appearance)  # This makes titlebar text white/light
+                
+                # Alternative: Set title text color directly
+                # Note: This requires accessing the titlebar's text field, which is more complex
+                # The appearance setting above is the recommended approach
                 
             except ImportError:
                 logger.warning("pyobjc not available. Install with: pip install pyobjc-framework-Cocoa")
@@ -1586,56 +1953,62 @@ if __name__ == "__main__":
             import traceback
             traceback.print_exc()
 
-    def post_init():
-        setup_file_drop_callback(app.on_file_drop)
-    
     def post_init_add_platform_backend_callbacks():
         """Called after platform backend is initialized - best time for native window customization"""
         import platform
         if platform.system() == "Darwin":
-            ...
-            enable_macos_window_style()
+            _set_titlebar_color_on_macos()
         elif platform.system() == "Windows":
-            enable_windows_dark_mode(True)
+            _set_dark_mode_on_windows(True)
 
-
-    runner_params = hello_imgui.RunnerParams()
-    runner_params.app_window_params.window_title = "Camera Spy"
-    runner_params.imgui_window_params.menu_app_title = "Camera Spy"
-    runner_params.app_window_params.window_geometry.size = (1200, 512)
-    runner_params.app_window_params.restore_previous_geometry = True
-    
-    # Set background color to match menu bar to eliminate dark border
-    windows_dark_titlebar_color = [32/255, 32/255, 32/255, 1.0]
-    runner_params.imgui_window_params.background_color = windows_dark_titlebar_color
-    runner_params.dpi_aware_params.dpi_window_size_factor = 1.0  # # Enable DPI awareness: 1.0 is Auto-detect?
-    runner_params.docking_params.layout_condition = hello_imgui.DockingLayoutCondition.never # Completely disable docking at the hello_imgui level
-    # runner_params.fps_idling.enable_idling = True
-    # runner_params.app_window_params.repaint_during_resize_gotcha_reentrant_repaint = True
-
-    # Add borderless window flag
-    # runner_params.app_window_params.borderless = True
-    # runner_params.app_window_params.borderless_movable = True  # Allow moving the window
-    # runner_params.app_window_params.borderless_resizable = True  # Allow resizing the window
-    # runner_params.app_window_params.borderless_closable = True  # Show close button
-
-
-    # Callbacks
-    runner_params.callbacks.load_additional_fonts = load_fonts
-    runner_params.callbacks.setup_imgui_config = setup_imgui_config
-    runner_params.callbacks.setup_imgui_style = setup_windows_dark_theme
-    runner_params.callbacks.post_init = post_init
-    runner_params.callbacks.post_init_add_platform_backend_callbacks = post_init_add_platform_backend_callbacks
-    runner_params.callbacks.show_gui = lambda: app.gui()
-    runner_params.imgui_window_params.default_imgui_window_type = (
-        hello_imgui.DefaultImGuiWindowType.no_default_window
-        # hello_imgui.DefaultImGuiWindowType.provide_full_screen_dock_space
+    runner_params = hello_imgui.RunnerParams(
+        callbacks=hello_imgui.RunnerCallbacks(
+            show_gui = lambda: app.gui(),
+            # show_menus=None,
+            # show_app_menu_items=None,
+            # show_status=None,
+            post_init_add_platform_backend_callbacks = post_init_add_platform_backend_callbacks,
+            post_init = post_init,
+            load_additional_fonts = load_additional_fonts,
+            # default_icon_font=hello_imgui.DefaultIconFont.font_awesome4,
+            setup_imgui_config = setup_imgui_config,
+            setup_imgui_style = setup_imgui_style,
+            # register_tests=None,
+            # register_tests_called=False,
+            # before_exit=None,
+            # before_exit_post_cleanup=None,
+            # pre_new_frame=None,
+            # before_imgui_render=None,
+            # after_swap=None,
+            # custom_background=None,
+            # post_render_dockable_windows=None,
+            any_backend_event_callback=None
+        ),
+        app_window_params=hello_imgui.AppWindowParams(
+            window_title="Perspy",
+            # window_geometry=hello_imgui.WindowGeometry(
+            #     position=(100, 100),
+            #     size=(1200, 512),
+            # ),
+            restore_previous_geometry=True
+            # repaint_during_resize_gotcha_reentrant_repaint=True,
+            # borderless=True,
+            # borderless_movable=True,
+            # borderless_resizable=True,
+            # borderless_closable=True,
+        ),
+        imgui_window_params=hello_imgui.ImGuiWindowParams(
+            menu_app_title="Perspy Demo",
+            background_color=[32/255, 32/255, 32/255, 1.0], # windows sytem titlebar color
+            default_imgui_window_type=hello_imgui.DefaultImGuiWindowType.no_default_window,
+        ),
+        dpi_aware_params=hello_imgui.DpiAwareParams(
+            dpi_window_size_factor=1.0 # Enable DPI awareness: 1.0 is Auto-detect?
+        ),
+        docking_params=hello_imgui.DockingParams(
+            layout_condition=hello_imgui.DockingLayoutCondition.never # Completely disable docking at the hello_imgui level
+        ),
     )
 
     hello_imgui.run(runner_params)
-    # immapp.run(app.gui, 
-    #            window_title="Perspy", 
-    #            window_size=(1200, 512), 
-    #            with_implot3d=True
-    # )
 

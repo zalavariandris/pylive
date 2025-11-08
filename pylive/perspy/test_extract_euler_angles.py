@@ -73,7 +73,7 @@ def test_get_rotation(order, angles):
             R = glm.rotate(R, angle, glm.vec3(0, 0, 1))
 
     R3 = glm.mat3(R)
-    computed = solver.extract_euler_angle(R3, order)
+    computed = solver.extract_euler(R3, order)
 
     # Reconstruct matrix from computed angles and compare
     reconstructed = build_matrix_from_euler(computed, order)

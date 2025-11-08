@@ -768,7 +768,6 @@ def _gram_schmidt_orthogonalization(matrix: glm.mat3) -> glm.mat3:
     
     return result
 
-
 #############################
 # Post-processing functions #
 #############################
@@ -889,7 +888,7 @@ def mat3_to_euler_zxy(M: glm.mat3) -> Tuple[float, float, float]:
 ##################
 # GLM EXTENSIONS #
 ##################
-def extract_euler_angle_XYZ(M: glm.mat4) -> Tuple[float, float, float]:
+def extract_euler_XYZ(M: glm.mat4) -> Tuple[float, float, float]:
     T1 = math.atan2(M[2][1], M[2][2])
     C2 = math.sqrt(M[0][0] * M[0][0] + M[1][0] * M[1][0])
     T2 = math.atan2(-M[2][0], C2)
@@ -898,7 +897,7 @@ def extract_euler_angle_XYZ(M: glm.mat4) -> Tuple[float, float, float]:
     T3 = math.atan2(S1 * M[0][2] - C1 * M[0][1], C1 * M[1][1] - S1 * M[1][2])
     return -T1, -T2, -T3
 
-def extract_euler_angle_YXZ(M: glm.mat4) -> Tuple[float, float, float]:
+def extract_euler_YXZ(M: glm.mat4) -> Tuple[float, float, float]:
     T1 = math.atan2(M[2][0], M[2][2])
     C2 = math.sqrt(M[0][1] * M[0][1] + M[1][1] * M[1][1])
     T2 = math.atan2(-M[2][1], C2)
@@ -907,7 +906,7 @@ def extract_euler_angle_YXZ(M: glm.mat4) -> Tuple[float, float, float]:
     T3 = math.atan2(S1 * M[1][2] - C1 * M[1][0], C1 * M[0][0] - S1 * M[0][2])
     return T1, T2, T3
 
-def extract_euler_angle_XZY(M: glm.mat4) -> Tuple[float, float, float]:
+def extract_euler_XZY(M: glm.mat4) -> Tuple[float, float, float]:
     T1 = math.atan2(M[1][2], M[1][1])
     C2 = math.sqrt(M[0][0] * M[0][0] + M[2][0] * M[2][0])
     T2 = math.atan2(-M[1][0], C2)
@@ -916,7 +915,7 @@ def extract_euler_angle_XZY(M: glm.mat4) -> Tuple[float, float, float]:
     T3 = math.atan2(S1 * M[0][1] - C1 * M[0][2], C1 * M[2][2] - S1 * M[2][1])
     return T1, T2, T3
 
-def extract_euler_angle_YZX(M: glm.mat4) -> Tuple[float, float, float]:
+def extract_euler_YZX(M: glm.mat4) -> Tuple[float, float, float]:
     T1 = math.atan2(-M[0][2], M[0][0])
     C2 = math.sqrt(M[1][1] * M[1][1] + M[2][1] * M[2][1])
     T2 = math.atan2(M[0][1], C2)
@@ -925,7 +924,7 @@ def extract_euler_angle_YZX(M: glm.mat4) -> Tuple[float, float, float]:
     T3 = math.atan2(S1 * M[1][0] + C1 * M[1][2], S1 * M[2][0] + C1 * M[2][2])
     return T1, T2, T3
 
-def extract_euler_angle_ZYX(M: glm.mat4) -> Tuple[float, float, float]:
+def extract_euler_ZYX(M: glm.mat4) -> Tuple[float, float, float]:
     T1 = math.atan2(M[0][1], M[0][0])
     C2 = math.sqrt(M[1][2] * M[1][2] + M[2][2] * M[2][2])
     T2 = math.atan2(-M[0][2], C2)
@@ -934,7 +933,7 @@ def extract_euler_angle_ZYX(M: glm.mat4) -> Tuple[float, float, float]:
     T3 = math.atan2(S1 * M[2][0] - C1 * M[2][1], C1 * M[1][1] - S1 * M[1][0])
     return T1, T2, T3
 
-def extract_euler_angle_ZXY(M: glm.mat4) -> Tuple[float, float, float]:
+def extract_euler_ZXY(M: glm.mat4) -> Tuple[float, float, float]:
     T1 = math.atan2(-M[1][0], M[1][1])
     C2 = math.sqrt(M[0][2] * M[0][2] + M[2][2] * M[2][2])
     T2 = math.atan2(M[1][2], C2)
@@ -943,7 +942,7 @@ def extract_euler_angle_ZXY(M: glm.mat4) -> Tuple[float, float, float]:
     T3 = math.atan2(C1 * M[2][0] + S1 * M[2][1], C1 * M[0][0] + S1 * M[0][1])
     return T1, T2, T3
 
-def extract_euler_angle(M: glm.mat3, order: EulerOrder) -> Tuple[float, float, float]:
+def extract_euler(M: glm.mat3, order: EulerOrder) -> Tuple[float, float, float]:
     """
     Convert a glm.mat3 rotation matrix
     to Euler angles (radians) for the specified rotation order.
@@ -952,22 +951,38 @@ def extract_euler_angle(M: glm.mat3, order: EulerOrder) -> Tuple[float, float, f
     """
     match order:
         case EulerOrder.XYZ:
-            x,y,z = extract_euler_angle_XYZ(M)
+            x,y,z = extract_euler_XYZ(M)
             return x,y,z
         case EulerOrder.XZY:
-            x,z,y = extract_euler_angle_XZY(M)
+            x,z,y = extract_euler_XZY(M)
             return x,y,z
         case EulerOrder.YXZ:
-            y,x,z = extract_euler_angle_YXZ(M)
+            y,x,z = extract_euler_YXZ(M)
             return x,y,z
         case EulerOrder.YZX:
-            y,z,x = extract_euler_angle_YZX(M)
+            y,z,x = extract_euler_YZX(M)
             return x,y,z
         case EulerOrder.ZXY:
-            z,x,y = extract_euler_angle_ZXY(M)
+            z,x,y = extract_euler_ZXY(M)
             return x,y,z
         case EulerOrder.ZYX:
-            z,y,x = extract_euler_angle_ZYX(M)
+            z,y,x = extract_euler_ZYX(M)
             return x,y,z
         case _:
             raise ValueError(f"Unsupported Euler angle order: {order}")
+
+def decompose(M: glm.mat4) -> Tuple[glm.vec3, glm.quat, glm.vec3, glm.vec3, glm.vec4]:
+    """glm dedomcpose wrapper.
+    returns: scale(vec3), rotation(quat), translation(vec3), skew(vec3), perspective(vec4)
+    raises ValueError if decomposition fails.
+    """
+    scale = glm.vec3()
+    quat = glm.quat()  # This will be our quaternion
+    translation = glm.vec3()
+    skew = glm.vec3()
+    perspective = glm.vec4()
+
+    if not glm.decompose(M, scale, quat, translation, skew, perspective):
+        raise ValueError("Could not decompose matrix")
+    
+    return scale, quat, translation, skew, perspective
