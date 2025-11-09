@@ -202,16 +202,16 @@ class PerspyApp():
                     ...
                 
                 if imgui.menu_item_simple(f"{folder_icon} Open", "Ctrl+O"):
-                    self.open()
+                    self.doc.open()
                     if self.doc.image_path:
                         # Create OpenGL texture
                         self._upload_image_texture(self.image)
 
                 if imgui.menu_item_simple(f"{save_icon} Save", "Ctrl+S"):
-                    self.save()
+                    self.doc.save()
                 
                 if imgui.menu_item_simple(f"{save_icon} Save As...", "Ctrl+Shift+S"):
-                    self.save(filepath=None)
+                    self.doc.save(filepath=None)
 
                 imgui.separator()
 

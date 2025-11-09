@@ -54,6 +54,16 @@ class Document(ABC):
         self._file_path: str|None = None
         self._is_modified: bool = False
 
+    def isModified(self)->bool:
+        return self._is_modified
+    
+    def __setattr__(self, name:str, value):
+        """setattr is called whenever an attribute is set on the instance.
+        """
+        super().__setattr__(name, value)
+        if name != '_is_modified':
+            object.__setattr__(self, '_is_modified', True)
+
     @abstractmethod
     def serialize(self)->str:
         """Serialize the document state to a JSON string.
@@ -67,13 +77,6 @@ class Document(ABC):
         Should be overridden by subclasses.
         """
         pass
-
-    def __setattr__(self, name:str, value):
-        """setattr is called whenever an attribute is set on the instance.
-        """
-        super().__setattr__(name, value)
-        if name != '_is_modified':
-            object.__setattr__(self, '_is_modified', True)
 
     def save(self, filepath: str|None=None):
         assert filepath is None or isinstance(filepath, str), f"got:, {filepath}"
@@ -99,7 +102,7 @@ class Document(ABC):
             save_dialog = pfd.save_file(
                 title="Save Project As", 
                 default_path="", 
-                filters=["perspy files", "(*.perspy)"]
+                filters=["perspy files", "*.prsy"]
             )
             choosen_filepath = save_dialog.result()[0] if save_dialog.result() else None
             if not choosen_filepath:
@@ -116,28 +119,21 @@ class Document(ABC):
             save_dialog = pfd.save_file(
                 title="Save Project As", 
                 default_path="", 
-                filters=["perspy files", "(*.perspy)"]
+                filters=["perspy files", "*.prsy"]
             )
             if path:=save_dialog.result():
                 filepath = path
+
+
+            
             self.file_path = filepath
 
         import json
         from struct import pack
         
         # Get JSON state
-        state_json = self.doc.serialize().encode('utf-8')
+        state_json = self.serialize().encode('utf-8')
         state_size = len(state_json)
-        
-        # Get image data
-        image_data = b''
-        if self.doc.image is not None:
-            import io
-            buffer = io.BytesIO()
-            # Save as PNG to preserve quality
-            self.doc.image.save(buffer, format='PNG')
-            image_data = buffer.getvalue()
-        image_size = len(image_data)
         
         # Write file
         magic = int.from_bytes(b'prsy', byteorder='little')  # 'prsy'
@@ -148,15 +144,11 @@ class Document(ABC):
             f.write(pack('<I', magic))        # 4 bytes: magic number
             f.write(pack('<I', version))      # 4 bytes: version
             f.write(pack('<I', state_size))   # 4 bytes: JSON size
-            f.write(pack('<I', image_size))   # 4 bytes: image size
-            
+
             # Write data
             f.write(state_json)
-            if image_data:
-                f.write(image_data)
         
         logger.info(f"✓ Saved to {filepath}")
-        logger.info(f"  State size: {state_size} bytes, Image size: {image_size} bytes")
 
     def open(self, filepath: str|None=None):
         """
@@ -171,7 +163,7 @@ class Document(ABC):
             open_file_dialog = pfd.open_file(
                 title="Open Project", 
                 default_path="", 
-                filters=["perspy files", "(*.perspy)"]
+                filters=["perspy files", "*.perspy"]
             )
             paths = open_file_dialog.result()
             if len(paths) > 0:
