@@ -19,6 +19,7 @@ from imgui_bundle import portable_file_dialogs as pfd
 from pylive.glrenderer.utils.camera import Camera
 from pylive.perspy import solver
 import ui
+from document import PerspyDocument, SolverMode
 
 # Configure logging to see shader compilation logs
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -53,143 +54,18 @@ def get_axis_color(axis:solver.Axis, dim:bool=False) -> Tuple[float, float, floa
         case _:
             return (1.0, 1.0, 1.0)
 
-class SolverMode(IntEnum):
-    OneVP = 0
-    TwoVP = 1
-
 # ########### #
 # Application #
 # ########### #
 
-class PerspyDocument:
-    def __init__(self):
-        # solver inputs
-        # - content image
-        self.image_path: str|None = None
-        self.content_size = imgui.ImVec2(1280,720)
-        self.image: Image = None
-        self.image_texture_ref:imgui.ImTextureRef|None = None
-        self.image_texture_id: int|None = None
-
-        # - solver params
-        self.solver_mode=SolverMode.OneVP
-        self.scene_scale=5.0
-        self.first_axis=solver.Axis.PositiveZ
-        self.second_axis=solver.Axis.PositiveX
-        self.fov_degrees=60.0 # only for OneVP mode
-        self.quad_mode=False # only for TwoVP mode. is this a ui state?
-
-        # - control points
-        self.origin_pixel=self.content_size/2
-        self.principal_point_pixel=self.content_size/2
-        self.first_vanishing_lines_pixel = [
-            (glm.vec2(296, 417), glm.vec2(633, 291)),
-            (glm.vec2(654, 660), glm.vec2(826, 344))
-        ]
-        self.second_vanishing_lines_pixel = [
-            [glm.vec2(381, 363), glm.vec2(884, 451)],
-            [glm.vec2(511, 311), glm.vec2(879, 356)]
-        ]
-
-        # - manage view
-        self.view_grid: bool = True
-        self.view_horizon: bool = True
-
-    # Document manager
-    def serialize(self)->str:
-        def serializer(obj):
-            """Custom JSON serializer for glm types."""
-            match obj:
-                case glm.vec2():
-                    return {'x': obj.x, 'y': obj.y}
-                case glm.vec3():
-                    return {'x': obj.x, 'y': obj.y, 'z': obj.z}
-                case glm.vec4():
-                    return {'x': obj.x, 'y': obj.y, 'z': obj.z, 'w': obj.w}
-                case glm.mat4():
-                    return {"rows": [
-                        [obj[col][row] for col in range(4)]
-                        for row in range(4)
-                    ]}
-                case imgui.ImVec2():
-                    return {'x': obj.x, 'y': obj.y}
-                case imgui.ImVec4():
-                    return {'x': obj.x, 'y': obj.y, 'z': obj.z, 'w': obj.w}
-                case Image():
-                    image_embed_data = b''
-                    import io
-                    buffer = io.BytesIO()
-                    self.image.save(buffer, format='PNG') # Save as PNG to preserve quality, consider using other image formats
-                    image_embed_data = buffer.getvalue()
-                    return base64.b64encode(obj).decode('ascii')
-                case _:
-                    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
-
-        _, quat, _, _, _ = solver.decompose(self.camera.transform)
-        euler = solver.extract_euler(self.camera.transform, order=self.current_euler_order)
-
-        data = {
-            'version': '0.5.0',
-            'solver_params': {
-                "mode": SolverMode(self.solver_mode).name,
-                "first_axis": solver.Axis(self.first_axis).name,
-                "second_axis": solver.Axis(self.second_axis).name,
-                "scene_scale": self.scene_scale,
-                "fov_degrees": 60.0,
-                "quad_mode": False
-            },
-
-            'control_points': {
-                "origin": self.origin_pixel,
-                "principal_point": self.principal_point_pixel,
-                "first_vanishing_lines": self.first_vanishing_lines_pixel,
-                "second_vanishing_lines": self.second_vanishing_lines_pixel
-            },
-
-            'image_params': {
-                "path": self.image_path,
-                "width": int(self.content_size.x),
-                "height": int(self.content_size.y)
-            },
-
-            'results': {
-                "camera": {
-                    "view": self.camera.viewMatrix(),
-                    "projection": self.camera.projectionMatrix(),
-                    "fovy_degrees": self.camera.fovy,
-                    "position": self.camera.getPosition(),
-                    "rotation_euler": {"x": euler[0], "y": euler[1], "z": euler[2], "order": solver.EulerOrder(self.current_euler_order).name},
-                    "rotation_quaternion": {"x": quat.x, "y": quat.y, "z": quat.z, "w": quat.w}
-                },
-                "vanishing_points": {
-                    "first": self.first_vanishing_point_pixel,
-                    "second": self.second_vanishing_point_pixel
-                }
-            },
-
-            'guides_params': {
-                "show_grid": self.view_grid,
-                "show_horizon": self.view_horizon
-            },
-
-            'ui_state': {
-                "dim_background": self.dim_background,
-                "windows": {
-                    "show_data": self.show_data_window,
-                    "show_style_editor": self.show_styleeditor_window
-                }
-            }
-        }
-
-        return json.dumps(data, indent=4, default=serializer)
-
-    def deserialize(self, json_text: str):
-        raise NotImplementedError("Deserialization from JSON is not implemented yet.")
-    
-
-class PerspyApp(PerspyDocument):
+class PerspyApp():
     def __init__(self):
         super().__init__()
+
+        self.doc = PerspyDocument()
+        self.doc_path: str|None = None
+        self.image_texture_ref:imgui.ImTextureRef|None = None
+        self.image_texture_id: int|None = None
 
         # solver results
         self.current_euler_order = solver.EulerOrder.ZXY
@@ -208,6 +84,10 @@ class PerspyApp(PerspyDocument):
         self.show_data_window: bool = True
         self.show_styleeditor_window: bool = False
 
+        # - manage view
+        self.view_grid: bool = True
+        self.view_horizon: bool = True
+
         # misc
         """
         Can be used to define inline variables, similarly how static vars used in C/C++ with imgui.
@@ -218,124 +98,6 @@ class PerspyApp(PerspyDocument):
         """
         self.misc:Dict[str, Any] = dict() # miscellaneous state variables for development. 
 
-    def save(self, filepath: str|None):
-        """
-        Save the app state to a custom .perspy file format.
-        
-        File structure:
-        - Magic number (4 bytes): b'prsp' (perspective spy)
-        - Version (4 bytes): version number
-        - JSON size (4 bytes): size of the state JSON
-        - Image size (4 bytes): size of the image data
-        - JSON data: serialized app state
-        - Image data: raw image bytes (if available)
-        """
-
-        if filepath is None:
-            """Prompt for file location"""
-            save_dialog = pfd.save_file(
-                title="Save Project As", 
-                default_path="project.perspy", 
-                file_types=["perspy files (*.perspy)"]
-            )
-            if path:=save_dialog.result():
-                filepath = path
-
-        import json
-        from struct import pack
-        
-        # Get JSON state
-        state_json = self.serialize().encode('utf-8')
-        state_size = len(state_json)
-        
-        # Get image data
-        image_data = b''
-        if self.image is not None:
-            import io
-            buffer = io.BytesIO()
-            # Save as PNG to preserve quality
-            self.image.save(buffer, format='PNG')
-            image_data = buffer.getvalue()
-        image_size = len(image_data)
-        
-        # Write file
-        magic = int.from_bytes(b'prsy', byteorder='little')  # 'prsy'
-        version = 1
-        
-        with open(filepath, 'wb') as f:
-            # Write header (16 bytes)
-            f.write(pack('<I', magic))        # 4 bytes: magic number
-            f.write(pack('<I', version))      # 4 bytes: version
-            f.write(pack('<I', state_size))   # 4 bytes: JSON size
-            f.write(pack('<I', image_size))   # 4 bytes: image size
-            
-            # Write data
-            f.write(state_json)
-            if image_data:
-                f.write(image_data)
-        
-        logger.info(f"✓ Saved to {filepath}")
-        logger.info(f"  State size: {state_size} bytes, Image size: {image_size} bytes")
-
-    def open(self, filepath: str|None):
-        """
-        Load app state from a .perspy file.
-        """
-        import json
-        from struct import unpack
-        import io
-
-        if filepath is None:
-            """Prompt for file location"""
-            open_file_dialog = pfd.open_file(
-                title="Open Project", 
-                default_path="", 
-                file_types=["perspy files (*.perspy)"]
-            )
-            paths = open_file_dialog.result()
-            if len(paths) > 0:
-                filepath = paths[0]
-            else:
-                return
-        
-        with open(filepath, 'rb') as f:
-            # Read header
-            magic_bytes = f.read(4)
-            if magic_bytes != b'prsp':
-                raise ValueError(f"Not a valid .perspy file (got magic: {magic_bytes})")
-            
-            version = unpack('<I', f.read(4))[0]
-            if version != 1:
-                raise ValueError(f"Unsupported version: {version}")
-            
-            state_size = unpack('<I', f.read(4))[0]
-            image_size = unpack('<I', f.read(4))[0]
-            
-            # Read state JSON
-            state_json = f.read(state_size).decode('utf-8')
-            
-            # Read image data
-            image_data = None
-            if image_size > 0:
-                image_data = f.read(image_size)
-        
-        # Use deserialize to restore state from JSON
-        self.deserialize(state_json)
-        
-        # Load image
-        if image_data:
-            import io
-            self.image = Image.open(io.BytesIO(image_data))
-            self.content_size = imgui.ImVec2(float(self.image.width), float(self.image.height))
-            
-            # Create OpenGL texture
-            self._upload_image_texture(self.image)
-            
-            logger.info(f"✓ Loaded from {filepath}")
-            logger.info(f"  Image: {self.image.width}x{self.image.height}")
-        else:
-            logger.warning("No image data in file")
-    
     # Windows
     def gui(self):        
         # Compute Camera
@@ -440,13 +202,16 @@ class PerspyApp(PerspyDocument):
                     ...
                 
                 if imgui.menu_item_simple(f"{folder_icon} Open", "Ctrl+O"):
-                    self.open_project_file()
-                
+                    self.open()
+                    if self.doc.image_path:
+                        # Create OpenGL texture
+                        self._upload_image_texture(self.image)
+
                 if imgui.menu_item_simple(f"{save_icon} Save", "Ctrl+S"):
-                    self.save_project_file()
+                    self.save()
                 
                 if imgui.menu_item_simple(f"{save_icon} Save As...", "Ctrl+Shift+S"):
-                    self.save_project_file_as()
+                    self.save(filepath=None)
 
                 imgui.separator()
 
@@ -528,43 +293,43 @@ class PerspyApp(PerspyDocument):
             if imgui.button("open image", size=imgui.ImVec2(-1,0)):
                 self.load_image_file()
             imgui.set_next_item_width(150)
-            _, value = imgui.input_int2("image size", [int(self.content_size.x), int(self.content_size.y)])
+            _, value = imgui.input_int2("image size", [int(self.doc.content_size.x), int(self.doc.content_size.y)])
             if _:
-                self.content_size = imgui.ImVec2(value[0], value[1])
+                self.doc.content_size = imgui.ImVec2(value[0], value[1])
         else:
-            image_aspect = self.content_size.x / self.content_size.y
+            image_aspect = self.doc.content_size.x / self.doc.content_size.y
             width = imgui.get_content_region_avail().x-imgui.get_style().frame_padding.x*2
             if imgui.image_button("open", self.image_texture_ref, imgui.ImVec2(width, width/image_aspect)):
                 self.load_image_file()
             imgui.set_next_item_width(150)
-            imgui.input_int2("image size", [int(self.content_size.x), int(self.content_size.y)], imgui.InputTextFlags_.read_only)
+            imgui.input_int2("image size", [int(self.doc.content_size.x), int(self.doc.content_size.y)], imgui.InputTextFlags_.read_only)
 
         _, self.dim_background = imgui.checkbox("dim background", self.dim_background)
 
         # imgui.bullet_text("Warning: Font scaling will NOT be smooth, because\nImGuiBackendFlags_RendererHasTextures is not set!")
         imgui.separator_text("Solver Parameters")
         imgui.set_next_item_width(150)
-        _, self.solver_mode = imgui.combo("mode", self.solver_mode, SolverMode._member_names_)
+        _, self.doc.solver_mode = imgui.combo("mode", self.doc.solver_mode, SolverMode._member_names_)
         imgui.set_next_item_width(150)
-        _, self.first_axis = imgui.combo("first axis",   self.first_axis, solver.Axis._member_names_)
+        _, self.doc.first_axis = imgui.combo("first axis",   self.doc.first_axis, solver.Axis._member_names_)
         imgui.set_next_item_width(150)
-        _, self.second_axis = imgui.combo("second axis", self.second_axis, solver.Axis._member_names_)
+        _, self.doc.second_axis = imgui.combo("second axis", self.doc.second_axis, solver.Axis._member_names_)
         imgui.set_next_item_width(150)
-        _, self.scene_scale = imgui.slider_float("scene  scale", self.scene_scale, 1.0, 100.0, "%.2f")
+        _, self.doc.scene_scale = imgui.slider_float("scene  scale", self.doc.scene_scale, 1.0, 100.0, "%.2f")
         
-        match self.solver_mode:
+        match self.doc.solver_mode:
             case SolverMode.OneVP:
                 imgui.set_next_item_width(150)
-                _, self.fov_degrees = imgui.slider_float("fov°", self.fov_degrees, 1.0, 179.0, "%.1f°")
+                _, self.doc.fov_degrees = imgui.slider_float("fov°", self.doc.fov_degrees, 1.0, 179.0, "%.1f°")
 
             case SolverMode.TwoVP:
-                _, self.quad_mode = imgui.checkbox("quad", self.quad_mode)
+                _, self.doc.quad_mode = imgui.checkbox("quad", self.doc.quad_mode)
 
     def show_viewer(self):
-        if ui.viewer.begin_viewer("viewer1", content_size=self.content_size, size=imgui.ImVec2(-1,-1), coordinate_system="top-left"):
+        if ui.viewer.begin_viewer("viewer1", content_size=self.doc.content_size, size=imgui.ImVec2(-1,-1), coordinate_system="top-left"):
             if self.image_texture_ref is not None:
                 tl = ui.viewer._get_window_coords(imgui.ImVec2(0,0))
-                br = ui.viewer._get_window_coords(imgui.ImVec2(self.content_size.x, self.content_size.y))
+                br = ui.viewer._get_window_coords(imgui.ImVec2(self.doc.content_size.x, self.doc.content_size.y))
                 image_size = br - tl
                 imgui.set_cursor_pos(tl)
                 if self.dim_background:
@@ -591,41 +356,41 @@ class PerspyApp(PerspyDocument):
                 # imgui.pop_style_var()
 
             # control points
-            _, self.origin_pixel = ui.viewer.control_point("o", self.origin_pixel)
+            _, self.doc.origin_pixel = ui.viewer.control_point("o", self.doc.origin_pixel)
             control_line = ui.comp(ui.viewer.control_point)
             control_lines = ui.comp(control_line)
-            _, self.first_vanishing_lines_pixel = control_lines("z", self.first_vanishing_lines_pixel, color=get_axis_color(self.first_axis) )
-            for line in self.first_vanishing_lines_pixel:
-                ui.viewer.guide(line[0], line[1], color=get_axis_color(self.first_axis))
+            _, self.doc.first_vanishing_lines_pixel = control_lines("z", self.doc.first_vanishing_lines_pixel, color=get_axis_color(self.doc.first_axis) )
+            for line in self.doc.first_vanishing_lines_pixel:
+                ui.viewer.guide(line[0], line[1], color=get_axis_color(self.doc.first_axis))
 
-            match self.solver_mode:
+            match self.doc.solver_mode:
                 case SolverMode.OneVP:
-                    _, self.second_vanishing_lines_pixel[0] = control_line("x", self.second_vanishing_lines_pixel[0], color=get_axis_color(self.second_axis))  
-                    ui.viewer.guide(self.second_vanishing_lines_pixel[0][0], self.second_vanishing_lines_pixel[0][1], color=get_axis_color(self.second_axis))
+                    _, self.doc.second_vanishing_lines_pixel[0] = control_line("x", self.doc.second_vanishing_lines_pixel[0], color=get_axis_color(self.doc.second_axis))  
+                    ui.viewer.guide(self.doc.second_vanishing_lines_pixel[0][0], self.doc.second_vanishing_lines_pixel[0][1], color=get_axis_color(self.doc.second_axis))
                 
                 case SolverMode.TwoVP:
-                    if self.quad_mode:
-                        z0, z1 = self.first_vanishing_lines_pixel
-                        self.second_vanishing_lines_pixel = [
+                    if self.doc.quad_mode:
+                        z0, z1 = self.doc.first_vanishing_lines_pixel
+                        self.doc.second_vanishing_lines_pixel = [
                             (z0[0], z1[0]),
                             (z0[1], z1[1])
                         ]
                     else:
-                        _, self.second_vanishing_lines_pixel = control_lines("x", self.second_vanishing_lines_pixel, color=get_axis_color(self.second_axis) )
+                        _, self.doc.second_vanishing_lines_pixel = control_lines("x", self.doc.second_vanishing_lines_pixel, color=get_axis_color(self.doc.second_axis) )
                     
-                    for line in self.second_vanishing_lines_pixel:
-                        ui.viewer.guide(line[0], line[1], color=get_axis_color(self.second_axis))
+                    for line in self.doc.second_vanishing_lines_pixel:
+                        ui.viewer.guide(line[0], line[1], color=get_axis_color(self.doc.second_axis))
 
             # draw vanishing lines to vanishing points
             if self.first_vanishing_point_pixel is not None:
-                for line in self.first_vanishing_lines_pixel:
+                for line in self.doc.first_vanishing_lines_pixel:
                     P = sorted([line[0], line[1]], key=lambda P: glm.distance2(P, self.first_vanishing_point_pixel))[0]
-                    ui.viewer.guide(P, self.first_vanishing_point_pixel, get_axis_color(self.first_axis, dim=True))
+                    ui.viewer.guide(P, self.first_vanishing_point_pixel, get_axis_color(self.doc.first_axis, dim=True))
 
             if self.second_vanishing_point_pixel is not None:
-                for line in self.second_vanishing_lines_pixel:
+                for line in self.doc.second_vanishing_lines_pixel:
                     P = sorted([line[0], line[1]], key=lambda P: glm.distance2(P, self.second_vanishing_point_pixel))[0]
-                    ui.viewer.guide(P, self.second_vanishing_point_pixel, get_axis_color(self.second_axis, dim=True))
+                    ui.viewer.guide(P, self.second_vanishing_point_pixel, get_axis_color(self.doc.second_axis, dim=True))
 
             if self.camera is not None:
                 if ui.viewer.begin_scene(glm.scale(self.camera.projectionMatrix(), glm.vec3(1.0, -1.0, 1.0)), self.camera.viewMatrix()):
@@ -638,9 +403,6 @@ class PerspyApp(PerspyDocument):
                         ui.viewer.horizon_line()
 
                 ui.viewer.end_scene()
-
-
-
 
 
         ui.viewer.end_viewer()
@@ -740,8 +502,8 @@ class PerspyApp(PerspyDocument):
             }
             # additional_data = {
             #     "principalPoint": {
-            #         'x': self.principal_point_pixel.x, 
-            #         'y': self.principal_point_pixel.y
+            #         'x': self.doc.principal_point_pixel.x, 
+            #         'y': self.doc.principal_point_pixel.y
             #     },
             #     "vanishingPoints": [
             #         {
@@ -755,13 +517,13 @@ class PerspyApp(PerspyDocument):
             #         "TODO:calculate third VP"
             #     ],
             #     "vanishingPointAxes": [
-            #         solver.Axis._member_map_[self.first_axis], 
-            #         solver.Axis._member_map_[self.second_axis],
+            #         solver.Axis._member_map_[self.doc.first_axis], 
+            #         solver.Axis._member_map_[self.doc.second_axis],
             #         "TODO:thirdAxis"
             #     ],
             #     'focalLength': "todo: calculate from fov with the camera sensor size in mind",
-            #     "imageWidth": int(self.content_size.x),
-            #     "imageHeight": int(self.content_size.y)
+            #     "imageWidth": int(self.doc.content_size.x),
+            #     "imageHeight": int(self.doc.content_size.y)
             # }
 
             # import json
@@ -773,7 +535,7 @@ class PerspyApp(PerspyDocument):
     def show_file(self):
         from textwrap import dedent
         if imgui.collapsing_header("Serialized", imgui.TreeNodeFlags_.default_open):
-            text = self.serialize()
+            text = self.doc.serialize()
             imgui.text_unformatted(text)
         # if imgui.collapsing_header("Parameters", imgui.TreeNodeFlags_.default_open):
         #     text = self.serialize()
@@ -1146,45 +908,45 @@ class PerspyApp(PerspyDocument):
 
     # Actions
     def solve(self):
-        self.data = json.loads(self.serialize())
+        self.data = json.loads(self.doc.serialize())
         # Solve for camera
         self.first_vanishing_point_pixel:glm.vec2|None = None
         self.second_vanishing_point_pixel:glm.vec2|None = None
         self.camera:Camera|None = None
 
-        self.principal_point_pixel = glm.vec2(self.content_size.x / 2, self.content_size.y / 2)
-        match self.solver_mode:
+        self.doc.principal_point_pixel = glm.vec2(self.doc.content_size.x / 2, self.doc.content_size.y / 2)
+        match self.doc.solver_mode:
             case SolverMode.OneVP:
                 try:
                     ###############################
                     # 1. COMPUTE vanishing points #
                     ###############################
-                    self.first_vanishing_point_pixel =  solver.least_squares_intersection_of_lines(self.first_vanishing_lines_pixel)
+                    self.first_vanishing_point_pixel =  solver.least_squares_intersection_of_lines(self.doc.first_vanishing_lines_pixel)
                     
 
                     ###################
                     # 2. Solve Camera #
                     ###################
-                    fovy = math.radians(self.fov_degrees)
-                    focal_length_pixel = solver.focal_length_from_fov(fovy, self.content_size.y)
+                    fovy = math.radians(self.doc.fov_degrees)
+                    focal_length_pixel = solver.focal_length_from_fov(fovy, self.doc.content_size.y)
                     camera_transform = solver.solve1vp(
-                        self.content_size.x, 
-                        self.content_size.y, 
+                        self.doc.content_size.x, 
+                        self.doc.content_size.y, 
                         self.first_vanishing_point_pixel,
-                        self.second_vanishing_lines_pixel[0],
+                        self.doc.second_vanishing_lines_pixel[0],
                         focal_length_pixel,
-                        self.principal_point_pixel,
-                        self.origin_pixel,
-                        self.first_axis,
-                        self.second_axis,
-                        self.scene_scale
+                        self.doc.principal_point_pixel,
+                        self.doc.origin_pixel,
+                        self.doc.first_axis,
+                        self.doc.second_axis,
+                        self.doc.scene_scale
                     )
 
                     # create camera
                     self.camera = Camera()
                     self.camera.setFoVY(fovy)
                     self.camera.transform = camera_transform
-                    self.camera.setAspectRatio(self.content_size.x / self.content_size.y)
+                    self.camera.setAspectRatio(self.doc.content_size.x / self.doc.content_size.y)
                     self.camera.setFoVY(math.degrees(fovy))
                 except Exception as e:
                     imgui.push_style_color(imgui.Col_.text, (1.0, 0.2, 0.2, 1.0))
@@ -1197,27 +959,27 @@ class PerspyApp(PerspyDocument):
                 try:
                     # compute vanishing points
                     self.first_vanishing_point_pixel =  solver.least_squares_intersection_of_lines(
-                        self.first_vanishing_lines_pixel)
+                        self.doc.first_vanishing_lines_pixel)
                     self.second_vanishing_point_pixel = solver.least_squares_intersection_of_lines(
-                        self.second_vanishing_lines_pixel)
+                        self.doc.second_vanishing_lines_pixel)
 
                     fovy, camera_transform = solver.solve2vp(
-                        self.content_size.x, 
-                        self.content_size.y, 
+                        self.doc.content_size.x, 
+                        self.doc.content_size.y, 
                         self.first_vanishing_point_pixel,
                         self.second_vanishing_point_pixel,
-                        self.principal_point_pixel,
-                        self.origin_pixel,
-                        self.first_axis,
-                        self.second_axis,
-                        self.scene_scale
+                        self.doc.principal_point_pixel,
+                        self.doc.origin_pixel,
+                        self.doc.first_axis,
+                        self.doc.second_axis,
+                        self.doc.scene_scale
                     )
 
                     # create camera
                     self.camera = Camera()
                     self.camera.setFoVY(fovy)
                     self.camera.transform = camera_transform
-                    self.camera.setAspectRatio(self.content_size.x / self.content_size.y)
+                    self.camera.setAspectRatio(self.doc.content_size.x / self.doc.content_size.y)
                     self.camera.setFoVY(math.degrees(fovy))
                 except Exception as e:
                     imgui.push_style_color(imgui.Col_.text, (1.0, 0.2, 0.2, 1.0))
@@ -1248,12 +1010,12 @@ class PerspyApp(PerspyDocument):
             else:
                 logger.info(f"✓ Found file: {Path(path).absolute()}")
 
-            self.image_path = path
+            self.doc.image_path = path
 
             # Load image with PIL
             img = Image.open(path)
-            self.image = img
-            self.content_size = imgui.ImVec2(img.width, img.height)
+            self.doc.image = img
+            self.doc.content_size = imgui.ImVec2(img.width, img.height)
             logger.info(f"✓ Loaded: {path} ({img.width}x{img.height})")
             
             if img.mode != 'RGBA':
