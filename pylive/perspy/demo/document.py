@@ -1,4 +1,5 @@
 
+from pathlib import Path
 from imgui_bundle import imgui
 from PIL.Image import Image
 import glm
@@ -57,12 +58,17 @@ class Document(ABC):
     def isModified(self)->bool:
         return self._is_modified
     
-    def __setattr__(self, name:str, value):
-        """setattr is called whenever an attribute is set on the instance.
-        """
-        super().__setattr__(name, value)
-        if name != '_is_modified':
-            object.__setattr__(self, '_is_modified', True)
+    # def __setattr__(self, name:str, value):
+    #     """setattr is called whenever an attribute is set on the instance.
+    #     """
+        
+    #     if name != '_is_modified':
+    #         if value is not getattr(self, name, None):
+    #             print(f"Document modified due to change in attribute '{name}'")
+    #             object.__setattr__(self, '_is_modified', True)
+    #         super().__setattr__(name, value)
+    #     else:
+    #         super().__setattr__(name, value)
 
     @abstractmethod
     def serialize(self)->str:
@@ -104,7 +110,7 @@ class Document(ABC):
                 default_path="", 
                 filters=["perspy files", "*.prsy"]
             )
-            choosen_filepath = save_dialog.result()[0] if save_dialog.result() else None
+            choosen_filepath = save_dialog.result()
             if not choosen_filepath:
                 return # if no filepath was chosen, abort save
             filepath = choosen_filepath
@@ -113,20 +119,10 @@ class Document(ABC):
 
         if not filepath:
             return
-
-        if filepath is None:
-            """Prompt for file location"""
-            save_dialog = pfd.save_file(
-                title="Save Project As", 
-                default_path="", 
-                filters=["perspy files", "*.prsy"]
-            )
-            if path:=save_dialog.result():
-                filepath = path
-
-
-            
-            self.file_path = filepath
+        
+        # Ensure the file has the correct extension
+        if Path(filepath).suffix != '.prsy':
+            filepath = str(Path(filepath).with_suffix('.prsy'))
 
         import json
         from struct import pack
@@ -134,6 +130,15 @@ class Document(ABC):
         # Get JSON state
         state_json = self.serialize().encode('utf-8')
         state_size = len(state_json)
+        
+        # Get image data if available
+        image_data = b''
+        if hasattr(self, 'image') and self.image is not None:
+            import io
+            buffer = io.BytesIO()
+            self.image.save(buffer, format='PNG')
+            image_data = buffer.getvalue()
+        image_size = len(image_data)
         
         # Write file
         magic = int.from_bytes(b'prsy', byteorder='little')  # 'prsy'
@@ -144,15 +149,20 @@ class Document(ABC):
             f.write(pack('<I', magic))        # 4 bytes: magic number
             f.write(pack('<I', version))      # 4 bytes: version
             f.write(pack('<I', state_size))   # 4 bytes: JSON size
+            f.write(pack('<I', image_size))   # 4 bytes: image size
 
             # Write data
             f.write(state_json)
+            if image_data:
+                f.write(image_data)
         
         logger.info(f"✓ Saved to {filepath}")
+        self._file_path = filepath
+        self._is_modified = False
 
     def open(self, filepath: str|None=None):
         """
-        Load app state from a .perspy file.
+        Load app state from a .prsy file.
         """
         import json
         from struct import unpack
@@ -163,7 +173,7 @@ class Document(ABC):
             open_file_dialog = pfd.open_file(
                 title="Open Project", 
                 default_path="", 
-                filters=["perspy files", "*.perspy"]
+                filters=["perspy files", "*.prsy"]
             )
             paths = open_file_dialog.result()
             if len(paths) > 0:
@@ -172,10 +182,10 @@ class Document(ABC):
                 return
         
         with open(filepath, 'rb') as f:
-            # Read header
+            # Read header (16 bytes total)
             magic_bytes = f.read(4)
             if magic_bytes != b'prsy':
-                raise ValueError(f"Not a valid .perspy file (got magic: {magic_bytes})")
+                raise ValueError(f"Not a valid .prsy file (got magic: {magic_bytes})")
             
             version = unpack('<I', f.read(4))[0]
             if version != 1:
@@ -187,7 +197,7 @@ class Document(ABC):
             # Read state JSON
             state_json = f.read(state_size).decode('utf-8')
             
-            # Read image data
+            # Read image data if present
             image_data = None
             if image_size > 0:
                 image_data = f.read(image_size)
@@ -195,18 +205,30 @@ class Document(ABC):
         # Use deserialize to restore state from JSON
         self.deserialize(state_json)
         
-        # Load image
+        # Load embedded image data if available
         if image_data:
             import io
+            from PIL import Image
             self.image = Image.open(io.BytesIO(image_data))
             self.content_size = imgui.ImVec2(float(self.image.width), float(self.image.height))
+        # Fallback: try to load image from path if no embedded image
+        elif hasattr(self, 'image_path') and self.image_path:
+            try:
+                from PIL import Image
+                self.image = Image.open(self.image_path)
+                self.content_size = imgui.ImVec2(float(self.image.width), float(self.image.height))
+            except Exception as e:
+                logger.warning(f"Could not load image from path '{self.image_path}': {e}")
+                self.image = None
 
             
-            logger.info(f"✓ Loaded from {filepath}")
+        logger.info(f"✓ Loaded from {filepath}")
+        if hasattr(self, 'image') and self.image:
             logger.info(f"  Image: {self.image.width}x{self.image.height}")
         else:
-            logger.warning("No image data in file")
-
+            logger.info("  No image loaded")
+        
+        self._file_path = filepath
         self._is_modified = False
     
 class PerspyDocument(Document):
@@ -227,13 +249,13 @@ class PerspyDocument(Document):
         self.quad_mode=False # only for TwoVP mode. is this a ui state?
 
         # - control points
-        self.origin_pixel=self.content_size/2
-        self.principal_point_pixel=self.content_size/2
-        self.first_vanishing_lines_pixel = [
+        self.origin=self.content_size/2
+        self.principal_point=self.content_size/2
+        self.first_vanishing_lines = [
             (glm.vec2(296, 417), glm.vec2(633, 291)),
             (glm.vec2(654, 660), glm.vec2(826, 344))
         ]
-        self.second_vanishing_lines_pixel = [
+        self.second_vanishing_lines = [
             [glm.vec2(381, 363), glm.vec2(884, 451)],
             [glm.vec2(511, 311), glm.vec2(879, 356)]
         ]
@@ -254,10 +276,10 @@ class PerspyDocument(Document):
             },
 
             'control_points': {
-                "origin": self.origin_pixel,
-                "principal_point": self.principal_point_pixel,
-                "first_vanishing_lines": self.first_vanishing_lines_pixel,
-                "second_vanishing_lines": self.second_vanishing_lines_pixel
+                "origin": self.origin,
+                "principal_point": self.principal_point,
+                "first_vanishing_lines": self.first_vanishing_lines,
+                "second_vanishing_lines": self.second_vanishing_lines
             },
 
             'image_params': {
@@ -329,19 +351,19 @@ class PerspyDocument(Document):
             cp = data['control_points']
             
             if 'origin' in cp:
-                self.origin_pixel = deserialize_vec2(cp['origin'])
+                self.origin = deserialize_vec2(cp['origin'])
             
             if 'principal_point' in cp:
-                self.principal_point_pixel = deserialize_vec2(cp['principal_point'])
+                self.principal_point = deserialize_vec2(cp['principal_point'])
             
             if 'first_vanishing_lines' in cp:
-                self.first_vanishing_lines_pixel = [
+                self.first_vanishing_lines = [
                     (deserialize_vec2(line[0]), deserialize_vec2(line[1]))
                     for line in cp['first_vanishing_lines']
                 ]
             
             if 'second_vanishing_lines' in cp:
-                self.second_vanishing_lines_pixel = [
+                self.second_vanishing_lines = [
                     [deserialize_vec2(line[0]), deserialize_vec2(line[1])]
                     for line in cp['second_vanishing_lines']
                 ]

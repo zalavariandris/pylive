@@ -4,57 +4,35 @@ from imgui_bundle import imgui
 from typing import TypeVar, Tuple, List
 import glm
 import numpy as np
-if __name__ == "__main__":
-    import colors
-else:
-    from . import colors
 from typing import Tuple, Literal, Iterable
 
-##############################
-# Stateles utility functions #
-##############################
-# def make_ortho(xmin:float, ymin:float, xmax:float, ymax:float, near:float=-1.0, far:float=1.0):
-#     x, y = imgui.get_window_pos()
-#     w, h = imgui.get_window_size()
-#     widget_aspect = w/h
-#     content_width = xmax - xmin
-#     content_height = ymax-ymin
-#     content_aspect = content_width/content_height
-#     if widget_aspect < content_aspect:
-#         # viewport is narrower -> expand world height, center original canvas vertically
-#         proj_h = float(content_width) / float(widget_aspect)
-#         top_margin = ( proj_h - float(content_height) ) * 0.5
-#         projection = glm.ortho(0.0, float(content_width), 0.0-top_margin, proj_h-top_margin, near, far)
-#     else:
-#         # viewport is wider -> expand world width, center original canvas horizontally
-#         proj_w = float(content_height) * float(widget_aspect)
-#         left_margin = (proj_w - float(content_width)) * 0.5
-#         projection = glm.ortho(0.0-left_margin, proj_w-left_margin, 0.0, float(content_height), near, far)
+import types
 
-#     return projection, near, far
+# ############ #
+# Viewer Style #
+# ############ #
+def fade_color(color:imgui.ImVec4, amount:float=0.5) -> imgui.ImVec4:
+        r, g, b, a = color
+        return imgui.ImVec4(r, g, b, a * amount)
 
-# def make_perspective_projection(fovy, canvas_tl, canvas_br, widget_tl, widget_br, near=0.1, far=100.0)->glm.mat4:
-#     """
-#     Create a perspective projection matrix that accounts for overscan between canvas and widget.
-#     """
-    
-#     # calculate symmetric perspective projection
-#     canvas_width = canvas_br.x - canvas_tl.x
-#     canvas_height = canvas_br.y - canvas_tl.y
-#     projection = glm.perspective(fovy, canvas_width / canvas_height, near, far)
+def get_viewer_style():
+    style = imgui.get_style()
+    return types.SimpleNamespace(
+        BACKGROUND_COLOR = imgui.ImVec4(0.1, 0.1, 0.1, 1.0),
+        GRID_COLOR =       imgui.ImVec4(0.3, 0.3, 0.3, 1.0),
+        AXIS_COLOR_X =     imgui.ImVec4(1,0.1,0, 1.0),
+        AXIS_COLOR_Y =     imgui.ImVec4(0,1,0, 1.0),
+        AXIS_COLOR_Z =     imgui.ImVec4(0.0,0.5,1, 1.0),
+        margin_stroke_color = fade_color(style.color_(imgui.Col_.border), 0.5),
+        margin_fill_color = fade_color(style.color_(imgui.Col_.window_bg), 0.7),
+        GUIDE_COLOR = style.color_(imgui.Col_.text_disabled),
+        HORIZON_LINE_COLOR = style.color_(imgui.Col_.text_disabled),
+        CONTROL_POINT_COLOR = style.color_(imgui.Col_.text)
+    )
 
-#     # apply overscan to projection to render in the entire widget area
-#     projection = overscan_projection(projection,
-#                                   glm.vec2(canvas_tl.x, canvas_tl.y),
-#                                   glm.vec2(canvas_br.x, canvas_br.y),
-#                                   glm.vec2(widget_tl.x, widget_tl.y),
-#                                   glm.vec2(widget_br.x, widget_br.y),
-#                                   near, far)
-#     # projection[1][1] *= -1 # flip Y for imgui coords
-#     return projection
-
-
-
+#######################
+# STATELESS UTILITIES #
+#######################
 def overscan_projection(projection:glm.mat4, rect_tl, rect_br, overscan_tl, overscan_br)->glm.mat4:
     # Calculate canvas and widget dimensions
     canvas_width = rect_br.x - rect_tl.x
@@ -321,42 +299,36 @@ def end_viewer():
     draw_list = imgui.get_window_draw_list()
     content_screen_tl = current_viewport._project( (0,0,0))
     content_screen_br = current_viewport._project( (current_viewport.content_size.x, current_viewport.content_size.y, 0))
-    
-    margin_stroke_color = imgui.ImVec4(style.color_(imgui.Col_.border))
-    margin_stroke_color.w = 0.40
-    margin_stroke_color = imgui.color_convert_float4_to_u32(margin_stroke_color)
-    draw_list.add_rect(content_screen_tl, content_screen_br, margin_stroke_color, thickness=1.0)
+
+    draw_list.add_rect(content_screen_tl, content_screen_br, imgui.color_convert_float4_to_u32(get_viewer_style().margin_stroke_color), thickness=1.0)
 
 
     viewport_tl = current_viewport.pos
     viewport_br = current_viewport.pos + current_viewport.size
-    margin_fill_color = imgui.ImVec4(style.color_(imgui.Col_.window_bg))
-    margin_fill_color.w = 0.70
-    margin_fill_color = imgui.color_convert_float4_to_u32(margin_fill_color)
 
     # Top rectangle
     draw_list.add_rect_filled(
         imgui.ImVec2(viewport_tl.x, viewport_tl.y),
         imgui.ImVec2(viewport_br.x, content_screen_tl.y),
-        margin_fill_color
+        imgui.color_convert_float4_to_u32(get_viewer_style().margin_fill_color)
     )
     # Bottom rectangle
     draw_list.add_rect_filled(
         imgui.ImVec2(viewport_tl.x, content_screen_br.y),
         imgui.ImVec2(viewport_br.x, viewport_br.y),
-        margin_fill_color
+        imgui.color_convert_float4_to_u32(get_viewer_style().margin_fill_color)
     )
     # Left rectangle
     draw_list.add_rect_filled(
         imgui.ImVec2(viewport_tl.x, content_screen_tl.y),
         imgui.ImVec2(content_screen_tl.x, content_screen_br.y),
-        margin_fill_color
+        imgui.color_convert_float4_to_u32(get_viewer_style().margin_fill_color)
     )
     # Right rectangle
     draw_list.add_rect_filled(
         imgui.ImVec2(content_screen_br.x, content_screen_tl.y),
         imgui.ImVec2(viewport_br.x, content_screen_br.y),
-        margin_fill_color
+        imgui.color_convert_float4_to_u32(get_viewer_style().margin_fill_color)
     )
 
     # display viewport info
@@ -367,7 +339,6 @@ def end_viewer():
     imgui.push_style_color(imgui.Col_.text, style.color_(imgui.Col_.text_disabled))
     imgui.text(f"{current_viewer_name} — @({x:.0f}, {y:.0f}) — {w:.0f}×{h:.0f}px")
     
-
     screen_tl = current_viewport._project((0,0,0))  # force update of widget rect in project function
     screen_br = current_viewport._project((current_viewport.content_size.x, current_viewport.content_size.y, 0))  # force update of widget rect in project function
 
@@ -413,11 +384,14 @@ def _clip_line(A: glm.vec3, B: glm.vec3, view: glm.mat4, near, far):
     else:
         return A, intersection_world
 
-def guide(A:imgui.ImVec2Like, B:imgui.ImVec2Like, color=None):
+def guide(A:imgui.ImVec2Like, B:imgui.ImVec2Like, color:imgui.ImVec4=None):
+    if not isinstance(color, imgui.ImVec4) and color is not None:
+        raise TypeError(f"color must be of type imgui.ImVec4 or None, got: {color}")
+    
     if color is None:
         style = imgui.get_style()
-        color = imgui.ImVec4(style.color_(imgui.Col_.text_disabled))
-        color = imgui.color_convert_float4_to_u32(color)
+        color = get_viewer_style().GUIDE_COLOR
+    
 
     global viewers, current_viewer_name
     current_viewport = viewers[current_viewer_name]
@@ -451,7 +425,7 @@ def guide(A:imgui.ImVec2Like, B:imgui.ImVec2Like, color=None):
 
     # draw line
     draw_list = imgui.get_window_draw_list()
-    draw_list.add_line(A, B, color)
+    draw_list.add_line(A, B, imgui.color_convert_float4_to_u32(color))
 
 def axes(length:float=1.0, thickness:float=1.0):
     global viewers, current_viewer_name
@@ -465,13 +439,13 @@ def axes(length:float=1.0, thickness:float=1.0):
     A_screen = current_viewport._project(origin)
     B_screen = current_viewport._project(x_axis)
     draw_list = imgui.get_window_draw_list()
-    draw_list.add_line(A_screen, B_screen, colors.RED_DIMMED, thickness)
+    draw_list.add_line(A_screen, B_screen, imgui.color_convert_float4_to_u32(get_viewer_style().AXIS_COLOR_X), thickness)
 
     B_screen = current_viewport._project(y_axis)
-    draw_list.add_line(A_screen, B_screen, colors.GREEN_DIMMED, thickness)
+    draw_list.add_line(A_screen, B_screen, imgui.color_convert_float4_to_u32(get_viewer_style().AXIS_COLOR_Y), thickness)
 
     B_screen = current_viewport._project(z_axis)
-    draw_list.add_line(A_screen, B_screen, colors.BLUE_DIMMED, thickness)
+    draw_list.add_line(A_screen, B_screen, imgui.color_convert_float4_to_u32(get_viewer_style().AXIS_COLOR_Z), thickness)
 
 def _cast_ray(
     pos: glm.vec2, 
@@ -511,8 +485,7 @@ def horizon_line(color:int=None):
     at_distance:float=10000.0
     if color is None:
         style = imgui.get_style()
-        color = imgui.ImVec4(style.color_(imgui.Col_.text_disabled))
-        color = imgui.color_convert_float4_to_u32(color)
+        color = imgui.ImVec4(get_viewer_style().HORIZON_LINE_COLOR)
 
     global viewers, current_viewer_name
     current_viewer = viewers[current_viewer_name]
@@ -623,9 +596,8 @@ def _get_window_coords(point: imgui.ImVec2Like | Tuple[float, float, float]) -> 
 
 def control_point(label:str, point:imgui.ImVec2Like, *, color:int=None)->Tuple[bool, imgui.ImVec2Like]:
     if color is None:
-        style = imgui.get_style()
-        color = style.color_(imgui.Col_.text)
-        color = imgui.color_convert_float4_to_u32(color)
+        color = get_viewer_style().CONTROL_POINT_COLOR
+
     # project the point to world coordinates
     P = _get_screen_coords(point)  # ensure widget rect is updated
 
@@ -639,13 +611,12 @@ def control_point(label:str, point:imgui.ImVec2Like, *, color:int=None)->Tuple[b
     text_offset = imgui.ImVec2(5, -5)
     radius=3
     if imgui.is_item_hovered() or imgui.is_item_active():
-        draw_list.add_circle_filled(P, radius+1, color, num_segments=0)
+        draw_list.add_circle_filled(P, radius+1, imgui.color_convert_float4_to_u32(color), num_segments=0)
         text = f"{label}".split("##")[0]
         text += f"({point.x:.0f},{point.y:.0f})"
-        draw_list.add_text(P + text_offset, color, text)
+        draw_list.add_text(P + text_offset, imgui.color_convert_float4_to_u32(color), text)
     else:
-        r, g, b, a = imgui.color_convert_u32_to_float4(color)
-        draw_list.add_circle_filled(P, radius, color, num_segments=8)
+        draw_list.add_circle_filled(P, radius, imgui.color_convert_float4_to_u32(color), num_segments=8)
 
     # handle dragging
     if imgui.is_item_active():
@@ -717,11 +688,12 @@ if __name__ == "__main__":
                         ):
             # 2d grid
             for A, B in make_gridXY_lines(step=10, size=30):
-                guide(A, B, colors.WHITE_DIMMED)
+                guide(A, B, imgui.ImVec4(1,1,1,0.3))
             axes(length=100.0)
-            _, CP_POS = control_point("CP##1", CP_POS, color=colors.CYAN)
+            _, CP_POS = control_point("CP##1", CP_POS, color=imgui.ImVec4(1,1,0,1))
             set_cursor_to_point(CP_POS)
             imgui.button("imgui button positioned in the viewer")
+
             # 3d scene
             camera.setAspectRatio(float(CONTENT_SIZE[0])/float(CONTENT_SIZE[1]))
             if begin_scene(camera.projectionMatrix(), camera.viewMatrix()):
@@ -731,6 +703,7 @@ if __name__ == "__main__":
                 set_cursor_to_point((0,0,0))
                 imgui.text("imgui.text at (0,0,0) in 3D space")
                 end_scene()
+
         end_viewer()
         
 

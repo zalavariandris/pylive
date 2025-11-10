@@ -1,5 +1,6 @@
 # Standard library imports
 import math
+from pathlib import Path
 from pprint import pformat
 from typing import Any, List, Tuple, Dict
 from enum import IntEnum
@@ -10,6 +11,7 @@ import logging
 # Third-party imports
 from PIL import Image
 import OpenGL.GL as gl
+import glfw
 import glm
 import numpy as np
 from imgui_bundle import imgui, icons_fontawesome_4
@@ -25,39 +27,21 @@ from document import PerspyDocument, SolverMode
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-sidebar_opacity = 0.8
-def begin_sidebar(name:str, p_open:bool|None=None, flags:int=0) -> bool:
-    SIDEBAR_FLAGS = imgui.WindowFlags_.always_auto_resize | imgui.WindowFlags_.no_move | imgui.WindowFlags_.no_resize | imgui.WindowFlags_.no_collapse
-    style = imgui.get_style()
-    window_bg = style.color_(imgui.Col_.window_bg)
-    title_bg = style.color_(imgui.Col_.title_bg)
-    title_bg = style.color_(imgui.Col_.title_bg_active)
-    border   = style.color_(imgui.Col_.border)
-    imgui.push_style_color(imgui.Col_.window_bg, (*list(window_bg)[:3], sidebar_opacity))
-    imgui.push_style_color(imgui.Col_.title_bg,  (*list(title_bg)[:3], sidebar_opacity))
-    imgui.push_style_color(imgui.Col_.border,    (*list(border)[:3], sidebar_opacity))
-    return imgui.begin(name, None, SIDEBAR_FLAGS)
 
-def end_sidebar():
-    imgui.end()
-    imgui.pop_style_color(3)
-    # imgui.pop_style_var()
-
-def get_axis_color(axis:solver.Axis, dim:bool=False) -> Tuple[float, float, float]:
+def get_axis_color(axis:solver.Axis) -> Tuple[float, float, float]:
     match axis:
         case solver.Axis.PositiveX | solver.Axis.NegativeX:
-            return ui.colors.RED if not dim else ui.colors.RED_DIMMED
+            return ui.viewer.get_viewer_style().AXIS_COLOR_X
         case solver.Axis.PositiveY | solver.Axis.NegativeY:
-            return ui.colors.GREEN if not dim else ui.colors.GREEN_DIMMED
+            return ui.viewer.get_viewer_style().AXIS_COLOR_Y
         case solver.Axis.PositiveZ | solver.Axis.NegativeZ:
-            return ui.colors.BLUE if not dim else ui.colors.BLUE_DIMMED
+            return ui.viewer.get_viewer_style().AXIS_COLOR_Z
         case _:
             return (1.0, 1.0, 1.0)
-
+        
 # ########### #
 # Application #
 # ########### #
-
 class PerspyApp():
     def __init__(self):
         super().__init__()
@@ -69,8 +53,8 @@ class PerspyApp():
 
         # solver results
         self.current_euler_order = solver.EulerOrder.ZXY
-        self.first_vanishing_point_pixel:glm.vec2|None = None
-        self.second_vanishing_point_pixel:glm.vec2|None = None
+        self.first_vanishing_point:glm.vec2|None = None
+        self.second_vanishing_point:glm.vec2|None = None
         self.camera:Camera|None = None
 
         # ui state
@@ -81,12 +65,13 @@ class PerspyApp():
         self.show_about_popup: bool = False
         self.show_emoji_window: bool = False
         self.show_fontawesome_window: bool = False
-        self.show_data_window: bool = True
+        self.show_data_window: bool = False
         self.show_styleeditor_window: bool = False
 
         # - manage view
         self.view_grid: bool = True
         self.view_horizon: bool = True
+        self.view_axes: bool = True
 
         # misc
         """
@@ -98,6 +83,21 @@ class PerspyApp():
         """
         self.misc:Dict[str, Any] = dict() # miscellaneous state variables for development. 
 
+    def update_os_window_title(self):
+        # Change the window title at runtime
+        try:
+            glfw_window = glfw.get_current_context()
+            title = f"Perspy"
+            if self.doc._file_path:
+                title += " - "
+                if self.doc.isModified():
+                    title += " *"
+                title += f"{Path(self.doc._file_path).stem}"
+                title += f" [{self.doc._file_path}]"
+            glfw.set_window_title(glfw_window, title)
+        except Exception as e:
+            logger.warning(f"Could not set window title: {e}")
+
     # Windows
     def gui(self):        
         # Compute Camera
@@ -107,7 +107,6 @@ class PerspyApp():
         self.show_main_menu_bar()
         menu_bar_height = imgui.get_frame_height()
 
-        # Model About window
         if self.show_about_popup:
             imgui.set_next_window_pos(imgui.ImVec2(0,0), imgui.Cond_.always)
             imgui.set_next_window_size(imgui.get_io().display_size, imgui.Cond_.always)
@@ -149,18 +148,22 @@ class PerspyApp():
             imgui.end()
 
         # Parameters Window
-        style = imgui.get_style()
-        display_size = imgui.get_io().display_size
-
-        imgui.set_next_window_pos(imgui.ImVec2(style.window_padding.x, display_size.y/2), imgui.Cond_.always, imgui.ImVec2(0.0, 0.5))
-        if begin_sidebar("Parameters", None):
+        if ui.begin_sidebar("Parameters", align="left"):
             self.show_parameters()
-        end_sidebar()
+        ui.end_sidebar()
 
         # Solve the camera
-        self.solve()
+        try:
+            self.solve()
+            error_msg = None
+        except Exception as e:
+            error_msg = e
+            import traceback
+            traceback.print_exc()
 
         # fullscreen viewer Window
+        # style = imgui.get_style()
+        display_size = imgui.get_io().display_size
         imgui.set_next_window_pos(imgui.ImVec2(0, menu_bar_height))
         imgui.set_next_window_size(imgui.ImVec2(display_size.x, display_size.y - menu_bar_height))       
         if imgui.begin("MainViewport", None, imgui.WindowFlags_.no_bring_to_front_on_focus | imgui.WindowFlags_.no_move | imgui.WindowFlags_.no_resize | imgui.WindowFlags_.no_collapse | imgui.WindowFlags_.no_title_bar):
@@ -168,10 +171,15 @@ class PerspyApp():
         imgui.end()
 
         # Results Window
-        imgui.set_next_window_pos(imgui.ImVec2(display_size.x-style.window_padding.x, display_size.y/2), imgui.Cond_.always, imgui.ImVec2(1.0, 0.5))
-        if begin_sidebar("Results"):
-            self.show_results()
-        end_sidebar()
+        
+        if ui.begin_sidebar("Results", align="right"):
+            if error_msg is not None:
+                imgui.push_style_color(imgui.Col_.text, (1.0, 0.2, 0.2, 1.0))
+                imgui.text_wrapped(f"{error_msg}")
+                imgui.pop_style_color()
+            else:
+                self.show_results()
+        ui.end_sidebar()
 
         if self.show_data_window:
             expanded, self.show_data_window = imgui.begin("data window", self.show_data_window)
@@ -237,8 +245,11 @@ class PerspyApp():
                 if imgui.menu_item_simple(f"horizon", None, self.view_horizon):
                     self.view_horizon = not self.view_horizon
 
-                global sidebar_opacity
-                _, sidebar_opacity = imgui.slider_float("sidebar opacity", sidebar_opacity, 0.0, 1.0, "%.2f")
+                if imgui.menu_item_simple(f"axes", None, self.view_axes):
+                    self.view_axes = not self.view_axes
+
+                # global sidebar_opacity
+                # _, sidebar_opacity = imgui.slider_float("sidebar opacity", sidebar_opacity, 0.0, 1.0, "%.2f")
 
                 imgui.end_menu()
             
@@ -259,6 +270,27 @@ class PerspyApp():
                     self.show_data_window = not self.show_data_window
                 imgui.end_menu()
 
+            # center title horizontally
+            if self.doc._file_path:
+                text = f"— {'*' if self.doc.isModified() else ''} {Path(self.doc._file_path).stem} —"
+                title_size = imgui.calc_text_size(text)
+                center_cursor_pos = (imgui.get_window_width() - title_size.x) * 0.5
+                if center_cursor_pos > imgui.get_cursor_pos_x():
+                    imgui.set_cursor_pos_x(center_cursor_pos)
+                imgui.text(text)                
+                imgui.text_colored(style.color_(imgui.Col_.text_disabled), f"[{self.doc._file_path}]")
+            else:
+                text = '— Untitled —'
+                title_size = imgui.calc_text_size(text)
+                center_cursor_pos = (imgui.get_window_width() - title_size.x) * 0.5
+                if center_cursor_pos > imgui.get_cursor_pos_x():
+                    imgui.set_cursor_pos_x(center_cursor_pos)
+                imgui.text(text)
+
+            # alignt menu to right
+            right_cursor_pos = imgui.get_window_width() - style.window_padding.x*2 - imgui.calc_text_size("Help").x
+            if right_cursor_pos > imgui.get_cursor_pos_x():
+                imgui.set_cursor_pos_x(right_cursor_pos)
             if imgui.begin_menu("Help"):
                 # Use safe icon access with fallback
                 book_icon = getattr(icons_fontawesome_4, 'ICON_FA_BOOK', '')
@@ -269,10 +301,8 @@ class PerspyApp():
                 if imgui.menu_item_simple(f"{info_icon} About"):
                     self.show_about_popup = True
 
-                
                 imgui.end_menu()
-            
-            # Store the actual height of the menu bar
+
             imgui.end_main_menu_bar()
         # imgui.pop_style_var()
 
@@ -327,6 +357,7 @@ class PerspyApp():
 
     def show_viewer(self):
         if ui.viewer.begin_viewer("viewer1", content_size=self.doc.content_size, size=imgui.ImVec2(-1,-1), coordinate_system="top-left"):
+            # background image
             if self.image_texture_ref is not None:
                 tl = ui.viewer._get_window_coords(imgui.ImVec2(0,0))
                 br = ui.viewer._get_window_coords(imgui.ImVec2(self.doc.content_size.x, self.doc.content_size.y))
@@ -339,58 +370,45 @@ class PerspyApp():
                     )
                 else:
                     imgui.image(self.image_texture_ref, image_size)
-            else:
-                io = imgui.get_io()
-                center = io.display_size / 2
-                
-                # # imgui.set_cursor_pos(center)
-                # imgui.set_next_window_pos(center, imgui.Cond_.always, imgui.ImVec2(0.5, 0.5))
-                # imgui.push_style_var(imgui.StyleVar_.window_padding, imgui.ImVec2(20, 20))
-                # imgui.push_style_color(imgui.Col_.window_bg, (0,0,0, 0.7))
-                # if imgui.begin("##dropzone", None, imgui.WindowFlags_.always_auto_resize | imgui.WindowFlags_.no_title_bar | imgui.WindowFlags_.no_inputs | imgui.WindowFlags_.no_move | imgui.WindowFlags_.no_resize | imgui.WindowFlags_.no_scrollbar):
-                #     imgui.push_style_color(imgui.Col_.text, imgui.get_style().color_(imgui.Col_.text_disabled))
-                #     imgui.bullet_text("Drop an image file here to load it as background")
-                #     imgui.pop_style_color()
-                # imgui.end()
-                # imgui.pop_style_color()
-                # imgui.pop_style_var()
 
             # control points
-            _, self.doc.origin_pixel = ui.viewer.control_point("o", self.doc.origin_pixel)
+            _, self.doc.origin = ui.viewer.control_point("o", self.doc.origin)
             control_line = ui.comp(ui.viewer.control_point)
             control_lines = ui.comp(control_line)
-            _, self.doc.first_vanishing_lines_pixel = control_lines("z", self.doc.first_vanishing_lines_pixel, color=get_axis_color(self.doc.first_axis) )
-            for line in self.doc.first_vanishing_lines_pixel:
+            _, self.doc.first_vanishing_lines = control_lines("z", self.doc.first_vanishing_lines, color=get_axis_color(self.doc.first_axis) )
+            for line in self.doc.first_vanishing_lines:
                 ui.viewer.guide(line[0], line[1], color=get_axis_color(self.doc.first_axis))
 
             match self.doc.solver_mode:
                 case SolverMode.OneVP:
-                    _, self.doc.second_vanishing_lines_pixel[0] = control_line("x", self.doc.second_vanishing_lines_pixel[0], color=get_axis_color(self.doc.second_axis))  
-                    ui.viewer.guide(self.doc.second_vanishing_lines_pixel[0][0], self.doc.second_vanishing_lines_pixel[0][1], color=get_axis_color(self.doc.second_axis))
+                    _, self.doc.second_vanishing_lines[0] = control_line("x", self.doc.second_vanishing_lines[0], color=get_axis_color(self.doc.second_axis))  
+                    ui.viewer.guide(self.doc.second_vanishing_lines[0][0], self.doc.second_vanishing_lines[0][1], color=get_axis_color(self.doc.second_axis))
                 
                 case SolverMode.TwoVP:
                     if self.doc.quad_mode:
-                        z0, z1 = self.doc.first_vanishing_lines_pixel
-                        self.doc.second_vanishing_lines_pixel = [
+                        z0, z1 = self.doc.first_vanishing_lines
+                        self.doc.second_vanishing_lines = [
                             (z0[0], z1[0]),
                             (z0[1], z1[1])
                         ]
                     else:
-                        _, self.doc.second_vanishing_lines_pixel = control_lines("x", self.doc.second_vanishing_lines_pixel, color=get_axis_color(self.doc.second_axis) )
+                        _, self.doc.second_vanishing_lines = control_lines("x", self.doc.second_vanishing_lines, color=get_axis_color(self.doc.second_axis) )
                     
-                    for line in self.doc.second_vanishing_lines_pixel:
+                    for line in self.doc.second_vanishing_lines:
                         ui.viewer.guide(line[0], line[1], color=get_axis_color(self.doc.second_axis))
 
             # draw vanishing lines to vanishing points
-            if self.first_vanishing_point_pixel is not None:
-                for line in self.doc.first_vanishing_lines_pixel:
-                    P = sorted([line[0], line[1]], key=lambda P: glm.distance2(P, self.first_vanishing_point_pixel))[0]
-                    ui.viewer.guide(P, self.first_vanishing_point_pixel, get_axis_color(self.doc.first_axis, dim=True))
+            if self.first_vanishing_point is not None:
+                for line in self.doc.first_vanishing_lines:
+                    P = sorted([line[0], line[1]], key=lambda P: glm.distance2(P, self.first_vanishing_point))[0]
+                    first_axis_color = get_axis_color(self.doc.first_axis)
+                    ui.viewer.guide(P, self.first_vanishing_point, imgui.ImVec4(first_axis_color[0], first_axis_color[1], first_axis_color[2], 0.4))
 
-            if self.second_vanishing_point_pixel is not None:
-                for line in self.doc.second_vanishing_lines_pixel:
-                    P = sorted([line[0], line[1]], key=lambda P: glm.distance2(P, self.second_vanishing_point_pixel))[0]
-                    ui.viewer.guide(P, self.second_vanishing_point_pixel, get_axis_color(self.doc.second_axis, dim=True))
+            if self.second_vanishing_point is not None:
+                for line in self.doc.second_vanishing_lines:
+                    P = sorted([line[0], line[1]], key=lambda P: glm.distance2(P, self.second_vanishing_point))[0]
+                    second_axis_color = get_axis_color(self.doc.second_axis)
+                    ui.viewer.guide(P, self.second_vanishing_point, imgui.ImVec4(second_axis_color[0], second_axis_color[1], second_axis_color[2], 0.4))
 
             if self.camera is not None:
                 if ui.viewer.begin_scene(glm.scale(self.camera.projectionMatrix(), glm.vec3(1.0, -1.0, 1.0)), self.camera.viewMatrix()):
@@ -398,13 +416,12 @@ class PerspyApp():
                         # draw the grid
                         for A, B in ui.viewer.make_gridXZ_lines(step=1, size=10):
                             ui.viewer.guide(A, B)
-                    ui.viewer.axes(length=1.0)
+                    if self.view_axes:
+                        ui.viewer.axes(length=1.0)
                     if self.view_horizon:
                         ui.viewer.horizon_line()
 
                 ui.viewer.end_scene()
-
-
         ui.viewer.end_viewer()
 
     def show_results(self):
@@ -502,17 +519,17 @@ class PerspyApp():
             }
             # additional_data = {
             #     "principalPoint": {
-            #         'x': self.doc.principal_point_pixel.x, 
-            #         'y': self.doc.principal_point_pixel.y
+            #         'x': self.doc.principal_point.x, 
+            #         'y': self.doc.principal_point.y
             #     },
             #     "vanishingPoints": [
             #         {
-            #             'x': self.first_vanishing_point_pixel.x, 
-            #             'y': self.first_vanishing_point_pixel.y
+            #             'x': self.first_vanishing_point.x, 
+            #             'y': self.first_vanishing_point.y
             #         },
             #         {
-            #             'x': self.second_vanishing_point_pixel.x, 
-            #             'y': self.second_vanishing_point_pixel.y
+            #             'x': self.second_vanishing_point.x, 
+            #             'y': self.second_vanishing_point.y
             #         },
             #         "TODO:calculate third VP"
             #     ],
@@ -908,85 +925,75 @@ class PerspyApp():
 
     # Actions
     def solve(self):
+        """Solve for camera based on current document state
+        throws exceptions on failure
+        """
         self.data = json.loads(self.doc.serialize())
         # Solve for camera
-        self.first_vanishing_point_pixel:glm.vec2|None = None
-        self.second_vanishing_point_pixel:glm.vec2|None = None
+        self.first_vanishing_point:glm.vec2|None = None
+        self.second_vanishing_point:glm.vec2|None = None
         self.camera:Camera|None = None
 
-        self.doc.principal_point_pixel = glm.vec2(self.doc.content_size.x / 2, self.doc.content_size.y / 2)
+        self.doc.principal_point = glm.vec2(self.doc.content_size.x / 2, self.doc.content_size.y / 2)
         match self.doc.solver_mode:
             case SolverMode.OneVP:
-                try:
-                    ###############################
-                    # 1. COMPUTE vanishing points #
-                    ###############################
-                    self.first_vanishing_point_pixel =  solver.least_squares_intersection_of_lines(self.doc.first_vanishing_lines_pixel)
-                    
+                ###############################
+                # 1. COMPUTE vanishing points #
+                ###############################
+                self.first_vanishing_point =  solver.least_squares_intersection_of_lines(self.doc.first_vanishing_lines)
+                
 
-                    ###################
-                    # 2. Solve Camera #
-                    ###################
-                    fovy = math.radians(self.doc.fov_degrees)
-                    focal_length_pixel = solver.focal_length_from_fov(fovy, self.doc.content_size.y)
-                    camera_transform = solver.solve1vp(
-                        self.doc.content_size.x, 
-                        self.doc.content_size.y, 
-                        self.first_vanishing_point_pixel,
-                        self.doc.second_vanishing_lines_pixel[0],
-                        focal_length_pixel,
-                        self.doc.principal_point_pixel,
-                        self.doc.origin_pixel,
-                        self.doc.first_axis,
-                        self.doc.second_axis,
-                        self.doc.scene_scale
-                    )
+                ###################
+                # 2. Solve Camera #
+                ###################
+                fovy = math.radians(self.doc.fov_degrees)
+                focal_length_pixel = solver.focal_length_from_fov(fovy, self.doc.content_size.y)
+                camera_transform = solver.solve1vp(
+                    self.doc.content_size.x, 
+                    self.doc.content_size.y, 
+                    self.first_vanishing_point,
+                    self.doc.second_vanishing_lines[0],
+                    focal_length_pixel,
+                    self.doc.principal_point,
+                    self.doc.origin,
+                    self.doc.first_axis,
+                    self.doc.second_axis,
+                    self.doc.scene_scale
+                )
 
-                    # create camera
-                    self.camera = Camera()
-                    self.camera.setFoVY(fovy)
-                    self.camera.transform = camera_transform
-                    self.camera.setAspectRatio(self.doc.content_size.x / self.doc.content_size.y)
-                    self.camera.setFoVY(math.degrees(fovy))
-                except Exception as e:
-                    imgui.push_style_color(imgui.Col_.text, (1.0, 0.2, 0.2, 1.0))
-                    imgui.text_wrapped(f"fspy error: {pformat(e)}")
-                    import traceback
-                    traceback.print_exc()
-                    imgui.pop_style_color()
+                # create camera
+                self.camera = Camera()
+                self.camera.setFoVY(fovy)
+                self.camera.transform = camera_transform
+                self.camera.setAspectRatio(self.doc.content_size.x / self.doc.content_size.y)
+                self.camera.setFoVY(math.degrees(fovy))
+
 
             case SolverMode.TwoVP:
-                try:
-                    # compute vanishing points
-                    self.first_vanishing_point_pixel =  solver.least_squares_intersection_of_lines(
-                        self.doc.first_vanishing_lines_pixel)
-                    self.second_vanishing_point_pixel = solver.least_squares_intersection_of_lines(
-                        self.doc.second_vanishing_lines_pixel)
+                # compute vanishing points
+                self.first_vanishing_point =  solver.least_squares_intersection_of_lines(
+                    self.doc.first_vanishing_lines)
+                self.second_vanishing_point = solver.least_squares_intersection_of_lines(
+                    self.doc.second_vanishing_lines)
 
-                    fovy, camera_transform = solver.solve2vp(
-                        self.doc.content_size.x, 
-                        self.doc.content_size.y, 
-                        self.first_vanishing_point_pixel,
-                        self.second_vanishing_point_pixel,
-                        self.doc.principal_point_pixel,
-                        self.doc.origin_pixel,
-                        self.doc.first_axis,
-                        self.doc.second_axis,
-                        self.doc.scene_scale
-                    )
+                fovy, camera_transform = solver.solve2vp(
+                    self.doc.content_size.x, 
+                    self.doc.content_size.y, 
+                    self.first_vanishing_point,
+                    self.second_vanishing_point,
+                    self.doc.principal_point,
+                    self.doc.origin,
+                    self.doc.first_axis,
+                    self.doc.second_axis,
+                    self.doc.scene_scale
+                )
 
-                    # create camera
-                    self.camera = Camera()
-                    self.camera.setFoVY(fovy)
-                    self.camera.transform = camera_transform
-                    self.camera.setAspectRatio(self.doc.content_size.x / self.doc.content_size.y)
-                    self.camera.setFoVY(math.degrees(fovy))
-                except Exception as e:
-                    imgui.push_style_color(imgui.Col_.text, (1.0, 0.2, 0.2, 1.0))
-                    imgui.text_wrapped(f"fspy error: {pformat(e)}")
-                    import traceback
-                    traceback.print_exc()
-                    imgui.pop_style_color()
+                # create camera
+                self.camera = Camera()
+                self.camera.setFoVY(fovy)
+                self.camera.transform = camera_transform
+                self.camera.setAspectRatio(self.doc.content_size.x / self.doc.content_size.y)
+                self.camera.setFoVY(math.degrees(fovy))
 
     def load_image_file(self, path:str|None=None):
         from pathlib import Path
@@ -1096,620 +1103,9 @@ class PerspyApp():
 
 
 if __name__ == "__main__":
+    from imgui_bundle import immapp
     from imgui_bundle import hello_imgui
+    from hello_imgui_config import create_my_runner_params
     app = PerspyApp()
-
-    # Setup HelloImGui application parameters
-    def create_fontawesome_assets_folder(self):
-        """Create the proper assets folder structure for FontAwesome fonts"""
-        from pathlib import Path
-        
-        # Create the assets/fonts directory structure
-        demo_dir = Path(__file__).parent
-        assets_fonts_dir = demo_dir / "assets" / "fonts"
-        
-        try:
-            assets_fonts_dir.mkdir(parents=True, exist_ok=True)
-            logger.info(f"✓ Created directory: {assets_fonts_dir}")
-            
-            # Create a README file with instructions
-            readme_file = assets_fonts_dir / "README_FontAwesome.txt"
-            readme_content = """FontAwesome Font Setup for ImGui Bundle
-
-    This folder should contain: fontawesome-webfont.ttf
-
-    HOW TO GET FontAwesome FONT:
-
-    1. Download FontAwesome 4 Web Font:
-    Visit: https://fontawesome.com/v4/get-started/
-    Download the web font package
-    Extract fontawesome-webfont.ttf from the fonts/ folder
-
-    2. Download ImGui Bundle default assets (includes FontAwesome):
-    Visit: https://traineq.org/ImGuiBundle/assets.zip
-    Extract to get the complete assets folder with fonts
-
-    3. Use wget/curl (if available):
-    wget https://github.com/FortAwesome/Font-Awesome/raw/v4.7.0/fonts/fontawesome-webfont.ttf
-
-    Once you have fontawesome-webfont.ttf, place it in this folder.
-    Then restart your application to load FontAwesome icons!
-    """
-            
-            with open(readme_file, 'w', encoding='utf-8') as f:
-                f.write(readme_content)
-            
-            logger.info(f"✓ Created instructions: {readme_file}")
-            logger.info("📁 Assets folder structure created!")
-            logger.info("📋 Check README_FontAwesome.txt for detailed instructions")
-            logger.info("")
-            logger.info("🚀 Next steps:")
-            logger.info("   1. Download fontawesome-webfont.ttf (see README)")
-            logger.info(f"   2. Place it in: {assets_fonts_dir}/")
-            logger.info("   3. Restart the application")
-            
-        except Exception as e:
-            logger.error(f"Failed to create assets folder: {e}")
-            import traceback
-            traceback.print_exc()
-
-    def load_additional_fonts():
-        """Load FiraCode fonts with emoji support"""
-        from pathlib import Path
-        try:
-            # Get the fonts directory
-            script_dir = Path(__file__).parent
-            fonts_dir = Path("fonts/FiraCode")
-            
-            io = imgui.get_io()
-
-            # Get DPI scale factor
-            dpi_scale = hello_imgui.dpi_window_size_factor()
-            # logger.info(f"DPI scale factor: {dpi_scale}")
-            
-            # Scale font sizes by DPI - increased base size to 40px for better readability
-            base_size = 12.0*dpi_scale
-            
-            # Check if FiraCode exists
-            fira_regular = fonts_dir / "FiraCode-Regular.ttf"
-            fira_bold = fonts_dir / "FiraCode-Bold.ttf"
-            
-            if fira_regular.exists():
-                # Configure font to merge with system emoji font
-                font_cfg = imgui.ImFontConfig()
-                font_cfg.merge_mode = False  # First font, don't merge
-                
-                # Add FiraCode as primary font
-                font = io.fonts.add_font_from_file_ttf(str(fira_regular), base_size, font_cfg)
-                logger.info(f"✓ Loaded FiraCode Regular from {fira_regular} at {base_size}px")
-                
-                # Add FontAwesome icons as merged font
-                # Try different FontAwesome loading methods based on imgui_bundle version
-                fa_loaded = False
-                
-                try:
-                    # Method 1: Check if immapp has FontAwesome functions
-                    from imgui_bundle import immapp
-                    if hasattr(immapp, 'add_font_awesome_to_font_atlas'):
-                        immapp.add_font_awesome_to_font_atlas()
-                        fa_loaded = True
-                        logger.info("✓ Loaded FontAwesome via immapp.add_font_awesome_to_font_atlas()")
-                    elif hasattr(immapp, 'load_font_awesome'):
-                        immapp.load_font_awesome(base_size)
-                        fa_loaded = True
-                        logger.info("✓ Loaded FontAwesome via immapp.load_font_awesome()")
-                except Exception as e1:
-                    logger.warning(f"immapp FontAwesome loading failed: {e1}")
-                
-                if not fa_loaded:
-                    try:
-                        # Method 2: Try manual font file approach
-                        import os
-                        from pathlib import Path
-                        
-                        # Look for FontAwesome font file per imgui_bundle conventions
-                        script_dir = Path(__file__).parent
-                        possible_fa_paths = [
-                            # imgui_bundle expects FontAwesome in assets/fonts/ folder
-                            script_dir / "assets" / "fonts" / "fontawesome-webfont.ttf",
-                            script_dir / "assets" / "fonts" / "fa-solid-900.ttf",  # FontAwesome 5/6
-                            script_dir / "assets" / "fonts" / "FontAwesome.ttf",
-                            # Also check the fonts/ folder you already have
-                            script_dir / "fonts" / "fontawesome-webfont.ttf",
-                            script_dir / "fonts" / "FontAwesome.ttf",
-                            # Check parent directory assets (common pattern)
-                            script_dir.parent / "assets" / "fonts" / "fontawesome-webfont.ttf",
-                            # Try system fonts
-                            Path("C:/Windows/Fonts/fontawesome-webfont.ttf"),
-                        ]
-                        
-                        fa_font_loaded = False
-                        for fa_path in possible_fa_paths:
-                            if fa_path.exists():
-                                try:
-                                    # Method 1: Try with glyph ranges
-                                    fa_config = imgui.ImFontConfig()
-                                    fa_config.merge_mode = True
-                                    
-                                    # Create glyph ranges properly for imgui_bundle
-                                    fa_ranges = imgui.GlyphRangesBuilder()
-                                    fa_ranges.add_ranges(imgui.get_io().fonts.get_glyph_ranges_default())
-                                    # Add FontAwesome range
-                                    fa_ranges.add_char(ord(icons_fontawesome_4.ICON_MIN_FA))
-                                    fa_ranges.add_char(ord(icons_fontawesome_4.ICON_MAX_FA))
-                                    ranges = fa_ranges.build_ranges()
-                                    
-                                    font = io.fonts.add_font_from_file_ttf(str(fa_path), base_size, fa_config, ranges)
-                                    if font:
-                                        logger.info(f"✓ Loaded FontAwesome from file (with ranges): {fa_path}")
-                                        fa_font_loaded = True
-                                        fa_loaded = True
-                                        break
-                                except Exception as e3a:
-                                    logger.warning(f"Failed to load FontAwesome with ranges from {fa_path}: {e3a}")
-                                    try:
-                                        # Method 2: Try without ranges (simpler)
-                                        fa_config_simple = imgui.ImFontConfig()
-                                        fa_config_simple.merge_mode = True
-                                        font = io.fonts.add_font_from_file_ttf(str(fa_path), base_size, fa_config_simple)
-                                        if font:
-                                            logger.info(f"✓ Loaded FontAwesome from file (no ranges): {fa_path}")
-                                            fa_font_loaded = True
-                                            fa_loaded = True
-                                            break
-                                    except Exception as e3b:
-                                        logger.warning(f"Failed to load FontAwesome without ranges from {fa_path}: {e3b}")
-                                    try:
-                                        # Method 3: Try with None config (most basic)
-                                        font = io.fonts.add_font_from_file_ttf(str(fa_path), base_size)
-                                        if font:
-                                            logger.info(f"✓ Loaded FontAwesome from file (basic): {fa_path}")
-                                            fa_font_loaded = True
-                                            fa_loaded = True
-                                            break
-                                    except Exception as e3c:
-                                        logger.warning(f"All FontAwesome loading methods failed for {fa_path}: {e3c}")
-                        
-                        if not fa_font_loaded and not fa_loaded:
-                            logger.warning("No FontAwesome font loaded. Icons will appear as boxes or empty spaces.")
-                            logger.info("FontAwesome constants are available but need the font file to render properly.")
-                            logger.info("")
-                            logger.info("📁 WHERE TO PLACE FontAwesome FONT:")
-                            demo_dir = Path(__file__).parent
-                            logger.info(f"   Create: {demo_dir}/assets/fonts/")
-                            logger.info(f"   Place fontawesome-webfont.ttf in that folder")
-                            logger.info("")
-                            logger.info("📦 HOW TO GET FontAwesome FONT:")
-                            logger.info("   1. Download from: https://fontawesome.com/v4/get-started/")
-                            logger.info("   2. Or download default assets: https://traineq.org/ImGuiBundle/assets.zip")
-                            logger.info("   3. Or pip install fonttools and get from CDN")
-                            logger.info("")
-                            logger.info("🔧 CHECKED THESE LOCATIONS:")
-                            for path in possible_fa_paths:
-                                exists_str = "✓" if path.exists() else "✗"
-                                logger.info(f"   {exists_str} {path}")
-                            logger.info("")
-                            logger.info("💡 Alternative: Use Unicode symbols instead of FontAwesome icons")
-                            
-                    except Exception as e2:
-                        logger.warning(f"Manual FontAwesome loading failed: {e2}")
-                        logger.info("FontAwesome icons will not be available")
-                
-                # Try to add system emoji font as fallback
-                try:
-                    import platform
-                    system = platform.system()
-                    
-                    emoji_font_cfg = imgui.ImFontConfig()
-                    emoji_font_cfg.merge_mode = True  # Merge with previous font
-                    emoji_font_cfg.pixel_snap_h = True
-                    
-                    emoji_font_path = None
-                    if system == "Windows":
-                        # Try Windows emoji fonts
-                        for font_name in ["seguiemj.ttf", "NotoColorEmoji.ttf"]:
-                            font_path = Path(f"C:/Windows/Fonts/{font_name}")
-                            if font_path.exists():
-                                emoji_font_path = str(font_path)
-                                break
-                    elif system == "Darwin":  # macOS
-                        emoji_font_path = "/System/Library/Fonts/Apple Color Emoji.ttc"
-                    elif system == "Linux":
-                        # Try common Linux emoji fonts
-                        for font_path in ["/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf",
-                                        "/usr/share/fonts/TTF/NotoColorEmoji.ttf"]:
-                            if Path(font_path).exists():
-                                emoji_font_path = font_path
-                                break
-                    
-                    if emoji_font_path and Path(emoji_font_path).exists():
-                        # Try to load emoji font without specific ranges first (simpler approach)
-                        try:
-                            io.fonts.add_font_from_file_ttf(emoji_font_path, base_size, emoji_font_cfg)
-                            logger.info(f"✓ Loaded emoji font: {emoji_font_path}")
-                        except Exception as e:
-                            logger.warning(f"Could not load emoji font {emoji_font_path}: {e}")
-                            # Fallback: try with default glyph ranges
-                            try:
-                                emoji_font_cfg_simple = imgui.ImFontConfig()
-                                emoji_font_cfg_simple.merge_mode = True
-                                io.fonts.add_font_from_file_ttf(emoji_font_path, base_size, emoji_font_cfg_simple)
-                                logger.info(f"✓ Loaded emoji font (fallback): {emoji_font_path}")
-                            except Exception as e2:
-                                logger.warning(f"Emoji font fallback also failed: {e2}")
-                    else:
-                        logger.warning(f"No emoji font found for {system}")
-                        
-                except Exception as e:
-                    logger.warning(f"Could not load emoji font: {e}")
-                
-                if fira_bold.exists():
-                    io.fonts.add_font_from_file_ttf(str(fira_bold), base_size)
-                    logger.info(f"✓ Loaded FiraCode Bold from {fira_bold} at {base_size}px")
-            else:
-                logger.warning(f"FiraCode font not found at {fira_regular.absolute()}")
-                # Fallback to default font
-                io.fonts.add_font_default()
-                
-        except Exception as e:
-            logger.error(f"Failed to load fonts: {e}")
-            import traceback
-            traceback.print_exc()
-
-    def setup_imgui_config():
-        """Setup ImGui configuration before initialization"""
-        io = imgui.get_io()
-        # Disable docking completely
-        io.config_flags &= ~imgui.ConfigFlags_.docking_enable
-        io.config_flags &= ~imgui.ConfigFlags_.viewports_enable  # Also disable viewports
-
-    def setup_imgui_style():
-        style = imgui.get_style()
-        imgui.style_colors_dark(style)
-
-        style.anti_aliased_lines = True
-        style.anti_aliased_lines_use_tex = True
-        style.anti_aliased_fill = True
-
-        levels = [
-            0.08,   # really deep
-            0.09,   # deep
-            0.11,   # medium
-            0.15,   # shallow
-        ]
-
-        windows_dark_titlebar_color = [ 32/255,  32/255, 32/255, 1.0]
-        levels = [
-            22/255,   # really deep
-            32/255,   # deep
-            43/255,   # medium
-            57/255,   # shallow
-        ]
-        windows_dark_text_color =     [255/255, 255/255, 255/255, 1.0]
-
-        style.set_color_(imgui.Col_.text ,               windows_dark_text_color)
-        style.set_color_(imgui.Col_.title_bg ,           imgui.ImVec4(*[levels[1]]*3,1.00))
-        style.set_color_(imgui.Col_.title_bg_active ,    imgui.ImVec4(*[levels[1]]*3,1.00))
-        style.set_color_(imgui.Col_.title_bg_collapsed , imgui.ImVec4(*[levels[1]]*3,1.00))
-        style.set_color_(imgui.Col_.window_bg,           imgui.ImVec4(*[levels[1]]*3,1.00))
-        style.set_color_(imgui.Col_.scrollbar_bg,         imgui.ImVec4(*[levels[1]]*3,1.00))
-
-
-        style.set_color_(imgui.Col_.child_bg ,           imgui.ImVec4(*[levels[2]]*3,1.00))
-        style.set_color_(imgui.Col_.frame_bg ,           imgui.ImVec4(*[levels[3]]*3,1.00))
-        style.set_color_(imgui.Col_.button   ,           imgui.ImVec4(*[levels[3]]*3,1.00))
-        style.set_color_(imgui.Col_.popup_bg ,           imgui.ImVec4(*[levels[1]]*3,1.00))
-
-        # Remove the dark border by setting menu bar background to match the menu bar
-        style.set_color_(imgui.Col_.menu_bar_bg,         windows_dark_titlebar_color)
-        
-        style.window_padding = imgui.ImVec2(12, 12)
-        style.frame_padding = imgui.ImVec2(6, 6)
-        style.item_spacing = imgui.ImVec2(12, 12)
-
-        style.frame_border_size = 0
-
-        style.child_border_size = 0
-        style.window_border_size = 0
-        style.set_color_(imgui.Col_.border   , imgui.ImVec4(*[levels[2]]*3,1.00))
-        style.popup_border_size = 1
-
-        style.grab_min_size = 4
-
-        
-        style.grab_rounding = 4
-        style.frame_rounding = 4
-        style.frame_rounding = 4
-        style.popup_rounding = 4
-        style.child_rounding = 4
-        style.window_rounding = 4
-        style.scrollbar_rounding = 4
-
-        style.window_title_align = imgui.ImVec2(0.5, 0.5)
-        style.window_menu_button_position = imgui.Dir.right
-
-        logger.info("✓ ImGui theme applied")
-
-    def _setup_file_drop_callback_for_glfw(callback):
-        """Setup GLFW file drop callback"""
-        try:
-            import glfw
-            # Method 2: Try getting current context window
-            window = glfw.get_current_context()
-
-            if not window:
-                logger.warning("Could not get GLFW window handle")
-                return
-
-            glfw.set_drop_callback(window, callback)
-            logger.info("✓ File drop callback installed successfully (method2)")
-            return
-                
-        except ImportError:
-            logger.warning("glfw module not available. Install with: pip install glfw")
-        except Exception as e:
-            logger.warning(f"Could not setup file drop: {e}")
-            import traceback
-            traceback.print_exc()
-    
-    def post_init():
-        _setup_file_drop_callback_for_glfw(app.on_file_drop)
-    
-    def _set_dark_mode_on_windows(enable: bool | None = None):
-        """Set dark mode on Windows for the application window
-        
-        Args:
-            enable: True for dark mode, False for light mode, None to detect system settings
-        """
-        import platform
-        if platform.system() != "Windows":
-            logger.info("Dark mode API only available on Windows")
-            return
-            
-        try:
-            import ctypes
-            from ctypes import wintypes
-            import winreg
-            import glfw
-            
-            # Determine which mode to use
-            if enable is None:
-                # Auto-detect system dark mode setting
-                def is_system_dark_mode():
-                    try:
-                        # Check registry for current theme
-                        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize")
-                        value, _ = winreg.QueryValueEx(key, "AppsUseLightTheme")
-                        winreg.CloseKey(key)
-                        # Value is 0 for dark mode, 1 for light mode
-                        return value == 0
-                    except Exception:
-                        # Fallback: assume light mode if we can't read registry
-                        return False
-                
-                use_dark_mode_bool = is_system_dark_mode()
-                logger.info(f"System dark mode detected: {use_dark_mode_bool}")
-            else:
-                # Use explicitly provided setting
-                use_dark_mode_bool = bool(enable)
-                source = "explicit setting" if enable is not None else "system detection"
-                logger.info(f"Dark mode set to {use_dark_mode_bool} via {source}")
-            
-            # Get the GLFW window handle
-            window = glfw.get_current_context()
-            if not window:
-                logger.warning("Could not get GLFW window for dark mode setup")
-                return
-                
-            # Get the native Windows window handle (HWND)
-            hwnd = glfw.get_win32_window(window)
-            if not hwnd:
-                logger.warning("Could not get Windows HWND")
-                return
-            
-            # Define Windows constants for dark mode
-            DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1 = 19
-            DWMWA_USE_IMMERSIVE_DARK_MODE = 20
-            
-            # Load DWM library
-            dwmapi = ctypes.windll.dwmapi
-            
-            # Set up DwmSetWindowAttribute function
-            dwmapi.DwmSetWindowAttribute.argtypes = [
-                wintypes.HWND,      # hwnd
-                wintypes.DWORD,     # dwAttribute  
-                ctypes.c_void_p,    # pvAttribute
-                wintypes.DWORD      # cbAttribute
-            ]
-            
-            # Set dark mode based on determined setting
-            use_dark_mode = wintypes.BOOL(use_dark_mode_bool)
-            
-            # Try the newer attribute first (Windows 10 build 20H1+)
-            result = dwmapi.DwmSetWindowAttribute(
-                hwnd,
-                DWMWA_USE_IMMERSIVE_DARK_MODE,
-                ctypes.byref(use_dark_mode),
-                ctypes.sizeof(use_dark_mode)
-            )
-            
-            # If that fails, try the older attribute (Windows 10 earlier builds)
-            if result != 0:
-                result = dwmapi.DwmSetWindowAttribute(
-                    hwnd,
-                    DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1,
-                    ctypes.byref(use_dark_mode),
-                    ctypes.sizeof(use_dark_mode)
-                )
-            
-            if result == 0:  # S_OK
-                mode_str = "dark" if use_dark_mode_bool else "light"
-                logger.info(f"✓ Windows {mode_str} mode applied to title bar")
-            else:
-                logger.warning(f"Failed to set window theme: DWM error {result}")
-                
-        except ImportError as e:
-            logger.warning(f"Windows API not available: {e}")
-        except Exception as e:
-            logger.warning(f"Failed to setup window theme: {e}")
-            import traceback
-            traceback.print_exc()
-
-    def _set_titlebar_color_on_macos():
-        """Set custom titlebar color for the application window macOS"""
-        import platform
-        if platform.system() != "Darwin":
-            logger.info("macOS window styling only available on macOS")
-            return
-            
-        try:
-            import glfw
-            
-            # Get the GLFW window handle
-            window = glfw.get_current_context()
-            if not window:
-                logger.warning("Could not get GLFW window for macOS styling")
-                return
-            
-            # Access the native NSWindow through pyobjc
-            try:
-                from AppKit import NSApp, NSColor, NSWindowStyleMaskFullSizeContentView
-                import objc
-                
-                
-                def get_ns_window():
-                    """Try multiple methods to get the NSWindow"""
-                    # Method 1: Get main window
-                    ns_window = NSApp.mainWindow()
-                    if ns_window:
-                        logger.info("Got NSWindow from NSApp mainWindow")
-                        return ns_window
-                    
-                    # Method 2: Try key window if main window is None
-                    ns_window = NSApp.keyWindow()
-                    if ns_window:
-                        logger.info("Got NSWindow from NSApp keyWindow")
-                        return ns_window
-
-                    # Method 3: Get from windows array
-                    windows = NSApp.windows()
-                    if windows and len(windows) > 0:
-                        ns_window = windows[0]
-                        if ns_window:
-                            logger.info("Got NSWindow from NSApp windows array")
-                            return ns_window
-                    
-                    # Method 4: Use GLFW's Cocoa window directly
-                    try:
-                        cocoa_window = glfw.get_cocoa_window(window)
-                        if cocoa_window:
-                            ns_window = objc.objc_object(c_void_p=cocoa_window)
-                            if ns_window:
-                                logger.info("Got NSWindow from GLFW Cocoa window")
-                                return ns_window
-                    except Exception as e:
-                        logger.warning(f"Failed to get NSWindow from GLFW Cocoa window: {e}")
-                    
-                    if not ns_window:
-                        logger.warning("Could not get NSWindow - window may not be fully initialized yet")
-                        logger.info("Titlebar styling skipped - window will use default appearance")
-                        return
-                    
-                ns_window = get_ns_window()
-                if not ns_window:
-                    logger.warning("NSWindow is None - cannot apply macOS styling")
-                    return
-                
-                # Remove titlebar border and set custom color
-                ns_window.setTitlebarAppearsTransparent_(True) # setting titlebar transparent removes the little border between titlebar and content
-                dark_gray = NSColor.colorWithRed_green_blue_alpha_(32/255, 32/255, 32/255, 1.0) # we can also set our own color.
-                ns_window.setBackgroundColor_(dark_gray)
-
-                default_titlebar_color = NSColor.controlBackgroundColor() 
-                
-                # Set titlebar appearance (dark or light) - this affects text color
-                # NSAppearance options: 
-                # - NSAppearanceNameAqua (light mode - dark text)
-                # - NSAppearanceNameDarkAqua (dark mode - light text)
-                from AppKit import NSAppearance
-                dark_appearance = NSAppearance.appearanceNamed_("NSAppearanceNameDarkAqua")
-                ns_window.setAppearance_(dark_appearance)  # This makes titlebar text white/light
-                
-                # Alternative: Set title text color directly
-                # Note: This requires accessing the titlebar's text field, which is more complex
-                # The appearance setting above is the recommended approach
-                
-            except ImportError:
-                logger.warning("pyobjc not available. Install with: pip install pyobjc-framework-Cocoa")
-                logger.info("Basic window styling still applied via GLFW")
-            except Exception as e:
-                logger.warning(f"Advanced macOS styling failed: {e}")
-                import traceback
-                traceback.print_exc()
-                
-        except ImportError as e:
-            logger.warning(f"GLFW not available: {e}")
-        except Exception as e:
-            logger.warning(f"Failed to setup macOS window styling: {e}")
-            import traceback
-            traceback.print_exc()
-
-    def post_init_add_platform_backend_callbacks():
-        """Called after platform backend is initialized - best time for native window customization"""
-        import platform
-        if platform.system() == "Darwin":
-            _set_titlebar_color_on_macos()
-        elif platform.system() == "Windows":
-            _set_dark_mode_on_windows(True)
-
-    runner_params = hello_imgui.RunnerParams(
-        callbacks=hello_imgui.RunnerCallbacks(
-            show_gui = lambda: app.gui(),
-            # show_menus=None,
-            # show_app_menu_items=None,
-            # show_status=None,
-            post_init_add_platform_backend_callbacks = post_init_add_platform_backend_callbacks,
-            post_init = post_init,
-            load_additional_fonts = load_additional_fonts,
-            # default_icon_font=hello_imgui.DefaultIconFont.font_awesome4,
-            setup_imgui_config = setup_imgui_config,
-            setup_imgui_style = setup_imgui_style,
-            # register_tests=None,
-            # register_tests_called=False,
-            # before_exit=None,
-            # before_exit_post_cleanup=None,
-            # pre_new_frame=None,
-            # before_imgui_render=None,
-            # after_swap=None,
-            # custom_background=None,
-            # post_render_dockable_windows=None,
-            any_backend_event_callback=None
-        ),
-        app_window_params=hello_imgui.AppWindowParams(
-            window_title="Perspy",
-            # window_geometry=hello_imgui.WindowGeometry(
-            #     position=(100, 100),
-            #     size=(1200, 512),
-            # ),
-            restore_previous_geometry=True
-            # repaint_during_resize_gotcha_reentrant_repaint=True,
-            # borderless=True,
-            # borderless_movable=True,
-            # borderless_resizable=True,
-            # borderless_closable=True,
-        ),
-        imgui_window_params=hello_imgui.ImGuiWindowParams(
-            menu_app_title="Perspy Demo",
-            background_color=[32/255, 32/255, 32/255, 1.0], # windows sytem titlebar color
-            default_imgui_window_type=hello_imgui.DefaultImGuiWindowType.no_default_window,
-        ),
-        dpi_aware_params=hello_imgui.DpiAwareParams(
-            dpi_window_size_factor=1.0 # Enable DPI awareness: 1.0 is Auto-detect?
-        ),
-        docking_params=hello_imgui.DockingParams(
-            layout_condition=hello_imgui.DockingLayoutCondition.never # Completely disable docking at the hello_imgui level
-        ),
-    )
-
-    hello_imgui.run(runner_params)
+    hello_imgui.run(create_my_runner_params(app.gui, app.on_file_drop))
 

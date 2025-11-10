@@ -1,3 +1,3 @@
-from .src import solver
+from .lib import solver
 
 __all__ = ['solver']

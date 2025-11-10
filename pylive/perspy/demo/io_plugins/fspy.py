@@ -83,8 +83,8 @@ def export_to_fspy(output_path, state_dict, image_data):
     state_string_size = len(state_json)
     image_buffer_size = len(image_data)
     
-    # fSpy magic number (0x79707366 = "fspy" in ASCII)
-    file_id = 2037412710
+    
+    file_id = 2037412710 # fSpy magic number (0x79707366 = "fspy" in ASCII)
     project_version = 1
     
     with open(output_path, 'wb') as f:
