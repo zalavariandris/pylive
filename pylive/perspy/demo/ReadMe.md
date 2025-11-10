@@ -16,6 +16,9 @@
     - [ ] houdini?
     - [ ] nuke: copy to clipboard, export to .nk
 
+- [ ] instead of crashing, show error messages when actions fail
+- [ ] review try except, logging, printing messages, consider using errorr popups and log window
+
 - landing page.
   - [?] when no image is loaded, show instructions to load an image.
   - [x] allow setting the image size, and let user place control points freely.

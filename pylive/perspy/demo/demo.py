@@ -26,7 +26,7 @@ from document import PerspyDocument, SolverMode
 # Configure logging to see shader compilation logs
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
-
+import pyperclip
 
 def get_axis_color(axis:solver.Axis) -> Tuple[float, float, float]:
     match axis:
@@ -101,9 +101,6 @@ class PerspyApp():
 
     # Windows
     def gui(self):        
-        # Compute Camera
-        self.camera = Camera()
-
         # Create main menu bar (independent of any window)
         self.show_main_menu_bar()
         menu_bar_height = imgui.get_frame_height()
@@ -230,8 +227,28 @@ class PerspyApp():
                 imgui.separator()
 
                 if imgui.begin_menu("Export results"):
-                    if imgui.menu_item_simple("JSON..."):
-                        self.export_results_to_json()
+                    if imgui.menu_item_simple("JSON"):
+                        try:
+                            self.export_results_to_json()
+                        except Exception as e:
+                            if imgui.begin_popup("export_error_popup"):
+                                imgui.text_colored(style.color_(imgui.Col_.text_disabled), f"Error exporting to JSON: {e}")
+                                imgui.end_popup()
+                            imgui.open_popup("export_error_popup")
+                            logger.error(f"Error exporting to JSON: {e}")
+                            import traceback
+                            traceback.print_exc()
+                    if imgui.menu_item_simple("blender script"):
+                        try:
+                            self.export_results_to_blender_script()
+                        except Exception as e:
+                            logger.error(f"Error exporting to Blender script: {e}")
+                            import traceback
+                            traceback.print_exc()
+                            if imgui.begin_popup("export_error_popup"):
+                                imgui.text_colored(style.color_(imgui.Col_.text_disabled), f"Error exporting to Blender script: {e}")
+                                imgui.end_popup()
+                            imgui.open_popup("export_error_popup")
                     imgui.end_menu()
                 
                 imgui.separator()
@@ -594,8 +611,14 @@ class PerspyApp():
         if imgui.collapsing_header("Document", imgui.TreeNodeFlags_.default_open):
             imgui.text_unformatted("TODO. implement doc.to_dict()")
 
-        if imgui.collapsing_header("Results", imgui.TreeNodeFlags_.default_open):
+        if imgui.collapsing_header("Results Dictionary", imgui.TreeNodeFlags_.default_open):
             data = self.results_to_dict()
+            text = pformat(data, indent=2, width=80, compact=False)
+            # text = json.dumps(data, indent=4)
+            imgui.text_unformatted(text)
+
+        if imgui.collapsing_header("Blender Script", imgui.TreeNodeFlags_.default_open):
+            data = self.results_to_blender_script()
             text = pformat(data, indent=2, width=80, compact=False)
             # text = json.dumps(data, indent=4)
             imgui.text_unformatted(text)
@@ -1147,6 +1170,8 @@ class PerspyApp():
 
     def export_results_to_json(self):
         """Export current results to JSON file."""
+
+        # open the file dialog
         file_dialog = pfd.save_file(
             title="Export Results to JSON",
             default_path="results.json",
@@ -1163,14 +1188,79 @@ class PerspyApp():
             logger.error(f"Invalid save path: {save_path}")
             return
         
-        # convert results to dictionary
+        # convert results to dict
         data = self.results_to_dict()
-        print(data)
+
+        # save data to file
+        try:
+            with open(save_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=4)
+        except Exception as e:
+            logger.error(f"Failed to save results to {save_path}: {e}")
+            import traceback
+            traceback.print_exc()
+
+    def results_to_blender_script(self) -> str:
+        """Generate a Blender Python script to recreate the camera setup."""
+        if self.camera is None:
+            logger.error("No camera data to export.")
+            return "# No camera data available."
+
+        from textwrap import dedent
+        blender_template_path = hello_imgui.asset_file_full_path("blender_camera_factory_template.py")
+        script = Path(blender_template_path).read_text()
+        script = script.replace("FOVY", str(math.radians(self.camera.fovy)))
+        transform_string = str([[row[i] for row in self.camera.transform] for i in range(4)])
+        print("transform_string:", transform_string)
+        script = script.replace("TRANSFORM", transform_string)
+        script = script.replace("CAMERA_NAME", "'PerspyCamera'")
+        return script
+
+    def export_results_to_blender_script(self):
+        """Export current results to a Blender Python script."""
+
+        # open the file dialog
+        file_dialog = pfd.save_file(
+            title="Export Results to Blender Script",
+            default_path="import_camera.py",
+            filters=["Python Files", "*.py", "All Files", "*.*"],
+            options=pfd.opt.none
+        )
+
+        save_path = file_dialog.result()
+        if save_path is None:
+            logger.info("Export cancelled by user.")
+            return
+        
+        if not isinstance(save_path, str):
+            logger.error(f"Invalid save path: {save_path}")
+            return
+        
+        # generate blender script content
+        script_content = self.results_to_blender_script()
+        pyperclip.copy(script_content)
+        logger.info("Blender script copied to clipboard.")
+
+        # save script to file
+        try:
+            with open(save_path, 'w', encoding='utf-8') as f:
+                f.write(script_content)
+            logger.info(f"Blender script saved to {save_path}")
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            logger.error(f"Failed to save Blender script to {save_path}: {e}")
+
+
 
 if __name__ == "__main__":
     from imgui_bundle import immapp
     from imgui_bundle import hello_imgui
     from hello_imgui_config import create_my_runner_params
     app = PerspyApp()
+    assets_folder = Path(__file__).parent / "assets"
+    assert assets_folder.exists(), f"Assets folder not found: {assets_folder.absolute()}"
+    print("setting assets folder:", assets_folder.absolute())
+    hello_imgui.set_assets_folder(str(assets_folder.absolute()))
     hello_imgui.run(create_my_runner_params(app.gui, app.on_file_drop))
 
