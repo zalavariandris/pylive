@@ -1,8 +1,6 @@
 import glm
 import math
-from src import solver
-
-import glm
+from . import solver
 import math
 import pytest
 
