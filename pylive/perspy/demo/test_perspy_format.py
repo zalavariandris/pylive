@@ -58,7 +58,6 @@ def create_perspy_file(filepath: str, state_dict: dict, image_path: str = None):
     print(f"  Image size: {image_size} bytes")
     print(f"  Total size: {16 + state_size + image_size} bytes")
 
-
 def read_perspy_file(filepath: str):
     """
     Read a .perspy file and return its contents.

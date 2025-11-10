@@ -219,7 +219,7 @@ class PerspyApp():
                     self.doc.save()
                 
                 if imgui.menu_item_simple(f"{save_icon} Save As...", "Ctrl+Shift+S"):
-                    self.doc.save(filepath=None)
+                    self.doc.save_as()
 
                 imgui.separator()
 
@@ -928,7 +928,7 @@ class PerspyApp():
         """Solve for camera based on current document state
         throws exceptions on failure
         """
-        self.data = json.loads(self.doc.serialize())
+        self.data = json.loads(self.doc.get_document_data())
         # Solve for camera
         self.first_vanishing_point:glm.vec2|None = None
         self.second_vanishing_point:glm.vec2|None = None

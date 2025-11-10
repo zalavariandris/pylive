@@ -1,4 +1,3 @@
-
 from pathlib import Path
 from imgui_bundle import imgui
 from PIL.Image import Image
@@ -19,6 +18,9 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+from typing import Tuple
+from struct import pack, unpack
+import io
 
 def json_serializer(obj):
     """Custom JSON serializer for glm types."""
@@ -51,9 +53,23 @@ def json_serializer(obj):
 from abc import ABC, abstractmethod
 
 class Document(ABC):
-    def __init__(self):
+    def __init__(self, extension:str, format_description:str, magic:bytes, version:str="0.1"):
+        if not isinstance(extension, str) or not extension.startswith('.'):
+            raise ValueError(f"Extension must be a string starting with '.', got: {extension}")
+        
+        if not isinstance(magic, bytes):
+            raise ValueError(f"Magic must be bytes, got: {type(magic).__name__}")
+        
+        if len(magic) != 4:
+            raise ValueError(f"Magic must be 4 bytes long, got length: {len(magic)}")
+        
         self._file_path: str|None = None
         self._is_modified: bool = False
+
+        self._version = version
+        self._extension = extension
+        self._magic = magic
+        self._format_description = format_description
 
     def isModified(self)->bool:
         return self._is_modified
@@ -71,109 +87,87 @@ class Document(ABC):
     #         super().__setattr__(name, value)
 
     @abstractmethod
-    def serialize(self)->str:
-        """Serialize the document state to a JSON string.
+    def serialize(self)->bytearray:
+        """Serialize the document state to a bytearray containing the complete file format.
         Should be overridden by subclasses.
         """
-        return "{}"
+        return bytearray()
     
     @abstractmethod
-    def deserialize(self, json_text: str):
-        """Deserialize JSON text to restore document state.
+    def deserialize(self, file_bytes: bytearray):
+        """Deserialize bytearray to restore document state.
         Should be overridden by subclasses.
         """
         pass
+    
+    def _open_save_dialog(self, title="Save"):
+        """Prompt for file location and save document."""
+        save_dialog = pfd.save_file(
+            title=title, 
+            default_path="", 
+            filters=[self._format_description, self._extension]
+        )
+        choosen_filepath = save_dialog.result()
+        if not choosen_filepath:
+            return  # if no filepath was chosen, abort save
+        return choosen_filepath
+    
+    def save_as(self):
+        chosen_filepath = self._open_save_dialog(title="Save Project As...")
+        if chosen_filepath:
+            self.save(filepath=chosen_filepath)
 
     def save(self, filepath: str|None=None):
         assert filepath is None or isinstance(filepath, str), f"got:, {filepath}"
         """
-        Save the app state to a custom .perspy file format.
+        Save the document to a custom file format.
         
         File structure:
-        - Magic number (4 bytes): b'prsp' (perspective spy)
-        - Version (4 bytes): version number
-        - JSON size (4 bytes): size of the state JSON
-        - Image size (4 bytes): size of the image data
-        - JSON data: serialized app state
-        - Image data: raw image bytes (if available)
+        - Magic number (4 bytes): document type identifier
+        - Version (4 bytes): format version number
+        - Data size (4 bytes): size of the serialized data
+        - Data: serialized document state
         """
 
-        DoSaveAs = self._file_path != filepath
-
-        if DoSaveAs:
-            ...
-
-        if not self._file_path or filepath:
-            """Prompt for file location"""
-            save_dialog = pfd.save_file(
-                title="Save Project As", 
-                default_path="", 
-                filters=["perspy files", "*.prsy"]
-            )
-            choosen_filepath = save_dialog.result()
-            if not choosen_filepath:
-                return # if no filepath was chosen, abort save
-            filepath = choosen_filepath
-        elif self._file_path:
-            filepath = self._file_path
+        # Determine if we need to prompt for filepath
+        if filepath is None:
+            if self._file_path is None:
+                # No existing file and no filepath provided - need to prompt
+                filepath = self._open_save_dialog(title="Save Project")
+                if not filepath:
+                    return  # User cancelled dialog
+            else:
+                # Use existing file path
+                filepath = self._file_path
 
         if not filepath:
             return
         
         # Ensure the file has the correct extension
-        if Path(filepath).suffix != '.prsy':
-            filepath = str(Path(filepath).with_suffix('.prsy'))
+        if Path(filepath).suffix != self._extension:
+            filepath = str(Path(filepath).with_suffix(self._extension))
 
-        import json
-        from struct import pack
-        
-        # Get JSON state
-        state_json = self.serialize().encode('utf-8')
-        state_size = len(state_json)
-        
-        # Get image data if available
-        image_data = b''
-        if hasattr(self, 'image') and self.image is not None:
-            import io
-            buffer = io.BytesIO()
-            self.image.save(buffer, format='PNG')
-            image_data = buffer.getvalue()
-        image_size = len(image_data)
-        
-        # Write file
-        magic = int.from_bytes(b'prsy', byteorder='little')  # 'prsy'
-        version = 1
-        
+        # Get complete file bytes (serialize already includes header)
+        file_bytes = self.serialize()
+
+        # Write all bytes at once
         with open(filepath, 'wb') as f:
-            # Write header (16 bytes)
-            f.write(pack('<I', magic))        # 4 bytes: magic number
-            f.write(pack('<I', version))      # 4 bytes: version
-            f.write(pack('<I', state_size))   # 4 bytes: JSON size
-            f.write(pack('<I', image_size))   # 4 bytes: image size
+            f.write(file_bytes)
 
-            # Write data
-            f.write(state_json)
-            if image_data:
-                f.write(image_data)
-        
         logger.info(f"✓ Saved to {filepath}")
         self._file_path = filepath
         self._is_modified = False
 
     def open(self, filepath: str|None=None):
         """
-        Load app state from a .prsy file.
+        Load document state from file.
         """
-        import json
-        from struct import unpack
-        import io
-
         if filepath is None:
             """Prompt for file location"""
             open_file_dialog = pfd.open_file(
                 title="Open Project", 
                 default_path="", 
-                filters=["perspy files", "*.prsy"]
+                filters=[f"{self._format_description} files", f"*{self._extension}"]
             )
             paths = open_file_dialog.result()
             if len(paths) > 0:
@@ -181,63 +175,86 @@ class Document(ABC):
             else:
                 return
         
+        # Read entire file into memory
         with open(filepath, 'rb') as f:
-            # Read header (16 bytes total)
-            magic_bytes = f.read(4)
-            if magic_bytes != b'prsy':
-                raise ValueError(f"Not a valid .prsy file (got magic: {magic_bytes})")
-            
-            version = unpack('<I', f.read(4))[0]
-            if version != 1:
-                raise ValueError(f"Unsupported version: {version}")
-            
-            state_size = unpack('<I', f.read(4))[0]
-            image_size = unpack('<I', f.read(4))[0]
-            
-            # Read state JSON
-            state_json = f.read(state_size).decode('utf-8')
-            
-            # Read image data if present
-            image_data = None
-            if image_size > 0:
-                image_data = f.read(image_size)
-        
-        # Use deserialize to restore state from JSON
-        self.deserialize(state_json)
-        
-        # Load embedded image data if available
-        if image_data:
-            import io
-            from PIL import Image
-            self.image = Image.open(io.BytesIO(image_data))
-            self.content_size = imgui.ImVec2(float(self.image.width), float(self.image.height))
-        # Fallback: try to load image from path if no embedded image
-        elif hasattr(self, 'image_path') and self.image_path:
-            try:
-                from PIL import Image
-                self.image = Image.open(self.image_path)
-                self.content_size = imgui.ImVec2(float(self.image.width), float(self.image.height))
-            except Exception as e:
-                logger.warning(f"Could not load image from path '{self.image_path}': {e}")
-                self.image = None
+            file_bytes = bytearray(f.read())
 
-            
-        logger.info(f"✓ Loaded from {filepath}")
-        if hasattr(self, 'image') and self.image:
-            logger.info(f"  Image: {self.image.width}x{self.image.height}")
-        else:
-            logger.info("  No image loaded")
+        self.deserialize(file_bytes)
         
+        logger.info(f"✓ Open from {filepath}")
         self._file_path = filepath
         self._is_modified = False
+
+    def _construct_header(self, data_size: int) -> bytearray:
+        """Construct file header with magic, version, and data size.
+        
+        Args:
+            data_size: Size of the document data in bytes
+            
+        Returns:
+            bytearray: 12-byte header
+        """
+        magic_bytes = int.from_bytes(self._magic, byteorder='little')
+        version = int(self._version.split('.')[0])  # Use major version
+        
+        header = bytearray()
+        header.extend(pack('<I', magic_bytes))    # 4 bytes: magic number
+        header.extend(pack('<I', version))        # 4 bytes: version
+        header.extend(pack('<I', data_size))      # 4 bytes: data size
+        
+        return header
     
+    def _parse_header(self, file_bytes: bytearray) -> tuple[bytearray, int]:
+        """Parse file header and extract document data.
+        
+        Args:
+            file_bytes: Complete file content as bytearray
+            
+        Returns:
+            tuple: (document_data, offset) where offset points to end of header
+            
+        Raises:
+            ValueError: If header is invalid
+        """
+        if len(file_bytes) < 12:
+            raise ValueError(f"File too small - expected at least 12 bytes, got {len(file_bytes)}")
+        
+        offset = 0
+        
+        # Read magic bytes
+        magic_bytes = file_bytes[offset:offset+4]
+        offset += 4
+        
+        if magic_bytes != self._magic:
+            raise ValueError(f"Not a valid {self._format_description} file (got magic: {magic_bytes})")
+        
+        # Read version
+        version = unpack('<I', file_bytes[offset:offset+4])[0]
+        offset += 4
+        
+        expected_version = int(self._version.split('.')[0])  # Use major version
+        if version != expected_version:
+            raise ValueError(f"Unsupported version: {version}, expected: {expected_version}")
+        
+        # Read data size
+        data_size = unpack('<I', file_bytes[offset:offset+4])[0]
+        offset += 4
+        
+        if len(file_bytes) < offset + data_size:
+            raise ValueError(f"File truncated - expected {data_size} bytes of data, got {len(file_bytes) - offset}")
+        
+        # Extract document data
+        document_data = bytearray(file_bytes[offset:offset+data_size])
+        
+        return document_data, offset + data_size
+
 class PerspyDocument(Document):
     def __init__(self):
-        super().__init__()
+        super().__init__(extension='.prsy', format_description='perspy', magic=b'prsy', version="0.5.0")
         # solver inputs
         # - content image
         self.image_path: str|None = None
-        self.content_size = imgui.ImVec2(1280,720)
+        self.content_size = imgui.ImVec2(720, 576)
         self.image: Image = None
 
         # - solver params
@@ -260,19 +277,19 @@ class PerspyDocument(Document):
             [glm.vec2(511, 311), glm.vec2(879, 356)]
         ]
 
-    def serialize(self)->str:
+    def serialize(self)->bytearray:
         # _, quat, _, _, _ = solver.decompose(self.camera.transform)
         # euler = solver.extract_euler(self.camera.transform, order=self.current_euler_order)
 
         data = {
-            'version': '0.5.0',
+            'version': self._version,
             'solver_params': {
                 "mode": SolverMode(self.solver_mode).name,
                 "first_axis": solver.Axis(self.first_axis).name,
                 "second_axis": solver.Axis(self.second_axis).name,
                 "scene_scale": self.scene_scale,
-                "fov_degrees": 60.0,
-                "quad_mode": False
+                "fov_degrees": self.fov_degrees,
+                "quad_mode": self.quad_mode
             },
 
             'control_points': {
@@ -317,11 +334,54 @@ class PerspyDocument(Document):
             # }
         }
 
+        # Convert document data to JSON
+        document_data = json.dumps(data, indent=4, default=json_serializer).encode('utf-8')
+        
+        # Build complete file: header + document data
+        header = self._construct_header(len(document_data))
+        
+        file_bytes = bytearray()
+        file_bytes.extend(header)          # 12 bytes: header
+        file_bytes.extend(document_data)   # N bytes: JSON data
+
+        return file_bytes
+
+    def get_document_data(self) -> str:
+        """Get document data as JSON string (without file headers) for in-memory use."""
+        data = {
+            'version': self._version,
+            'solver_params': {
+                "mode": SolverMode(self.solver_mode).name,
+                "first_axis": solver.Axis(self.first_axis).name,
+                "second_axis": solver.Axis(self.second_axis).name,
+                "scene_scale": self.scene_scale,
+                "fov_degrees": self.fov_degrees,
+                "quad_mode": self.quad_mode
+            },
+            'control_points': {
+                "origin": self.origin,
+                "principal_point": self.principal_point,
+                "first_vanishing_lines": self.first_vanishing_lines,
+                "second_vanishing_lines": self.second_vanishing_lines
+            },
+            'image_params': {
+                "path": self.image_path,
+                "width": int(self.content_size.x),
+                "height": int(self.content_size.y)
+            }
+        }
+        
         return json.dumps(data, indent=4, default=json_serializer)
 
-    def deserialize(self, json_text: str):
-        """Deserialize JSON text to restore document state."""
+    def deserialize(self, file_bytes: bytearray):
+        """Deserialize complete file format to restore document state."""
+        # Parse header and extract document data
+        document_data, _ = self._parse_header(file_bytes)
         
+        # Convert JSON data to string
+        json_text = document_data.decode('utf-8')
+        
+        # Helper functions for deserialization
         def deserialize_vec2(obj):
             """Convert dict to glm.vec2"""
             if isinstance(obj, dict) and 'x' in obj and 'y' in obj:
@@ -372,10 +432,7 @@ class PerspyDocument(Document):
         if 'image_params' in data:
             ip = data['image_params']
             self.image_path = ip.get('path', None)
-            width = ip.get('width', 1280)
-            height = ip.get('height', 720)
+            width = ip.get('width', 720)
+            height = ip.get('height', 576)
             self.content_size = imgui.ImVec2(width, height)
-        
-        # Note: The actual image data is loaded separately in the open() method
-        # of PerspyApp, not here
     
