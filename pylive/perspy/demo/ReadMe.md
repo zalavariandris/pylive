@@ -42,7 +42,9 @@
         => added some green to the blue and a little to the red as well. these colors now a lot more pleasant on the dark background.
   - [-] allow emojis! :)
   - [-] fontawesome icons?
-
+  
+- [ ] consider implementing document is modified query for the Document.
+      since with imgui, we update the state every frame this might not be easy.
 
 - COLOR STYLE
 - [x] adjusted style for windows dark mode.

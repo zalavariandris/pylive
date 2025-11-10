@@ -272,7 +272,7 @@ class PerspyApp():
 
             # center title horizontally
             if self.doc._file_path:
-                text = f"— {'*' if self.doc.isModified() else ''} {Path(self.doc._file_path).stem} —"
+                text = f"— {Path(self.doc._file_path).stem} —"
                 title_size = imgui.calc_text_size(text)
                 center_cursor_pos = (imgui.get_window_width() - title_size.x) * 0.5
                 if center_cursor_pos > imgui.get_cursor_pos_x():
@@ -928,7 +928,6 @@ class PerspyApp():
         """Solve for camera based on current document state
         throws exceptions on failure
         """
-        self.data = json.loads(self.doc.get_document_data())
         # Solve for camera
         self.first_vanishing_point:glm.vec2|None = None
         self.second_vanishing_point:glm.vec2|None = None

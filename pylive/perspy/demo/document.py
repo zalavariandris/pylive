@@ -64,27 +64,11 @@ class Document(ABC):
             raise ValueError(f"Magic must be 4 bytes long, got length: {len(magic)}")
         
         self._file_path: str|None = None
-        self._is_modified: bool = False
 
         self._version = version
         self._extension = extension
         self._magic = magic
         self._format_description = format_description
-
-    def isModified(self)->bool:
-        return self._is_modified
-    
-    # def __setattr__(self, name:str, value):
-    #     """setattr is called whenever an attribute is set on the instance.
-    #     """
-        
-    #     if name != '_is_modified':
-    #         if value is not getattr(self, name, None):
-    #             print(f"Document modified due to change in attribute '{name}'")
-    #             object.__setattr__(self, '_is_modified', True)
-    #         super().__setattr__(name, value)
-    #     else:
-    #         super().__setattr__(name, value)
 
     @abstractmethod
     def serialize(self)->bytearray:
@@ -156,7 +140,6 @@ class Document(ABC):
 
         logger.info(f"✓ Saved to {filepath}")
         self._file_path = filepath
-        self._is_modified = False
 
     def open(self, filepath: str|None=None):
         """
@@ -183,7 +166,6 @@ class Document(ABC):
         
         logger.info(f"✓ Open from {filepath}")
         self._file_path = filepath
-        self._is_modified = False
 
     def _construct_header(self, data_size: int) -> bytearray:
         """Construct file header with magic, version, and data size.
@@ -278,9 +260,6 @@ class PerspyDocument(Document):
         ]
 
     def serialize(self)->bytearray:
-        # _, quat, _, _, _ = solver.decompose(self.camera.transform)
-        # euler = solver.extract_euler(self.camera.transform, order=self.current_euler_order)
-
         data = {
             'version': self._version,
             'solver_params': {
@@ -345,33 +324,6 @@ class PerspyDocument(Document):
         file_bytes.extend(document_data)   # N bytes: JSON data
 
         return file_bytes
-
-    def get_document_data(self) -> str:
-        """Get document data as JSON string (without file headers) for in-memory use."""
-        data = {
-            'version': self._version,
-            'solver_params': {
-                "mode": SolverMode(self.solver_mode).name,
-                "first_axis": solver.Axis(self.first_axis).name,
-                "second_axis": solver.Axis(self.second_axis).name,
-                "scene_scale": self.scene_scale,
-                "fov_degrees": self.fov_degrees,
-                "quad_mode": self.quad_mode
-            },
-            'control_points': {
-                "origin": self.origin,
-                "principal_point": self.principal_point,
-                "first_vanishing_lines": self.first_vanishing_lines,
-                "second_vanishing_lines": self.second_vanishing_lines
-            },
-            'image_params': {
-                "path": self.image_path,
-                "width": int(self.content_size.x),
-                "height": int(self.content_size.y)
-            }
-        }
-        
-        return json.dumps(data, indent=4, default=json_serializer)
 
     def deserialize(self, file_bytes: bytearray):
         """Deserialize complete file format to restore document state."""
