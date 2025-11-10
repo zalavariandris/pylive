@@ -1,10 +1,26 @@
 # Camera Spy Demo Application
 
 ## Feature TODOs
+- IO
+  - [x] save and load project
+      - [ ] consider saving additional information like results(camera, vanishing points); camera sensor size, and focal length
+  - [ ] import
+  - [ ] export results
+    - [ ] export results to json
+    - [ ] copy to clipboard json
+    - [ ] consider other formats: yaml.
+    - [ ] fspy import export
+    - [ ] AE: export to jsx
+    - [ ] blender export to script, or import plugin from .prpy 
+    - [ ] max: export to .ms or .py
+    - [ ] houdini?
+    - [ ] nuke: copy to clipboard, export to .nk
+
 - landing page.
   - [?] when no image is loaded, show instructions to load an image.
   - [x] allow setting the image size, and let user place control points freely.
         => allow setting the image size, and play with the vanishing lines
+
 - about menu
   - [ ] with links to github, author info
 
@@ -54,19 +70,6 @@
       - [ ] consider setting the theme a little lighter to match the native titlebar color?
 - [ ] linux?
 
-- IO
-  - [x] save and load project
-      - [ ] consider saving additional information like results(camera, vanishing points); camera sensor size, and focal length
-  - [ ] import/export
-    - [ ] export results to json
-    - [ ] copy to clipboard json
-    - [ ] consider other formats: yaml.
-    - [ ] fspy import export
-    - [ ] AE: export to jsx
-    - [ ] blender export to script, or import plugin from .prpy 
-    - [ ] max: export to .ms or .py
-    - [ ] houdini?
-    - [ ] nuke: copy to clipboard, export to .nk
 
 ## Code Quality
 - [ ] CREATE TESTS!

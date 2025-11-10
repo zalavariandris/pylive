@@ -47,15 +47,10 @@ class PerspyApp():
         super().__init__()
 
         self.doc = PerspyDocument()
-        self.doc_path: str|None = None
+
+        # stored texture
         self.image_texture_ref:imgui.ImTextureRef|None = None
         self.image_texture_id: int|None = None
-
-        # solver results
-        self.current_euler_order = solver.EulerOrder.ZXY
-        self.first_vanishing_point:glm.vec2|None = None
-        self.second_vanishing_point:glm.vec2|None = None
-        self.camera:Camera|None = None
 
         # ui state
         self.pan_and_zoom_matrix = glm.identity(glm.mat4)
@@ -73,6 +68,12 @@ class PerspyApp():
         self.view_horizon: bool = True
         self.view_axes: bool = True
 
+        # solver results
+        self.camera:Camera|None = None
+        self.current_euler_order = solver.EulerOrder.ZXY
+        self.first_vanishing_point:glm.vec2|None = None
+        self.second_vanishing_point:glm.vec2|None = None
+        
         # misc
         """
         Can be used to define inline variables, similarly how static vars used in C/C++ with imgui.
@@ -184,7 +185,7 @@ class PerspyApp():
         if self.show_data_window:
             expanded, self.show_data_window = imgui.begin("data window", self.show_data_window)
             if expanded:
-                self.show_file()
+                self.show_data()
             imgui.end()
 
         # Style Editor Window
@@ -225,12 +226,20 @@ class PerspyApp():
 
                 if imgui.menu_item_simple(f"{folder_icon} Load Image", "Ctrl+O"):
                     self.load_image_file()
+
+                imgui.separator()
+
+                if imgui.begin_menu("Export results"):
+                    if imgui.menu_item_simple("JSON..."):
+                        self.export_results_to_json()
+                    imgui.end_menu()
                 
                 imgui.separator()
                 if imgui.menu_item_simple(f"{quit_icon} Quit", "Ctrl+Q"):
                     # Exit the application
                     import sys
                     sys.exit(0)
+
                 
                 imgui.end_menu()
 
@@ -424,6 +433,37 @@ class PerspyApp():
                 ui.viewer.end_scene()
         ui.viewer.end_viewer()
 
+    def results_to_dict(self) -> Dict[str, Any]:
+        import document
+        
+        result:Dict[str, Any] = dict()
+        if self.camera is not None:
+            _, quat, translation, _, _ = solver.decompose(self.camera.transform)
+            euler = solver.extract_euler(self.camera.transform, order=self.current_euler_order)
+            camera_data = {
+                "transform": self.camera.transform,
+                "fov_degrees": self.camera.fovy,
+                "position": self.camera.getPosition(),
+                "quaternion_xyzw": quat,
+                "euler_degrees_xyz": glm.vec3(euler[0], euler[1], euler[2]),
+                "euler_order": solver.EulerOrder._member_names_[self.current_euler_order]
+            }
+            result["camera"] = camera_data
+
+        vanishing_points_data:Dict[str, Any] = dict()
+        if self.first_vanishing_point is not None:
+            vanishing_points_data["first_vanishing_point"] = {
+                "x": self.first_vanishing_point.x,
+                "y": self.first_vanishing_point.y
+            }
+        if self.second_vanishing_point is not None:
+            vanishing_points_data["second_vanishing_point"] = {
+                "x": self.second_vanishing_point.x,
+                "y": self.second_vanishing_point.y
+            }
+        result["vanishing_points"] = vanishing_points_data
+        return result
+
     def show_results(self):
         def pretty_matrix(value:np.array, separator:str='\t') -> str:
             # Format with numpy's array2string for better control
@@ -458,9 +498,9 @@ class PerspyApp():
             euler = solver.extract_euler(self.camera.transform, order=self.current_euler_order)
 
             transform_text = pretty_matrix(np.array(transform).reshape(4,4), separator="\t")
-            position_text = pretty_matrix(np.array(translation), separator="\t")
-            quat_text = pretty_matrix(np.array([quat.x, quat.y, quat.z, quat.w]), separator="\t")
-            euler_text = pretty_matrix(np.array(euler), separator="\t")
+            position_text =  pretty_matrix(np.array(translation), separator="\t")
+            quat_text =      pretty_matrix(np.array([quat.x, quat.y, quat.z, quat.w]), separator="\t")
+            euler_text =     pretty_matrix(np.array(euler), separator="\t")
 
             if ui.begin_attribute_editor("res props"):
                 ui.next_attribute("transform")
@@ -549,10 +589,15 @@ class PerspyApp():
             # if imgui.button("export camera parameters", imgui.ImVec2(-1,0)):
             #     ...
 
-    def show_file(self):
+    def show_data(self):
         from textwrap import dedent
-        if imgui.collapsing_header("Serialized", imgui.TreeNodeFlags_.default_open):
-            text = self.doc.serialize()
+        if imgui.collapsing_header("Document", imgui.TreeNodeFlags_.default_open):
+            imgui.text_unformatted("TODO. implement doc.to_dict()")
+
+        if imgui.collapsing_header("Results", imgui.TreeNodeFlags_.default_open):
+            data = self.results_to_dict()
+            text = pformat(data, indent=2, width=80, compact=False)
+            # text = json.dumps(data, indent=4)
             imgui.text_unformatted(text)
         # if imgui.collapsing_header("Parameters", imgui.TreeNodeFlags_.default_open):
         #     text = self.serialize()
@@ -1100,6 +1145,27 @@ class PerspyApp():
         self.image_texture_id = texture_id
         logger.info(f"✓ Uploaded texture (ID: {texture_id})")
 
+    def export_results_to_json(self):
+        """Export current results to JSON file."""
+        file_dialog = pfd.save_file(
+            title="Export Results to JSON",
+            default_path="results.json",
+            filters=["JSON Files", "*.json", "All Files", "*.*"],
+            options=pfd.opt.none
+        )
+
+        save_path = file_dialog.result()
+        if save_path is None:
+            logger.info("Export cancelled by user.")
+            return
+        
+        if not isinstance(save_path, str):
+            logger.error(f"Invalid save path: {save_path}")
+            return
+        
+        # convert results to dictionary
+        data = self.results_to_dict()
+        print(data)
 
 if __name__ == "__main__":
     from imgui_bundle import immapp
