@@ -60,10 +60,6 @@ class ModuleHotReloader:
 ModuleHotReloader([solver, ui.viewer]).start_file_watchers()
 
 
-
-
-
-
 # Configure logging to see shader compilation logs
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -440,7 +436,7 @@ class PerspyApp():
                     """
                     self.doc.first_axis, self.doc.second_axis = solver.Axis.PositiveY, solver.Axis.NegativeX
                 case "maya":
-                    self.doc.first_axis, self.doc.second_axis = solver.Axis.PositiveZ, solver.Axis.PositiveX
+                    self.doc.first_axis, self.doc.second_axis = solver.Axis.PositiveZ, solver.Axis.NegativeX
         
         try:
             axis_matrix = solver.create_axis_assignment_matrix(self.doc.first_axis, self.doc.second_axis)

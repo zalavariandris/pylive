@@ -83,24 +83,24 @@ def solve1vp(
         camera_orientation = glm.mat3(view_orientation_matrix)
         # camera_transform = glm.inverse(view_transform)
 
-        # ##################
-        # # 3. Adjust Camera Roll to match second vanishing lines
-        # ##################
-        # # Roll the camera based on the horizon line projected to 3D
-        # fovy = fov_from_focal_length(f, height)
+        ##################
+        # 3. Adjust Camera Roll to match second vanishing lines
+        ##################
+        # Roll the camera based on the horizon line projected to 3D
+        fovy = fov_from_focal_length(f, height)
 
-        # if second_vanishing_line:
-        #     roll_matrix = compute_roll_matrix(
-        #         width, 
-        #         height, 
-        #         second_vanishing_line,
-        #         first_axis,
-        #         second_axis,
-        #         projection_matrix=glm.perspective(fovy, width/height, 0.1, 100.0),
-        #         view_matrix=view_transform
-        #     )
+        if second_vanishing_line:
+            roll_matrix = compute_roll_matrix(
+                width, 
+                height, 
+                second_vanishing_line,
+                first_axis,
+                second_axis,
+                projection_matrix=glm.perspective(fovy, width/height, 0.1, 100.0),
+                view_matrix=view_transform
+            )
 
-        #     view_transform = view_transform * roll_matrix
+            view_transform = view_transform * roll_matrix
 
         camera_transform = glm.inverse(view_transform)
         return camera_transform
@@ -305,36 +305,29 @@ def compute_roll_matrix(
     P_ray_origin, P_ray_dir = cast_ray(P, view_matrix, projection_matrix, viewport)
     Q_ray_origin, Q_ray_dir = cast_ray(Q, view_matrix, projection_matrix, viewport)
 
+
     # Intersect rays with XY plane
-    forward_plane = glm.vec3(0, 0, 0), _axisVector(first_axis)
+    forward_plane = glm.vec3(0, 0, 0), _axis_positive_vector(first_axis)
     P_on_grid = intersect_ray_with_plane(P_ray_origin, P_ray_dir, forward_plane[0], forward_plane[1])
     Q_on_grid = intersect_ray_with_plane(Q_ray_origin, Q_ray_dir, forward_plane[0], forward_plane[1])
 
-    # Calculate how much this line deviates from horizontal (y = constant)
-    match first_axis:
-        case Axis.PositiveX | Axis.NegativeX:
-            delta = P_on_grid.yz - Q_on_grid.yz
-            roll = math.atan2(delta.y, delta.x)
-        case Axis.PositiveY | Axis.NegativeY:
-            delta = P_on_grid.xz - Q_on_grid.xz
-            roll = math.atan2(delta.y, delta.x)
-        case Axis.PositiveZ | Axis.NegativeZ:
-            delta = P_on_grid.xy - Q_on_grid.xy
-            roll = math.atan2(delta.y, delta.x)
-        case _:
-            raise ValueError(f"Invalid first_axis value: {first_axis}")
-    
+    v = Q_on_grid - P_on_grid # vector along the line on the plane
+    n = glm.normalize(forward_plane[1]) # plane normal
+    v_proj = v - glm.dot(v, n) * n # project vector onto plane
 
-    # Determine the roll axis using both first_axis and second_axis
-    # Typically, roll is around the axis orthogonal to both first and second axes
-    axis1 = _axisVector(first_axis)
-    axis2 = _axisVector(second_axis)
-    roll_axis = glm.normalize(axis1)
-    # If the cross product is zero (axes are collinear), fallback to second_axis
-    if glm.length(roll_axis) < 1e-6:
-        roll_axis = glm.normalize(axis1)
-    # Apply negative roll to correct the deviation (counter-rotate)
-    return glm.rotate(glm.mat4(1.0), roll, roll_axis)
+    # --- Define plane's X and Y axes ---
+
+    plane_y_axis = glm.cross(n, _third_axis_vector(first_axis, second_axis)) # along the line
+    plane_x_axis = glm.cross(n, plane_y_axis)  # perpendicular in the plane
+
+    # --- Compute 360° angle using atan2 ---
+    x_on_plane = glm.dot(v_proj, plane_y_axis)
+    y_on_plane = glm.dot(v_proj, plane_x_axis)
+    angle = math.atan(y_on_plane / x_on_plane)
+    
+    roll_axis = _axis_positive_vector(first_axis)
+
+    return glm.rotate(glm.mat4(1.0), angle, roll_axis)
 
 def compute_focal_length_from_vanishing_points(
         Fu: glm.vec2, # first vanishing point
@@ -536,8 +529,8 @@ def create_axis_assignment_matrix(first_axis: Axis, second_axis: Axis) -> glm.ma
     """
     
     # Get the unit vectors for the specified axes
-    forward = _axisVector(first_axis)
-    right = _axisVector(second_axis)
+    forward = _axis_vector(first_axis)
+    right = _axis_vector(second_axis)
     up = glm.cross(forward, right)
     
     # Build the matrix with each row representing the target world axis
@@ -573,7 +566,7 @@ def focal_length_from_fov(fovy, image_height):
 def fov_from_focal_length(focal_length_pixel, image_height):
     return math.atan(image_height / 2 / focal_length_pixel) * 2
 
-def _axisVector(axis: Axis)->glm.vec3:
+def _axis_vector(axis: Axis)->glm.vec3:
     match axis:
       case Axis.NegativeX:
         return glm.vec3(-1, 0, 0)
@@ -587,6 +580,21 @@ def _axisVector(axis: Axis)->glm.vec3:
         return glm.vec3(0, 0, -1)
       case Axis.PositiveZ:
         return glm.vec3(0, 0, 1)
+
+def _axis_positive_vector(axis):
+    match axis:
+        case Axis.PositiveX | Axis.NegativeX:
+            return glm.vec3(1, 0, 0)
+        case Axis.PositiveY | Axis.NegativeY:
+            return glm.vec3(0, -1, 0)
+        case Axis.PositiveZ | Axis.NegativeZ:
+            return glm.vec3(0, 0, 1)
+        
+def _third_axis_vector(axis1, axis2):
+    vec1 = _axis_vector(axis1)
+    vec2 = _axis_vector(axis2)
+    return glm.normalize(glm.cross(vec1, vec2))
+
 
 def _vectorAxis(vector: glm.vec3)->Axis:
     if vector.x == 0 and vector.y == 0:
