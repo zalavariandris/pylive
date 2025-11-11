@@ -524,32 +524,43 @@ class PerspyApp():
 
             if self.camera is not None:
                 if ui.viewer.begin_scene(glm.scale(self.camera.projectionMatrix(), glm.vec3(1.0, -1.0, 1.0)), self.camera.viewMatrix()):
+                    axes_name = {
+                        solver.Axis.PositiveX: "X",
+                        solver.Axis.NegativeX: "X",
+                        solver.Axis.PositiveY: "Y",
+                        solver.Axis.NegativeY: "Y",
+                        solver.Axis.PositiveZ: "Z",
+                        solver.Axis.NegativeZ: "Z"
+                    }
+                    ground_axes = set([axes_name[self.doc.first_axis], axes_name[self.doc.second_axis]])
                     if self.view_grid:
                         # draw the grid
-                        axes_name = {
-                            solver.Axis.PositiveX: "X",
-                            solver.Axis.NegativeX: "X",
-                            solver.Axis.PositiveY: "Y",
-                            solver.Axis.NegativeY: "Y",
-                            solver.Axis.PositiveZ: "Z",
-                            solver.Axis.NegativeZ: "Z"
-                        }
-                        axes = set([axes_name[self.doc.first_axis], axes_name[self.doc.second_axis]])
-                        if axes == {'X', 'Y'}:
+                        if ground_axes == {'X', 'Y'}:
                             for A, B in ui.viewer.make_gridXY_lines(step=1, size=10):
                                 ui.viewer.guide(A, B)
-                        elif axes == {'X', 'Z'}:
+                        elif ground_axes == {'X', 'Z'}:
                             for A, B in ui.viewer.make_gridXZ_lines(step=1, size=10):
                                 ui.viewer.guide(A, B)
-                        elif axes == {'Y', 'Z'}:
+                        elif ground_axes == {'Y', 'Z'}:
                             for A, B in ui.viewer.make_gridYZ_lines(step=1, size=10):
                                 ui.viewer.guide(A, B)
                         else:
                             logger.warning(f"Cannot draw grid for the selected axes. {solver.Axis(self.doc.first_axis).name}, {solver.Axis(self.doc.second_axis).name}")
+                    
                     if self.view_axes:
                         ui.viewer.axes(length=1.0)
+
                     if self.view_horizon:
-                        ui.viewer.horizon_line()
+                        # draw the horizon line
+                        if ground_axes == {'X', 'Y'}:
+                            ui.viewer.horizon_line(ground='xy')
+                        elif ground_axes == {'X', 'Z'}:
+                            ui.viewer.horizon_line(ground='xz')
+                        elif ground_axes == {'Y', 'Z'}:
+                            ui.viewer.horizon_line(ground='yz')
+                        else:
+                            logger.warning(f"Cannot draw horizon line for the selected axes. {solver.Axis(self.doc.first_axis).name}, {solver.Axis(self.doc.second_axis).name}")
+                    
 
                 ui.viewer.end_scene()
         ui.viewer.end_viewer()

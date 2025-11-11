@@ -81,12 +81,12 @@ def solve1vp(
         view_transform = view_rotation_transform * view_translate_transform
 
         camera_orientation = glm.mat3(view_orientation_matrix)
-        camera_transform = glm.inverse(view_transform)
+        # camera_transform = glm.inverse(view_transform)
 
-        ###################
-        # 3. Adjust Camera Roll to match second vanishing lines
-        ###################
-        # Roll the camera based on the horizon line projected to 3D
+        # ##################
+        # # 3. Adjust Camera Roll to match second vanishing lines
+        # ##################
+        # # Roll the camera based on the horizon line projected to 3D
         # fovy = fov_from_focal_length(f, height)
 
         # if second_vanishing_line:
@@ -101,8 +101,8 @@ def solve1vp(
         #     )
 
         #     view_transform = view_transform * roll_matrix
-        #     camera_transform = glm.inverse(view_transform)
 
+        camera_transform = glm.inverse(view_transform)
         return camera_transform
 
 def solve2vp(
@@ -201,6 +201,26 @@ def second_vanishing_point_from_focal_length(
 
     return Fv
 
+def compute_orientation_from_single_vanishing_point(
+        Fu:glm.vec2,
+        Fv:glm.vec2,
+        f:float,
+    ):
+    Fu_Fv = Fu-Fv
+    forward = glm.normalize( glm.vec3(Fu_Fv.x, Fu_Fv.y,  -f))
+    right = glm.vec3(1,0,0)
+    up =   glm.normalize( glm.cross(right, forward))
+    right =      glm.normalize( glm.cross(up, forward))
+    view_orientation_matrix = glm.mat3(forward, right, up)
+
+
+    # validate if matrix is a purely rotational matrix
+    determinant = glm.determinant(view_orientation_matrix)
+    if math.fabs(determinant - 1) > 1e-6:
+        view_orientation_matrix = _gram_schmidt_orthogonalization(view_orientation_matrix)
+        logger.warning(f'Warning: Invalid vanishing point configuration. Rotation determinant {determinant}\n'+"View orientation matrix was not orthogonal, applied Gram-Schmidt orthogonalization")
+    return view_orientation_matrix
+
 def compute_orientation_from_two_vanishing_points(
         Fu:glm.vec2, # first vanishing point
         Fv:glm.vec2, # second vanishing point
@@ -225,25 +245,6 @@ def compute_orientation_from_two_vanishing_points(
         view_orientation_matrix = _gram_schmidt_orthogonalization(view_orientation_matrix)
         logger.warning(f'Warning: Invalid vanishing point configuration. Rotation determinant {determinant}\n'+"View orientation matrix was not orthogonal, applied Gram-Schmidt orthogonalization")
 
-    return view_orientation_matrix
-
-def compute_orientation_from_single_vanishing_point(
-        Fu:glm.vec2,
-        Fv:glm.vec2,
-        f:float,
-    ):
-    Fu_Fv = Fu-Fv
-    forward = glm.normalize( glm.vec3(Fu_Fv.x, Fu_Fv.y,  -f))
-    right =   glm.normalize( glm.cross(glm.vec3(0,1,0), forward))
-    up =      glm.normalize( glm.cross(forward, right))
-    
-    view_orientation_matrix = glm.mat3(forward, right, up)
-
-    # validate if matrix is a purely rotational matrix
-    determinant = glm.determinant(view_orientation_matrix)
-    if math.fabs(determinant - 1) > 1e-6:
-        view_orientation_matrix = _gram_schmidt_orthogonalization(view_orientation_matrix)
-        logger.warning(f'Warning: Invalid vanishing point configuration. Rotation determinant {determinant}\n'+"View orientation matrix was not orthogonal, applied Gram-Schmidt orthogonalization")
     return view_orientation_matrix
 
 def compute_camera_position(
@@ -296,33 +297,42 @@ def compute_roll_matrix(
     Compute a roll correction matrix to align the horizon based on the second vanishing lines.
     """
 
-    # Project the horizon line to the XY plane in 3D world space
-    viewport = glm.vec4(0, 0, width, height)
-    # XY plane definition (z = 0)
-    plane_xy = glm.vec3(0, 0, 0), glm.vec3(0, 0, 1)
-    plane_xz = glm.vec3(0, 0, 0), glm.vec3(0, 1, 0)
-    plane = plane_xy
-    projected_horizontal_line = project_line_to_plane(
-        second_vanishing_line[0], second_vanishing_line[1],
-        plane[0], plane[1],
-        view_matrix, projection_matrix,
-        viewport
-    )
+    # Project the second vanishing line the forward plane in 3D world space
+    P, Q = second_vanishing_line
 
-    A, B = projected_horizontal_line
+    # Unproject pixel coordinates to world space rays
+    viewport = glm.vec4(0, 0, width, height)    
+    P_ray_origin, P_ray_dir = cast_ray(P, view_matrix, projection_matrix, viewport)
+    Q_ray_origin, Q_ray_dir = cast_ray(Q, view_matrix, projection_matrix, viewport)
+
+    # Intersect rays with XY plane
+    forward_plane = glm.vec3(0, 0, 0), _axisVector(first_axis)
+    P_on_grid = intersect_ray_with_plane(P_ray_origin, P_ray_dir, forward_plane[0], forward_plane[1])
+    Q_on_grid = intersect_ray_with_plane(Q_ray_origin, Q_ray_dir, forward_plane[0], forward_plane[1])
 
     # Calculate how much this line deviates from horizontal (y = constant)
-    delta = B.xy - A.xy
-    roll = math.atan2(delta.y, delta.x)
+    match first_axis:
+        case Axis.PositiveX | Axis.NegativeX:
+            delta = P_on_grid.yz - Q_on_grid.yz
+            roll = math.atan2(delta.y, delta.x)
+        case Axis.PositiveY | Axis.NegativeY:
+            delta = P_on_grid.xz - Q_on_grid.xz
+            roll = math.atan2(delta.y, delta.x)
+        case Axis.PositiveZ | Axis.NegativeZ:
+            delta = P_on_grid.xy - Q_on_grid.xy
+            roll = math.atan2(delta.y, delta.x)
+        case _:
+            raise ValueError(f"Invalid first_axis value: {first_axis}")
+    
 
     # Determine the roll axis using both first_axis and second_axis
     # Typically, roll is around the axis orthogonal to both first and second axes
     axis1 = _axisVector(first_axis)
     axis2 = _axisVector(second_axis)
-    roll_axis = glm.normalize(glm.cross(axis1, axis2))
+    roll_axis = glm.normalize(axis1)
     # If the cross product is zero (axes are collinear), fallback to second_axis
     if glm.length(roll_axis) < 1e-6:
-        roll_axis = glm.normalize(axis2)
+        roll_axis = glm.normalize(axis1)
     # Apply negative roll to correct the deviation (counter-rotate)
     return glm.rotate(glm.mat4(1.0), roll, roll_axis)
 
@@ -660,10 +670,12 @@ def cast_ray(
         view_matrix, projection_matrix, viewport
     )
 
-    ray_direction = glm.unProject(
+    ray_target = glm.unProject(
         glm.vec3(pos.x, pos.y, 1.0),
         view_matrix, projection_matrix, viewport
     )
+
+    ray_direction = glm.normalize(ray_target - ray_origin)
 
     return ray_origin, ray_direction
 
@@ -684,7 +696,9 @@ def _world_depth_to_ndc_z(distance:float, near:float, far:float, clamp=False) ->
     ndc_z = (ndc_z + 1) / 2  # Convert from [-1, 1] to [0, 1]
     return ndc_z
 
-def intersect_ray_with_plane(ray_origin: glm.vec3, ray_direction: glm.vec3, plane_point: glm.vec3, plane_normal: glm.vec3) -> glm.vec3:
+def intersect_ray_with_plane(
+        ray_origin: glm.vec3, ray_direction: glm.vec3, 
+        plane_point: glm.vec3, plane_normal: glm.vec3) -> glm.vec3:
     """
     Intersect a ray with a plane.
     
@@ -708,37 +722,6 @@ def intersect_ray_with_plane(ray_origin: glm.vec3, ray_direction: glm.vec3, plan
     #     raise ValueError("Intersection is behind the ray origin")
     
     return ray_origin + t * ray_direction
-
-def project_line_to_plane(line_start_pixel: glm.vec2, line_end_pixel: glm.vec2, 
-                          plane_point: glm.vec3, plane_normal: glm.vec3,
-                           view_matrix: glm.mat4, projection_matrix: glm.mat4, 
-                           viewport: glm.vec4) -> Tuple[glm.vec3, glm.vec3]:
-    """
-    Project a 2D line from screen space to the XY plane (z=0) in world space.
-    
-    Args:
-        line_start_pixel: Start point of line in pixel coordinates
-        line_end_pixel: End point of line in pixel coordinates
-        view_matrix: Camera view matrix
-        projection_matrix: Camera projection matrix
-        viewport: Viewport (x, y, width, height)
-    
-    Returns:
-        Tuple of (start_3d, end_3d) points on the XY plane
-    """    
-    # Unproject pixel coordinates to world space rays
-    start_world_near, start_world_far = cast_ray(line_start_pixel, view_matrix, projection_matrix, viewport)
-    end_world_near, end_world_far = cast_ray(line_end_pixel, view_matrix, projection_matrix, viewport)
-
-    # Create ray directions
-    start_ray_dir = glm.normalize(start_world_far - start_world_near)
-    end_ray_dir = glm.normalize(end_world_far - end_world_near)
-    
-    # Intersect rays with XY plane
-    start_3d = intersect_ray_with_plane(start_world_near, start_ray_dir, plane_point, plane_normal)
-    end_3d =   intersect_ray_with_plane(end_world_near,   end_ray_dir,   plane_point, plane_normal)
-    
-    return start_3d, end_3d
 
 def _gram_schmidt_orthogonalization(matrix: glm.mat3) -> glm.mat3:
     """

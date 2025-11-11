@@ -526,14 +526,16 @@ def _cast_ray(
         view_matrix, projection_matrix, viewport
     )
 
-    ray_direction = glm.unProject(
+    ray_target = glm.unProject(
         glm.vec3(pos.x, pos.y, 1.0),
         view_matrix, projection_matrix, viewport
     )
 
+    ray_direction = glm.normalize(ray_target - ray_origin)
+
     return ray_origin, ray_direction
 
-def horizon_line(color:int=None):
+def horizon_line(color:int=None, ground:Literal['xz', 'xy', 'yz']='xz'):
     """Draw the horizon line in the current viewer scene.
     note: current implementation draws a line at a large (but not infinite) distance on the XZ plane.
     """
@@ -558,27 +560,35 @@ def horizon_line(color:int=None):
     projection = current_viewer.camera_projection_matrix
 
     # horizon
-    left_origin, left_target = _cast_ray(
+    left_origin, left_direction = _cast_ray(
         imgui.ImVec2(0, current_viewer.content_size.y/2), 
         view, 
         projection,
         (0,0,current_viewer.content_size.x, current_viewer.content_size.y)
     )
-    direction_on_left_side = left_target-left_origin
-    direction_on_left_side.y = 0
-    direction_on_left_side = glm.normalize(direction_on_left_side) * at_distance
-
-    right_origin, right_target = _cast_ray(
+    right_origin, right_direction = _cast_ray(
         imgui.ImVec2(current_viewer.content_size.x, current_viewer.content_size.y/2), 
         view, 
         projection,
         (0,0,current_viewer.content_size.x, current_viewer.content_size.y)
     )
-    direction_on_right_side = right_target-right_origin
-    direction_on_right_side.y = 0
-    direction_on_right_side = glm.normalize(direction_on_right_side) * at_distance
 
-    guide(direction_on_left_side, direction_on_right_side, color)
+    match ground:
+        case 'xz':
+            left_direction.y = 0
+            right_direction.y = 0
+        case 'xy':
+            left_direction.z = 0
+            right_direction.z = 0
+        case 'yz':
+            left_direction.x = 0
+            right_direction.x = 0
+        case _:
+            raise ValueError(f"ground must be one of 'xz', 'xy', 'yz', got: {ground}")
+    left_direction = glm.normalize(left_direction) * at_distance
+    right_direction = glm.normalize(right_direction) * at_distance
+
+    guide(left_direction, right_direction, color)
 
 def begin_scene(projection:glm.mat4, view:glm.mat4):
     """
