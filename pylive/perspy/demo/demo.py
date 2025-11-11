@@ -1348,14 +1348,12 @@ class PerspyApp():
         script = Path(blender_template_path).read_text()
 
         fovx = 2.0 * math.degrees(math.atan(math.tan(math.radians(self.camera.fovy) * 0.5) * (self.doc.content_size.x / self.doc.content_size.y)))
-        script = script.replace("CAMERA_FOV", str(math.radians(max(fovx, self.camera.fovy))))
-        # transform_string = str([[row[i] for row in self.camera.transform] for i in range(4)])
-        transform_string = str([[v for v in col] for col in glm.transpose(self.camera.transform)])
+        script = script.replace("<CAMERA_FOV>", str(math.radians(max(fovx, self.camera.fovy))))
+        transform_string = str([[v for v in row] for row in glm.transpose(self.camera.transform)])
         print("transform_string:", transform_string)
-        script = script.replace("CAMERA_TRANSFORM", transform_string)
-        script = script.replace("CAMERA_NAME", "'PerspyCamera'")
+        script = script.replace("<CAMERA_TRANSFORM>", transform_string)
+        script = script.replace("<CAMERA_NAME>", "'PerspyCamera'")
         return script
-
 
 
 if __name__ == "__main__":

@@ -3,7 +3,6 @@ from enum import IntEnum
 import math
 from venv import logger
 import glm
-from imgui_bundle import imgui
 
 #########
 # TYPES #

@@ -77,9 +77,9 @@ def create_camera(
 if __name__ == "__main__":
     # Create or update camera
     camera = create_camera(
-        CAMERA_NAME, 
-        CAMERA_FOV, 
-        CAMERA_TRANSFORM, 
+        <CAMERA_NAME>, 
+        <CAMERA_FOV>, 
+        <CAMERA_TRANSFORM>, 
         mode='UPDATE'
     )
     
