@@ -440,8 +440,26 @@ class PerspyApp():
                 if ui.viewer.begin_scene(glm.scale(self.camera.projectionMatrix(), glm.vec3(1.0, -1.0, 1.0)), self.camera.viewMatrix()):
                     if self.view_grid:
                         # draw the grid
-                        for A, B in ui.viewer.make_gridXZ_lines(step=1, size=10):
-                            ui.viewer.guide(A, B)
+                        axes_name = {
+                            solver.Axis.PositiveX: "X",
+                            solver.Axis.NegativeX: "X",
+                            solver.Axis.PositiveY: "Y",
+                            solver.Axis.NegativeY: "Y",
+                            solver.Axis.PositiveZ: "Z",
+                            solver.Axis.NegativeZ: "Z"
+                        }
+                        axes = set([axes_name[self.doc.first_axis], axes_name[self.doc.second_axis]])
+                        if axes == {'X', 'Y'}:
+                            for A, B in ui.viewer.make_gridXY_lines(step=1, size=10):
+                                ui.viewer.guide(A, B)
+                        elif axes == {'X', 'Z'}:
+                            for A, B in ui.viewer.make_gridXZ_lines(step=1, size=10):
+                                ui.viewer.guide(A, B)
+                        elif axes == {'Y', 'Z'}:
+                            for A, B in ui.viewer.make_gridYZ_lines(step=1, size=10):
+                                ui.viewer.guide(A, B)
+                        else:
+                            logger.warning(f"Cannot draw grid for the selected axes. {solver.Axis(self.doc.first_axis).name}, {solver.Axis(self.doc.second_axis).name}")
                     if self.view_axes:
                         ui.viewer.axes(length=1.0)
                     if self.view_horizon:
@@ -517,7 +535,7 @@ class PerspyApp():
             transform_text = pretty_matrix(np.array(transform).reshape(4,4), separator="\t")
             position_text =  pretty_matrix(np.array(translation), separator="\t")
             quat_text =      pretty_matrix(np.array([quat.x, quat.y, quat.z, quat.w]), separator="\t")
-            euler_text =     pretty_matrix(np.array(euler), separator="\t")
+            euler_text =     pretty_matrix(np.array([math.degrees(radians) for radians in euler]), separator="\t")
 
             if ui.begin_attribute_editor("res props"):
                 ui.next_attribute("transform")

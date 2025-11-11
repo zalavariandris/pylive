@@ -236,7 +236,7 @@ class PerspyDocument(Document):
         # solver inputs
         # - content image
         self.image_path: str|None = None
-        self.content_size = imgui.ImVec2(720, 576)
+        self.content_size = imgui.ImVec2(1280, 720)
         self.image: Image = None
 
         # - solver params

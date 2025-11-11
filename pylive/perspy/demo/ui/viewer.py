@@ -95,6 +95,21 @@ def make_gridXY_lines(size: float = 10, step: float = 1, near: float = 0.1):
         lines.append((glm.vec3(-size/2, y, 0), glm.vec3(size/2, y, 0)))
     return lines
 
+def make_gridYZ_lines(size: float = 10, step: float = 1, near: float = 0.1):
+    """Draw a grid on the YZ plane centered at the origin."""
+
+    # Generate grid coordinates
+    n_steps = int(np.floor(size/2 / step)) # number of steps from the center to edge
+    ys = np.arange(-n_steps, n_steps + 1) * step
+    zs = np.arange(-n_steps, n_steps + 1) * step
+
+    # Create grid lines along Y and Z axes
+    lines = []
+    for y in ys:
+        lines.append((glm.vec3(0, y, -size/2), glm.vec3(0, y, size/2)))
+    for z in zs:
+        lines.append((glm.vec3(0, -size/2, z), glm.vec3(0, size/2, z)))
+    return lines
 ############################
 # Viewer Widget (stateful) #
 ############################
