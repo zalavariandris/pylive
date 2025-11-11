@@ -390,12 +390,13 @@ class PerspyApp():
         imgui.text_link_open_url("https://github.com/yourusername/camera-spy")
 
     def show_parameters(self):
+        buttons_width = 120
         imgui.separator_text("Image")
-        imgui.set_next_item_width(150)
+        imgui.set_next_item_width(buttons_width)
         if self.image_texture_ref is None:
             if imgui.button("open image", size=imgui.ImVec2(-1,0)):
                 self.load_image_file()
-            imgui.set_next_item_width(150)
+            imgui.set_next_item_width(buttons_width)
             _, value = imgui.input_int2("image size", [int(self.doc.content_size.x), int(self.doc.content_size.y)])
             if _:
                 self.doc.content_size = imgui.ImVec2(value[0], value[1])
@@ -404,25 +405,37 @@ class PerspyApp():
             width = imgui.get_content_region_avail().x-imgui.get_style().frame_padding.x*2
             if imgui.image_button("open", self.image_texture_ref, imgui.ImVec2(width, width/image_aspect)):
                 self.load_image_file()
-            imgui.set_next_item_width(150)
+            imgui.set_next_item_width(buttons_width)
             imgui.input_int2("image size", [int(self.doc.content_size.x), int(self.doc.content_size.y)], imgui.InputTextFlags_.read_only)
 
         _, self.dim_background = imgui.checkbox("dim background", self.dim_background)
 
         # imgui.bullet_text("Warning: Font scaling will NOT be smooth, because\nImGuiBackendFlags_RendererHasTextures is not set!")
         imgui.separator_text("Solver Parameters")
-        imgui.set_next_item_width(150)
+        imgui.set_next_item_width(buttons_width)
         _, self.doc.solver_mode = imgui.combo("mode", self.doc.solver_mode, SolverMode._member_names_)
 
-        imgui.separator_text("Axes")
+        imgui.set_next_item_width(buttons_width)
+        _, self.doc.scene_scale = imgui.slider_float("scene  scale", self.doc.scene_scale, 1.0, 100.0, "%.2f")
 
+        # solver specific parameters
+        match self.doc.solver_mode:
+            case SolverMode.OneVP:
+                imgui.set_next_item_width(buttons_width)
+                _, self.doc.fov_degrees = imgui.slider_float("fov°", self.doc.fov_degrees, 1.0, 179.0, "%.1f°")
+
+            case SolverMode.TwoVP:
+                _, self.doc.quad_mode = imgui.checkbox("quad", self.doc.quad_mode)
+
+        imgui.separator_text("Axes")
         axes_presets = {
             "default": 0,
             'blender':1,
             'maya':2
         }
         self.misc.setdefault('axes_preset', 0)
-        _, self.misc['axes_preset'] = imgui.combo("axies_preset", self.misc['axes_preset'], list(axes_presets.keys()))
+        imgui.set_next_item_width(buttons_width)
+        _, self.misc['axes_preset'] = imgui.combo("axes_preset", self.misc['axes_preset'], list(axes_presets.keys()))
         if _:
             preset = list(axes_presets.keys())[self.misc['axes_preset']]
             match preset:
@@ -451,22 +464,24 @@ class PerspyApp():
             self.doc.first_axis, self.doc.second_axis = solver.Axis.PositiveZ, solver.Axis.PositiveX
             axis_matrix = solver.create_axis_assignment_matrix(self.doc.first_axis, self.doc.second_axis)
             imgui.text(f"Error: {e}")
-        imgui.text(f"{axis_matrix}")
         
-        imgui.set_next_item_width(150)
-        _, self.doc.first_axis = imgui.combo("first axis",   self.doc.first_axis, solver.Axis._member_names_)
-        imgui.set_next_item_width(150)
-        _, self.doc.second_axis = imgui.combo("second axis", self.doc.second_axis, solver.Axis._member_names_)
-        imgui.set_next_item_width(150)
-        _, self.doc.scene_scale = imgui.slider_float("scene  scale", self.doc.scene_scale, 1.0, 100.0, "%.2f")
+        axes_short_names = {
+            solver.Axis.PositiveX: "X+",
+            solver.Axis.NegativeX: "X-",
+            solver.Axis.PositiveY: "Y+",
+            solver.Axis.NegativeY: "Y-",
+            solver.Axis.PositiveZ: "Z+",
+            solver.Axis.NegativeZ: "Z-"
+        }
+        style = imgui.get_style()
+        imgui.set_next_item_width(buttons_width/2-style.frame_padding.x)
+        _, self.doc.first_axis = imgui.combo("##first axis",   self.doc.first_axis, list(axes_short_names.values()))
+        imgui.set_item_tooltip(f"First axis (ground plane axis 1)")
+        imgui.same_line()
+        imgui.set_next_item_width(buttons_width/2-style.frame_padding.x)
+        _, self.doc.second_axis = imgui.combo("##second axis", self.doc.second_axis, list(axes_short_names.values()))
+        imgui.set_item_tooltip(f"Second axis (ground plane axis 2)")
         
-        match self.doc.solver_mode:
-            case SolverMode.OneVP:
-                imgui.set_next_item_width(150)
-                _, self.doc.fov_degrees = imgui.slider_float("fov°", self.doc.fov_degrees, 1.0, 179.0, "%.1f°")
-
-            case SolverMode.TwoVP:
-                _, self.doc.quad_mode = imgui.checkbox("quad", self.doc.quad_mode)
 
     def show_viewer(self):
         if ui.viewer.begin_viewer("viewer1", content_size=self.doc.content_size, size=imgui.ImVec2(-1,-1)):
@@ -701,7 +716,7 @@ class PerspyApp():
         if imgui.collapsing_header("Document as Python Code", imgui.TreeNodeFlags_.default_open):
             text = self.doc.document_to_python()
             imgui.text_unformatted(dedent(text).strip())
-            
+
         if imgui.collapsing_header("Document as Dict", imgui.TreeNodeFlags_.default_open):
             imgui.text_unformatted("TODO. implement doc.to_dict()")
 

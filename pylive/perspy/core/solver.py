@@ -85,8 +85,6 @@ def solve1vp(
                 width, 
                 height, 
                 second_vanishing_line,
-                first_axis=Axis.PositiveX, # since axis assignment moved after this, we use te default axes TODO: probably these are redundant now. or at leaas could have default values
-                second_axis=Axis.PositiveY,# - same as above -
                 projection_matrix=glm.perspective(fovy, width/height, 0.1, 100.0),
                 view_matrix=view_matrix
             )
@@ -282,10 +280,10 @@ def compute_roll_matrix(
         width:int,
         height:int,
         second_vanishing_line:Tuple[glm.vec2, glm.vec2],
-        first_axis:Axis,
-        second_axis:Axis,
         projection_matrix:glm.mat4,
-        view_matrix:glm.mat4
+        view_matrix:glm.mat4,
+        first_axis:Axis=Axis.PositiveX,
+        second_axis:Axis=Axis.PositiveY
 ):
     """
     Compute a roll correction matrix to align the horizon based on the second vanishing lines.
@@ -299,27 +297,25 @@ def compute_roll_matrix(
     P_ray_origin, P_ray_dir = cast_ray(P, view_matrix, projection_matrix, viewport)
     Q_ray_origin, Q_ray_dir = cast_ray(Q, view_matrix, projection_matrix, viewport)
 
+    # define the plane coordinate system (the plane facing against the camera screen, orineted by the first axis)
+    plane_origin = glm.vec3(0, 0, 0)
+    plane_normal = _axis_positive_vector(first_axis)
+    plane_y_axis = glm.cross(plane_normal, _third_axis_vector(first_axis, second_axis)) # along the line
+    plane_x_axis = glm.cross(plane_normal, plane_y_axis)  # perpendicular in the plane
 
-    # Intersect rays with XY plane
-    forward_plane = glm.vec3(0, 0, 0), _axis_positive_vector(first_axis)
-    P_on_grid = intersect_ray_with_plane(P_ray_origin, P_ray_dir, forward_plane[0], forward_plane[1])
-    Q_on_grid = intersect_ray_with_plane(Q_ray_origin, Q_ray_dir, forward_plane[0], forward_plane[1])
+    # Intersect rays with facing plane
+    P_on_grid = intersect_ray_with_plane(P_ray_origin, P_ray_dir, plane_origin, plane_normal)
+    Q_on_grid = intersect_ray_with_plane(Q_ray_origin, Q_ray_dir, plane_origin, plane_normal)
 
     v = Q_on_grid - P_on_grid # vector along the line on the plane
-    n = glm.normalize(forward_plane[1]) # plane normal
-    v_proj = v - glm.dot(v, n) * n # project vector onto plane
-
-    # --- Define plane's X and Y axes ---
-
-    plane_y_axis = glm.cross(n, _third_axis_vector(first_axis, second_axis)) # along the line
-    plane_x_axis = glm.cross(n, plane_y_axis)  # perpendicular in the plane
+    v_proj = v - glm.dot(v, plane_normal) * plane_normal # project vector onto plane
 
     # --- Compute 360° angle using atan2 ---
     x_on_plane = glm.dot(v_proj, plane_y_axis)
     y_on_plane = glm.dot(v_proj, plane_x_axis)
     angle = math.atan(y_on_plane / x_on_plane)
     
-    roll_axis = _axis_positive_vector(first_axis)
+    roll_axis = plane_normal # plane normal
 
     return glm.rotate(glm.mat4(1.0), angle, roll_axis)
 

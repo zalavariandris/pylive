@@ -305,6 +305,9 @@ def setup_imgui_style():
     style.set_color_(imgui.Col_.button   ,           imgui.ImVec4(*[levels[3]]*3,1.00))
     style.set_color_(imgui.Col_.popup_bg ,           imgui.ImVec4(*[levels[1]]*3,1.00))
 
+    # now the checkbox frame and dropdown button has the same color
+    style.set_color_(imgui.Col_.button_hovered,         style.color_(imgui.Col_.frame_bg_hovered))
+
     # Remove the dark border by setting menu bar background to match the menu bar
     style.set_color_(imgui.Col_.menu_bar_bg,         windows_dark_titlebar_color)
     
@@ -332,6 +335,10 @@ def setup_imgui_style():
 
     style.window_title_align = imgui.ImVec2(0.5, 0.5)
     style.window_menu_button_position = imgui.Dir.right
+
+    style.separator_text_border_size = 1
+    style.separator_text_align = imgui.ImVec2(0.0, 0.5)
+    style.separator_text_padding = imgui.ImVec2(0, 3)
 
     logger.info("✓ ImGui theme applied")
 
