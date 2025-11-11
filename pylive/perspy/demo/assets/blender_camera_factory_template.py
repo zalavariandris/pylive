@@ -5,7 +5,7 @@ from typing import Literal
 
 def create_camera(
     camera_name: str="PerspyCam", 
-    fovy: float=60.0, 
+    fov: float=60.0, 
     transform: tuple = ((1.0, 0.0, 0.0, 0.0),
                         (0.0, 1.0, 0.0, 0.0),
                         (0.0, 0.0, 1.0, 0.0),
@@ -17,7 +17,7 @@ def create_camera(
     
     Args:
         camera_name (str): Name for the camera object
-        fovy (float): Vertical field of view in radians
+        fov (float): Field of view in radians
         transform (tuple): 4x4 transformation matrix (row-major)
         mode (str): 'NEW' - always create new camera
                     'REPLACE' - delete existing and create new
@@ -62,7 +62,7 @@ def create_camera(
     
     # Set FOV
     cam_data.lens_unit = 'FOV'
-    cam_data.angle = fovy
+    cam_data.angle = fov
     
     # Set sensor size (35mm equivalent)
     cam_data.sensor_width = 36.0
@@ -76,7 +76,12 @@ def create_camera(
 
 if __name__ == "__main__":
     # Create or update camera
-    camera = create_camera(CAMERA_NAME, FOVY, TRANSFORM, mode='UPDATE')
+    camera = create_camera(
+        CAMERA_NAME, 
+        CAMERA_FOV, 
+        CAMERA_TRANSFORM, 
+        mode='UPDATE'
+    )
     
     # Set as active camera
     bpy.context.scene.camera = camera

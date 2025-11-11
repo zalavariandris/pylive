@@ -240,23 +240,23 @@ class PerspyDocument(Document):
         self.image: Image = None
 
         # - solver params
-        self.solver_mode=SolverMode.OneVP
+        self.solver_mode=SolverMode.TwoVP
         self.scene_scale=5.0
-        self.first_axis=solver.Axis.PositiveZ
-        self.second_axis=solver.Axis.PositiveX
+        self.first_axis=solver.Axis.PositiveX
+        self.second_axis=solver.Axis.PositiveY
         self.fov_degrees=60.0 # only for OneVP mode
         self.quad_mode=False # only for TwoVP mode. is this a ui state?
 
         # - control points
-        self.origin=self.content_size/2
+        self.origin=imgui.ImVec2(self.content_size.x/2, self.content_size.y*0.66)
         self.principal_point=self.content_size/2
         self.first_vanishing_lines = [
-            (glm.vec2(296, 417), glm.vec2(633, 291)),
-            (glm.vec2(654, 660), glm.vec2(826, 344))
+            (glm.vec2(417, 446), glm.vec2(733, 332)),
+            (glm.vec2(570, 660), glm.vec2(908, 386))
         ]
         self.second_vanishing_lines = [
-            [glm.vec2(381, 363), glm.vec2(884, 451)],
-            [glm.vec2(511, 311), glm.vec2(879, 356)]
+            [glm.vec2(455, 392), glm.vec2(734, 663)],
+            [glm.vec2(658, 340), glm.vec2(946, 450)]
         ]
 
     def serialize(self)->bytearray:

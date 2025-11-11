@@ -3,6 +3,7 @@ from enum import IntEnum
 import math
 from venv import logger
 import glm
+from imgui_bundle import imgui
 
 #########
 # TYPES #
@@ -86,19 +87,21 @@ def solve1vp(
         # 3. Adjust Camera Roll to match second vanishing lines
         ###################
         # Roll the camera based on the horizon line projected to 3D
-        fovy = fov_from_focal_length(f, height)
+        # fovy = fov_from_focal_length(f, height)
 
-        if second_vanishing_line:
-            roll_matrix = compute_roll_matrix(
-                width, 
-                height, 
-                second_vanishing_line,
-                projection_matrix=glm.perspective(fovy, width/height, 0.1, 100.0),
-                view_matrix=view_transform
-            )
+        # if second_vanishing_line:
+        #     roll_matrix = compute_roll_matrix(
+        #         width, 
+        #         height, 
+        #         second_vanishing_line,
+        #         first_axis,
+        #         second_axis,
+        #         projection_matrix=glm.perspective(fovy, width/height, 0.1, 100.0),
+        #         view_matrix=view_transform
+        #     )
 
-            view_transform = view_transform * roll_matrix
-            camera_transform = glm.inverse(view_transform)
+        #     view_transform = view_transform * roll_matrix
+        #     camera_transform = glm.inverse(view_transform)
 
         return camera_transform
 
@@ -116,7 +119,7 @@ def solve2vp(
     """ Solve camera intrinsics and orientation from 3 orthogonal vanishing points.
     returns (fovy in radians, camera_orientation_matrix, camera_position)
     """
-
+    imgui.slider_float("Test Slider", 0.5, 0.0, 1.0)
     ###########################
     # 2. COMPUTE Focal Length #
     ###########################
@@ -156,6 +159,7 @@ def solve2vp(
     view_translate_transform = glm.translate(glm.mat4(1.0), camera_position)
     view_rotation_transform = glm.mat4(view_orientation_matrix)
     view_transform= view_rotation_transform * view_translate_transform
+
     camera_transform = glm.inverse(view_transform)
 
     return fovy, camera_transform
@@ -203,7 +207,14 @@ def compute_orientation_from_two_vanishing_points(
         P:glm.vec2,
         f:float
     )->glm.mat3:
-    forward = glm.normalize(glm.vec3(Fu-P,  -f))
+    from textwrap import dedent
+    imgui.text(dedent(f"""\
+        Fu: {Fu}
+        Fv: {Fv}
+        P: {P}
+        f: {f}
+    """))
+    forward = glm.normalize(glm.vec3(Fu-P, -f))
     right =   glm.normalize(glm.vec3(Fv-P, -f))
     up = glm.cross(forward, right)
     view_orientation_matrix = glm.mat3(forward, right, up)
@@ -222,10 +233,10 @@ def compute_orientation_from_single_vanishing_point(
         f:float,
     ):
     Fu_Fv = Fu-Fv
-    forward = glm.normalize(glm.vec3(Fu_Fv.x, Fu_Fv.y,  -f))
-    up_world = glm.vec3(0, 1, 0)
-    right = glm.normalize(glm.cross(up_world, forward))
-    up = glm.cross(forward, right)
+    forward = glm.normalize( glm.vec3(Fu_Fv.x, Fu_Fv.y,  -f))
+    right =   glm.normalize( glm.cross(glm.vec3(0,1,0), forward))
+    up =      glm.normalize( glm.cross(forward, right))
+    
     view_orientation_matrix = glm.mat3(forward, right, up)
 
     # validate if matrix is a purely rotational matrix
@@ -276,6 +287,8 @@ def compute_roll_matrix(
         width:int,
         height:int,
         second_vanishing_line:Tuple[glm.vec2, glm.vec2],
+        first_axis:Axis,
+        second_axis:Axis,
         projection_matrix:glm.mat4,
         view_matrix:glm.mat4
 ):
@@ -285,8 +298,13 @@ def compute_roll_matrix(
 
     # Project the horizon line to the XY plane in 3D world space
     viewport = glm.vec4(0, 0, width, height)
-    projected_horizontal_line = project_line_to_xy_plane(
+    # XY plane definition (z = 0)
+    plane_xy = glm.vec3(0, 0, 0), glm.vec3(0, 0, 1)
+    plane_xz = glm.vec3(0, 0, 0), glm.vec3(0, 1, 0)
+    plane = plane_xy
+    projected_horizontal_line = project_line_to_plane(
         second_vanishing_line[0], second_vanishing_line[1],
+        plane[0], plane[1],
         view_matrix, projection_matrix,
         viewport
     )
@@ -297,8 +315,16 @@ def compute_roll_matrix(
     delta = B.xy - A.xy
     roll = math.atan2(delta.y, delta.x)
 
+    # Determine the roll axis using both first_axis and second_axis
+    # Typically, roll is around the axis orthogonal to both first and second axes
+    axis1 = _axisVector(first_axis)
+    axis2 = _axisVector(second_axis)
+    roll_axis = glm.normalize(glm.cross(axis1, axis2))
+    # If the cross product is zero (axes are collinear), fallback to second_axis
+    if glm.length(roll_axis) < 1e-6:
+        roll_axis = glm.normalize(axis2)
     # Apply negative roll to correct the deviation (counter-rotate)
-    return glm.rotate(glm.mat4(1.0), roll, glm.vec3(0, 0, 1))
+    return glm.rotate(glm.mat4(1.0), roll, roll_axis)
 
 def compute_focal_length_from_vanishing_points(
         Fu: glm.vec2, # first vanishing point
@@ -537,7 +563,6 @@ def focal_length_from_fov(fovy, image_height):
 def fov_from_focal_length(focal_length_pixel, image_height):
     return math.atan(image_height / 2 / focal_length_pixel) * 2
 
-
 def _axisVector(axis: Axis)->glm.vec3:
     match axis:
       case Axis.NegativeX:
@@ -563,6 +588,10 @@ def _vectorAxis(vector: glm.vec3)->Axis:
     
     raise ValueError('Invalid axis vector')
 
+def flip_coordinate_handness(mat: glm.mat4) -> glm.mat4:
+    """swap left-right handed coordinate system"""
+    flipZ = glm.scale(glm.vec3(1.0, 1.0, -1.0))
+    return flipZ * mat # todo: check order
 
 ###########################
 # 2D-3D GOMETRY FUNCTIONS #
@@ -680,7 +709,8 @@ def intersect_ray_with_plane(ray_origin: glm.vec3, ray_direction: glm.vec3, plan
     
     return ray_origin + t * ray_direction
 
-def project_line_to_xy_plane(line_start_pixel: glm.vec2, line_end_pixel: glm.vec2, 
+def project_line_to_plane(line_start_pixel: glm.vec2, line_end_pixel: glm.vec2, 
+                          plane_point: glm.vec3, plane_normal: glm.vec3,
                            view_matrix: glm.mat4, projection_matrix: glm.mat4, 
                            viewport: glm.vec4) -> Tuple[glm.vec3, glm.vec3]:
     """
@@ -703,10 +733,6 @@ def project_line_to_xy_plane(line_start_pixel: glm.vec2, line_end_pixel: glm.vec
     # Create ray directions
     start_ray_dir = glm.normalize(start_world_far - start_world_near)
     end_ray_dir = glm.normalize(end_world_far - end_world_near)
-    
-    # XY plane definition (z = 0)
-    plane_point = glm.vec3(0, 0, 0)
-    plane_normal = glm.vec3(0, 0, 1)
     
     # Intersect rays with XY plane
     start_3d = intersect_ray_with_plane(start_world_near, start_ray_dir, plane_point, plane_normal)

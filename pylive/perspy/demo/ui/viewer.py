@@ -114,7 +114,7 @@ def make_gridYZ_lines(size: float = 10, step: float = 1, near: float = 0.1):
 # Viewer Widget (stateful) #
 ############################
 class ViewerWidget:
-    def __init__(self, content_size:imgui.ImVec2, coordinate_system:Literal['top-left', 'bottom-left']='top-left'):
+    def __init__(self, content_size:imgui.ImVec2, coordinate_system:Literal['top-left', 'bottom-left']='bottom-left'):
         # canvas size in pixels (aka viewport?)
         self.content_size = content_size
         self.coordinate_system = coordinate_system
@@ -223,7 +223,7 @@ current_viewer_name:str|None = None
 def begin_viewer(name: str, 
                  content_size: imgui.ImVec2, 
                  size:imgui.ImVec2=None,
-                 coordinate_system:Literal['top-left', 'bottom-left']='top-left'
+                 coordinate_system:Literal['top-left', 'bottom-left']='bottom-left'
                  )->bool:
     """
     note: call begin_scene after begin_viewer regardless of the return value. just like imgui.begin_child.
@@ -302,24 +302,28 @@ def begin_viewer(name: str,
         offset = glm.vec3(mouse_world_before.x - mouse_world_after.x, mouse_world_before.y - mouse_world_after.y, 0)
         current_viewport.interactive_pan_and_zoom = glm.translate(current_viewport.interactive_pan_and_zoom, -offset)
 
+    imgui.set_cursor_pos(imgui.get_style().window_padding)
+    imgui.new_line() # let some room for the viewer name
     return ret
 
 def end_viewer():
     global viewers, current_viewer_name
     current_viewport = viewers[current_viewer_name]
 
-    
     # draw content area margins
     style = imgui.get_style()
     draw_list = imgui.get_window_draw_list()
-    content_screen_tl = current_viewport._project( (0,0,0))
-    content_screen_br = current_viewport._project( (current_viewport.content_size.x, current_viewport.content_size.y, 0))
-
-    draw_list.add_rect(content_screen_tl, content_screen_br, imgui.color_convert_float4_to_u32(get_viewer_style().margin_stroke_color), thickness=1.0)
-
 
     viewport_tl = current_viewport.pos
     viewport_br = current_viewport.pos + current_viewport.size
+    
+    content_screen_tl = current_viewport._project( (0,0,0))
+    content_screen_br = current_viewport._project( (current_viewport.content_size.x, current_viewport.content_size.y, 0))
+    if current_viewport.coordinate_system == 'bottom-left':
+        # flip Y for margin drawing
+        content_screen_tl.y, content_screen_br.y = content_screen_br.y, content_screen_tl.y
+
+    draw_list.add_rect(content_screen_tl, content_screen_br, imgui.color_convert_float4_to_u32(get_viewer_style().margin_stroke_color), thickness=1.0)
 
     # Top rectangle
     draw_list.add_rect_filled(
@@ -399,7 +403,10 @@ def _clip_line(A: glm.vec3, B: glm.vec3, view: glm.mat4, near, far):
     else:
         return A, intersection_world
 
-def guide(A:imgui.ImVec2Like, B:imgui.ImVec2Like, color:imgui.ImVec4=None):
+def guide(P:imgui.ImVec2Like, Q:imgui.ImVec2Like, color:imgui.ImVec4=None, 
+          front_head_shape:Literal['', '>', '<', 'o']='',
+          back_head_shape:Literal['', '>', '<', 'o']=''
+    ):
     if not isinstance(color, imgui.ImVec4) and color is not None:
         raise TypeError(f"color must be of type imgui.ImVec4 or None, got: {color}")
     
@@ -411,36 +418,68 @@ def guide(A:imgui.ImVec2Like, B:imgui.ImVec2Like, color:imgui.ImVec4=None):
     global viewers, current_viewer_name
     current_viewport = viewers[current_viewer_name]
 
-    if len(A) not in (2,3):
-        raise ValueError(f"A must be of length 2 or 3, got {len(A)}")
-    if len(B) not in (2,3):
-        raise ValueError(f"B must be of length 2 or 3, got {len(B)}")
+    if len(P) not in (2,3):
+        raise ValueError(f"A must be of length 2 or 3, got {len(P)}")
+    if len(Q) not in (2,3):
+        raise ValueError(f"B must be of length 2 or 3, got {len(Q)}")
 
-    if len(B) == 2:
-        B = glm.vec3(B[0], B[1], 0)
+    if len(Q) == 2:
+        Q = glm.vec3(Q[0], Q[1], 0)
     else:
-        B = glm.vec3(B[0], B[1], B[2])
+        Q = glm.vec3(Q[0], Q[1], Q[2])
 
-    if len(A) == 2:
-        A = glm.vec3(A[0], A[1], 0)
+    if len(P) == 2:
+        P = glm.vec3(P[0], P[1], 0)
     else:
-        A = glm.vec3(A[0], A[1], A[2])
+        P = glm.vec3(P[0], P[1], P[2])
     # clip line against near plane if using camera
     if current_viewport.use_camera:
         near = 0.1  # TODO: get from camera
         far = 100.0
-        clipped = _clip_line(A, B, current_viewport.camera_view_matrix, near, far)
+        clipped = _clip_line(P, Q, current_viewport.camera_view_matrix, near, far)
         if clipped is None:
             return
-        A, B = clipped
+        P, Q = clipped
 
     # project points
-    A = current_viewport._project(A)
-    B = current_viewport._project(B)
+    P = current_viewport._project(P)
+    Q = current_viewport._project(Q)
 
     # draw line
     draw_list = imgui.get_window_draw_list()
-    draw_list.add_line(A, B, imgui.color_convert_float4_to_u32(color))
+    draw_list.add_line(P, Q, imgui.color_convert_float4_to_u32(color))
+
+    # draw line head front
+    dir = glm.vec2(Q.x, Q.y) - glm.vec2(P.x, P.y)
+    dir = glm.normalize(dir)
+    head_size = 12.0
+    perp = glm.vec2(-dir.y, dir.x) * (head_size * 0.5)
+
+    match front_head_shape:
+        case '>':
+            A = imgui.ImVec2(Q.x - dir.x * head_size + perp.x, Q.y - dir.y * head_size + perp.y)
+            B = imgui.ImVec2(Q.x, Q.y)
+            C = imgui.ImVec2(Q.x - dir.x * head_size - perp.x, Q.y - dir.y * head_size - perp.y)
+            draw_list.add_line(A,B,imgui.color_convert_float4_to_u32(color))
+            draw_list.add_line(C,B,imgui.color_convert_float4_to_u32(color))
+            draw_list.add_triangle_filled(A, B, C, imgui.color_convert_float4_to_u32(color))
+        case _:
+            pass
+
+
+    # draw line head back (backwards arrow)
+    match back_head_shape:
+        case '>':
+            draw_list.add_line(
+                imgui.ImVec2(P.x - dir.x * head_size + perp.x, P.y - dir.y * head_size + perp.y),
+                P,
+                imgui.color_convert_float4_to_u32(color)
+            )
+            draw_list.add_line(
+                imgui.ImVec2(P.x - dir.x * head_size - perp.x, P.y - dir.y * head_size - perp.y),
+                P,
+                imgui.color_convert_float4_to_u32(color)
+            )
 
 def axes(length:float=1.0, thickness:float=1.0):
     global viewers, current_viewer_name
@@ -451,16 +490,18 @@ def axes(length:float=1.0, thickness:float=1.0):
     y_axis = glm.vec3(0,length,0)
     z_axis = glm.vec3(0,0,length)
 
-    A_screen = current_viewport._project(origin)
-    B_screen = current_viewport._project(x_axis)
+    O_screen = current_viewport._project(origin)
+    X_screen = current_viewport._project(x_axis)
     draw_list = imgui.get_window_draw_list()
-    draw_list.add_line(A_screen, B_screen, imgui.color_convert_float4_to_u32(get_viewer_style().AXIS_COLOR_X), thickness)
+    draw_list.add_line(O_screen, X_screen, imgui.color_convert_float4_to_u32(get_viewer_style().AXIS_COLOR_X), thickness)
 
-    B_screen = current_viewport._project(y_axis)
-    draw_list.add_line(A_screen, B_screen, imgui.color_convert_float4_to_u32(get_viewer_style().AXIS_COLOR_Y), thickness)
+    Y_screen = current_viewport._project(y_axis)
+    draw_list.add_line(O_screen, Y_screen, imgui.color_convert_float4_to_u32(get_viewer_style().AXIS_COLOR_Y), thickness)
 
-    B_screen = current_viewport._project(z_axis)
-    draw_list.add_line(A_screen, B_screen, imgui.color_convert_float4_to_u32(get_viewer_style().AXIS_COLOR_Z), thickness)
+    Z_screen = current_viewport._project(z_axis)
+    draw_list.add_line(O_screen, Z_screen, imgui.color_convert_float4_to_u32(get_viewer_style().AXIS_COLOR_Z), thickness)
+
+    draw_list.add_circle(O_screen, 5.0, imgui.color_convert_float4_to_u32(get_viewer_style().CONTROL_POINT_COLOR))
 
 def _cast_ray(
     pos: glm.vec2, 
@@ -553,8 +594,12 @@ def begin_scene(projection:glm.mat4, view:glm.mat4):
     current_viewport = viewers[current_viewer_name]
     assert current_viewport.use_camera is False, "Nested begin_scene calls are not supported."
 
-    content_screen_tl = current_viewport._project( (0,0, 0))
+    content_screen_tl = current_viewport._project( (0, 0, 0))
     content_screen_br = current_viewport._project( (current_viewport.content_size.x, current_viewport.content_size.y, 0))
+    if current_viewport.coordinate_system == 'bottom-left':
+        # flip Y for margin drawing
+        content_screen_tl.y, content_screen_br.y = content_screen_br.y, content_screen_tl.y
+
     viewport_tl = current_viewport.pos
     viewport_br = current_viewport.pos + current_viewport.size
 
@@ -564,6 +609,7 @@ def begin_scene(projection:glm.mat4, view:glm.mat4):
         case 'bottom-left':
             pass
         case 'top-left':
+            ...
             projection[1][1] *= -1
 
     projection = overscan_projection(projection,
@@ -618,6 +664,7 @@ def control_point(label:str, point:imgui.ImVec2Like, *, color:int=None)->Tuple[b
 
     # invisible button to handle interaction
     btn_size = imgui.ImVec2(28,28)
+    store_cursor_pos = imgui.get_cursor_pos()
     imgui.set_cursor_screen_pos(imgui.ImVec2(P.x, P.y)-btn_size/2)
     imgui.invisible_button(label, btn_size)
 
@@ -650,7 +697,7 @@ def control_point(label:str, point:imgui.ImVec2Like, *, color:int=None)->Tuple[b
             new_point.y += world_space_delta.y
             return True, new_point
 
-    # imgui.set_cursor_pos(store_cursor_pos) # restore cursor pos?
+    imgui.set_cursor_pos(store_cursor_pos)
     return False, point
 
 def set_cursor_to_point(point: imgui.ImVec2Like | Tuple[float, float, float]):
@@ -723,3 +770,4 @@ if __name__ == "__main__":
         
 
     immapp.run(gui, window_size=(1024,768), window_title="Viewport Demo")
+
