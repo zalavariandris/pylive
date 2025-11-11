@@ -290,6 +290,13 @@ class PerspyApp():
                         pyperclip.copy(self.results_to_blender_script())
 
                     imgui.end_menu()
+
+                if imgui.begin_menu("Copy document to clipboard"):
+                    if imgui.menu_item_simple("Python code"):
+                        pyperclip.copy(self.doc.document_to_python())
+
+                    imgui.end_menu()
+                
                 
                 imgui.separator()
                 if imgui.menu_item_simple(f"{quit_icon} Quit", "Ctrl+Q"):
@@ -691,7 +698,11 @@ class PerspyApp():
 
     def show_data(self):
         from textwrap import dedent
-        if imgui.collapsing_header("Document", imgui.TreeNodeFlags_.default_open):
+        if imgui.collapsing_header("Document as Python Code", imgui.TreeNodeFlags_.default_open):
+            text = self.doc.document_to_python()
+            imgui.text_unformatted(dedent(text).strip())
+            
+        if imgui.collapsing_header("Document as Dict", imgui.TreeNodeFlags_.default_open):
             imgui.text_unformatted("TODO. implement doc.to_dict()")
 
         if imgui.collapsing_header("Results Dictionary", imgui.TreeNodeFlags_.default_open):

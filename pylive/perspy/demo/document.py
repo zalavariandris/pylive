@@ -6,6 +6,8 @@ import json
 import base64
 from imgui_bundle import portable_file_dialogs as pfd
 from enum import IntEnum
+
+import pyperclip
 class SolverMode(IntEnum):
     OneVP = 0
     TwoVP = 1
@@ -236,7 +238,7 @@ class PerspyDocument(Document):
         # solver inputs
         # - content image
         self.image_path: str|None = None
-        self.content_size = imgui.ImVec2(1280, 720)
+        self.content_size = imgui.ImVec2(1920.000000, 1080.000000)
         self.image: Image = None
 
         # - solver params
@@ -248,15 +250,15 @@ class PerspyDocument(Document):
         self.quad_mode=False # only for TwoVP mode. is this a ui state?
 
         # - control points
-        self.origin=imgui.ImVec2(self.content_size.x/2, self.content_size.y*0.66)
+        self.origin=imgui.ImVec2(973.475037, 503.216217)
         self.principal_point=self.content_size/2
         self.first_vanishing_lines = [
-            (glm.vec2(417, 446), glm.vec2(733, 332)),
-            (glm.vec2(570, 660), glm.vec2(908, 386))
+            (glm.vec2(      1607.85,      295.307 ), glm.vec2(      417.701,      829.766 )),
+            (glm.vec2(      421.026,      29.7583 ), glm.vec2(      291.441,      808.788 ))
         ]
         self.second_vanishing_lines = [
-            [glm.vec2(455, 392), glm.vec2(734, 663)],
-            [glm.vec2(658, 340), glm.vec2(946, 450)]
+            [glm.vec2(      203.971,      260.313 ), glm.vec2(      1576.68,      838.188 )],
+            [glm.vec2(       1367.2,      8.25011 ), glm.vec2(      1672.56,      802.614 )]
         ]
 
     def serialize(self)->bytearray:
@@ -388,3 +390,32 @@ class PerspyDocument(Document):
             height = ip.get('height', 576)
             self.content_size = imgui.ImVec2(width, height)
     
+    def document_to_python(self):
+        """Serialize document and copy to clipboard as base64 string."""
+        from textwrap import dedent
+        return dedent(f"""\
+            # - content image
+            self.image_path: str|None = None
+            self.content_size = imgui.{self.content_size}
+            self.image: Image = None
+
+            # - solver params
+            self.solver_mode=SolverMode.{SolverMode(self.solver_mode).name}
+            self.scene_scale={self.scene_scale}
+            self.first_axis=solver.Axis.{solver.Axis(self.first_axis).name}
+            self.second_axis=solver.Axis.{solver.Axis(self.second_axis).name}
+            self.fov_degrees={self.fov_degrees} # only for OneVP mode
+            self.quad_mode={self.quad_mode} # only for TwoVP mode. is this a ui state?
+
+            # - control points
+            self.origin=imgui.{self.origin}
+            self.principal_point=self.content_size/2
+            self.first_vanishing_lines = [
+                (glm.{self.first_vanishing_lines[0][0]}, glm.{self.first_vanishing_lines[0][1]}),
+                (glm.{self.first_vanishing_lines[1][0]}, glm.{self.first_vanishing_lines[1][1]})
+            ]
+            self.second_vanishing_lines = [
+                [glm.{self.second_vanishing_lines[0][0]}, glm.{self.second_vanishing_lines[0][1]}],
+                [glm.{self.second_vanishing_lines[1][0]}, glm.{self.second_vanishing_lines[1][1]}]
+            ]
+        """)

@@ -56,13 +56,9 @@ def solve1vp(
             P,
             f
         )
-
-        # apply axis assignment
-        axis_assignment_matrix:glm.mat3 = create_axis_assignment_matrix(first_axis, second_axis)            
-        view_orientation_matrix:glm.mat3 = view_orientation_matrix * glm.inverse(axis_assignment_matrix)
-
+  
         # convert to 4x4 matrix for transformations
-        view_rotation_transform:glm.mat4 = glm.mat4(view_orientation_matrix)
+        view_matrix:glm.mat4 = glm.mat4(view_orientation_matrix)
 
         ##############################
         # 4. COMPUTE Camera Position #
@@ -71,38 +67,42 @@ def solve1vp(
             width, 
             height, 
             f, 
-            view_orientation_matrix, 
+            view_matrix, 
             O, 
             scale
         )
 
-        view_translate_transform = glm.translate(glm.mat4(1.0), camera_position)
-        view_rotation_transform = glm.mat4(view_orientation_matrix)
-        view_transform = view_rotation_transform * view_translate_transform
+        # apply translation
+        view_matrix = glm.translate(view_matrix, camera_position)
 
-        camera_orientation = glm.mat3(view_orientation_matrix)
-        # camera_transform = glm.inverse(view_transform)
-
-        ##################
-        # 3. Adjust Camera Roll to match second vanishing lines
-        ##################
+        #########################
+        # 3. Adjust Camera Roll #
+        #########################
         # Roll the camera based on the horizon line projected to 3D
-        fovy = fov_from_focal_length(f, height)
-
         if second_vanishing_line:
+            fovy = fov_from_focal_length(f, height)
             roll_matrix = compute_roll_matrix(
                 width, 
                 height, 
                 second_vanishing_line,
-                first_axis,
-                second_axis,
+                first_axis=Axis.PositiveX, # since axis assignment moved after this, we use te default axes TODO: probably these are redundant now. or at leaas could have default values
+                second_axis=Axis.PositiveY,# - same as above -
                 projection_matrix=glm.perspective(fovy, width/height, 0.1, 100.0),
-                view_matrix=view_transform
+                view_matrix=view_matrix
             )
 
-            view_transform = view_transform * roll_matrix
+            # apply roll
+            view_matrix = view_matrix * roll_matrix
 
-        camera_transform = glm.inverse(view_transform)
+        # world transform from view_matrix
+        camera_transform = glm.inverse(view_matrix)
+
+        ############################
+        # 4. Apply axis assignment #
+        ############################
+        axis_assignment_matrix:glm.mat3 = create_axis_assignment_matrix(first_axis, second_axis)       
+        camera_transform= glm.mat4(axis_assignment_matrix)*camera_transform
+
         return camera_transform
 
 def solve2vp(
@@ -119,7 +119,6 @@ def solve2vp(
     """ Solve camera intrinsics and orientation from 3 orthogonal vanishing points.
     returns (fovy in radians, camera_orientation_matrix, camera_position)
     """
-    imgui.slider_float("Test Slider", 0.5, 0.0, 1.0)
     ###########################
     # 2. COMPUTE Focal Length #
     ###########################
@@ -140,9 +139,7 @@ def solve2vp(
         f
     )
 
-    # apply axis assignment
-    axis_assignment_matrix:glm.mat3 = create_axis_assignment_matrix(first_axis, second_axis)            
-    view_orientation_matrix:glm.mat3 = view_orientation_matrix * glm.inverse(axis_assignment_matrix)
+    view_matrix = glm.mat4(view_orientation_matrix)
 
     ##############################
     # 4. COMPUTE Camera Position #
@@ -151,19 +148,24 @@ def solve2vp(
         width, 
         height, 
         f, 
-        view_orientation_matrix, 
+        glm.mat4(view_orientation_matrix), 
         O, 
         scale
     )
 
-    view_translate_transform = glm.translate(glm.mat4(1.0), camera_position)
-    view_rotation_transform = glm.mat4(view_orientation_matrix)
-    view_transform= view_rotation_transform * view_translate_transform
+    # apply translation
+    view_matrix = glm.translate(view_matrix, camera_position)
 
-    camera_transform = glm.inverse(view_transform)
+    # world transform from view_matrix
+    camera_transform = glm.inverse(view_matrix)
+
+    ############################
+    # 5. Apply axis assignment #
+    ############################
+    axis_assignment_matrix:glm.mat3 = create_axis_assignment_matrix(first_axis, second_axis)       
+    camera_transform= glm.mat4(axis_assignment_matrix)*camera_transform
 
     return fovy, camera_transform
-
 
 ########################
 # CORE SOLVER FUNCTIOS #
@@ -227,13 +229,7 @@ def compute_orientation_from_two_vanishing_points(
         P:glm.vec2,
         f:float
     )->glm.mat3:
-    from textwrap import dedent
-    imgui.text(dedent(f"""\
-        Fu: {Fu}
-        Fv: {Fv}
-        P: {P}
-        f: {f}
-    """))
+
     forward = glm.normalize(glm.vec3(Fu-P, -f))
     right =   glm.normalize(glm.vec3(Fv-P, -f))
     up = glm.cross(forward, right)
@@ -251,7 +247,7 @@ def compute_camera_position(
         width:int,
         height:int,
         f:float,
-        view_orientation_matrix:glm.mat3,
+        view_matrix:glm.mat4,
         O:glm.vec2,
         scale:float=1.0,
     )-> glm.vec3:
@@ -269,15 +265,13 @@ def compute_camera_position(
     )
 
     # convert to 4x4 matrix for transformations
-    view_rotation_transform:glm.mat4 = glm.mat4(view_orientation_matrix)
-
     origin_3D = glm.unProject(
         glm.vec3(
             O.x, 
             O.y, 
             _world_depth_to_ndc_z(scale, near, far)
         ),
-        view_rotation_transform, 
+        glm.mat4(view_matrix), 
         projection_matrix, 
         glm.vec4(0,0,width,height)
     )
@@ -550,7 +544,6 @@ def create_axis_assignment_matrix(first_axis: Axis, second_axis: Axis) -> glm.ma
     assert math.fabs(1 - glm.determinant(axis_aqssignment_matrix)) < 1e-7, "Invalid axis assignment: axes must be orthogonal"
     return axis_aqssignment_matrix
 
-
 ###########################
 # Solver helper functions #
 ###########################
@@ -594,7 +587,6 @@ def _third_axis_vector(axis1, axis2):
     vec1 = _axis_vector(axis1)
     vec2 = _axis_vector(axis2)
     return glm.normalize(glm.cross(vec1, vec2))
-
 
 def _vectorAxis(vector: glm.vec3)->Axis:
     if vector.x == 0 and vector.y == 0:
