@@ -1,8 +1,15 @@
+# standard library
 from typing import List, Tuple, Literal
 from enum import IntEnum
 import math
-from venv import logger
+import logging
+
+
+# third party library
 import glm
+
+# set up logger
+logger = logging.getLogger(__name__)
 
 #########
 # TYPES #
@@ -22,9 +29,6 @@ class EulerOrder(IntEnum):
     YXZ = 3
     ZXY = 4
     ZYX = 5
-
-import inspect
-from functools import wraps
 
 #########################
 # MAIN SOLVER FUNCTIONS #

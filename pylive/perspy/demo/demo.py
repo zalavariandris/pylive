@@ -1125,16 +1125,16 @@ class PerspyApp():
                 fovy = math.radians(self.doc.fov_degrees)
                 focal_length_pixel = solver.focal_length_from_fov(fovy, self.doc.content_size.y)
                 camera_transform = solver.solve1vp(
-                    self.doc.content_size.x, 
-                    self.doc.content_size.y, 
-                    self.first_vanishing_point,
-                    self.doc.second_vanishing_lines[0],
-                    focal_length_pixel,
-                    self.doc.principal_point,
-                    self.doc.origin,
-                    self.doc.first_axis,
-                    self.doc.second_axis,
-                    self.doc.scene_scale
+                    width =                 self.doc.content_size.x, 
+                    height =                self.doc.content_size.y, 
+                    Fu=                     self.first_vanishing_point,
+                    second_vanishing_line = self.doc.second_vanishing_lines[0],
+                    f =                     focal_length_pixel,
+                    P =                     self.doc.principal_point,
+                    O =                     self.doc.origin,
+                    first_axis =            self.doc.first_axis,
+                    second_axis =           self.doc.second_axis,
+                    scale =                 self.doc.scene_scale
                 )
 
                 # create camera
@@ -1349,9 +1349,8 @@ class PerspyApp():
 
         fovx = 2.0 * math.degrees(math.atan(math.tan(math.radians(self.camera.fovy) * 0.5) * (self.doc.content_size.x / self.doc.content_size.y)))
         script = script.replace("<CAMERA_FOV>", str(math.radians(max(fovx, self.camera.fovy))))
-        transform_string = str([[v for v in row] for row in glm.transpose(self.camera.transform)])
-        print("transform_string:", transform_string)
-        script = script.replace("<CAMERA_TRANSFORM>", transform_string)
+        transform_list = [[v for v in row] for row in glm.transpose(self.camera.transform)]
+        script = script.replace("<CAMERA_TRANSFORM>", str(transform_list))
         script = script.replace("<CAMERA_NAME>", "'PerspyCamera'")
         return script
 
@@ -1365,5 +1364,5 @@ if __name__ == "__main__":
     assert assets_folder.exists(), f"Assets folder not found: {assets_folder.absolute()}"
     print("setting assets folder:", assets_folder.absolute())
     hello_imgui.set_assets_folder(str(assets_folder.absolute()))
-    hello_imgui.run(create_my_runner_params(app.gui, app.on_file_drop))
+    hello_imgui.run(create_my_runner_params(app.gui, app.on_file_drop, "Perspy v0.5.0"))
 

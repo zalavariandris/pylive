@@ -572,7 +572,7 @@ def post_init_add_platform_backend_callbacks():
     elif platform.system() == "Windows":
         _set_dark_mode_on_windows(True)
 
-def create_my_runner_params(gui_function: callable, on_file_drop: callable) -> hello_imgui.RunnerParams:
+def create_my_runner_params(gui_function: callable, on_file_drop: callable, window_title: str) -> hello_imgui.RunnerParams:
     """Create HelloImGui application configuration"""
     runner_params = hello_imgui.RunnerParams(
         callbacks=hello_imgui.RunnerCallbacks(
@@ -598,7 +598,7 @@ def create_my_runner_params(gui_function: callable, on_file_drop: callable) -> h
             any_backend_event_callback=None
         ),
         app_window_params=hello_imgui.AppWindowParams(
-            window_title="Perspy v0.5.0",
+            window_title=window_title,
             # window_geometry=hello_imgui.WindowGeometry(
             #     position=(100, 100),
             #     size=(1200, 512),
@@ -612,7 +612,7 @@ def create_my_runner_params(gui_function: callable, on_file_drop: callable) -> h
         ),
         imgui_window_params=hello_imgui.ImGuiWindowParams(
             menu_app_title="Perspy v0.5.0",
-            background_color=[32/255, 32/255, 32/255, 1.0], # windows sytem titlebar color
+            background_color=[27/255, 27/255, 27/255, 1.0], # a little bit darker than windows sytem titlebar color
             default_imgui_window_type=hello_imgui.DefaultImGuiWindowType.no_default_window,
         ),
         dpi_aware_params=hello_imgui.DpiAwareParams(

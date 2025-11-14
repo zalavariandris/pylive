@@ -250,8 +250,8 @@ class PerspyDocument(Document):
         self.quad_mode=False # only for TwoVP mode. is this a ui state?
 
         # - control points
-        self.origin=imgui.ImVec2(973.475037, 503.216217)
         self.principal_point=self.content_size/2
+        self.origin=imgui.ImVec2(973.475037, 503.216217)
         self.first_vanishing_lines = [
             (glm.vec2(      1607.85,      295.307 ), glm.vec2(      417.701,      829.766 )),
             (glm.vec2(      421.026,      29.7583 ), glm.vec2(      291.441,      808.788 ))
