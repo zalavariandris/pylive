@@ -239,8 +239,8 @@ class PerspyApp():
         if imgui.begin_main_menu_bar():
             if imgui.begin_menu("File"):
                 folder_icon = getattr(icons_fontawesome_4, 'ICON_FA_FOLDER_OPEN', getattr(icons_fontawesome_4, 'ICON_FA_FOLDER', ''))
-                save_icon = getattr(icons_fontawesome_4, 'ICON_FA_SAVE', getattr(icons_fontawesome_4, 'ICON_FA_FLOPPY_O', ''))
-                quit_icon = getattr(icons_fontawesome_4, 'ICON_FA_TIMES', getattr(icons_fontawesome_4, 'ICON_FA_CLOSE', ''))
+                save_icon =   getattr(icons_fontawesome_4, 'ICON_FA_SAVE',        getattr(icons_fontawesome_4, 'ICON_FA_FLOPPY_O', ''))
+                quit_icon =   getattr(icons_fontawesome_4, 'ICON_FA_TIMES',       getattr(icons_fontawesome_4, 'ICON_FA_CLOSE', ''))
                 
                 if imgui.menu_item_simple(f"{folder_icon} New", "Ctrl+N"):
                     ...
@@ -391,7 +391,7 @@ class PerspyApp():
         imgui.text_link_open_url("https://github.com/yourusername/camera-spy")
 
     def show_parameters(self):
-        buttons_width = 120
+        buttons_width = 150
         imgui.separator_text("Image")
         imgui.set_next_item_width(buttons_width)
         if self.image_texture_ref is None:
@@ -427,6 +427,9 @@ class PerspyApp():
 
             case SolverMode.TwoVP:
                 _, self.doc.enable_auto_principal_point = imgui.checkbox("auto principal point", self.doc.enable_auto_principal_point)
+                _, self.doc.quad_mode = imgui.checkbox("quad", self.doc.quad_mode)
+
+            case SolverMode.ThreeVP:
                 _, self.doc.quad_mode = imgui.checkbox("quad", self.doc.quad_mode)
 
         imgui.separator_text("Axes")
@@ -490,15 +493,24 @@ class PerspyApp():
             if self.image_texture_ref is not None:
                 tl = ui.viewer._get_window_coords(imgui.ImVec2(0,0))
                 br = ui.viewer._get_window_coords(imgui.ImVec2(self.doc.content_size.x, self.doc.content_size.y))
+
+                
                 image_size = br - tl
-                imgui.set_cursor_pos(tl)
+                # imgui.set_cursor_pos(tl)
+                draw_list = imgui.get_window_draw_list()
+
+                tint = (1.0, 1.0, 1.0, 1.0)
                 if self.dim_background:
-                    imgui.image_with_bg(self.image_texture_ref, image_size, None, None, 
-                                        bg_col=  (0.33,0.33,0.33,1.0),
-                                        tint_col=(0.33,0.33,0.33,1.0)
-                    )
-                else:
-                    imgui.image(self.image_texture_ref, image_size)
+                    tint = (0.33, 0.33, 0.33, 1.0)
+
+                draw_list.add_image(
+                    self.image_texture_ref, 
+                    tl+imgui.get_window_pos(), 
+                    br+imgui.get_window_pos(), 
+                    imgui.ImVec2(0,1), 
+                    imgui.ImVec2(1,0), 
+                    imgui.color_convert_float4_to_u32(tint)
+                )
 
             # control points
             _, self.doc.origin = ui.viewer.control_point("o", self.doc.origin)
@@ -528,6 +540,24 @@ class PerspyApp():
                     
                     for line in self.doc.second_vanishing_lines:
                         ui.viewer.guide(line[0], line[1], get_axis_color(self.doc.second_axis), '>')
+
+                case SolverMode.ThreeVP:
+                    _, self.doc.principal_point = ui.viewer.control_point("p", self.doc.principal_point)
+                    if self.doc.quad_mode:
+                        z0, z1 = self.doc.first_vanishing_lines
+                        self.doc.second_vanishing_lines = [
+                            (z0[0], z1[0]),
+                            (z0[1], z1[1])
+                        ]
+                    else:
+                        _, self.doc.second_vanishing_lines = control_lines("x", self.doc.second_vanishing_lines, color=get_axis_color(self.doc.second_axis) )
+                    
+                    for line in self.doc.second_vanishing_lines:
+                        ui.viewer.guide(line[0], line[1], get_axis_color(self.doc.second_axis), '>')
+
+                    _, self.doc.third_vanishing_lines = control_lines("y", self.doc.third_vanishing_lines, color=get_axis_color(self.doc.third_axis) )
+                    for line in self.doc.third_vanishing_lines:
+                        ui.viewer.guide(line[0], line[1], get_axis_color(self.doc.third_axis), '>')
 
             # draw vanishing lines to vanishing points
             if self.first_vanishing_point is not None:
@@ -585,73 +615,53 @@ class PerspyApp():
                 ui.viewer.end_scene()
         ui.viewer.end_viewer()
 
-    def show_results(self):            
-        if self.camera is not None:
-            scale = glm.vec3()
-            quat = glm.quat()  # This will be our quaternion
-            translation = glm.vec3()
-            skew = glm.vec3()
-            perspective = glm.vec4()
-            success = glm.decompose(self.camera.transform, scale, quat, translation, skew, perspective)
-            if not success:
-                imgui.text("Error: Could not decompose camera transform matrix.")
-                return
+    def show_results(self):
+        if self.solver_results is None:
+            imgui.text("No results yet.")
+            return
 
-            transform = [self.camera.transform[j][i] for i in range(4) for j in range(4)]
-            euler = solver.extract_euler(self.camera.transform, order=self.current_euler_order)
 
-            transform_text = solver.pretty_matrix(np.array(transform).reshape(4,4), separator=" ")
-            position_text =  solver.pretty_matrix(np.array(translation), separator=" ")
+        if ui.begin_attribute_editor("res props"):
+            style = imgui.get_style()
+            
+            ui.next_attribute("transform")
+            transform_text = solver.pretty_matrix(np.array(self.solver_results.transform).reshape(4,4), separator=" ")
+            transform_text_size = imgui.calc_text_size(transform_text) + style.frame_padding * 2+imgui.ImVec2(0, 0)
+            imgui.input_text_multiline("##transform", transform_text, size=transform_text_size, flags=imgui.InputTextFlags_.read_only)
+
+            ui.next_attribute("position")
+            position_text =  solver.pretty_matrix(np.array(self.solver_results.get_position()), separator=" ")
+            imgui.input_text("##position", position_text, flags=imgui.InputTextFlags_.read_only)
+
+            ui.next_attribute("quaternion (xyzw)")
+            quat = self.solver_results.get_quaternion()
             quat_text =      solver.pretty_matrix(np.array([quat.x, quat.y, quat.z, quat.w]), separator=" ")
-            euler_text =     solver.pretty_matrix(np.array([math.degrees(radians) for radians in euler]), separator=" ")
+            imgui.input_text("##quaternion", quat_text, flags=imgui.InputTextFlags_.read_only)
+            imgui.set_item_tooltip("Quaternion representing camera rotation (x, y, z, w)")
 
-            if ui.begin_attribute_editor("res props"):
-                ui.next_attribute("transform")
-                style = imgui.get_style()
-                transform_text_size = imgui.calc_text_size(transform_text) + style.frame_padding * 2+imgui.ImVec2(50, 0)
-                imgui.input_text_multiline("##transform", transform_text, size=transform_text_size, flags=imgui.InputTextFlags_.read_only)
+            ui.next_attribute(f"euler")
+            imgui.push_style_var(imgui.StyleVar_.item_spacing, imgui.ImVec2(2, style.item_spacing.y))
+            euler_order_options = solver.EulerOrder._member_names_
+            max_text_width = max([imgui.calc_text_size(text).x for text in euler_order_options])
+            total_width = max_text_width + style.frame_padding.x * 2.0 -10
+            total_width+=imgui.get_frame_height() # for the arrow button todo: is it square for sure?
+            imgui.set_next_item_width(total_width)
+            _, self.current_euler_order = imgui.combo("##euler_order", self.current_euler_order, solver.EulerOrder._member_names_)
+            imgui.set_item_tooltip("Select the Euler angle rotation order used for decomposition.")
+            imgui.same_line()
+            imgui.set_next_item_width(-1)
+            euler_text = solver.pretty_matrix(np.array([math.degrees(radians) for radians in self.solver_results.get_euler(self.current_euler_order)]), separator="")
+            imgui.input_text("##euler", euler_text, flags=imgui.InputTextFlags_.read_only)
+            imgui.set_item_tooltip("Euler angles in degrees (x,y,z).\nNote: Rotation is applied in order order: ZXY (Yaw, Pitch, Roll)")
+            imgui.pop_style_var()
 
-                ui.next_attribute("position")
-                imgui.input_text("##position", position_text, flags=imgui.InputTextFlags_.read_only)
-                
-                # imgui.begin_tooltip()
+            ui.next_attribute("fovy")
+            imgui.input_text("##fovy", f"{math.degrees(self.camera.fovy):.2f}°")
 
-                ui.next_attribute("quaternion (xyzw)")
-                imgui.input_text("##quaternion", quat_text, flags=imgui.InputTextFlags_.read_only)
-                imgui.set_item_tooltip("Quaternion representing camera rotation (x, y, z, w)")
+            ui.next_attribute("fovx")
+            imgui.input_text("##fovx", f"{math.degrees(self.solver_results.get_fovx()):.2f}°")
 
-                # next_attribute("euler order")
-                
-                ui.next_attribute(f"euler")
-                imgui.push_style_var(imgui.StyleVar_.item_spacing, imgui.ImVec2(2, style.item_spacing.y))
-                euler_order_options = solver.EulerOrder._member_names_
-                max_text_width = max([imgui.calc_text_size(text).x for text in euler_order_options])
-                total_width = max_text_width + style.frame_padding.x * 2.0
-                total_width+=imgui.get_frame_height() # for the arrow button todo: is it square for sure?
-                imgui.set_next_item_width(total_width)
-                # if imgui.begin_combo("##euler_order", solver.EulerOrder._member_names_[self.current_euler_order], imgui.ComboFlags_.no_arrow_button):
-                #     for i, option in enumerate(euler_order_options):
-                #         is_selected = (i == self.current_euler_order)
-                #         _, selected_event =  imgui.selectable(option, is_selected)
-                #         if selected_event:
-                #             self.current_euler_order = i
-                #         if is_selected:
-                #             imgui.set_item_default_focus()
-                #     imgui.end_combo()
-                _, self.current_euler_order = imgui.combo("##euler_order", self.current_euler_order, solver.EulerOrder._member_names_)
-                imgui.set_item_tooltip("Select the Euler angle rotation order used for decomposition.")
-                imgui.same_line()
-                imgui.set_next_item_width(-1)
-                imgui.input_text("##euler", euler_text, flags=imgui.InputTextFlags_.read_only)
-                imgui.set_item_tooltip("Euler angles in degrees (x,y,z).\nNote: Rotation is applied in order order: ZXY (Yaw, Pitch, Roll)")
-                imgui.pop_style_var()
-                ui.next_attribute("fovy")
-                imgui.input_text("##fovy", f"{self.camera.fovy:.2f}°")
-                ui.next_attribute("fovx")
-                fovx = 2.0 * math.degrees(math.atan(math.tan(math.radians(self.camera.fovy) * 0.5) * (self.doc.content_size.x / self.doc.content_size.y)))
-                imgui.input_text("##fovx", f"{fovx:.2f}°")
-
-                ui.end_attribute_editor()
+            ui.end_attribute_editor()
 
         if self.camera is not None:
             data = {
@@ -1153,6 +1163,41 @@ class PerspyApp():
                 self.camera.setFoVY(math.degrees(self.solver_results.fovy))
                 self.camera.setAspectRatio(self.doc.content_size.x / self.doc.content_size.y)
                 self.camera.set_lens_shift(self.solver_results.shift_x, self.solver_results.shift_y)
+
+            case SolverMode.ThreeVP:
+                # compute vanishing points
+                self.first_vanishing_point =  solver.least_squares_intersection_of_lines(
+                    self.doc.first_vanishing_lines)
+                self.second_vanishing_point = solver.least_squares_intersection_of_lines(
+                    self.doc.second_vanishing_lines)
+                self.third_vanishing_point = solver.least_squares_intersection_of_lines(
+                    self.doc.third_vanishing_lines)
+                
+                computed_principal = solver.triangle_ortho_center(
+                    self.first_vanishing_point,
+                    self.second_vanishing_point,
+                    self.third_vanishing_point
+                )
+                self.doc.principal_point = computed_principal
+
+                self.solver_results = solver.solve2vp(
+                    self.doc.content_size.x, 
+                    self.doc.content_size.y, 
+                    self.first_vanishing_point,
+                    self.second_vanishing_point,
+                    self.doc.principal_point,
+                    self.doc.origin,
+                    self.doc.first_axis,
+                    self.doc.second_axis,
+                    self.doc.scene_scale
+                )
+
+                # create camera
+                self.camera = Camera()
+                self.camera.transform = self.solver_results.transform
+                self.camera.setFoVY(math.degrees(self.solver_results.fovy))
+                self.camera.setAspectRatio(self.doc.content_size.x / self.doc.content_size.y)
+                self.camera.set_lens_shift(self.solver_results.shift_x, self.solver_results.shift_y)
                 
     def load_image_file(self, path:str|None=None):
         from pathlib import Path
@@ -1347,5 +1392,6 @@ if __name__ == "__main__":
     assert assets_folder.exists(), f"Assets folder not found: {assets_folder.absolute()}"
     print("setting assets folder:", assets_folder.absolute())
     hello_imgui.set_assets_folder(str(assets_folder.absolute()))
-    hello_imgui.run(create_my_runner_params(app.gui, app.on_file_drop, "Perspy v0.5.0"))
+    runner_params = create_my_runner_params(app.gui, app.on_file_drop, "Perspy v0.5.0")
+    hello_imgui.run(runner_params)
 

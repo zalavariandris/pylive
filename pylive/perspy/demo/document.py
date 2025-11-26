@@ -6,11 +6,14 @@ import json
 import base64
 from imgui_bundle import portable_file_dialogs as pfd
 from enum import IntEnum
+from typing import Tuple
+from struct import pack, unpack
 
 import pyperclip
 class SolverMode(IntEnum):
     OneVP = 0
     TwoVP = 1
+    ThreeVP = 2
 
 from pylive.perspy import solver
 
@@ -20,9 +23,7 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-from typing import Tuple
-from struct import pack, unpack
-import io
+
 
 def json_serializer(obj):
     """Custom JSON serializer for glm types."""
@@ -236,29 +237,34 @@ class PerspyDocument(BaseDocument):
         super().__init__(extension='.prsy', format_description='perspy', magic=b'prsy', version="0.5.0")
         # solver inputs
         # - content image
-        self.image_path: str|None = None
-        self.content_size = imgui.ImVec2(1920.000000, 1080.000000)
+        self.image_path: str|None = 'C:\\Users\\and\\iCloudDrive\\_ANDRIS_\\dev\\blender_tools\\vanishing_lines_for_blender\\docs\\0a42f3b2-dc40-4f26-bae7-a14eaacc9488-1757x2040.jpg'
+        self.content_size = imgui.ImVec2(1757.000000, 2040.000000)
         self.image: Image = None
 
         # - solver params
-        self.solver_mode=SolverMode.TwoVP
+        self.solver_mode=SolverMode.ThreeVP
         self.scene_scale=5.0
-        self.first_axis=solver.Axis.PositiveX
+        self.first_axis=solver.Axis.NegativeX
         self.second_axis=solver.Axis.PositiveY
+        self.third_axis=solver.Axis.PositiveZ
         self.fov_degrees=60.0 # only for OneVP mode
         self.quad_mode=False # only for TwoVP mode. is this a ui state?
+        self.enable_auto_principal_point=True
 
         # - control points
+        self.origin=imgui.ImVec2(609.247009, 577.750366)
         self.principal_point=self.content_size/2
-        self.enable_auto_principal_point = True
-        self.origin=imgui.ImVec2(973.475037, 503.216217)
         self.first_vanishing_lines = [
-            (glm.vec2(      1607.85,      295.307 ), glm.vec2(      417.701,      829.766 )),
-            (glm.vec2(      421.026,      29.7583 ), glm.vec2(      291.441,      808.788 ))
+            (glm.vec2(      1561.62,      1466.54 ), glm.vec2(      281.936,      1872.16 )),
+            (glm.vec2(      1008.14,      60.5322 ), glm.vec2(     -37.6624,      900.753 ))
         ]
         self.second_vanishing_lines = [
-            [glm.vec2(      203.971,      260.313 ), glm.vec2(      1576.68,      838.188 )],
-            [glm.vec2(       1367.2,      8.25011 ), glm.vec2(      1672.56,      802.614 )]
+            [glm.vec2(      857.368,      815.351 ), glm.vec2(      1319.06,      1505.22 )],
+            [glm.vec2(     -49.4138,      1045.43 ), glm.vec2(       985.78,      1848.83 )]
+        ]
+        self.third_vanishing_lines = [
+            [glm.vec2(      260.742,      327.019 ), glm.vec2(     -45.1552,      1919.01 )],
+            [glm.vec2(      1454.11,      600.881 ), glm.vec2(      1670.46,      1914.78 )]
         ]
 
     def serialize(self)->bytearray:
@@ -395,7 +401,7 @@ class PerspyDocument(BaseDocument):
         from textwrap import dedent
         return dedent(f"""\
             # - content image
-            self.image_path: str|None = None
+            self.image_path: str|None = {self.image_path!r}
             self.content_size = imgui.{self.content_size}
             self.image: Image = None
 
@@ -404,8 +410,10 @@ class PerspyDocument(BaseDocument):
             self.scene_scale={self.scene_scale}
             self.first_axis=solver.Axis.{solver.Axis(self.first_axis).name}
             self.second_axis=solver.Axis.{solver.Axis(self.second_axis).name}
+            self.third_axis=solver.Axis.{solver.Axis(self.third_axis).name}
             self.fov_degrees={self.fov_degrees} # only for OneVP mode
             self.quad_mode={self.quad_mode} # only for TwoVP mode. is this a ui state?
+            self.enable_auto_principal_point=True
 
             # - control points
             self.origin=imgui.{self.origin}
@@ -417,6 +425,10 @@ class PerspyDocument(BaseDocument):
             self.second_vanishing_lines = [
                 [glm.{self.second_vanishing_lines[0][0]}, glm.{self.second_vanishing_lines[0][1]}],
                 [glm.{self.second_vanishing_lines[1][0]}, glm.{self.second_vanishing_lines[1][1]}]
+            ]
+            self.third_vanishing_lines = [
+                [glm.{self.third_vanishing_lines[0][0]}, glm.{self.third_vanishing_lines[0][1]}],
+                [glm.{self.third_vanishing_lines[1][0]}, glm.{self.third_vanishing_lines[1][1]}]
             ]
         """)
 

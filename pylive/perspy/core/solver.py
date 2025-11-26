@@ -120,13 +120,15 @@ class SolverResults:
         projection_text = pretty_matrix(np.array(self.get_projection()).reshape(4,4), separator=" ") if self.get_projection() is not None else "N/A"
 
         return dedent(f"""Solver Results:\n
-            transform: {transform_text}\n
-            position: {position_text}\n
-            quaternion: {quat_text}\n
-            euler (degrees): {euler_text}\n
-            projection: {projection_text}\n
-            fovy: {math.degrees(self.fovy)}\n
-            fovx: {math.degrees(self.get_fovx())}\n
+transform:\n{transform_text}\n
+position:\n{position_text}\n
+quaternion:\n{quat_text}\n
+euler (degrees):\n{euler_text}\n
+projection:\n{projection_text}\n
+fovy: {math.degrees(self.fovy)}\n
+fovx: {math.degrees(self.get_fovx())}\n
+shift_x: {self.shift_x}\n
+shift_y: {self.shift_y}\n
         """)
 
     # projection_matrix: glm.mat4
@@ -255,16 +257,14 @@ def solve2vp(
     """ Solve camera intrinsics and orientation from 3 orthogonal vanishing points.
     returns (fovy in radians, camera_orientation_matrix, camera_position)
     """
+
     ###########################
     # 2. COMPUTE Focal Length #
     ###########################
-    # Fu-= glm.vec2(width/2, height/2)-P
-    # Fv-= glm.vec2(width/2, height/2)-P
-    
     f = compute_focal_length_from_vanishing_points(
-        Fu = Fu,
-        Fv = Fv, 
-        P =  P
+        Fu=Fu,
+        Fv=Fv,
+        P=P
     )
     fovy = fov_from_focal_length(f, height)
 
@@ -272,10 +272,10 @@ def solve2vp(
     # 3. COMPUTE Camera Orientation #
     #################################
     view_orientation_matrix = compute_orientation_from_two_vanishing_points(
-        Fu,
-        Fv,
-        P,
-        f
+        Fu=Fu,
+        Fv=Fv,
+        P=P,
+        f=f
     )
 
     view_matrix = glm.mat4(view_orientation_matrix)
@@ -283,15 +283,22 @@ def solve2vp(
     ##############################
     # 4. COMPUTE Camera Position #
     ##############################
-    shift_x = (P.x - width / 2) / (width / 2)
+    # Calculate Lens Shift
+    # X Shift: Negated because positive shift moves frustum right (center projects left)
+    # Y Shift: Standard because positive shift moves frustum up (center projects down... wait)
+    # Standard OpenGL: +ShiftY moves window UP. (0,0,0) projects to -Y_ndc.
+    # If P is Top (y=0), we want projection Top (y=+1). We need -ShiftY.
+    # (P_tl.y - H/2) for P=0 is Negative. So this formula is correct for Y.
+    shift_x = -(P.x - width / 2) / (width / 2)
     shift_y = (P.y - height / 2) / (height / 2)
+
     camera_position = compute_camera_position(
         width, 
         height, 
         f, 
         glm.mat4(view_orientation_matrix), 
         O,
-        P,
+        glm.vec2(P.x, height-P.y), # Pass TL P so compute_camera_position uses the same shift logic
         scale
     )
 
@@ -414,8 +421,11 @@ def compute_camera_position(
     fovy = fov_from_focal_length(f, height)
     near = 0.1
     far = 100
-    shift_x = (P.x - width / 2) / (width / 2)
+
+    # Updated Shift Logic: Negate X to align with OpenGL frustum projection
+    shift_x = -(P.x - width / 2) / (width / 2)
     shift_y = (P.y - height / 2) / (height / 2)
+
     projection_matrix = perspective_tiltshift(
         fovy, 
         width/height, 
@@ -424,7 +434,6 @@ def compute_camera_position(
         shift_x, 
         shift_y
     )
-
 
     # convert to 4x4 matrix for transformations
     origin_3D = glm.unProject(
@@ -559,6 +568,20 @@ def compute_focal_length_from_vanishing_points(
         logger.warning(f"Warning: Computed focal length {focal_length:.1f} is outside reasonable range [{min_focal}, {max_focal}]")
     
     return focal_length
+
+def triangle_ortho_center(k: glm.vec2, l: glm.vec2, m: glm.vec2)-> glm.vec2:
+    a = k.x
+    b = k.y
+    c = l.x
+    d = l.y
+    e = m.x
+    f = m.y
+
+    N = b * c + d * e + f * a - c * f - b * e - a * d
+    x = ((d - f) * b * b + (f - b) * d * d + (b - d) * f * f + a * b * (c - e) + c * d * (e - a) + e * f * (a - c)) / N
+    y = ((e - c) * a * a + (a - e) * c * c + (c - a) * e * e + a * b * (f - d) + c * d * (b - f) + e * f * (d - b)) / N
+
+    return glm.vec2(x, y)
 
 def _compute_focal_length_from_vanishing_points_simple(
         Fu: glm.vec2, # first vanishing point

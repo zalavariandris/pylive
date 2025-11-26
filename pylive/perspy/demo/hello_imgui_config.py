@@ -72,7 +72,8 @@ def load_additional_fonts():
         dpi_scale = hello_imgui.dpi_window_size_factor()
         # logger.info(f"DPI scale factor: {dpi_scale}")
         
-        # Scale font sizes by DPI - increased base size to 40px for better readability
+        # Scale font sizes by DPI
+        print("dpi_scale:", dpi_scale)
         base_size = 12.0*dpi_scale
         
         # Check if FiraCode exists
@@ -364,7 +365,6 @@ def _setup_file_drop_callback_for_glfw(callback):
         import traceback
         traceback.print_exc()
 
-
 def _set_dark_mode_on_windows(enable: bool | None = None):
     """Set dark mode on Windows for the application window
     
@@ -616,7 +616,7 @@ def create_my_runner_params(gui_function: callable, on_file_drop: callable, wind
             default_imgui_window_type=hello_imgui.DefaultImGuiWindowType.no_default_window,
         ),
         dpi_aware_params=hello_imgui.DpiAwareParams(
-            dpi_window_size_factor=1.0 # Enable DPI awareness: 1.0 is Auto-detect?
+            # dpi_window_size_factor=1.0 # Enable DPI awareness: 1.0 is Auto-detect?
         ),
         docking_params=hello_imgui.DockingParams(
             layout_condition=hello_imgui.DockingLayoutCondition.never # Completely disable docking at the hello_imgui level
