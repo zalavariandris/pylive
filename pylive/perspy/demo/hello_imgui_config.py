@@ -572,7 +572,7 @@ def post_init_add_platform_backend_callbacks():
     elif platform.system() == "Windows":
         _set_dark_mode_on_windows(True)
 
-def create_my_runner_params(gui_function: callable, on_file_drop: callable, window_title: str) -> hello_imgui.RunnerParams:
+def create_my_runner_params(gui_function: callable, setup_function:callable, on_file_drop: callable, window_title: str) -> hello_imgui.RunnerParams:
     """Create HelloImGui application configuration"""
     runner_params = hello_imgui.RunnerParams(
         callbacks=hello_imgui.RunnerCallbacks(
@@ -581,7 +581,7 @@ def create_my_runner_params(gui_function: callable, on_file_drop: callable, wind
             # show_app_menu_items=None,
             # show_status=None,
             post_init_add_platform_backend_callbacks = post_init_add_platform_backend_callbacks,
-            post_init = lambda: _setup_file_drop_callback_for_glfw(on_file_drop),
+            post_init = lambda: (_setup_file_drop_callback_for_glfw(on_file_drop), setup_function() if setup_function else None),
             load_additional_fonts = load_additional_fonts,
             # default_icon_font=hello_imgui.DefaultIconFont.font_awesome4,
             setup_imgui_config = setup_imgui_config,

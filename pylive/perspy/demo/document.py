@@ -239,7 +239,6 @@ class PerspyDocument(BaseDocument):
         # - content image
         self.image_path: str|None = 'C:\\Users\\and\\iCloudDrive\\_ANDRIS_\\dev\\blender_tools\\vanishing_lines_for_blender\\docs\\0a42f3b2-dc40-4f26-bae7-a14eaacc9488-1757x2040.jpg'
         self.content_size = imgui.ImVec2(1757.000000, 2040.000000)
-        self.image: Image = None
 
         # - solver params
         self.solver_mode=SolverMode.ThreeVP
@@ -253,7 +252,7 @@ class PerspyDocument(BaseDocument):
 
         # - control points
         self.origin=imgui.ImVec2(609.247009, 577.750366)
-        self.principal_point=self.content_size/2
+        self.principal_point=imgui.ImVec2(1757/2, 2040/2)
         self.first_vanishing_lines = [
             (glm.vec2(      1561.62,      1466.54 ), glm.vec2(      281.936,      1872.16 )),
             (glm.vec2(      1008.14,      60.5322 ), glm.vec2(     -37.6624,      900.753 ))
@@ -402,8 +401,6 @@ class PerspyDocument(BaseDocument):
         return dedent(f"""\
             # - content image
             self.image_path: str|None = {self.image_path!r}
-            self.content_size = imgui.{self.content_size}
-            self.image: Image = None
 
             # - solver params
             self.solver_mode=SolverMode.{SolverMode(self.solver_mode).name}

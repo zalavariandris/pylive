@@ -16,6 +16,7 @@ import glfw
 import glm
 import numpy as np
 from imgui_bundle import imgui, icons_fontawesome_4
+from imgui_bundle import icons_fontawesome_4 as fa
 from imgui_bundle import portable_file_dialogs as pfd
 
 # Local application imports
@@ -28,6 +29,8 @@ import pyperclip
 # ############ #
 # Hot Reloader #
 # ############ #
+
+
 import watchfiles
 import importlib
 class ModuleHotReloader:
@@ -122,23 +125,13 @@ class PerspyApp():
         """
         self.misc:Dict[str, Any] = dict() # miscellaneous state variables for development. 
 
-    def update_os_window_title(self):
-        # Change the window title at runtime
-        try:
-            glfw_window = glfw.get_current_context()
-            title = f"Perspy"
-            if self.doc._file_path:
-                title += " - "
-                if self.doc.isModified():
-                    title += " *"
-                title += f"{Path(self.doc._file_path).stem}"
-                title += f" [{self.doc._file_path}]"
-            glfw.set_window_title(glfw_window, title)
-        except Exception as e:
-            logger.warning(f"Could not set window title: {e}")
-
     # Windows
-    def gui(self):
+    def setup_gui(self):
+        if self.doc.image_path:
+            # Create OpenGL texture
+            self.update_texture()
+
+    def draw_gui(self):
         # Create main menu bar (independent of any window)
         self.show_main_menu_bar()
         menu_bar_height = imgui.get_frame_height()
@@ -190,7 +183,7 @@ class PerspyApp():
 
         # Solve the camera
         try:
-            self.solve()
+            self.update_solve()
             error_msg = None
         except Exception as e:
             error_msg = e
@@ -207,7 +200,6 @@ class PerspyApp():
         imgui.end()
 
         # Results Window
-        
         if ui.begin_sidebar("Results", align="right"):
             if error_msg is not None:
                 imgui.push_style_color(imgui.Col_.text, (1.0, 0.2, 0.2, 1.0))
@@ -220,7 +212,7 @@ class PerspyApp():
         if self.show_data_window:
             expanded, self.show_data_window = imgui.begin("data window", self.show_data_window)
             if expanded:
-                self.show_data()
+                self.show_io()
             imgui.end()
 
         # Style Editor Window
@@ -238,29 +230,27 @@ class PerspyApp():
         # imgui.push_style_var(imgui.StyleVar_.frame_padding, imgui.ImVec2(style.frame_padding.x, 12))
         if imgui.begin_main_menu_bar():
             if imgui.begin_menu("File"):
-                folder_icon = getattr(icons_fontawesome_4, 'ICON_FA_FOLDER_OPEN', getattr(icons_fontawesome_4, 'ICON_FA_FOLDER', ''))
-                save_icon =   getattr(icons_fontawesome_4, 'ICON_FA_SAVE',        getattr(icons_fontawesome_4, 'ICON_FA_FLOPPY_O', ''))
-                quit_icon =   getattr(icons_fontawesome_4, 'ICON_FA_TIMES',       getattr(icons_fontawesome_4, 'ICON_FA_CLOSE', ''))
                 
-                if imgui.menu_item_simple(f"{folder_icon} New", "Ctrl+N"):
+
+                if imgui.menu_item_simple(f"{fa.ICON_FA_FILE} New", "Ctrl+N"):
                     ...
                 
-                if imgui.menu_item_simple(f"{folder_icon} Open", "Ctrl+O"):
+                if imgui.menu_item_simple(f"{fa.ICON_FA_FOLDER_OPEN} Open", "Ctrl+O"):
                     self.doc.open()
                     if self.doc.image_path:
                         # Create OpenGL texture
-                        self._upload_image_texture(self.image)
+                        self.update_texture()
 
-                if imgui.menu_item_simple(f"{save_icon} Save", "Ctrl+S"):
+                if imgui.menu_item_simple(f"{fa.ICON_FA_SAVE} Save", "Ctrl+S"):
                     self.doc.save()
                 
-                if imgui.menu_item_simple(f"{save_icon} Save As...", "Ctrl+Shift+S"):
+                if imgui.menu_item_simple(f"{fa.ICON_FA_SAVE} Save As...", "Ctrl+Shift+S"):
                     self.doc.save_as()
 
                 imgui.separator()
 
-                if imgui.menu_item_simple(f"{folder_icon} Load Image", "Ctrl+O"):
-                    self.load_image_file()
+                if imgui.menu_item_simple(f"{fa.ICON_FA_FOLDER_OPEN} Load Image", "Ctrl+O"):
+                    self.open_image()
 
                 imgui.separator()
 
@@ -300,7 +290,7 @@ class PerspyApp():
                 
                 
                 imgui.separator()
-                if imgui.menu_item_simple(f"{quit_icon} Quit", "Ctrl+Q"):
+                if imgui.menu_item_simple(f"Quit", "Ctrl+Q"):
                     # Exit the application
                     import sys
                     sys.exit(0)
@@ -396,7 +386,7 @@ class PerspyApp():
         imgui.set_next_item_width(buttons_width)
         if self.image_texture_ref is None:
             if imgui.button("open image", size=imgui.ImVec2(-1,0)):
-                self.load_image_file()
+                self.open_image()
             imgui.set_next_item_width(buttons_width)
             _, value = imgui.input_int2("image size", [int(self.doc.content_size.x), int(self.doc.content_size.y)])
             if _:
@@ -405,7 +395,7 @@ class PerspyApp():
             image_aspect = self.doc.content_size.x / self.doc.content_size.y
             width = imgui.get_content_region_avail().x-imgui.get_style().frame_padding.x*2
             if imgui.image_button("open", self.image_texture_ref, imgui.ImVec2(width, width/image_aspect)):
-                self.load_image_file()
+                self.open_image()
             imgui.set_next_item_width(buttons_width)
             imgui.input_int2("image size", [int(self.doc.content_size.x), int(self.doc.content_size.y)], imgui.InputTextFlags_.read_only)
 
@@ -620,7 +610,6 @@ class PerspyApp():
             imgui.text("No results yet.")
             return
 
-
         if ui.begin_attribute_editor("res props"):
             style = imgui.get_style()
             
@@ -705,7 +694,7 @@ class PerspyApp():
             # if imgui.button("export camera parameters", imgui.ImVec2(-1,0)):
             #     ...
 
-    def show_data(self):
+    def show_io(self):
         from textwrap import dedent
         if imgui.collapsing_header("Document as Python Code", imgui.TreeNodeFlags_.default_open):
             text = self.doc.document_to_python()
@@ -1092,10 +1081,42 @@ class PerspyApp():
         logger.info(f"Files dropped: {paths}")
         if len(paths) > 0:
             first_path = paths[0]
-            self.load_image_file(first_path)
+            self.open_image(first_path)
 
-    # Actions
-    def solve(self):
+    # Actions 
+    def open_image(self, path:str|None=None):
+        from pathlib import Path
+        try:
+            if path is None:
+                filters = [
+                    "Image Files", "*.png *.jpg *.jpeg *.bmp *.tiff *.tif *.gif", 
+                    "All Files", "*.*"
+                ]
+                open_file_dialog = pfd.open_file("Select Image", "", filters, pfd.opt.none)
+                paths = open_file_dialog.result()
+                print("results: ", paths)
+                if len(paths)>0:
+                    path = paths[0]
+                else:
+                    return
+
+            if not Path(path).exists():
+                logger.error(f"File not found: {Path(path).absolute()}")
+                return
+            else:
+                logger.info(f"✓ Found file: {Path(path).absolute()}")
+
+            self.doc.image_path = path
+
+            self.update_texture()
+            
+        except Exception as e:
+            logger.error(f"Failed to load {path}: {e}")
+            import traceback
+            traceback.print_exc()
+
+    # update 
+    def update_solve(self):
         """Solve for camera based on current document state
         throws exceptions on failure
         """
@@ -1181,7 +1202,7 @@ class PerspyApp():
                 self.doc.principal_point = computed_principal
 
                 self.solver_results = solver.solve2vp(
-                    self.doc.content_size.x, 
+                    self.doc.content_size.x,
                     self.doc.content_size.y, 
                     self.first_vanishing_point,
                     self.second_vanishing_point,
@@ -1198,88 +1219,25 @@ class PerspyApp():
                 self.camera.setFoVY(math.degrees(self.solver_results.fovy))
                 self.camera.setAspectRatio(self.doc.content_size.x / self.doc.content_size.y)
                 self.camera.set_lens_shift(self.solver_results.shift_x, self.solver_results.shift_y)
-                
-    def load_image_file(self, path:str|None=None):
-        from pathlib import Path
-        try:
-            if path is None:
-                filters = [
-                    "Image Files", "*.png *.jpg *.jpeg *.bmp *.tiff *.tif *.gif", 
-                    "All Files", "*.*"
-                ]
-                open_file_dialog = pfd.open_file("Select Image", "", filters, pfd.opt.none)
-                paths = open_file_dialog.result()
-                print("results: ", paths)
-                if len(paths)>0:
-                    path = paths[0]
-                else:
-                    return
-
-            if not Path(path).exists():
-                logger.error(f"File not found: {Path(path).absolute()}")
-                return
-            else:
-                logger.info(f"✓ Found file: {Path(path).absolute()}")
-
-            self.doc.image_path = path
-
-            # Load image with PIL
-            img = Image.open(path)
-            self.doc.image = img
-            self.doc.content_size = imgui.ImVec2(img.width, img.height)
-            logger.info(f"✓ Loaded: {path} ({img.width}x{img.height})")
-            
-            if img.mode != 'RGBA':
-                # Convert to RGBA if needed
-                img = img.convert('RGBA')
-
-            img_data = np.frombuffer(img.tobytes(), dtype=np.uint8)
-            if self.image_texture_id is not None:
-                gl.glDeleteTextures(1, [self.image_texture_id])
-                self.image_texture_ref = None
-                self.image_texture_id = None
-            
-            texture_id = gl.glGenTextures(1)
-            gl.glBindTexture(gl.GL_TEXTURE_2D, texture_id)
-            
-            # Set texture parameters
-            gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_LINEAR)
-            gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_LINEAR)
-            gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_S, gl.GL_CLAMP_TO_EDGE)
-            gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_T, gl.GL_CLAMP_TO_EDGE)
-            
-            # Upload texture data
-            gl.glTexImage2D(
-                gl.GL_TEXTURE_2D, 0, gl.GL_RGBA,
-                img.width, img.height, 0,
-                gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, img_data
-            )
-            
-            # Unbind texture
-            gl.glBindTexture(gl.GL_TEXTURE_2D, 0)
-            
-            self.image_texture_id = texture_id
-            self.image_texture_ref = imgui.ImTextureRef(texture_id)
-            logger.info(f"✓ Created OpenGL texture: {texture_id}")
-            
-        except Exception as e:
-            logger.error(f"Failed to load {path}: {e}")
-            import traceback
-            traceback.print_exc()
-
-    def _upload_image_texture(self, img: Image):
-        """Helper to upload PIL image to OpenGL texture."""
-        # Convert to RGBA if needed
+       
+    def update_texture(self):
+        # Load image with PIL
+        path = self.doc.image_path
+        img = Image.open(path)
+        self.doc.image = img
+        self.doc.content_size = imgui.ImVec2(img.width, img.height)
+        logger.info(f"✓ Loaded: {path} ({img.width}x{img.height})")
+        
         if img.mode != 'RGBA':
+            # Convert to RGBA if needed
             img = img.convert('RGBA')
-        
-        img_data = np.array(img, dtype=np.uint8)
-        
-        # Delete old texture if exists
+
+        img_data = np.frombuffer(img.tobytes(), dtype=np.uint8)
         if self.image_texture_id is not None:
             gl.glDeleteTextures(1, [self.image_texture_id])
+            self.image_texture_ref = None
+            self.image_texture_id = None
         
-        # Generate new texture
         texture_id = gl.glGenTextures(1)
         gl.glBindTexture(gl.GL_TEXTURE_2D, texture_id)
         
@@ -1291,20 +1249,34 @@ class PerspyApp():
         
         # Upload texture data
         gl.glTexImage2D(
-            gl.GL_TEXTURE_2D,
-            0,
-            gl.GL_RGBA,
-            img.width,
-            img.height,
-            0,
-            gl.GL_RGBA,
-            gl.GL_UNSIGNED_BYTE,
-            img_data
+            gl.GL_TEXTURE_2D, 0, gl.GL_RGBA,
+            img.width, img.height, 0,
+            gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, img_data
         )
         
+        # Unbind texture
+        gl.glBindTexture(gl.GL_TEXTURE_2D, 0)
+        
         self.image_texture_id = texture_id
-        logger.info(f"✓ Uploaded texture (ID: {texture_id})")
+        self.image_texture_ref = imgui.ImTextureRef(texture_id)
+        logger.info(f"✓ Created OpenGL texture: {texture_id}")
 
+    def update_os_window_title(self):
+        # Change the window title at runtime
+        try:
+            glfw_window = glfw.get_current_context()
+            title = f"Perspy"
+            if self.doc._file_path:
+                title += " - "
+                if self.doc.isModified():
+                    title += " *"
+                title += f"{Path(self.doc._file_path).stem}"
+                title += f" [{self.doc._file_path}]"
+            glfw.set_window_title(glfw_window, title)
+        except Exception as e:
+            logger.warning(f"Could not set window title: {e}")
+
+    # IO
     def _export_text_to_file(self, default_name: str, content: str, file_type: str, extension: str):
         """Helper to save text content to a file via dialog."""
         # open the file dialog
@@ -1392,6 +1364,6 @@ if __name__ == "__main__":
     assert assets_folder.exists(), f"Assets folder not found: {assets_folder.absolute()}"
     print("setting assets folder:", assets_folder.absolute())
     hello_imgui.set_assets_folder(str(assets_folder.absolute()))
-    runner_params = create_my_runner_params(app.gui, app.on_file_drop, "Perspy v0.5.0")
+    runner_params = create_my_runner_params(app.draw_gui, app.setup_gui, app.on_file_drop, "Perspy v0.5.0")
     hello_imgui.run(runner_params)
 
