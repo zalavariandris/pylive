@@ -16,7 +16,7 @@ class Camera:
 		# Lens parameters
 		self._focal_length = 23.0  # Focal length in mm
 		self._sensor_size = (36.0, 24.0)  # Default sensor size in mm (width, height)
-		# self._fovy = 45.0  # Field of view in degrees
+		self._lens_shift = (0.0, 0.0)
 	
 		# Perspective projection matrix
 		self._update_projection()
@@ -33,12 +33,41 @@ class Camera:
 
 	def _update_projection(self):
 		"""Updates the projection matrix based on current camera parameters."""
-		self.projection = glm.perspective(
-			glm.radians(self.fovy), 
-			self.aspect_ratio, 
-			self.near_plane, 
-			self.far_plane
-		)
+		# self.projection = glm.perspective(
+		# 	glm.radians(self.fovy), 
+		# 	self.aspect_ratio, 
+		# 	self.near_plane, 
+		# 	self.far_plane
+		# )
+
+		import glm
+
+		# Camera parameters
+		fovy = glm.radians(self.fovy)
+		aspect = self.aspect_ratio
+		near = self.near_plane
+		far = self.far_plane
+
+		# Lens shift (normalized -1..1, where 0 is center)
+		shift_x, shift_y = self._lens_shift
+
+		# Compute top/bottom/left/right in view space
+		top = near * glm.tan(fovy / 2)
+		bottom = -top
+		right = top * aspect
+		left = -right
+
+		# Apply shifts
+		width = right - left
+		height = top - bottom
+
+		left += shift_x * width / 2
+		right += shift_x * width / 2
+		bottom += shift_y * height / 2
+		top += shift_y * height / 2
+
+		# Create the projection matrix with lens shift
+		self.projection = glm.frustum(left, right, bottom, top, near, far)
 
 	@property
 	def aspect_ratio(self)->float:
@@ -72,6 +101,20 @@ class Camera:
 		"""
 		w, h = self._sensor_size
 		self._focal_length = (h / 2) / math.tan(math.radians(fovy_degrees) / 2)
+		self._update_projection()
+
+	def get_lens_shift(self)->Tuple[float, float]:
+		"""
+		Returns the current lens shift as a tuple (shift_x, shift_y).
+		"""
+		return self._lens_shift
+	
+	def set_lens_shift(self, shift_x:float, shift_y:float):
+		"""
+		Sets the lens shift and updates the projection matrix.
+		shift_x and shift_y should be in the range [-1, 1], where 0 is centered.
+		"""
+		self._lens_shift = (shift_x, shift_y)
 		self._update_projection()
 
 	def viewMatrix(self):

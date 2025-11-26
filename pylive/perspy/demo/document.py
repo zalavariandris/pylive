@@ -54,7 +54,7 @@ def json_serializer(obj):
 
 from abc import ABC, abstractmethod
 
-class Document(ABC):
+class BaseDocument(ABC):
     def __init__(self, extension:str, format_description:str, magic:bytes, version:str="0.1"):
         if not isinstance(extension, str) or not extension.startswith('.'):
             raise ValueError(f"Extension must be a string starting with '.', got: {extension}")
@@ -66,7 +66,6 @@ class Document(ABC):
             raise ValueError(f"Magic must be 4 bytes long, got length: {len(magic)}")
         
         self._file_path: str|None = None
-
         self._version = version
         self._extension = extension
         self._magic = magic
@@ -232,7 +231,7 @@ class Document(ABC):
         
         return document_data, offset + data_size
 
-class PerspyDocument(Document):
+class PerspyDocument(BaseDocument):
     def __init__(self):
         super().__init__(extension='.prsy', format_description='perspy', magic=b'prsy', version="0.5.0")
         # solver inputs
@@ -251,6 +250,7 @@ class PerspyDocument(Document):
 
         # - control points
         self.principal_point=self.content_size/2
+        self.enable_auto_principal_point = True
         self.origin=imgui.ImVec2(973.475037, 503.216217)
         self.first_vanishing_lines = [
             (glm.vec2(      1607.85,      295.307 ), glm.vec2(      417.701,      829.766 )),

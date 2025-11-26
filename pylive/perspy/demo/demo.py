@@ -110,6 +110,7 @@ class PerspyApp():
         self.current_euler_order = solver.EulerOrder.ZXY
         self.first_vanishing_point:glm.vec2|None = None
         self.second_vanishing_point:glm.vec2|None = None
+        self.solver_results:solver.SolverResults|None = None
         
         # misc
         """
@@ -425,6 +426,7 @@ class PerspyApp():
                 _, self.doc.fov_degrees = imgui.slider_float("fov°", self.doc.fov_degrees, 1.0, 179.0, "%.1f°")
 
             case SolverMode.TwoVP:
+                _, self.doc.enable_auto_principal_point = imgui.checkbox("auto principal point", self.doc.enable_auto_principal_point)
                 _, self.doc.quad_mode = imgui.checkbox("quad", self.doc.quad_mode)
 
         imgui.separator_text("Axes")
@@ -482,7 +484,6 @@ class PerspyApp():
         _, self.doc.second_axis = imgui.combo("##second axis", self.doc.second_axis, list(axes_short_names.values()))
         imgui.set_item_tooltip(f"Second axis (ground plane axis 2)")
         
-
     def show_viewer(self):
         if ui.viewer.begin_viewer("viewer1", content_size=self.doc.content_size, size=imgui.ImVec2(-1,-1)):
             # background image
@@ -515,6 +516,7 @@ class PerspyApp():
                     ui.viewer.guide(self.doc.second_vanishing_lines[0][0], self.doc.second_vanishing_lines[0][1], get_axis_color(self.doc.second_axis), '>')
                 
                 case SolverMode.TwoVP:
+                    _, self.doc.principal_point = ui.viewer.control_point("p", self.doc.principal_point)
                     if self.doc.quad_mode:
                         z0, z1 = self.doc.first_vanishing_lines
                         self.doc.second_vanishing_lines = [
@@ -583,25 +585,7 @@ class PerspyApp():
                 ui.viewer.end_scene()
         ui.viewer.end_viewer()
 
-    def show_results(self):
-        def pretty_matrix(value:np.array, separator:str='\t') -> str:
-            # Format with numpy's array2string for better control
-            text = np.array2string(
-                value,
-                precision=3,
-                suppress_small=True,
-                separator=separator,  # Use double space as separator
-                prefix='',
-                suffix='',
-                formatter={'float_kind': lambda x: f"{'+' if np.sign(x)>=0 else '-'}{abs(x):.3f}"}  # Right-aligned with 8 characters width
-            )
-            
-            text = text.replace('[', ' ').replace(']', '')
-            from textwrap import dedent
-            text = dedent(text).strip()
-            text = text.replace('+', ' ')
-            return text
-            
+    def show_results(self):            
         if self.camera is not None:
             scale = glm.vec3()
             quat = glm.quat()  # This will be our quaternion
@@ -612,14 +596,14 @@ class PerspyApp():
             if not success:
                 imgui.text("Error: Could not decompose camera transform matrix.")
                 return
-            pos = self.camera.getPosition()
+
             transform = [self.camera.transform[j][i] for i in range(4) for j in range(4)]
             euler = solver.extract_euler(self.camera.transform, order=self.current_euler_order)
 
-            transform_text = pretty_matrix(np.array(transform).reshape(4,4), separator=" ")
-            position_text =  pretty_matrix(np.array(translation), separator=" ")
-            quat_text =      pretty_matrix(np.array([quat.x, quat.y, quat.z, quat.w]), separator=" ")
-            euler_text =     pretty_matrix(np.array([math.degrees(radians) for radians in euler]), separator=" ")
+            transform_text = solver.pretty_matrix(np.array(transform).reshape(4,4), separator=" ")
+            position_text =  solver.pretty_matrix(np.array(translation), separator=" ")
+            quat_text =      solver.pretty_matrix(np.array([quat.x, quat.y, quat.z, quat.w]), separator=" ")
+            euler_text =     solver.pretty_matrix(np.array([math.degrees(radians) for radians in euler]), separator=" ")
 
             if ui.begin_attribute_editor("res props"):
                 ui.next_attribute("transform")
@@ -1110,7 +1094,8 @@ class PerspyApp():
         self.second_vanishing_point:glm.vec2|None = None
         self.camera:Camera|None = None
 
-        self.doc.principal_point = glm.vec2(self.doc.content_size.x / 2, self.doc.content_size.y / 2)
+        if self.doc.enable_auto_principal_point:
+            self.doc.principal_point = glm.vec2(self.doc.content_size.x / 2, self.doc.content_size.y / 2)
         match self.doc.solver_mode:
             case SolverMode.OneVP:
                 ###############################
@@ -1118,13 +1103,12 @@ class PerspyApp():
                 ###############################
                 self.first_vanishing_point =  solver.least_squares_intersection_of_lines(self.doc.first_vanishing_lines)
                 
-
                 ###################
                 # 2. Solve Camera #
                 ###################
                 fovy = math.radians(self.doc.fov_degrees)
                 focal_length_pixel = solver.focal_length_from_fov(fovy, self.doc.content_size.y)
-                camera_transform = solver.solve1vp(
+                self.solver_results:solver.SolverResults = solver.solve1vp(
                     width =                 self.doc.content_size.x, 
                     height =                self.doc.content_size.y, 
                     Fu=                     self.first_vanishing_point,
@@ -1139,10 +1123,9 @@ class PerspyApp():
 
                 # create camera
                 self.camera = Camera()
-                self.camera.setFoVY(fovy)
-                self.camera.transform = camera_transform
+                self.camera.setFoVY(math.degrees(self.solver_results.fovy))
+                self.camera.transform = self.solver_results.transform
                 self.camera.setAspectRatio(self.doc.content_size.x / self.doc.content_size.y)
-                self.camera.setFoVY(math.degrees(fovy))
 
 
             case SolverMode.TwoVP:
@@ -1152,7 +1135,7 @@ class PerspyApp():
                 self.second_vanishing_point = solver.least_squares_intersection_of_lines(
                     self.doc.second_vanishing_lines)
 
-                fovy, camera_transform = solver.solve2vp(
+                self.solver_results = solver.solve2vp(
                     self.doc.content_size.x, 
                     self.doc.content_size.y, 
                     self.first_vanishing_point,
@@ -1166,11 +1149,11 @@ class PerspyApp():
 
                 # create camera
                 self.camera = Camera()
-                self.camera.setFoVY(fovy)
-                self.camera.transform = camera_transform
+                self.camera.transform = self.solver_results.transform
+                self.camera.setFoVY(math.degrees(self.solver_results.fovy))
                 self.camera.setAspectRatio(self.doc.content_size.x / self.doc.content_size.y)
-                self.camera.setFoVY(math.degrees(fovy))
-
+                self.camera.set_lens_shift(self.solver_results.shift_x, self.solver_results.shift_y)
+                
     def load_image_file(self, path:str|None=None):
         from pathlib import Path
         try:
