@@ -252,7 +252,7 @@ class PerspyDocument(BaseDocument):
 
         # - control points
         self.origin=imgui.ImVec2(609.247009, 577.750366)
-        self.principal_point=imgui.ImVec2(1757/2, 2040/2)
+        self.principal=imgui.ImVec2(1757/2, 2040/2)
         self.first_vanishing_lines = [
             (glm.vec2(      1561.62,      1466.54 ), glm.vec2(      281.936,      1872.16 )),
             (glm.vec2(      1008.14,      60.5322 ), glm.vec2(     -37.6624,      900.753 ))
@@ -280,7 +280,7 @@ class PerspyDocument(BaseDocument):
 
             'control_points': {
                 "origin": self.origin,
-                "principal_point": self.principal_point,
+                "principal_point": self.principal,
                 "first_vanishing_lines": self.first_vanishing_lines,
                 "second_vanishing_lines": self.second_vanishing_lines
             },
@@ -373,7 +373,7 @@ class PerspyDocument(BaseDocument):
                 self.origin = deserialize_vec2(cp['origin'])
             
             if 'principal_point' in cp:
-                self.principal_point = deserialize_vec2(cp['principal_point'])
+                self.principal = deserialize_vec2(cp['principal_point'])
             
             if 'first_vanishing_lines' in cp:
                 self.first_vanishing_lines = [
@@ -394,8 +394,8 @@ class PerspyDocument(BaseDocument):
             width = ip.get('width', 720)
             height = ip.get('height', 576)
             self.content_size = imgui.ImVec2(width, height)
-    
-    def document_to_python(self):
+
+    def as_python_script(self):
         """Serialize document and copy to clipboard as base64 string."""
         from textwrap import dedent
         return dedent(f"""\

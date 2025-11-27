@@ -33,7 +33,7 @@ class EulerOrder(IntEnum):
 
 
 def pretty_matrix(value:np.array, separator:str='\t') -> str:
-    # Format with numpy's array2string for better control
+    """format a matrix nicely for printing"""
     text = np.array2string(
         value,
         precision=3,
@@ -109,7 +109,48 @@ class SolverResults:
     
     def get_euler(self, order: EulerOrder=EulerOrder.ZXY) -> glm.vec3:
         return glm.vec3(extract_euler(self.transform, order))
-    
+
+        # IO
+
+    # IO
+    def as_dict(self)->dict:
+        position = self.get_position()
+        quaternion = self.get_quaternion()
+        projection = self.get_projection()
+        return {
+            "transform": np.array(self.transform).reshape(4,4).tolist(),
+            "fovy": self.fovy,
+            "position": tuple(position) if position else None,
+            "quaternion": tuple(quaternion) if quaternion else None,
+            "euler_order": EulerOrder.ZXY.name,
+            "euler": tuple(self.get_euler(order=EulerOrder.ZXY)),
+            "projection": np.array(projection).reshape(4,4).tolist() if projection is not None else None,
+            "aspect": self.aspect,
+            "near_plane": self.near_plane,
+            "far_plane": self.far_plane,
+            "shift_x": self.shift_x,
+            "shift_y": self.shift_y
+        }
+
+    def as_blender_script(self, camera_name: str="VLCamera")-> str:
+        """Generate a Blender Python script to recreate the camera setup."""
+        from imgui_bundle import hello_imgui
+        from pathlib import Path
+
+        blender_template_path = hello_imgui.asset_file_full_path("blender_camera_factory_template.py")
+        try:
+            script = Path(blender_template_path).read_text()
+        except Exception as e:
+            logger.error(f"Failed to read Blender template: {e}")
+            return "# Failed to read Blender template."
+
+        fovx = 2.0 * math.degrees(math.atan(math.tan(math.radians(self.fovy) * 0.5) * self.aspect))
+        script = script.replace("<CAMERA_FOV>", str(math.radians(max(fovx, self.fovy))))
+        transform_list = [[v for v in row] for row in glm.transpose(self.transform)]
+        script = script.replace("<CAMERA_TRANSFORM>", str(transform_list))
+        script = script.replace("<CAMERA_NAME>", f"'{camera_name}'")
+        return script
+
     def __str__(self)->str:
         from textwrap import dedent
         transform_text = pretty_matrix(np.array(self.transform).reshape(4,4), separator=" ") if self.transform is not None else "N/A"
@@ -130,12 +171,6 @@ fovx: {math.degrees(self.get_fovx())}\n
 shift_x: {self.shift_x}\n
 shift_y: {self.shift_y}\n
         """)
-
-    # projection_matrix: glm.mat4
-    # fovy: float
-    # fovx: float
-    # shift_x: float
-    # shift_y: float
 
 #########################
 # MAIN SOLVER FUNCTIONS #

@@ -46,8 +46,6 @@ class ModuleHotReloader:
             t.start()
             self.watcher_threads.append(t)
 
-from imgui_bundle import imgui_color_text_edit
-
 def start(module_filepath: str):
     # Dynamically import the module
     sketch_demo = load_module_from_file(module_filepath)
@@ -55,7 +53,6 @@ def start(module_filepath: str):
     # ---------------------------
     # GUI LOOP
     # ---------------------------
-
     hot_reloader = ModuleHotReloader([sketch_demo])
     hot_reloader.start_file_watchers()
 
@@ -73,8 +70,31 @@ def start(module_filepath: str):
 
     immapp.run(gui)
 
+
+from watchfiles import watch
+
+
+import time
 if __name__ == "__main__":
     from pathlib import Path
     path = Path.cwd().joinpath("pylive", "imsketch").resolve()
     print(f"Changing working directory to: {path}")
-    start(path / "sketch_demo.py")
+
+
+    # start(path / "sketch_demo.py")
+    path = Path.cwd() / "pylive" / "imsketch"
+
+    w = watch(
+        path / "sketch_demo.py",
+        yield_on_timeout=True,
+        # rust_timeout=1,    # IMPORTANT: must be > 0
+        debounce=0
+    )
+
+    while True:
+        # print("frame")
+        changes = next(w)     # non-blocking now
+        if changes:
+            print("changes:", changes)
+
+        # time.sleep(1/60)

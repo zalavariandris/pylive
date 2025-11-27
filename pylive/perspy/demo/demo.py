@@ -230,8 +230,6 @@ class PerspyApp():
         # imgui.push_style_var(imgui.StyleVar_.frame_padding, imgui.ImVec2(style.frame_padding.x, 12))
         if imgui.begin_main_menu_bar():
             if imgui.begin_menu("File"):
-                
-
                 if imgui.menu_item_simple(f"{fa.ICON_FA_FILE} New", "Ctrl+N"):
                     ...
                 
@@ -256,17 +254,17 @@ class PerspyApp():
 
                 if imgui.begin_menu("Export results"):
                     if imgui.menu_item_simple("JSON"):
-                        self._export_text_to_file(
+                        self.export(
                             default_name="perspy_camera_factory.py",
-                            content=json.dumps(self.results_to_dict(), indent=4),
+                            content=json.dumps(self.solver_results.as_dict(), indent=4),
                             file_type="JSON",
                             extension=".json"
                         )
 
                     if imgui.menu_item_simple("blender script"):
-                        self._export_text_to_file(
+                        self.export(
                             default_name="perspy_camera_factory.py",
-                            content=self.results_to_blender_script(),
+                            content=self.solver_results.as_blender_script(),
                             file_type="Blender Python Script",
                             extension=".py"
                         )
@@ -275,16 +273,16 @@ class PerspyApp():
                 
                 if imgui.begin_menu("Copy results to clipboard"):
                     if imgui.menu_item_simple("JSON"):
-                        pyperclip.copy(json.dumps(self.results_to_dict(), indent=4))
+                        pyperclip.copy(json.dumps(self.solver_results.as_dict(), indent=4))
 
                     if imgui.menu_item_simple("blender script"):
-                        pyperclip.copy(self.results_to_blender_script())
+                        pyperclip.copy(self.solver_results.as_blender_script())
 
                     imgui.end_menu()
 
                 if imgui.begin_menu("Copy document to clipboard"):
                     if imgui.menu_item_simple("Python code"):
-                        pyperclip.copy(self.doc.document_to_python())
+                        pyperclip.copy(self.doc.as_python_script())
 
                     imgui.end_menu()
                 
@@ -518,7 +516,7 @@ class PerspyApp():
                     ui.viewer.guide(self.doc.second_vanishing_lines[0][0], self.doc.second_vanishing_lines[0][1], get_axis_color(self.doc.second_axis), '>')
                 
                 case SolverMode.TwoVP:
-                    _, self.doc.principal_point = ui.viewer.control_point("p", self.doc.principal_point)
+                    _, self.doc.principal = ui.viewer.control_point("p", self.doc.principal)
                     if self.doc.quad_mode:
                         z0, z1 = self.doc.first_vanishing_lines
                         self.doc.second_vanishing_lines = [
@@ -532,7 +530,7 @@ class PerspyApp():
                         ui.viewer.guide(line[0], line[1], get_axis_color(self.doc.second_axis), '>')
 
                 case SolverMode.ThreeVP:
-                    _, self.doc.principal_point = ui.viewer.control_point("p", self.doc.principal_point)
+                    _, self.doc.principal = ui.viewer.control_point("p", self.doc.principal)
                     if self.doc.quad_mode:
                         z0, z1 = self.doc.first_vanishing_lines
                         self.doc.second_vanishing_lines = [
@@ -697,14 +695,14 @@ class PerspyApp():
     def show_io(self):
         from textwrap import dedent
         if imgui.collapsing_header("Document as Python Code", imgui.TreeNodeFlags_.default_open):
-            text = self.doc.document_to_python()
+            text = self.doc.as_python_script()
             imgui.text_unformatted(dedent(text).strip())
 
         if imgui.collapsing_header("Document as Dict", imgui.TreeNodeFlags_.default_open):
             imgui.text_unformatted("TODO. implement doc.to_dict()")
 
         if imgui.collapsing_header("Results Dictionary", imgui.TreeNodeFlags_.default_open):
-            data = self.results_to_dict()
+            data = self.solver_results.as_dict()
             text = pformat(data, indent=2, width=80, compact=False)
             # text = json.dumps(data, indent=4)
             imgui.text_unformatted(text)
@@ -1115,6 +1113,35 @@ class PerspyApp():
             import traceback
             traceback.print_exc()
 
+    def export(self, default_path: str, content: str, file_type: str, extension: str):
+        """Helper to save text content to a file via dialog."""
+        # open the file dialog
+        file_dialog = pfd.save_file(
+            title=f"Save {file_type}",
+            default_path=default_path,
+            filters=[f"{file_type} Files", f"*{extension}", "All Files", "*.*"],
+            options=pfd.opt.none
+        )
+
+        save_path = file_dialog.result()
+        if save_path is None:
+            logger.info("Save cancelled by user.")
+            return
+        
+        if not isinstance(save_path, str):
+            logger.error(f"Invalid save path: {save_path}")
+            return
+        
+        # save content to file
+        try:
+            with open(save_path, 'w', encoding='utf-8') as f:
+                f.write(content)
+            logger.info(f"{file_type} saved to {save_path}")
+        except Exception as e:
+            logger.error(f"Failed to save {file_type} to {save_path}: {e}")
+            import traceback
+            traceback.print_exc()
+
     # update 
     def update_solve(self):
         """Solve for camera based on current document state
@@ -1126,7 +1153,7 @@ class PerspyApp():
         self.camera:Camera|None = None
 
         if self.doc.enable_auto_principal_point:
-            self.doc.principal_point = glm.vec2(self.doc.content_size.x / 2, self.doc.content_size.y / 2)
+            self.doc.principal = glm.vec2(self.doc.content_size.x / 2, self.doc.content_size.y / 2)
         match self.doc.solver_mode:
             case SolverMode.OneVP:
                 ###############################
@@ -1145,7 +1172,7 @@ class PerspyApp():
                     Fu=                     self.first_vanishing_point,
                     second_vanishing_line = self.doc.second_vanishing_lines[0],
                     f =                     focal_length_pixel,
-                    P =                     self.doc.principal_point,
+                    P =                     self.doc.principal,
                     O =                     self.doc.origin,
                     first_axis =            self.doc.first_axis,
                     second_axis =           self.doc.second_axis,
@@ -1171,7 +1198,7 @@ class PerspyApp():
                     self.doc.content_size.y, 
                     self.first_vanishing_point,
                     self.second_vanishing_point,
-                    self.doc.principal_point,
+                    self.doc.principal,
                     self.doc.origin,
                     self.doc.first_axis,
                     self.doc.second_axis,
@@ -1199,14 +1226,14 @@ class PerspyApp():
                     self.second_vanishing_point,
                     self.third_vanishing_point
                 )
-                self.doc.principal_point = computed_principal
+                self.doc.principal = computed_principal
 
                 self.solver_results = solver.solve2vp(
                     self.doc.content_size.x,
                     self.doc.content_size.y, 
                     self.first_vanishing_point,
                     self.second_vanishing_point,
-                    self.doc.principal_point,
+                    self.doc.principal,
                     self.doc.origin,
                     self.doc.first_axis,
                     self.doc.second_axis,
@@ -1276,83 +1303,6 @@ class PerspyApp():
         except Exception as e:
             logger.warning(f"Could not set window title: {e}")
 
-    # IO
-    def _export_text_to_file(self, default_name: str, content: str, file_type: str, extension: str):
-        """Helper to save text content to a file via dialog."""
-        # open the file dialog
-        file_dialog = pfd.save_file(
-            title=f"Save {file_type}",
-            default_path=default_name,
-            filters=[f"{file_type} Files", f"*{extension}", "All Files", "*.*"],
-            options=pfd.opt.none
-        )
-
-        save_path = file_dialog.result()
-        if save_path is None:
-            logger.info("Save cancelled by user.")
-            return
-        
-        if not isinstance(save_path, str):
-            logger.error(f"Invalid save path: {save_path}")
-            return
-        
-        # save content to file
-        try:
-            with open(save_path, 'w', encoding='utf-8') as f:
-                f.write(content)
-            logger.info(f"{file_type} saved to {save_path}")
-        except Exception as e:
-            logger.error(f"Failed to save {file_type} to {save_path}: {e}")
-            import traceback
-            traceback.print_exc()
-
-    def results_to_dict(self) -> Dict[str, Any]:
-        import document
-        
-        result:Dict[str, Any] = dict()
-        if self.camera is not None:
-            _, quat, translation, _, _ = solver.decompose(self.camera.transform)
-            euler = solver.extract_euler(self.camera.transform, order=self.current_euler_order)
-            camera_data = {
-                "transform": self.camera.transform,
-                "fov_degrees": self.camera.fovy,
-                "position": self.camera.getPosition(),
-                "quaternion_xyzw": quat,
-                "euler_degrees_xyz": glm.vec3(euler[0], euler[1], euler[2]),
-                "euler_order": solver.EulerOrder._member_names_[self.current_euler_order]
-            }
-            result["camera"] = camera_data
-
-        vanishing_points_data:Dict[str, Any] = dict()
-        if self.first_vanishing_point is not None:
-            vanishing_points_data["first_vanishing_point"] = {
-                "x": self.first_vanishing_point.x,
-                "y": self.first_vanishing_point.y
-            }
-        if self.second_vanishing_point is not None:
-            vanishing_points_data["second_vanishing_point"] = {
-                "x": self.second_vanishing_point.x,
-                "y": self.second_vanishing_point.y
-            }
-        result["vanishing_points"] = vanishing_points_data
-        return result
-
-    def results_to_blender_script(self) -> str:
-        """Generate a Blender Python script to recreate the camera setup."""
-        if self.camera is None:
-            logger.error("No camera data to export.")
-            return "# No camera data available."
-
-        from textwrap import dedent
-        blender_template_path = hello_imgui.asset_file_full_path("blender_camera_factory_template.py")
-        script = Path(blender_template_path).read_text()
-
-        fovx = 2.0 * math.degrees(math.atan(math.tan(math.radians(self.camera.fovy) * 0.5) * (self.doc.content_size.x / self.doc.content_size.y)))
-        script = script.replace("<CAMERA_FOV>", str(math.radians(max(fovx, self.camera.fovy))))
-        transform_list = [[v for v in row] for row in glm.transpose(self.camera.transform)]
-        script = script.replace("<CAMERA_TRANSFORM>", str(transform_list))
-        script = script.replace("<CAMERA_NAME>", "'PerspyCamera'")
-        return script
 
 
 if __name__ == "__main__":
