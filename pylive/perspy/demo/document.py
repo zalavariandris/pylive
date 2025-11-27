@@ -23,8 +23,6 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-
-
 def json_serializer(obj):
     """Custom JSON serializer for glm types."""
     match obj:
@@ -56,21 +54,38 @@ def json_serializer(obj):
 from abc import ABC, abstractmethod
 
 class BaseDocument(ABC):
-    def __init__(self, extension:str, format_description:str, magic:bytes, version:str="0.1"):
-        if not isinstance(extension, str) or not extension.startswith('.'):
-            raise ValueError(f"Extension must be a string starting with '.', got: {extension}")
+    def __init__(self):
+        # if not isinstance(extension, str) or not extension.startswith('.'):
+        #     raise ValueError(f"Extension must be a string starting with '.', got: {extension}")
         
-        if not isinstance(magic, bytes):
-            raise ValueError(f"Magic must be bytes, got: {type(magic).__name__}")
+        # if not isinstance(magic, bytes):
+        #     raise ValueError(f"Magic must be bytes, got: {type(magic).__name__}")
         
-        if len(magic) != 4:
-            raise ValueError(f"Magic must be 4 bytes long, got length: {len(magic)}")
+        # if len(magic) != 4:
+        #     raise ValueError(f"Magic must be 4 bytes long, got length: {len(magic)}")
         
         self._file_path: str|None = None
-        self._version = version
-        self._extension = extension
-        self._magic = magic
-        self._format_description = format_description
+        # self._version = version
+        # self._extension = extension
+        # self._magic = magic
+        # self._format_description = format_description
+
+    @abstractmethod
+    def extension(self)->str:
+        return '.prsy'
+    
+    @abstractmethod
+    def name(self)->str:
+        return 'perspy'
+    
+    @abstractmethod
+    def magic(self)->bytes:
+        """for bytes magic number"""
+        return b'prsy'
+    
+    @abstractmethod
+    def version(self)->str:
+        return "0.5.0"
 
     @abstractmethod
     def serialize(self)->bytearray:
@@ -91,7 +106,7 @@ class BaseDocument(ABC):
         save_dialog = pfd.save_file(
             title=title, 
             default_path="", 
-            filters=[self._format_description, self._extension]
+            filters=[self.name(), self.extension()]
         )
         choosen_filepath = save_dialog.result()
         if not choosen_filepath:
@@ -130,8 +145,8 @@ class BaseDocument(ABC):
             return
         
         # Ensure the file has the correct extension
-        if Path(filepath).suffix != self._extension:
-            filepath = str(Path(filepath).with_suffix(self._extension))
+        if Path(filepath).suffix != self.extension():
+            filepath = str(Path(filepath).with_suffix(self.extension()))
 
         # Get complete file bytes (serialize already includes header)
         file_bytes = self.serialize()
@@ -152,7 +167,7 @@ class BaseDocument(ABC):
             open_file_dialog = pfd.open_file(
                 title="Open Project", 
                 default_path="", 
-                filters=[f"{self._format_description} files", f"*{self._extension}"]
+                filters=[f"{self.name()} files", f"*{self.extension()}"]
             )
             paths = open_file_dialog.result()
             if len(paths) > 0:
@@ -178,8 +193,8 @@ class BaseDocument(ABC):
         Returns:
             bytearray: 12-byte header
         """
-        magic_bytes = int.from_bytes(self._magic, byteorder='little')
-        version = int(self._version.split('.')[0])  # Use major version
+        magic_bytes = int.from_bytes(self.magic(), byteorder='little')
+        version = int(self.version().split('.')[0])  # Use major version
         
         header = bytearray()
         header.extend(pack('<I', magic_bytes))    # 4 bytes: magic number
@@ -209,14 +224,14 @@ class BaseDocument(ABC):
         magic_bytes = file_bytes[offset:offset+4]
         offset += 4
         
-        if magic_bytes != self._magic:
-            raise ValueError(f"Not a valid {self._format_description} file (got magic: {magic_bytes})")
+        if magic_bytes != self.magic():
+            raise ValueError(f"Not a valid {self.name()} file (got magic: {magic_bytes})")
         
         # Read version
         version = unpack('<I', file_bytes[offset:offset+4])[0]
         offset += 4
         
-        expected_version = int(self._version.split('.')[0])  # Use major version
+        expected_version = int(self.version().split('.')[0])  # Use major version
         if version != expected_version:
             raise ValueError(f"Unsupported version: {version}, expected: {expected_version}")
         
@@ -232,9 +247,23 @@ class BaseDocument(ABC):
         
         return document_data, offset + data_size
 
+
 class PerspyDocument(BaseDocument):
+    def extension(self)->str:
+        return '.prsy'
+    
+    def name(self)->str:
+        return 'perspy'
+    
+    def magic(self)->bytes:
+        """for bytes magic number"""
+        return b'prsy'
+    
+    def version(self)->str:
+        return "0.5.0"
+    
     def __init__(self):
-        super().__init__(extension='.prsy', format_description='perspy', magic=b'prsy', version="0.5.0")
+        super().__init__()
         # solver inputs
         # - content image
         self.image_path: str|None = 'C:\\Users\\and\\iCloudDrive\\_ANDRIS_\\dev\\blender_tools\\vanishing_lines_for_blender\\docs\\0a42f3b2-dc40-4f26-bae7-a14eaacc9488-1757x2040.jpg'

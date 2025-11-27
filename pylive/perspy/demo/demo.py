@@ -93,7 +93,6 @@ class PerspyApp():
         self.image_texture_id: int|None = None
 
         # ui state
-        self.pan_and_zoom_matrix = glm.identity(glm.mat4)
         self.dim_background: bool = True
 
         # - manage windows
