@@ -161,33 +161,112 @@ class PerspyApp():
                 
             imgui.end()
 
-        # Emoji Test Window
-        if self.show_emoji_window:
-            expanded, self.show_emoji_window = imgui.begin("Emoji Test Window", self.show_emoji_window)
-            if expanded:
-                self.show_emoji_test()
-            imgui.end()
-
-        # FontAwesome Test Window
-        if self.show_fontawesome_window:
-            expanded, self.show_fontawesome_window = imgui.begin("FontAwesome Icons", self.show_fontawesome_window, imgui.WindowFlags_.always_auto_resize)
-            if expanded:
-                self.show_fontawesome_test()
-            imgui.end()
-
         # Parameters Window
         if ui.begin_sidebar("Parameters", align="left"):
-            self.show_parameters()
+            buttons_width = 150
+            imgui.separator_text("Image")
+            imgui.set_next_item_width(buttons_width)
+            if self.image_texture_ref is None:
+                if imgui.button("open image", size=imgui.ImVec2(-1,0)):
+                    self.open_image()
+                imgui.set_next_item_width(buttons_width)
+                _, value = imgui.input_int2("image size", [int(self.doc.content_size.x), int(self.doc.content_size.y)])
+                if _:
+                    self.doc.content_size = imgui.ImVec2(value[0], value[1])
+            else:
+                image_aspect = self.doc.content_size.x / self.doc.content_size.y
+                width = imgui.get_content_region_avail().x-imgui.get_style().frame_padding.x*2
+                if imgui.image_button("open", self.image_texture_ref, imgui.ImVec2(width, width/image_aspect)):
+                    self.open_image()
+                imgui.set_next_item_width(buttons_width)
+                imgui.input_int2("image size", [int(self.doc.content_size.x), int(self.doc.content_size.y)], imgui.InputTextFlags_.read_only)
+
+            _, self.dim_background = imgui.checkbox("dim background", self.dim_background)
+
+            # imgui.bullet_text("Warning: Font scaling will NOT be smooth, because\nImGuiBackendFlags_RendererHasTextures is not set!")
+            imgui.separator_text("Solver Parameters")
+            imgui.set_next_item_width(buttons_width)
+            _, self.doc.solver_mode = imgui.combo("mode", self.doc.solver_mode, SolverMode._member_names_)
+
+            imgui.set_next_item_width(buttons_width)
+            _, self.doc.scene_scale = imgui.slider_float("scene  scale", self.doc.scene_scale, 1.0, 100.0, "%.2f")
+
+            imgui.set_next_item_width(buttons_width)
+            _, self.doc.reference_distance_mode = imgui.combo("reference distance mode", self.doc.reference_distance_mode, solver.ReferenceDistanceMode._member_names_)
+
+            imgui.set_next_item_width(buttons_width)
+            _, self.doc.reference_distance = imgui.slider_float("reference distance", self.doc.reference_distance, 1.0, 1000.0, "%.2f")
+
+            # solver specific parameters
+            match self.doc.solver_mode:
+                case SolverMode.OneVP:
+                    imgui.set_next_item_width(buttons_width)
+                    _, self.doc.fov_degrees = imgui.slider_float("fov°", self.doc.fov_degrees, 1.0, 179.0, "%.1f°")
+
+                case SolverMode.TwoVP:
+                    _, self.doc.enable_auto_principal_point = imgui.checkbox("auto principal point", self.doc.enable_auto_principal_point)
+                    _, self.doc.quad_mode = imgui.checkbox("quad", self.doc.quad_mode)
+
+                case SolverMode.ThreeVP:
+                    _, self.doc.quad_mode = imgui.checkbox("quad", self.doc.quad_mode)
+
+            imgui.separator_text("Axes")
+            axes_presets = {
+                "default": 0,
+                'blender':1,
+                'maya':2
+            }
+            self.misc.setdefault('axes_preset', 0)
+            imgui.set_next_item_width(buttons_width)
+            _, self.misc['axes_preset'] = imgui.combo("axes_preset", self.misc['axes_preset'], list(axes_presets.keys()))
+            if _:
+                preset = list(axes_presets.keys())[self.misc['axes_preset']]
+                match preset:
+                    case "default":
+                        """
+                        right-handed
+                        x: front/back axis
+                        y: left/right axis
+                        z: up/down axis
+                        """
+                        self.doc.first_axis, self.doc.second_axis = solver.Axis.PositiveX, solver.Axis.PositiveY
+                    case "blender":
+                        """
+                        right-handed
+                        X is the left/right axis
+                        Y is the front/back axis, 
+                        Z is the up/down axis.
+                        """
+                        self.doc.first_axis, self.doc.second_axis = solver.Axis.PositiveY, solver.Axis.NegativeX
+                    case "maya":
+                        self.doc.first_axis, self.doc.second_axis = solver.Axis.PositiveZ, solver.Axis.NegativeX
+            
+            try:
+                axis_matrix = solver.create_axis_assignment_matrix(self.doc.first_axis, self.doc.second_axis)
+            except Exception as e:
+                self.doc.first_axis, self.doc.second_axis = solver.Axis.PositiveZ, solver.Axis.PositiveX
+                axis_matrix = solver.create_axis_assignment_matrix(self.doc.first_axis, self.doc.second_axis)
+                imgui.text(f"Error: {e}")
+            
+            axes_short_names = {
+                solver.Axis.PositiveX: "X+",
+                solver.Axis.NegativeX: "X-",
+                solver.Axis.PositiveY: "Y+",
+                solver.Axis.NegativeY: "Y-",
+                solver.Axis.PositiveZ: "Z+",
+                solver.Axis.NegativeZ: "Z-"
+            }
+            style = imgui.get_style()
+            imgui.set_next_item_width(buttons_width/2-style.frame_padding.x)
+            _, self.doc.first_axis = imgui.combo("##first axis",   self.doc.first_axis, list(axes_short_names.values()))
+            imgui.set_item_tooltip(f"First axis (ground plane axis 1)")
+            imgui.same_line()
+            imgui.set_next_item_width(buttons_width/2-style.frame_padding.x)
+            _, self.doc.second_axis = imgui.combo("##second axis", self.doc.second_axis, list(axes_short_names.values()))
+            imgui.set_item_tooltip(f"Second axis (ground plane axis 2)")
         ui.end_sidebar()
 
-        # Solve the camera
-        try:
-            self.update_solve()
-            error_msg = None
-        except Exception as e:
-            error_msg = e
-            import traceback
-            traceback.print_exc()
+
 
         # fullscreen viewer Window
         # style = imgui.get_style()
@@ -195,7 +274,159 @@ class PerspyApp():
         imgui.set_next_window_pos(imgui.ImVec2(0, menu_bar_height))
         imgui.set_next_window_size(imgui.ImVec2(display_size.x, display_size.y - menu_bar_height))       
         if imgui.begin("MainViewport", None, imgui.WindowFlags_.no_bring_to_front_on_focus | imgui.WindowFlags_.no_move | imgui.WindowFlags_.no_resize | imgui.WindowFlags_.no_collapse | imgui.WindowFlags_.no_title_bar):
-            self.show_viewer()
+
+
+            if ui.viewer.begin_viewer("viewer1", content_size=self.doc.content_size, size=imgui.ImVec2(-1,-1)):
+                # Solve the camera
+                try:
+                    self.update_solve()
+                    error_msg = None
+                except Exception as e:
+                    error_msg = e
+                    import traceback
+                    traceback.print_exc()
+
+                # background image
+                if self.image_texture_ref is not None:
+                    tl = ui.viewer._get_window_coords(imgui.ImVec2(0,0))
+                    br = ui.viewer._get_window_coords(imgui.ImVec2(self.doc.content_size.x, self.doc.content_size.y))
+
+                    
+                    image_size = br - tl
+                    # imgui.set_cursor_pos(tl)
+                    draw_list = imgui.get_window_draw_list()
+
+                    tint = (1.0, 1.0, 1.0, 1.0)
+                    if self.dim_background:
+                        tint = (0.33, 0.33, 0.33, 1.0)
+
+                    draw_list.add_image(
+                        self.image_texture_ref, 
+                        tl+imgui.get_window_pos(), 
+                        br+imgui.get_window_pos(), 
+                        imgui.ImVec2(0,1), 
+                        imgui.ImVec2(1,0), 
+                        imgui.color_convert_float4_to_u32(tint)
+                    )
+
+                # control points
+                _, self.doc.origin = ui.viewer.control_point("o", self.doc.origin)
+
+                # reference_pos = self.doc.origin + imgui.ImVec2( self.doc.reference_distance, 0)
+                # _, reference_pos = ui.viewer.control_point("reference", reference_pos, color=imgui.ImVec4(0.0, 1.0, 1.0, 1.0))
+                # if _:
+                #     self.doc.reference_distance = glm.distance(glm.vec2(*self.doc.origin), glm.vec2(*reference_pos))
+                # ui.viewer.guide(self.doc.origin, reference_pos, imgui.ImVec4(0.0, 1.0, 1.0, 1.0), '>')
+
+                control_line = ui.comp(ui.viewer.control_point)
+                control_lines = ui.comp(control_line)
+                _, self.doc.first_vanishing_lines = control_lines("z", self.doc.first_vanishing_lines, color=get_axis_color(self.doc.first_axis) )
+                for line in self.doc.first_vanishing_lines:
+                    ui.viewer.guide(line[0], line[1], get_axis_color(self.doc.first_axis), '>')
+
+                ui.viewer.axes(length=10)
+
+                match self.doc.solver_mode:
+                    case SolverMode.OneVP:
+                        _, self.doc.second_vanishing_lines[0] = control_line("x", self.doc.second_vanishing_lines[0], color=get_axis_color(self.doc.second_axis))  
+                        ui.viewer.guide(self.doc.second_vanishing_lines[0][0], self.doc.second_vanishing_lines[0][1], get_axis_color(self.doc.second_axis), '>')
+                    
+                    case SolverMode.TwoVP:
+                        _, self.doc.principal = ui.viewer.control_point("p", self.doc.principal)
+                        if self.doc.quad_mode:
+                            z0, z1 = self.doc.first_vanishing_lines
+                            self.doc.second_vanishing_lines = [
+                                (z0[0], z1[0]),
+                                (z0[1], z1[1])
+                            ]
+                        else:
+                            _, self.doc.second_vanishing_lines = control_lines("x", self.doc.second_vanishing_lines, color=get_axis_color(self.doc.second_axis) )
+                        
+                        for line in self.doc.second_vanishing_lines:
+                            ui.viewer.guide(line[0], line[1], get_axis_color(self.doc.second_axis), '>')
+
+                    case SolverMode.ThreeVP:
+                        _, self.doc.principal = ui.viewer.control_point("p", self.doc.principal)
+                        if self.doc.quad_mode:
+                            z0, z1 = self.doc.first_vanishing_lines
+                            self.doc.second_vanishing_lines = [
+                                (z0[0], z1[0]),
+                                (z0[1], z1[1])
+                            ]
+                        else:
+                            _, self.doc.second_vanishing_lines = control_lines("x", self.doc.second_vanishing_lines, color=get_axis_color(self.doc.second_axis) )
+                        
+                        for line in self.doc.second_vanishing_lines:
+                            ui.viewer.guide(line[0], line[1], get_axis_color(self.doc.second_axis), '>')
+
+                        _, self.doc.third_vanishing_lines = control_lines("y", self.doc.third_vanishing_lines, color=get_axis_color(self.doc.third_axis) )
+                        for line in self.doc.third_vanishing_lines:
+                            ui.viewer.guide(line[0], line[1], get_axis_color(self.doc.third_axis), '>')
+
+                # draw vanishing lines to vanishing points
+                if self.first_vanishing_point is not None:
+                    for line in self.doc.first_vanishing_lines:
+                        P = sorted([line[0], line[1]], key=lambda P: glm.distance2(P, self.first_vanishing_point))[0]
+                        first_axis_color = get_axis_color(self.doc.first_axis)
+                        ui.viewer.guide(P, self.first_vanishing_point, imgui.ImVec4(first_axis_color[0], first_axis_color[1], first_axis_color[2], 0.4))
+
+                if self.second_vanishing_point is not None:
+                    for line in self.doc.second_vanishing_lines:
+                        P = sorted([line[0], line[1]], key=lambda P: glm.distance2(P, self.second_vanishing_point))[0]
+                        second_axis_color = get_axis_color(self.doc.second_axis)
+                        ui.viewer.guide(P, self.second_vanishing_point, imgui.ImVec4(second_axis_color[0], second_axis_color[1], second_axis_color[2], 0.4))
+
+                if self.camera is not None:
+
+                    reference_pos = self.doc.origin + imgui.ImVec2( self.doc.reference_distance, 0)
+                    _, reference_pos = ui.viewer.control_point("reference", reference_pos, color=imgui.ImVec4(0.0, 1.0, 1.0, 1.0))
+                    if _:
+                        self.doc.reference_distance = glm.distance(glm.vec2(*self.doc.origin), glm.vec2(*reference_pos))
+                    ui.viewer.guide(self.doc.origin, reference_pos, imgui.ImVec4(0.0, 1.0, 1.0, 1.0), '>')
+
+                    if ui.viewer.begin_scene(glm.scale(self.camera.projectionMatrix(), glm.vec3(1.0, -1.0, 1.0)), self.camera.viewMatrix()):
+                        axes_name = {
+                            solver.Axis.PositiveX: "X",
+                            solver.Axis.NegativeX: "X",
+                            solver.Axis.PositiveY: "Y",
+                            solver.Axis.NegativeY: "Y",
+                            solver.Axis.PositiveZ: "Z",
+                            solver.Axis.NegativeZ: "Z"
+                        }
+                        ground_axes = set([axes_name[self.doc.first_axis], axes_name[self.doc.second_axis]])
+                        if self.view_grid:
+                            # draw the grid
+                            if ground_axes == {'X', 'Y'}:
+                                for A, B in ui.viewer.make_gridXY_lines(step=1, size=10):
+                                    ui.viewer.guide(A, B)
+                            elif ground_axes == {'X', 'Z'}:
+                                for A, B in ui.viewer.make_gridXZ_lines(step=1, size=10):
+                                    ui.viewer.guide(A, B)
+                            elif ground_axes == {'Y', 'Z'}:
+                                for A, B in ui.viewer.make_gridYZ_lines(step=1, size=10):
+                                    ui.viewer.guide(A, B)
+                            else:
+                                logger.warning(f"Cannot draw grid for the selected axes. {solver.Axis(self.doc.first_axis).name}, {solver.Axis(self.doc.second_axis).name}")
+                        
+                        if self.view_axes:
+                            ui.viewer.axes(length=1.0)
+
+                        if self.view_horizon:
+                            # draw the horizon line
+                            if ground_axes == {'X', 'Y'}:
+                                ui.viewer.horizon_line(ground='xy')
+                            elif ground_axes == {'X', 'Z'}:
+                                ui.viewer.horizon_line(ground='xz')
+                            elif ground_axes == {'Y', 'Z'}:
+                                ui.viewer.horizon_line(ground='yz')
+                            else:
+                                logger.warning(f"Cannot draw horizon line for the selected axes. {solver.Axis(self.doc.first_axis).name}, {solver.Axis(self.doc.second_axis).name}")
+                        
+
+                    ui.viewer.end_scene()
+            ui.viewer.end_viewer()
+
+
         imgui.end()
 
         # Results Window
@@ -205,7 +436,92 @@ class PerspyApp():
                 imgui.text_wrapped(f"{error_msg}")
                 imgui.pop_style_color()
             else:
-                self.show_results()
+                if self.solver_results is None:
+                    imgui.text("No results yet.")
+                else:
+                    if ui.begin_attribute_editor("res props"):
+                        style = imgui.get_style()
+                        
+                        ui.next_attribute("transform")
+                        transform_text = solver.pretty_matrix(np.array(self.solver_results.transform).reshape(4,4), separator=" ")
+                        transform_text_size = imgui.calc_text_size(transform_text) + style.frame_padding * 2+imgui.ImVec2(0, 0)
+                        imgui.input_text_multiline("##transform", transform_text, size=transform_text_size, flags=imgui.InputTextFlags_.read_only)
+
+                        ui.next_attribute("position")
+                        position_text =  solver.pretty_matrix(np.array(self.solver_results.get_position()), separator=" ")
+                        imgui.input_text("##position", position_text, flags=imgui.InputTextFlags_.read_only)
+
+                        ui.next_attribute("quaternion (xyzw)")
+                        quat = self.solver_results.get_quaternion()
+                        quat_text =      solver.pretty_matrix(np.array([quat.x, quat.y, quat.z, quat.w]), separator=" ")
+                        imgui.input_text("##quaternion", quat_text, flags=imgui.InputTextFlags_.read_only)
+                        imgui.set_item_tooltip("Quaternion representing camera rotation (x, y, z, w)")
+
+                        ui.next_attribute(f"euler")
+                        imgui.push_style_var(imgui.StyleVar_.item_spacing, imgui.ImVec2(2, style.item_spacing.y))
+                        euler_order_options = solver.EulerOrder._member_names_
+                        max_text_width = max([imgui.calc_text_size(text).x for text in euler_order_options])
+                        total_width = max_text_width + style.frame_padding.x * 2.0 -10
+                        total_width+=imgui.get_frame_height() # for the arrow button todo: is it square for sure?
+                        imgui.set_next_item_width(total_width)
+                        _, self.current_euler_order = imgui.combo("##euler_order", self.current_euler_order, solver.EulerOrder._member_names_)
+                        imgui.set_item_tooltip("Select the Euler angle rotation order used for decomposition.")
+                        imgui.same_line()
+                        imgui.set_next_item_width(-1)
+                        euler_text = solver.pretty_matrix(np.array([math.degrees(radians) for radians in self.solver_results.get_euler(self.current_euler_order)]), separator="")
+                        imgui.input_text("##euler", euler_text, flags=imgui.InputTextFlags_.read_only)
+                        imgui.set_item_tooltip("Euler angles in degrees (x,y,z).\nNote: Rotation is applied in order order: ZXY (Yaw, Pitch, Roll)")
+                        imgui.pop_style_var()
+
+                        ui.next_attribute("fovy")
+                        imgui.input_text("##fovy", f"{math.degrees(self.camera.fovy):.2f}°")
+
+                        ui.next_attribute("fovx")
+                        imgui.input_text("##fovx", f"{math.degrees(self.solver_results.get_fovx()):.2f}°")
+
+                        ui.end_attribute_editor()
+
+                    if self.camera is not None:
+                        data = {
+                            "viewTransform": {
+                                "rows": [[col for col in self.camera.viewMatrix()[j]] for j in range(4)]
+                            },
+                            "projectionTransform": {
+                                "rows": [[col for col in self.camera.projectionMatrix()[j]] for j in range(4)]
+                            },
+                            "verticalFieldOfView": self.camera.fovy
+                        }
+                        # additional_data = {
+                        #     "principalPoint": {
+                        #         'x': self.doc.principal_point.x, 
+                        #         'y': self.doc.principal_point.y
+                        #     },
+                        #     "vanishingPoints": [
+                        #         {
+                        #             'x': self.first_vanishing_point.x, 
+                        #             'y': self.first_vanishing_point.y
+                        #         },
+                        #         {
+                        #             'x': self.second_vanishing_point.x, 
+                        #             'y': self.second_vanishing_point.y
+                        #         },
+                        #         "TODO:calculate third VP"
+                        #     ],
+                        #     "vanishingPointAxes": [
+                        #         solver.Axis._member_map_[self.doc.first_axis], 
+                        #         solver.Axis._member_map_[self.doc.second_axis],
+                        #         "TODO:thirdAxis"
+                        #     ],
+                        #     'focalLength': "todo: calculate from fov with the camera sensor size in mind",
+                        #     "imageWidth": int(self.doc.content_size.x),
+                        #     "imageHeight": int(self.doc.content_size.y)
+                        # }
+
+                        # import json
+                        # json_string = json.dumps(data, indent=4)
+                        # imgui.text(json_string)
+                        # if imgui.button("export camera parameters", imgui.ImVec2(-1,0)):
+                        #     ...
         ui.end_sidebar()
 
         if self.show_data_window:
@@ -377,319 +693,7 @@ class PerspyApp():
         imgui.text("Developed with ❤ by András Zalavári")
         imgui.text_link_open_url("https://github.com/yourusername/camera-spy")
 
-    def show_parameters(self):
-        buttons_width = 150
-        imgui.separator_text("Image")
-        imgui.set_next_item_width(buttons_width)
-        if self.image_texture_ref is None:
-            if imgui.button("open image", size=imgui.ImVec2(-1,0)):
-                self.open_image()
-            imgui.set_next_item_width(buttons_width)
-            _, value = imgui.input_int2("image size", [int(self.doc.content_size.x), int(self.doc.content_size.y)])
-            if _:
-                self.doc.content_size = imgui.ImVec2(value[0], value[1])
-        else:
-            image_aspect = self.doc.content_size.x / self.doc.content_size.y
-            width = imgui.get_content_region_avail().x-imgui.get_style().frame_padding.x*2
-            if imgui.image_button("open", self.image_texture_ref, imgui.ImVec2(width, width/image_aspect)):
-                self.open_image()
-            imgui.set_next_item_width(buttons_width)
-            imgui.input_int2("image size", [int(self.doc.content_size.x), int(self.doc.content_size.y)], imgui.InputTextFlags_.read_only)
-
-        _, self.dim_background = imgui.checkbox("dim background", self.dim_background)
-
-        # imgui.bullet_text("Warning: Font scaling will NOT be smooth, because\nImGuiBackendFlags_RendererHasTextures is not set!")
-        imgui.separator_text("Solver Parameters")
-        imgui.set_next_item_width(buttons_width)
-        _, self.doc.solver_mode = imgui.combo("mode", self.doc.solver_mode, SolverMode._member_names_)
-
-        imgui.set_next_item_width(buttons_width)
-        _, self.doc.scene_scale = imgui.slider_float("scene  scale", self.doc.scene_scale, 1.0, 100.0, "%.2f")
-
-        # solver specific parameters
-        match self.doc.solver_mode:
-            case SolverMode.OneVP:
-                imgui.set_next_item_width(buttons_width)
-                _, self.doc.fov_degrees = imgui.slider_float("fov°", self.doc.fov_degrees, 1.0, 179.0, "%.1f°")
-
-            case SolverMode.TwoVP:
-                _, self.doc.enable_auto_principal_point = imgui.checkbox("auto principal point", self.doc.enable_auto_principal_point)
-                _, self.doc.quad_mode = imgui.checkbox("quad", self.doc.quad_mode)
-
-            case SolverMode.ThreeVP:
-                _, self.doc.quad_mode = imgui.checkbox("quad", self.doc.quad_mode)
-
-        imgui.separator_text("Axes")
-        axes_presets = {
-            "default": 0,
-            'blender':1,
-            'maya':2
-        }
-        self.misc.setdefault('axes_preset', 0)
-        imgui.set_next_item_width(buttons_width)
-        _, self.misc['axes_preset'] = imgui.combo("axes_preset", self.misc['axes_preset'], list(axes_presets.keys()))
-        if _:
-            preset = list(axes_presets.keys())[self.misc['axes_preset']]
-            match preset:
-                case "default":
-                    """
-                    right-handed
-                    x: front/back axis
-                    y: left/right axis
-                    z: up/down axis
-                    """
-                    self.doc.first_axis, self.doc.second_axis = solver.Axis.PositiveX, solver.Axis.PositiveY
-                case "blender":
-                    """
-                    right-handed
-                    X is the left/right axis
-                    Y is the front/back axis, 
-                    Z is the up/down axis.
-                    """
-                    self.doc.first_axis, self.doc.second_axis = solver.Axis.PositiveY, solver.Axis.NegativeX
-                case "maya":
-                    self.doc.first_axis, self.doc.second_axis = solver.Axis.PositiveZ, solver.Axis.NegativeX
-        
-        try:
-            axis_matrix = solver.create_axis_assignment_matrix(self.doc.first_axis, self.doc.second_axis)
-        except Exception as e:
-            self.doc.first_axis, self.doc.second_axis = solver.Axis.PositiveZ, solver.Axis.PositiveX
-            axis_matrix = solver.create_axis_assignment_matrix(self.doc.first_axis, self.doc.second_axis)
-            imgui.text(f"Error: {e}")
-        
-        axes_short_names = {
-            solver.Axis.PositiveX: "X+",
-            solver.Axis.NegativeX: "X-",
-            solver.Axis.PositiveY: "Y+",
-            solver.Axis.NegativeY: "Y-",
-            solver.Axis.PositiveZ: "Z+",
-            solver.Axis.NegativeZ: "Z-"
-        }
-        style = imgui.get_style()
-        imgui.set_next_item_width(buttons_width/2-style.frame_padding.x)
-        _, self.doc.first_axis = imgui.combo("##first axis",   self.doc.first_axis, list(axes_short_names.values()))
-        imgui.set_item_tooltip(f"First axis (ground plane axis 1)")
-        imgui.same_line()
-        imgui.set_next_item_width(buttons_width/2-style.frame_padding.x)
-        _, self.doc.second_axis = imgui.combo("##second axis", self.doc.second_axis, list(axes_short_names.values()))
-        imgui.set_item_tooltip(f"Second axis (ground plane axis 2)")
-        
-    def show_viewer(self):
-        if ui.viewer.begin_viewer("viewer1", content_size=self.doc.content_size, size=imgui.ImVec2(-1,-1)):
-            # background image
-            if self.image_texture_ref is not None:
-                tl = ui.viewer._get_window_coords(imgui.ImVec2(0,0))
-                br = ui.viewer._get_window_coords(imgui.ImVec2(self.doc.content_size.x, self.doc.content_size.y))
-
-                
-                image_size = br - tl
-                # imgui.set_cursor_pos(tl)
-                draw_list = imgui.get_window_draw_list()
-
-                tint = (1.0, 1.0, 1.0, 1.0)
-                if self.dim_background:
-                    tint = (0.33, 0.33, 0.33, 1.0)
-
-                draw_list.add_image(
-                    self.image_texture_ref, 
-                    tl+imgui.get_window_pos(), 
-                    br+imgui.get_window_pos(), 
-                    imgui.ImVec2(0,1), 
-                    imgui.ImVec2(1,0), 
-                    imgui.color_convert_float4_to_u32(tint)
-                )
-
-            # control points
-            _, self.doc.origin = ui.viewer.control_point("o", self.doc.origin)
-            control_line = ui.comp(ui.viewer.control_point)
-            control_lines = ui.comp(control_line)
-            _, self.doc.first_vanishing_lines = control_lines("z", self.doc.first_vanishing_lines, color=get_axis_color(self.doc.first_axis) )
-            for line in self.doc.first_vanishing_lines:
-                ui.viewer.guide(line[0], line[1], get_axis_color(self.doc.first_axis), '>')
-
-            ui.viewer.axes(length=10)
-
-            match self.doc.solver_mode:
-                case SolverMode.OneVP:
-                    _, self.doc.second_vanishing_lines[0] = control_line("x", self.doc.second_vanishing_lines[0], color=get_axis_color(self.doc.second_axis))  
-                    ui.viewer.guide(self.doc.second_vanishing_lines[0][0], self.doc.second_vanishing_lines[0][1], get_axis_color(self.doc.second_axis), '>')
-                
-                case SolverMode.TwoVP:
-                    _, self.doc.principal = ui.viewer.control_point("p", self.doc.principal)
-                    if self.doc.quad_mode:
-                        z0, z1 = self.doc.first_vanishing_lines
-                        self.doc.second_vanishing_lines = [
-                            (z0[0], z1[0]),
-                            (z0[1], z1[1])
-                        ]
-                    else:
-                        _, self.doc.second_vanishing_lines = control_lines("x", self.doc.second_vanishing_lines, color=get_axis_color(self.doc.second_axis) )
-                    
-                    for line in self.doc.second_vanishing_lines:
-                        ui.viewer.guide(line[0], line[1], get_axis_color(self.doc.second_axis), '>')
-
-                case SolverMode.ThreeVP:
-                    _, self.doc.principal = ui.viewer.control_point("p", self.doc.principal)
-                    if self.doc.quad_mode:
-                        z0, z1 = self.doc.first_vanishing_lines
-                        self.doc.second_vanishing_lines = [
-                            (z0[0], z1[0]),
-                            (z0[1], z1[1])
-                        ]
-                    else:
-                        _, self.doc.second_vanishing_lines = control_lines("x", self.doc.second_vanishing_lines, color=get_axis_color(self.doc.second_axis) )
-                    
-                    for line in self.doc.second_vanishing_lines:
-                        ui.viewer.guide(line[0], line[1], get_axis_color(self.doc.second_axis), '>')
-
-                    _, self.doc.third_vanishing_lines = control_lines("y", self.doc.third_vanishing_lines, color=get_axis_color(self.doc.third_axis) )
-                    for line in self.doc.third_vanishing_lines:
-                        ui.viewer.guide(line[0], line[1], get_axis_color(self.doc.third_axis), '>')
-
-            # draw vanishing lines to vanishing points
-            if self.first_vanishing_point is not None:
-                for line in self.doc.first_vanishing_lines:
-                    P = sorted([line[0], line[1]], key=lambda P: glm.distance2(P, self.first_vanishing_point))[0]
-                    first_axis_color = get_axis_color(self.doc.first_axis)
-                    ui.viewer.guide(P, self.first_vanishing_point, imgui.ImVec4(first_axis_color[0], first_axis_color[1], first_axis_color[2], 0.4))
-
-            if self.second_vanishing_point is not None:
-                for line in self.doc.second_vanishing_lines:
-                    P = sorted([line[0], line[1]], key=lambda P: glm.distance2(P, self.second_vanishing_point))[0]
-                    second_axis_color = get_axis_color(self.doc.second_axis)
-                    ui.viewer.guide(P, self.second_vanishing_point, imgui.ImVec4(second_axis_color[0], second_axis_color[1], second_axis_color[2], 0.4))
-
-            if self.camera is not None:
-                if ui.viewer.begin_scene(glm.scale(self.camera.projectionMatrix(), glm.vec3(1.0, -1.0, 1.0)), self.camera.viewMatrix()):
-                    axes_name = {
-                        solver.Axis.PositiveX: "X",
-                        solver.Axis.NegativeX: "X",
-                        solver.Axis.PositiveY: "Y",
-                        solver.Axis.NegativeY: "Y",
-                        solver.Axis.PositiveZ: "Z",
-                        solver.Axis.NegativeZ: "Z"
-                    }
-                    ground_axes = set([axes_name[self.doc.first_axis], axes_name[self.doc.second_axis]])
-                    if self.view_grid:
-                        # draw the grid
-                        if ground_axes == {'X', 'Y'}:
-                            for A, B in ui.viewer.make_gridXY_lines(step=1, size=10):
-                                ui.viewer.guide(A, B)
-                        elif ground_axes == {'X', 'Z'}:
-                            for A, B in ui.viewer.make_gridXZ_lines(step=1, size=10):
-                                ui.viewer.guide(A, B)
-                        elif ground_axes == {'Y', 'Z'}:
-                            for A, B in ui.viewer.make_gridYZ_lines(step=1, size=10):
-                                ui.viewer.guide(A, B)
-                        else:
-                            logger.warning(f"Cannot draw grid for the selected axes. {solver.Axis(self.doc.first_axis).name}, {solver.Axis(self.doc.second_axis).name}")
-                    
-                    if self.view_axes:
-                        ui.viewer.axes(length=1.0)
-
-                    if self.view_horizon:
-                        # draw the horizon line
-                        if ground_axes == {'X', 'Y'}:
-                            ui.viewer.horizon_line(ground='xy')
-                        elif ground_axes == {'X', 'Z'}:
-                            ui.viewer.horizon_line(ground='xz')
-                        elif ground_axes == {'Y', 'Z'}:
-                            ui.viewer.horizon_line(ground='yz')
-                        else:
-                            logger.warning(f"Cannot draw horizon line for the selected axes. {solver.Axis(self.doc.first_axis).name}, {solver.Axis(self.doc.second_axis).name}")
-                    
-
-                ui.viewer.end_scene()
-        ui.viewer.end_viewer()
-
-    def show_results(self):
-        if self.solver_results is None:
-            imgui.text("No results yet.")
-            return
-
-        if ui.begin_attribute_editor("res props"):
-            style = imgui.get_style()
-            
-            ui.next_attribute("transform")
-            transform_text = solver.pretty_matrix(np.array(self.solver_results.transform).reshape(4,4), separator=" ")
-            transform_text_size = imgui.calc_text_size(transform_text) + style.frame_padding * 2+imgui.ImVec2(0, 0)
-            imgui.input_text_multiline("##transform", transform_text, size=transform_text_size, flags=imgui.InputTextFlags_.read_only)
-
-            ui.next_attribute("position")
-            position_text =  solver.pretty_matrix(np.array(self.solver_results.get_position()), separator=" ")
-            imgui.input_text("##position", position_text, flags=imgui.InputTextFlags_.read_only)
-
-            ui.next_attribute("quaternion (xyzw)")
-            quat = self.solver_results.get_quaternion()
-            quat_text =      solver.pretty_matrix(np.array([quat.x, quat.y, quat.z, quat.w]), separator=" ")
-            imgui.input_text("##quaternion", quat_text, flags=imgui.InputTextFlags_.read_only)
-            imgui.set_item_tooltip("Quaternion representing camera rotation (x, y, z, w)")
-
-            ui.next_attribute(f"euler")
-            imgui.push_style_var(imgui.StyleVar_.item_spacing, imgui.ImVec2(2, style.item_spacing.y))
-            euler_order_options = solver.EulerOrder._member_names_
-            max_text_width = max([imgui.calc_text_size(text).x for text in euler_order_options])
-            total_width = max_text_width + style.frame_padding.x * 2.0 -10
-            total_width+=imgui.get_frame_height() # for the arrow button todo: is it square for sure?
-            imgui.set_next_item_width(total_width)
-            _, self.current_euler_order = imgui.combo("##euler_order", self.current_euler_order, solver.EulerOrder._member_names_)
-            imgui.set_item_tooltip("Select the Euler angle rotation order used for decomposition.")
-            imgui.same_line()
-            imgui.set_next_item_width(-1)
-            euler_text = solver.pretty_matrix(np.array([math.degrees(radians) for radians in self.solver_results.get_euler(self.current_euler_order)]), separator="")
-            imgui.input_text("##euler", euler_text, flags=imgui.InputTextFlags_.read_only)
-            imgui.set_item_tooltip("Euler angles in degrees (x,y,z).\nNote: Rotation is applied in order order: ZXY (Yaw, Pitch, Roll)")
-            imgui.pop_style_var()
-
-            ui.next_attribute("fovy")
-            imgui.input_text("##fovy", f"{math.degrees(self.camera.fovy):.2f}°")
-
-            ui.next_attribute("fovx")
-            imgui.input_text("##fovx", f"{math.degrees(self.solver_results.get_fovx()):.2f}°")
-
-            ui.end_attribute_editor()
-
-        if self.camera is not None:
-            data = {
-                "viewTransform": {
-                    "rows": [[col for col in self.camera.viewMatrix()[j]] for j in range(4)]
-                },
-                "projectionTransform": {
-                    "rows": [[col for col in self.camera.projectionMatrix()[j]] for j in range(4)]
-                },
-                "verticalFieldOfView": self.camera.fovy
-            }
-            # additional_data = {
-            #     "principalPoint": {
-            #         'x': self.doc.principal_point.x, 
-            #         'y': self.doc.principal_point.y
-            #     },
-            #     "vanishingPoints": [
-            #         {
-            #             'x': self.first_vanishing_point.x, 
-            #             'y': self.first_vanishing_point.y
-            #         },
-            #         {
-            #             'x': self.second_vanishing_point.x, 
-            #             'y': self.second_vanishing_point.y
-            #         },
-            #         "TODO:calculate third VP"
-            #     ],
-            #     "vanishingPointAxes": [
-            #         solver.Axis._member_map_[self.doc.first_axis], 
-            #         solver.Axis._member_map_[self.doc.second_axis],
-            #         "TODO:thirdAxis"
-            #     ],
-            #     'focalLength': "todo: calculate from fov with the camera sensor size in mind",
-            #     "imageWidth": int(self.doc.content_size.x),
-            #     "imageHeight": int(self.doc.content_size.y)
-            # }
-
-            # import json
-            # json_string = json.dumps(data, indent=4)
-            # imgui.text(json_string)
-            # if imgui.button("export camera parameters", imgui.ImVec2(-1,0)):
-            #     ...
+    
 
     def show_io(self):
         from textwrap import dedent
@@ -703,374 +707,13 @@ class PerspyApp():
         if imgui.collapsing_header("Results Dictionary", imgui.TreeNodeFlags_.default_open):
             data = self.solver_results.as_dict()
             text = pformat(data, indent=2, width=80, compact=False)
-            # text = json.dumps(data, indent=4)
             imgui.text_unformatted(text)
 
         if imgui.collapsing_header("Blender Script", imgui.TreeNodeFlags_.default_open):
             data = self.results_to_blender_script()
             text = pformat(data, indent=2, width=80, compact=False)
-            # text = json.dumps(data, indent=4)
             imgui.text_unformatted(text)
-        # if imgui.collapsing_header("Parameters", imgui.TreeNodeFlags_.default_open):
-        #     text = self.serialize()
-        #     imgui.text_unformatted=(text)
 
-        # if imgui.collapsing_header("Computed", imgui.TreeNodeFlags_.default_open):
-        #     imgui.text("...")
-       
-    def show_emoji_test(self):
-        imgui.text("Emoji Font Test")
-        imgui.separator()
-        
-        # Calculate total emoji count
-        total_sample_emojis = 0
-        
-        # Extended emoji categories with more comprehensive coverage
-        emoji_categories = {
-            "Smileys & Emotion (😀-😿)": [
-                "😀", "😃", "😄", "😁", "😆", "😅", "🤣", "😂", "🙂", "🙃", "🫠",
-                "😉", "😊", "😇", "🥰", "😍", "🤩", "😘", "😗", "☺", "😚", "😙",
-                "🥲", "😋", "😛", "😜", "🤪", "😝", "🤑", "🤗", "🤭", "🫢", "🫣",
-                "🤫", "🤔", "🫡", "🤐", "🤨", "😐", "😑", "😶", "🫥", "😶‍🌫", "😏",
-                "😒", "🙄", "😬", "😮‍💨", "🤥", "😔", "😪", "🤤", "😴", "😷",
-                "🤒", "🤕", "🤢", "🤮", "🤧", "🥵", "🥶", "🥴", "😵", "😵‍💫",
-                "🤯", "🤠", "🥳", "🥸", "😎", "🤓", "🧐", "😕", "🫤", "😟",
-                "🙁", "☹", "😮", "😯", "😲", "😳", "🥺", "🥹", "😦", "😧",
-                "😨", "😰", "😥", "😢", "😭", "😱", "😖", "😣", "😞", "😓",
-                "😩", "😫", "🥱", "😤", "😡", "😠", "🤬", "😈", "👿", "💀",
-                "☠", "�", "🤡", "👹", "👺", "👻", "👽", "👾", "🤖", "😺",
-                "😸", "😹", "😻", "😼", "😽", "🙀", "😿", "😾"
-            ],
-            "People & Body (�👋-🫶)": [
-                "👋", "🤚", "🖐", "✋", "🖖", "🫱", "�", "🫳", "�", "👌",
-                "�", "🤏", "✌", "🤞", "🫰", "🤟", "�🤘", "🤙", "👈", "👉",
-                "👆", "🖕", "👇", "☝", "🫵", "👍", "👎", "👊", "✊", "🤛",
-                "🤜", "👏", "🙌", "🫶", "👐", "🤲", "🤝", "🙏", "✍", "💅",
-                "🤳", "💪", "🦾", "🦿", "🦵", "🦶", "👂", "🦻", "👃", "🧠",
-                "🫀", "🫁", "🦷", "🦴", "👀", "👁", "👅", "👄", "🫦", "👶",
-                "🧒", "👦", "👧", "🧑", "👱", "👨", "🧔", "👨‍🦰", "👨‍🦱", "👨‍🦳",
-                "👨‍🦲", "👩", "👩‍🦰", "👩‍🦱", "👩‍🦳", "👩‍🦲", "🧓", "👴", "👵"
-            ],
-            "Animals & Nature (🐵-🦎)": [
-                "🐵", "🐒", "🦍", "🦧", "🐶", "🐕", "🦮", "🐕‍🦺", "�", "🐺",
-                "🦊", "🦝", "�🐱", "🐈", "🐈‍⬛", "🦁", "🐯", "🐅", "🐆", "🐴",
-                "🐎", "🦄", "🦓", "🦌", "🦬", "🐮", "🐂", "🐃", "🐄", "🐷",
-                "🐖", "�", "🐽", "🐏", "🐑", "🐐", "🐪", "🐫", "🦙", "🦒",
-                "🐘", "🦣", "🦏", "🦛", "�🐭", "🐁", "🐀", "🐹", "🐰", "🐇",
-                "🐿", "�", "🦔", "🦇", "🐻", "�‍❄", "🐨", "�", "🦥", "🦦",
-                "�", "🦘", "🦡", "🐾", "🦃", "🐔", "�", "�", "�", "�",
-                "�", "🐧", "🕊", "🦅", "🦆", "🦢", "🦉", "🦤", "🪶", "🦩",
-                "🦚", "🦜", "�", "�", "�", "🦎", "🐍", "🐲", "🐉", "🦕",
-                "🦖", "🐳", "🐋", "🐬", "🦭", "🐟", "🐠", "�", "🦈", "🐙"
-            ],
-            "Food & Drink (🍎-🍷)": [
-                "🍎", "🍊", "🍋", "🍌", "🍉", "🍇", "🍓", "🫐", "🍈", "🍒",
-                "🍑", "🥭", "🍍", "🥥", "🥝", "🍅", "🍆", "🥑", "🥦", "🥒",
-                "🌶", "🫑", "🌽", "🥕", "🫒", "🧄", "🧅", "🥔", "🍠", "🫘",
-                "🥐", "🍞", "🥖", "🥨", "🧀", "🥚", "🍳", "🧈", "🥞", "🧇",
-                "🥓", "🥩", "🍗", "🍖", "🦴", "🌭", "🍔", "🍟", "🍕", "🫓",
-                "🥙", "🧆", "🌮", "🌯", "🫔", "🥗", "🥘", "🫕", "🍝", "🍜",
-                "🍲", "🍛", "🍣", "🍱", "🥟", "🦪", "🍤", "🍙", "🍚", "🍘",
-                "🍥", "🥠", "🥮", "🍢", "🍡", "🍧", "🍨", "🍦", "🥧", "🧁",
-                "🍰", "🎂", "🍮", "🍭", "🍬", "🍫", "🍿", "🍩", "🍪", "🌰",
-                "🥜", "🍯", "🥛", "🍼", "🫖", "☕", "🍵", "🧃", "🥤", "🧋",
-                "🍶", "🍺", "🍻", "🥂", "🍷", "🥃", "🍸", "🍹", "🧉", "🍾"
-            ],
-            "Travel & Places (🚗-🏰)": [
-                "🚗", "🚕", "🚙", "🚌", "🚎", "🏎", "🚓", "🚑", "🚒", "🚐",
-                "🛻", "🚚", "🚛", "🚜", "🏍", "🛵", "🚲", "🛴", "🛹", "🛼",
-                "🚁", "🛸", "✈", "🛩", "🛫", "🛬", "🪂", "⛵", "🚤", "🛥",
-                "🛳", "⛴", "🚢", "⚓", "🪝", "⛽", "🚧", "🚦", "🚥", "🗺",
-                "🗿", "🗽", "🗼", "🏰", "🏯", "🏟", "🎡", "🎢", "🎠", "⛲",
-                "⛱", "🏖", "🏝", "🏜", "🌋", "⛰", "🏔", "🗻", "🏕", "⛺"
-            ],
-            "Activities & Sports (⚽-🥇)": [
-                "⚽", "🏀", "🏈", "⚾", "🥎", "🎾", "🏐", "🏉", "🥏", "🎱",
-                "🪀", "🏓", "🏸", "🏒", "🏑", "🥍", "🏏", "🪃", "🥅", "⛳",
-                "🪁", "🏹", "🎣", "🤿", "🥊", "🥋", "🎽", "🛹", "🛷", "⛸",
-                "🥌", "🎿", "⛷", "🏂", "🪂", "🏋", "🤼", "🤸", "⛹", "🤺",
-                "🏇", "🧘", "🏄", "🏊", "🤽", "🚣", "🧗", "🚵", "🚴", "🏆",
-                "🥇", "🥈", "🥉", "🏅", "🎖", "🏵", "🎗", "🎫", "🎟", "🎪"
-            ],
-            "Objects & Technology (💻-📱)": [
-                "💻", "🖥", "🖨", "⌨", "🖱", "🖲", "💽", "💾", "💿", "📀",
-                "🧮", "📱", "📞", "☎", "📟", "📠", "📺", "📻", "🎙", "🎚",
-                "🎛", "🧭", "⏱", "⏲", "⏰", "🕰", "⌛", "⏳", "📡", "🔋",
-                "🪫", "🔌", "💡", "🔦", "🕯", "🪔", "🧯", "🛢", "💸", "💵",
-                "💴", "💶", "💷", "🪙", "💰", "💳", "💎", "⚖", "🪜", "🧰"
-            ],
-            "Symbols & Flags (❤-🏁)": [
-                "❤", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "🤎", "💔",
-                "❣", "💕", "💞", "💓", "💗", "💖", "💘", "💝", "💟", "☮",
-                "✝", "☪", "🕉", "☸", "✡", "🔯", "🕎", "☯", "☦", "🛐",
-                "⛎", "♈", "♉", "♊", "♋", "♌", "♍", "♎", "♏", "♐",
-                "♑", "♒", "♓", "🆔", "⚛", "🉑", "☢", "☣", "📴", "📳",
-                "🈶", "🈚", "🈸", "🈺", "🈷", "✴", "🆚", "💮", "🉐", "㊙",
-                "㊗", "🈴", "🈵", "🈹", "🈲", "🅰", "🅱", "🆎", "🆑", "🅾",
-                "🆘", "❌", "⭕", "🛑", "⛔", "📛", "🚫", "💯", "💢", "♨",
-                "🚷", "🚯", "🚳", "🚱", "🔞", "📵", "🚭", "❗", "❕", "❓",
-                "❔", "‼", "⁉", "🔅", "🔆", "〽", "⚠", "🚸", "🔱", "⚜",
-                "🔰", "♻", "✅", "🈯", "💹", "❇", "✳", "❎", "🌐", "💠",
-                "Ⓜ", "🌀", "💤", "🏧", "🚾", "♿", "🅿", "🈳", "🈂", "🛂",
-                "🛃", "🛄", "🛅", "🚹", "🚺", "🚼", "⚧", "🚻", "🚮", "🎦",
-                "📶", "🈁", "🔣", "ℹ", "🔤", "🔡", "🔠", "🆖", "🆗", "🆙",
-                "🆒", "🆕", "🆓", "0️⃣", "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣",
-                "7️⃣", "8️⃣", "9️⃣", "🔟", "🔢", "#️⃣", "*️⃣", "⏏", "▶", "⏸",
-                "⏯", "⏹", "⏺", "⏭", "⏮", "⏩", "⏪", "⏫", "⏬", "◀",
-                "🔼", "🔽", "➡", "⬅", "⬆", "⬇", "↗", "↘", "↙", "↖",
-                "↕", "↔", "↪", "↩", "⤴", "⤵", "🔀", "🔁", "🔂", "🔄",
-                "🔃", "🎵", "🎶", "➕", "➖", "➗", "✖", "🟰", "♾", "💲",
-                "💱", "™", "©", "®", "〰", "➰", "➿", "🔚", "🔙", "🔛",
-                "🔝", "🔜", "✔", "☑", "🔘", "🔴", "🟠", "🟡", "🟢", "🔵",
-                "🟣", "⚫", "⚪", "🟤", "🔺", "🔻", "🔸", "🔹", "🔶", "🔷",
-                "🔳", "🔲", "▪", "▫", "◾", "◽", "◼", "◻", "🟥", "🟧",
-                "🟨", "🟩", "🟦", "🟪", "⬛", "⬜", "🟫", "🔈", "🔇", "🔉",
-                "🔊", "🔔", "🔕", "📣", "📢", "💬", "💭", "🗯", "♠", "♣",
-                "♥", "♦", "🃏", "🎴", "🀄", "🕐", "🕑", "🕒", "🕓", "🕔",
-                "🕕", "🕖", "🕗", "🕘", "🕙", "🕚", "🕛", "🕜", "🕝", "🕞",
-                "🕟", "🕠", "🕡", "🕢", "🕣", "🕤", "🕥", "🕦", "🕧", "🏁"
-            ]
-        }
-        
-        # Count total emojis for statistics
-        for category, emojis in emoji_categories.items():
-            total_sample_emojis += len(emojis)
-        
-        # Show statistics
-        imgui.text(f"Sample Coverage: {total_sample_emojis:,} emojis shown")
-        imgui.text("📊 Unicode Emoji Statistics:")
-        imgui.bullet_text("Total Unicode emojis: ~3,600+ (as of Unicode 15.1)")
-        imgui.bullet_text("This sample shows major categories")
-        imgui.bullet_text("Actual coverage depends on your system's emoji font")
-        imgui.separator()
-        
-        # Show categories with emoji grids
-        for category, emojis in emoji_categories.items():
-            emoji_count = len(emojis)
-            header_text = f"{category} ({emoji_count} emojis)"
-            
-            if imgui.collapsing_header(header_text):
-                # Display emojis in a grid
-                columns = 12  # More columns for better space usage
-                for i, emoji in enumerate(emojis):
-                    if i > 0 and i % columns != 0:
-                        imgui.same_line()
-                    
-                    # Make emoji buttons for better interaction
-                    if imgui.button(emoji, imgui.ImVec2(30, 30)):
-                        # Copy emoji to clipboard (if supported)
-                        pass
-                    
-                    if imgui.is_item_hovered():
-                        # Try to get the actual Unicode codepoint(s)
-                        try:
-                            if len(emoji) == 1:
-                                codepoint = ord(emoji)
-                                imgui.set_tooltip(f"Unicode: U+{codepoint:04X}\nClick to copy")
-                            else:
-                                # Multi-codepoint emoji (like skin tones, ZWJ sequences)
-                                codepoints = [f"U+{ord(c):04X}" for c in emoji]
-                                imgui.set_tooltip(f"Unicode: {' '.join(codepoints)}\nClick to copy")
-                        except:
-                            imgui.set_tooltip(f"Emoji: {emoji}\nClick to copy")
-                
-                imgui.spacing()
-        
-        imgui.separator()
-        imgui.text("🧪 Font Rendering Tests:")
-        
-        # Test different emoji types
-        test_cases = [
-            ("Basic Emojis", "😀 😃 😄 😁 😆 😅 🤣 😂"),
-            ("Skin Tones", "👋 👋🏻 👋🏼 👋🏽 👋🏾 👋�"),
-            ("Compound Emojis", "👨‍💻 👩‍🎓 🧑‍🚀 👩‍⚕️ 👨‍🍳"),
-            ("Flags", "🏁 🏳️ 🏳️‍🌈 🏳️‍⚧️ 🏴‍☠️"),
-            ("Recent Additions", "🫠 🫡 🫥 🫤 🫣 🫢 🫱 🫲"),
-            ("Mixed Content", "Code: -> ≤ ≥ ≠ == /* */ // && || 🔥 💻"),
-        ]
-        
-        for test_name, test_emoji in test_cases:
-            imgui.text(f"{test_name}:")
-            imgui.text(test_emoji)
-            imgui.spacing()
-        
-        imgui.separator()
-        imgui.text_colored((0.7, 0.7, 0.7, 1.0), "💡 Note: Emoji rendering depends on your system's emoji font.")
-        imgui.text_colored((0.7, 0.7, 0.7, 1.0), "Some emojis may appear as □ if not supported.")
-
-    def show_fontawesome_test(self):
-        imgui.text("FontAwesome 4 Icons Test")
-        imgui.separator()
-        
-        # Helper function to safely get FontAwesome icons
-        def safe_icon(name, fallback=""):
-            return getattr(icons_fontawesome_4, name, fallback)
-        
-        # FontAwesome icon categories with safe access
-        icon_categories = {
-            "Interface Icons": [
-                (safe_icon('ICON_FA_HOME'), "Home"),
-                (safe_icon('ICON_FA_USER'), "User"),
-                (safe_icon('ICON_FA_SEARCH'), "Search"),
-                (safe_icon('ICON_FA_COG', safe_icon('ICON_FA_GEAR')), "Settings"),
-                (safe_icon('ICON_FA_BARS'), "Menu"),
-                (safe_icon('ICON_FA_TIMES', safe_icon('ICON_FA_CLOSE')), "Close"),
-                (safe_icon('ICON_FA_PLUS'), "Add"),
-                (safe_icon('ICON_FA_MINUS'), "Remove"),
-                (safe_icon('ICON_FA_EDIT', safe_icon('ICON_FA_PENCIL')), "Edit"),
-                (safe_icon('ICON_FA_TRASH', safe_icon('ICON_FA_TRASH_O')), "Delete"),
-                (safe_icon('ICON_FA_SAVE', safe_icon('ICON_FA_FLOPPY_O')), "Save"),
-                (safe_icon('ICON_FA_UNDO'), "Undo"),
-                (safe_icon('ICON_FA_REFRESH'), "Refresh"),
-                (safe_icon('ICON_FA_DOWNLOAD'), "Download"),
-                (safe_icon('ICON_FA_UPLOAD'), "Upload"),
-            ],
-            "Media & Files": [
-                (safe_icon('ICON_FA_FILE', safe_icon('ICON_FA_FILE_O')), "File"),
-                (safe_icon('ICON_FA_FOLDER', safe_icon('ICON_FA_FOLDER_O')), "Folder"),
-                (safe_icon('ICON_FA_IMAGE', safe_icon('ICON_FA_PICTURE_O')), "Image"),
-                (safe_icon('ICON_FA_VIDEO_CAMERA', safe_icon('ICON_FA_VIDEO')), "Video"),
-                (safe_icon('ICON_FA_MUSIC'), "Music"),
-                (safe_icon('ICON_FA_PLAY'), "Play"),
-                (safe_icon('ICON_FA_PAUSE'), "Pause"),
-                (safe_icon('ICON_FA_STOP'), "Stop"),
-                (safe_icon('ICON_FA_VOLUME_UP'), "Volume Up"),
-                (safe_icon('ICON_FA_VOLUME_DOWN'), "Volume Down"),
-                (safe_icon('ICON_FA_VOLUME_OFF'), "Mute"),
-            ],
-            "Navigation": [
-                (safe_icon('ICON_FA_ARROW_LEFT'), "Left"),
-                (safe_icon('ICON_FA_ARROW_RIGHT'), "Right"),
-                (safe_icon('ICON_FA_ARROW_UP'), "Up"),
-                (safe_icon('ICON_FA_ARROW_DOWN'), "Down"),
-                (safe_icon('ICON_FA_CHEVRON_LEFT'), "Chevron Left"),
-                (safe_icon('ICON_FA_CHEVRON_RIGHT'), "Chevron Right"),
-                (safe_icon('ICON_FA_CHEVRON_UP'), "Chevron Up"),
-                (safe_icon('ICON_FA_CHEVRON_DOWN'), "Chevron Down"),
-                (safe_icon('ICON_FA_ANGLE_LEFT'), "Angle Left"),
-                (safe_icon('ICON_FA_ANGLE_RIGHT'), "Angle Right"),
-            ],
-            "Communication": [
-                (safe_icon('ICON_FA_ENVELOPE', safe_icon('ICON_FA_ENVELOPE_O')), "Email"),
-                (safe_icon('ICON_FA_PHONE'), "Phone"),
-                (safe_icon('ICON_FA_COMMENT', safe_icon('ICON_FA_COMMENT_O')), "Comment"),
-                (safe_icon('ICON_FA_COMMENTS', safe_icon('ICON_FA_COMMENTS_O')), "Comments"),
-                (safe_icon('ICON_FA_BELL', safe_icon('ICON_FA_BELL_O')), "Bell"),
-                (safe_icon('ICON_FA_HEART', safe_icon('ICON_FA_HEART_O')), "Heart"),
-                (safe_icon('ICON_FA_STAR', safe_icon('ICON_FA_STAR_O')), "Star"),
-                (safe_icon('ICON_FA_THUMBS_UP', safe_icon('ICON_FA_THUMBS_O_UP')), "Thumbs Up"),
-                (safe_icon('ICON_FA_THUMBS_DOWN', safe_icon('ICON_FA_THUMBS_O_DOWN')), "Thumbs Down"),
-            ],
-            "Status & Indicators": [
-                (safe_icon('ICON_FA_CHECK'), "Check"),
-                (safe_icon('ICON_FA_TIMES'), "X/Cross"),
-                (safe_icon('ICON_FA_EXCLAMATION'), "Exclamation"),
-                (safe_icon('ICON_FA_QUESTION'), "Question"),
-                (safe_icon('ICON_FA_INFO'), "Info"),
-                (safe_icon('ICON_FA_WARNING', safe_icon('ICON_FA_EXCLAMATION_TRIANGLE')), "Warning"),
-                (safe_icon('ICON_FA_BAN'), "Ban"),
-                (safe_icon('ICON_FA_LOCK'), "Lock"),
-                (safe_icon('ICON_FA_UNLOCK', safe_icon('ICON_FA_UNLOCK_ALT')), "Unlock"),
-                (safe_icon('ICON_FA_EYE'), "Eye"),
-                (safe_icon('ICON_FA_EYE_SLASH'), "Eye Slash"),
-            ]
-        }
-        
-        total_icons = sum(len(icons) for icons in icon_categories.values())
-        imgui.text(f"FontAwesome 4 Sample: {total_icons} icons")
-        imgui.text("Icons are vector-based and scale perfectly!")
-        imgui.separator()
-        
-        for category, icons in icon_categories.items():
-            if imgui.collapsing_header(category):
-                columns = 5
-                for i, (icon, name) in enumerate(icons):
-                    if i > 0 and i % columns != 0:
-                        imgui.same_line()
-                    
-                    # Create button with icon
-                    button_size = imgui.ImVec2(80, 40)
-                    if imgui.button(f"{icon}###{name}", button_size):
-                        logger.info(f"Clicked {name} icon")
-                    
-                    if imgui.is_item_hovered():
-                        imgui.set_tooltip(f"{name}\nIcon: {icon}")
-                
-                imgui.spacing()
-        
-        imgui.separator()
-        imgui.text("Icon Integration Examples:")
-        
-        # Example usage in UI elements
-        play_icon = safe_icon('ICON_FA_PLAY')
-        pause_icon = safe_icon('ICON_FA_PAUSE')
-        stop_icon = safe_icon('ICON_FA_STOP')
-        info_icon = safe_icon('ICON_FA_INFO')
-        home_icon = safe_icon('ICON_FA_HOME')
-        chevron_icon = safe_icon('ICON_FA_CHEVRON_RIGHT')
-        check_icon = safe_icon('ICON_FA_CHECK')
-        
-        if imgui.button(f"{play_icon} Play"):
-            logger.info("Play button clicked")
-        imgui.same_line()
-        
-        if imgui.button(f"{pause_icon} Pause"):
-            logger.info("Pause button clicked")
-        imgui.same_line()
-        
-        if imgui.button(f"{stop_icon} Stop"):
-            logger.info("Stop button clicked")
-        
-        imgui.spacing()
-        imgui.text(f"{info_icon} Mixed text with icons")
-        imgui.text(f"{home_icon} Home {chevron_icon} Settings {chevron_icon} Display")
-        
-        imgui.separator()
-        
-        # Show available icons information
-        available_icons = [attr for attr in dir(icons_fontawesome_4) if attr.startswith('ICON_FA_')]
-        imgui.text(f"Available FontAwesome constants: {len(available_icons)}")
-        
-        # Debug: Show first few icon constants and their values
-        imgui.separator()
-        imgui.text("Debug: First 10 FontAwesome constants:")
-        for i, icon_name in enumerate(available_icons[:10]):
-            icon_value = getattr(icons_fontawesome_4, icon_name, "")
-            # Show both the constant name and its Unicode value
-            if icon_value:
-                try:
-                    unicode_val = ord(icon_value) if len(icon_value) == 1 else "multi-char"
-                    imgui.text(f"{icon_name}: '{icon_value}' (U+{unicode_val:04X})" if unicode_val != "multi-char" else f"{icon_name}: '{icon_value}' (multi-char)")
-                except:
-                    imgui.text(f"{icon_name}: '{icon_value}' (unknown)")
-            else:
-                imgui.text(f"{icon_name}: (empty)")
-        
-        imgui.separator()
-        imgui.text("Raw icon test (should show Unicode characters):")
-        # Test some basic icons directly
-        test_icons = ['ICON_FA_HOME', 'ICON_FA_USER', 'ICON_FA_SEARCH', 'ICON_FA_STAR']
-        for icon_name in test_icons:
-            if hasattr(icons_fontawesome_4, icon_name):
-                icon_char = getattr(icons_fontawesome_4, icon_name)
-                imgui.text(f"{icon_name}: -> {icon_char} <-")
-                imgui.same_line()
-                imgui.text_colored((0.7, 0.7, 0.7, 1.0), f"(should be an icon)")
-            else:
-                imgui.text(f"{icon_name}: NOT FOUND")
-        
-        imgui.separator()
-        imgui.text_colored((1.0, 0.8, 0.3, 1.0), "If you see boxes □ or empty spaces, the FontAwesome font isn't loaded.")
-        imgui.text_colored((0.7, 0.7, 0.7, 1.0), "The Unicode characters exist, but need the FontAwesome font to display properly.")
-        
-        imgui.separator()
-        if check_icon:
-            imgui.text_colored((0.3, 0.8, 0.3, 1.0), f"{check_icon} FontAwesome constants are loaded")
-        else:
-            imgui.text_colored((1.0, 0.7, 0.3, 1.0), "FontAwesome constants may be missing")
-        
-        imgui.text_colored((0.7, 0.7, 0.7, 1.0), "Note: Icons need proper font loading to render correctly")
-        
     # Events
     def on_file_drop(self, window, paths):
         from pathlib import Path
@@ -1153,6 +796,7 @@ class PerspyApp():
 
         if self.doc.enable_auto_principal_point:
             self.doc.principal = glm.vec2(self.doc.content_size.x / 2, self.doc.content_size.y / 2)
+
         match self.doc.solver_mode:
             case SolverMode.OneVP:
                 ###############################
@@ -1165,9 +809,9 @@ class PerspyApp():
                 ###################
                 fovy = math.radians(self.doc.fov_degrees)
                 focal_length_pixel = solver.focal_length_from_fov(fovy, self.doc.content_size.y)
+
                 self.solver_results:solver.SolverResults = solver.solve1vp(
-                    width =                 self.doc.content_size.x, 
-                    height =                self.doc.content_size.y, 
+                    viewport =              solver.Viewport(0,0,self.doc.content_size.x, self.doc.content_size.y),
                     Fu=                     self.first_vanishing_point,
                     second_vanishing_line = self.doc.second_vanishing_lines[0],
                     f =                     focal_length_pixel,
@@ -1175,15 +819,18 @@ class PerspyApp():
                     O =                     self.doc.origin,
                     first_axis =            self.doc.first_axis,
                     second_axis =           self.doc.second_axis,
-                    scale =                 self.doc.scene_scale
+                    scale =                 self.doc.scene_scale,
+                    reference_distance_mode= self.doc.reference_distance_mode,
+                    reference_distance =    self.doc.reference_distance
                 )
+
+                
 
                 # create camera
                 self.camera = Camera()
                 self.camera.setFoVY(math.degrees(self.solver_results.fovy))
                 self.camera.transform = self.solver_results.transform
                 self.camera.setAspectRatio(self.doc.content_size.x / self.doc.content_size.y)
-
 
             case SolverMode.TwoVP:
                 # compute vanishing points
@@ -1193,15 +840,16 @@ class PerspyApp():
                     self.doc.second_vanishing_lines)
 
                 self.solver_results = solver.solve2vp(
-                    self.doc.content_size.x, 
-                    self.doc.content_size.y, 
-                    self.first_vanishing_point,
-                    self.second_vanishing_point,
-                    self.doc.principal,
-                    self.doc.origin,
-                    self.doc.first_axis,
-                    self.doc.second_axis,
-                    self.doc.scene_scale
+                    viewport =           solver.Viewport(0,0,self.doc.content_size.x, self.doc.content_size.y),
+                    Fu =                 self.first_vanishing_point,
+                    Fv =                 self.second_vanishing_point,
+                    P =                  self.doc.principal,
+                    O =                  self.doc.origin,
+                    first_axis =         self.doc.first_axis,
+                    second_axis =        self.doc.second_axis,
+                    scale =              self.doc.scene_scale,
+                    reference_distance_mode= self.doc.reference_distance_mode,
+                    reference_distance = self.doc.reference_distance
                 )
 
                 # create camera
@@ -1228,15 +876,15 @@ class PerspyApp():
                 self.doc.principal = computed_principal
 
                 self.solver_results = solver.solve2vp(
-                    self.doc.content_size.x,
-                    self.doc.content_size.y, 
-                    self.first_vanishing_point,
-                    self.second_vanishing_point,
-                    self.doc.principal,
-                    self.doc.origin,
-                    self.doc.first_axis,
-                    self.doc.second_axis,
-                    self.doc.scene_scale
+                    viewport =           solver.Viewport(0,0,self.doc.content_size.x, self.doc.content_size.y),
+                    Fu =                 self.first_vanishing_point,
+                    Fv =                 self.second_vanishing_point,
+                    P =                  self.doc.principal,
+                    O =                  self.doc.origin,
+                    first_axis =         self.doc.first_axis,
+                    second_axis =        self.doc.second_axis,
+                    scale =              self.doc.scene_scale,
+                    reference_distance = self.doc.reference_distance
                 )
 
                 # create camera
@@ -1249,7 +897,11 @@ class PerspyApp():
     def update_texture(self):
         # Load image with PIL
         path = self.doc.image_path
-        img = Image.open(path)
+        try:
+            img = Image.open(path)
+        except FileNotFoundError:
+            logger.error(f"File not found: {path}")
+            return
         self.doc.image = img
         self.doc.content_size = imgui.ImVec2(img.width, img.height)
         logger.info(f"✓ Loaded: {path} ({img.width}x{img.height})")

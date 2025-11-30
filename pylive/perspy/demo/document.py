@@ -9,11 +9,13 @@ from enum import IntEnum
 from typing import Tuple
 from struct import pack, unpack
 
+from typing import Literal
 import pyperclip
 class SolverMode(IntEnum):
     OneVP = 0
     TwoVP = 1
     ThreeVP = 2
+
 
 from pylive.perspy import solver
 
@@ -249,19 +251,6 @@ class BaseDocument(ABC):
 
 
 class PerspyDocument(BaseDocument):
-    def extension(self)->str:
-        return '.prsy'
-    
-    def name(self)->str:
-        return 'perspy'
-    
-    def magic(self)->bytes:
-        """for bytes magic number"""
-        return b'prsy'
-    
-    def version(self)->str:
-        return "0.5.0"
-    
     def __init__(self):
         super().__init__()
         # solver inputs
@@ -294,6 +283,23 @@ class PerspyDocument(BaseDocument):
             [glm.vec2(      260.742,      327.019 ), glm.vec2(     -45.1552,      1919.01 )],
             [glm.vec2(      1454.11,      600.881 ), glm.vec2(      1670.46,      1914.78 )]
         ]
+
+        # reference distance
+        self.reference_distance_mode:solver.ReferenceDistanceMode = solver.ReferenceDistanceMode.Screen
+        self.reference_distance = 100.0
+
+    def extension(self)->str:
+        return '.prsy'
+    
+    def name(self)->str:
+        return 'perspy'
+    
+    def magic(self)->bytes:
+        """for bytes magic number"""
+        return b'prsy'
+    
+    def version(self)->str:
+        return "0.5.0"
 
     def serialize(self)->bytearray:
         data = {

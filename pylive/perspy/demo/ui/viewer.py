@@ -219,6 +219,8 @@ class ViewerWidget:
 from collections import defaultdict
 viewers:dict[int|str, ViewerWidget] = dict()
 current_viewer_name:str|None = None
+# TODO: viewer should be shared accross imports. use singleton pattern?
+
 
 def begin_viewer(name: str, 
                  content_size: imgui.ImVec2, 
