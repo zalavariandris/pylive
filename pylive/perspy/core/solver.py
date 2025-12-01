@@ -585,6 +585,8 @@ def calc_reference_distance_scale_factor(
     # We only care about X/Y distance (Screen Plane), not Z-depth
     current_length_px = glm.distance(glm.vec2(origin_screen), glm.vec2(ref_point_screen))
 
+    # ui.viewer.guide((0,0,0), (100,100,100))
+
     if current_length_px < 1e-5:
         logger.warning("Reference length on screen is effectively zero. Camera might be too far or axis is parallel to view direction.")
         return 1.0
