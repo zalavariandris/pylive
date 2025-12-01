@@ -52,6 +52,12 @@ class BaseDocument(ABC):
         logger.info(f"✓ Open from {filepath}")
         self._file_path = filepath
 
+    def is_modified(self) -> bool:
+        """Check if the document has unsaved changes.
+        This is a placeholder implementation and should be overridden by subclasses.
+        """
+        return True  # Default to always modified; override in subclasses as needed
+
     def save_as(self):
         chosen_filepath = self._open_save_dialog(title="Save Project As...")
         if chosen_filepath:

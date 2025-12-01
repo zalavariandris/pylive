@@ -220,10 +220,10 @@ from collections import defaultdict
 
 class ViewerRegistry:
     def __init__(self):
-        self.viewers = {}
-        self.current_viewer_name = None
+        self.viewers:dict[int|str, ViewerWidget] = dict()
+        self.current_viewer_name:str|None = None
 
-_registry = None
+_registry:ViewerRegistry|None = None
 
 def get_registry() -> ViewerRegistry:
     global _registry
@@ -231,8 +231,23 @@ def get_registry() -> ViewerRegistry:
         _registry = ViewerRegistry()
     return _registry
 
-viewers:dict[int|str, ViewerWidget] = dict()
-current_viewer_name:str|None = None
+def get_current_viewer() -> ViewerWidget|None:
+    registry = get_registry()
+    if registry.current_viewer_name is None:
+        return None
+    return registry.viewers.get(registry.current_viewer_name, None)
+
+def ensure_viewer(name:str, content_size:imgui.ImVec2, coordinate_system:Literal['top-left', 'bottom-left']='bottom-left'):
+    if name not in get_registry().viewers:
+        get_registry().viewers[name] = ViewerWidget(content_size, coordinate_system)
+    get_registry().current_viewer_name = name
+
+def set_current_viewer(name:str|None):
+    registry = get_registry()
+    registry.current_viewer_name = name
+
+# viewers:dict[int|str, ViewerWidget] = dict()
+# current_viewer_name:str|None = None
 # TODO: viewer should be shared accross imports. use singleton pattern?
 
 
@@ -247,8 +262,8 @@ def begin_viewer(name: str,
     note: call begin_scene after begin_viewer regardless of the return value. just like imgui.begin_child.
     """
 
-    global viewers, current_viewer_name
-    assert current_viewer_name is None, "Nested begin_viewer calls are not supported."
+    # global viewers, current_viewer_name
+    assert get_current_viewer() is None, "begin_viewer called without a matching end_viewer"
     if size is None:
         size = imgui.ImVec2(-1,-1)
 
@@ -267,12 +282,11 @@ def begin_viewer(name: str,
         imgui.WindowFlags_.no_scrollbar | imgui.WindowFlags_.no_scroll_with_mouse
     )
 
-    current_viewer_name = name
-    if name not in viewers:
-        viewers[name] = ViewerWidget(content_size, coordinate_system)
+    ensure_viewer(name, content_size, coordinate_system)
+    current_viewport = get_current_viewer()
+    assert current_viewport is not None, "begin_viewer: current_viewport is None after creation"
 
     # update viewport info
-    current_viewport = viewers[current_viewer_name]
     current_viewport.pos = imgui.get_window_pos()
     current_viewport.size = imgui.get_window_size()
     current_viewport.content_size = content_size
@@ -325,8 +339,9 @@ def begin_viewer(name: str,
     return ret
 
 def end_viewer():
-    global viewers, current_viewer_name
-    current_viewport = viewers[current_viewer_name]
+    # global viewers, current_viewer_name
+    current_viewport = get_current_viewer()
+    assert current_viewport is not None, "end_viewer called without a matching begin_viewer"
 
     # draw content area margins
     style = imgui.get_style()
@@ -374,7 +389,7 @@ def end_viewer():
     w, h = current_viewport.size.x, current_viewport.size.y
     imgui.set_cursor_pos(style.window_padding)
     imgui.push_style_color(imgui.Col_.text, style.color_(imgui.Col_.text_disabled))
-    imgui.text(f"{current_viewer_name} — @({x:.0f}, {y:.0f}) — {w:.0f}×{h:.0f}px")
+    # imgui.text(f"{current_viewer_name} — @({x:.0f}, {y:.0f}) — {w:.0f}×{h:.0f}px")
     
     screen_tl = current_viewport._project((0,0,0))  # force update of widget rect in project function
     screen_br = current_viewport._project((current_viewport.content_size.x, current_viewport.content_size.y, 0))  # force update of widget rect in project function
@@ -386,7 +401,7 @@ def end_viewer():
     imgui.pop_style_color()
 
     # end viewport widget
-    current_viewer_name = None
+    set_current_viewer(None)
     imgui.end_child()
 
 def _clip_line(A: glm.vec3, B: glm.vec3, view: glm.mat4, near, far):
@@ -433,8 +448,8 @@ def guide(P:imgui.ImVec2Like, Q:imgui.ImVec2Like, color:imgui.ImVec4=None,
         color = get_viewer_style().GUIDE_COLOR
     
 
-    global viewers, current_viewer_name
-    current_viewport = viewers[current_viewer_name]
+    current_viewport = get_current_viewer()
+    assert current_viewport is not None, "guide: no current viewer"
 
     if len(P) not in (2,3):
         raise ValueError(f"A must be of length 2 or 3, got {len(P)}")
@@ -500,8 +515,8 @@ def guide(P:imgui.ImVec2Like, Q:imgui.ImVec2Like, color:imgui.ImVec4=None,
             )
 
 def axes(length:float=1.0, thickness:float=1.0):
-    global viewers, current_viewer_name
-    current_viewport = viewers[current_viewer_name]
+    current_viewport = get_current_viewer()
+    assert current_viewport is not None, "axes: no current viewer"
 
     origin = glm.vec3(0,0,0)
     x_axis = glm.vec3(length,0,0)
@@ -563,8 +578,8 @@ def horizon_line(color:int=None, ground:Literal['xz', 'xy', 'yz']='xz'):
         style = imgui.get_style()
         color = imgui.ImVec4(get_viewer_style().HORIZON_LINE_COLOR)
 
-    global viewers, current_viewer_name
-    current_viewer = viewers[current_viewer_name]
+    current_viewer = get_current_viewer()
+    assert current_viewer is not None, "horizon_line: no current viewer"
 
     if current_viewer is None:
         logging.warning("horizon_line: no current viewer")
@@ -618,12 +633,12 @@ def begin_scene(projection:glm.mat4, view:glm.mat4):
         camera.setAspectRatio(viewer_content_size.x / viewer_content_size.y)
         begin_scene(camera.projectionMatrix(), camera.viewMatrix())
     """
-    global viewers, current_viewer_name
-    current_viewport = viewers[current_viewer_name]
+    current_viewport = get_current_viewer()
+    assert current_viewport is not None, "begin_scene: no current viewer"
     assert current_viewport.use_camera is False, "Nested begin_scene calls are not supported."
 
-    content_screen_tl = current_viewport._project( (0, 0, 0))
-    content_screen_br = current_viewport._project( (current_viewport.content_size.x, current_viewport.content_size.y, 0))
+    content_screen_tl = current_viewport._project( glm.vec3(0, 0, 0))
+    content_screen_br = current_viewport._project( glm.vec3(current_viewport.content_size.x, current_viewport.content_size.y, 0))
     if current_viewport.coordinate_system == 'bottom-left':
         # flip Y for margin drawing
         content_screen_tl.y, content_screen_br.y = content_screen_br.y, content_screen_tl.y
@@ -655,8 +670,8 @@ def begin_scene(projection:glm.mat4, view:glm.mat4):
 
 def end_scene():
     """End the current 3D scene."""
-    global viewers, current_viewer_name
-    current_viewport = viewers[current_viewer_name]
+    current_viewport = get_current_viewer()
+    assert current_viewport is not None, "end_scene: no current viewer"
     assert current_viewport.use_camera is True
     current_viewport.use_camera = False
 
@@ -665,18 +680,18 @@ def _get_screen_coords(point: imgui.ImVec2Like | Tuple[float, float, float]) -> 
     if len(point) not in (2,3):
         raise ValueError(f"point must be of length 2 or 3, got {len(point)}")
     
-    global viewers, current_viewer_name
-    current_viewport = viewers[current_viewer_name]
+    current_viewport = get_current_viewer()
+    assert current_viewport is not None, "_get_screen_coords: no current viewer"
     if len(point) == 2:
         point = (point[0], point[1], 0.0)
-    return current_viewport._project(point)
+    return current_viewport._project((point))
 
 def _get_window_coords(point: imgui.ImVec2Like | Tuple[float, float, float]) -> imgui.ImVec2:
     """Project a 3D point to 2D window space in the current viewer."""
     if len(point) not in (2,3):
         raise ValueError(f"point must be of length 2 or 3, got {len(point)}")
-    global viewers, current_viewer_name
-    current_viewport = viewers[current_viewer_name]
+    current_viewport = get_current_viewer()
+    assert current_viewport is not None, "_get_window_coords: no current viewer"
     if len(point) == 2:
         point = (point[0], point[1], 0.0)
     screen_pos = current_viewport._project(point)
@@ -711,7 +726,8 @@ def control_point(label:str, point:imgui.ImVec2Like, *, color:int=None)->Tuple[b
     # handle dragging
     if imgui.is_item_active():
         # Compute world-space movement
-        current_viewport = viewers[current_viewer_name]
+        current_viewport = get_current_viewer()
+        assert current_viewport is not None, "control_point: no current viewer"
         io = imgui.get_io()
         mouse_world_pos_prev = current_viewport._unproject(io.mouse_pos_prev)  # ensure widget rect is updated
         mouse_world_pos = current_viewport._unproject(io.mouse_pos)  # ensure widget rect is updated

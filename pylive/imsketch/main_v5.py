@@ -39,8 +39,9 @@ def show_doc_menu(doc:BaseDocument):
         return True, BaseDocument()
     
     if imgui.menu_item_simple(f"{fa.ICON_FA_FOLDER_OPEN} Open", "Ctrl+O"):
-        if doc is not None:
-            doc.close()
+        if doc.is_modified():
+            """prompt if to save modifications"""
+            doc.save()
         return True, BaseDocument()
 
     if imgui.menu_item_simple(f"{fa.ICON_FA_SAVE} Save", "Ctrl+S"):
@@ -730,7 +731,7 @@ class SketchAppBase():
             #         title += " *"
             #     title += f"{Path(self.doc._file_path).stem}"
             #     title += f" [{self.doc._file_path}]"
-            glfw.set_window_title(glfw_window, title)
+            glfw.set_window_title(glfw_window, f"𝕊 {title}")
         except Exception as e:
             logger.warning(f"Could not set window title: {e}")
 
@@ -744,6 +745,6 @@ if __name__ == "__main__":
     assert assets_folder.exists(), f"Assets folder not found: {assets_folder.absolute()}"
     print("setting assets folder:", assets_folder.absolute())
     hello_imgui.set_assets_folder(str(assets_folder.absolute()))
-    runner_params = create_my_runner_params(app.draw_gui, app.setup_gui, app.on_file_drop, "Perspy v0.5.0")
+    runner_params = create_my_runner_params(app.draw_gui, app.setup_gui, app.on_file_drop, "𝕊Perspy v0.5.0")
     hello_imgui.run(runner_params)
 
