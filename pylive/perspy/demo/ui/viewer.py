@@ -218,6 +218,18 @@ class ViewerWidget:
 
 from collections import defaultdict
 
+class ViewerRegistry:
+    def __init__(self):
+        self.viewers = {}
+        self.current_viewer_name = None
+
+_registry = None
+
+def get_registry() -> ViewerRegistry:
+    global _registry
+    if _registry is None:
+        _registry = ViewerRegistry()
+    return _registry
 
 viewers:dict[int|str, ViewerWidget] = dict()
 current_viewer_name:str|None = None
