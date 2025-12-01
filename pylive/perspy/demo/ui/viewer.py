@@ -223,13 +223,20 @@ class ViewerRegistry:
         self.viewers:dict[int|str, ViewerWidget] = dict()
         self.current_viewer_name:str|None = None
 
-_registry:ViewerRegistry|None = None
-
 def get_registry() -> ViewerRegistry:
-    global _registry
-    if _registry is None:
-        _registry = ViewerRegistry()
-    return _registry
+    """Get the singleton ViewerRegistry instance."""
+    #TODO: use better more pythonic singleton pattern
+    import sys
+    key = "pylive_viewer_registry"
+    if key not in sys.modules:
+        print("Creating ViewerRegistry singleton")
+        sys.modules[key] = ViewerRegistry()
+    return sys.modules[key]
+
+def ensure_viewer(name:str, content_size:imgui.ImVec2, coordinate_system:Literal['top-left', 'bottom-left']='bottom-left'):
+    if name not in get_registry().viewers:
+        get_registry().viewers[name] = ViewerWidget(content_size, coordinate_system)
+    get_registry().current_viewer_name = name
 
 def get_current_viewer() -> ViewerWidget|None:
     registry = get_registry()
@@ -237,10 +244,7 @@ def get_current_viewer() -> ViewerWidget|None:
         return None
     return registry.viewers.get(registry.current_viewer_name, None)
 
-def ensure_viewer(name:str, content_size:imgui.ImVec2, coordinate_system:Literal['top-left', 'bottom-left']='bottom-left'):
-    if name not in get_registry().viewers:
-        get_registry().viewers[name] = ViewerWidget(content_size, coordinate_system)
-    get_registry().current_viewer_name = name
+
 
 def set_current_viewer(name:str|None):
     registry = get_registry()
@@ -435,10 +439,28 @@ def _clip_line(A: glm.vec3, B: glm.vec3, view: glm.mat4, near, far):
         return intersection_world, B
     else:
         return A, intersection_world
+    
+def circle(center:imgui.ImVec2Like, radius:float, color:imgui.ImVec4=None):
+    if not isinstance(color, imgui.ImVec4) and color is not None:
+        raise TypeError(f"color must be of type imgui.ImVec4 or None, got: {color}")
+    
+    if color is None:
+        style = imgui.get_style()
+        color = get_viewer_style().GUIDE_COLOR
 
-def guide(P:imgui.ImVec2Like, Q:imgui.ImVec2Like, color:imgui.ImVec4=None, 
-          front_head_shape:Literal['', '>', '<', 'o']='',
-          back_head_shape:Literal['', '>', '<', 'o']=''
+    current_viewport = get_current_viewer()
+    assert current_viewport is not None, "circle: no current viewer"
+
+    draw_list = imgui.get_window_draw_list()
+    C = current_viewport._project(center)
+    T = current_viewport._project( (center.x+radius, center.y, 0) )
+    R = glm.distance(glm.vec2(C.x, C.y), glm.vec2(T.x, T.y))
+    draw_list.add_circle(current_viewport._project(center), R, imgui.color_convert_float4_to_u32(color))
+
+def guide(P:imgui.ImVec2Like, Q:imgui.ImVec2Like, color:imgui.ImVec4=None, *, 
+          text:str='',
+          head:Literal['', '>', '<', 'o']='',
+          tail:Literal['', '>', '<', 'o']=''
     ):
     if not isinstance(color, imgui.ImVec4) and color is not None:
         raise TypeError(f"color must be of type imgui.ImVec4 or None, got: {color}")
@@ -482,13 +504,20 @@ def guide(P:imgui.ImVec2Like, Q:imgui.ImVec2Like, color:imgui.ImVec4=None,
     draw_list = imgui.get_window_draw_list()
     draw_list.add_line(P, Q, imgui.color_convert_float4_to_u32(color))
 
+    # draw text
+    if text != '':
+        mid = imgui.ImVec2( (P.x + Q.x) * 0.5, (P.y + Q.y) * 0.5 )
+        text_size = imgui.calc_text_size(text)
+        text_pos = imgui.ImVec2( mid.x - text_size.x * 0.5, mid.y+10 )
+        draw_list.add_text(text_pos, imgui.color_convert_float4_to_u32(color), text)
+
     # draw line head front
     dir = glm.vec2(Q.x, Q.y) - glm.vec2(P.x, P.y)
     dir = glm.normalize(dir)
     head_size = 12.0
     perp = glm.vec2(-dir.y, dir.x) * (head_size * 0.5)
 
-    match front_head_shape:
+    match head:
         case '>':
             A = imgui.ImVec2(Q.x - dir.x * head_size + perp.x, Q.y - dir.y * head_size + perp.y)
             B = imgui.ImVec2(Q.x, Q.y)
@@ -501,7 +530,7 @@ def guide(P:imgui.ImVec2Like, Q:imgui.ImVec2Like, color:imgui.ImVec4=None,
 
 
     # draw line head back (backwards arrow)
-    match back_head_shape:
+    match tail:
         case '>':
             draw_list.add_line(
                 imgui.ImVec2(P.x - dir.x * head_size + perp.x, P.y - dir.y * head_size + perp.y),

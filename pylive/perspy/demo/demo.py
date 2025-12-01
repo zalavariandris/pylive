@@ -189,13 +189,14 @@ class PerspyApp():
             _, self.doc.solver_mode = imgui.combo("mode", self.doc.solver_mode, SolverMode._member_names_)
 
             imgui.set_next_item_width(buttons_width)
-            _, self.doc.scene_scale = imgui.slider_float("scene  scale", self.doc.scene_scale, 1.0, 100.0, "%.2f")
+            _, self.doc.scene_scale = imgui.slider_float("scene scale", self.doc.scene_scale, 1.0, 100.0, "%.2f")
 
             imgui.set_next_item_width(buttons_width)
             _, self.doc.reference_distance_mode = imgui.combo("reference distance mode", self.doc.reference_distance_mode, solver.ReferenceDistanceMode._member_names_)
 
+
             imgui.set_next_item_width(buttons_width)
-            _, self.doc.reference_distance = imgui.slider_float("reference distance", self.doc.reference_distance, 1.0, 1000.0, "%.2f")
+            _, self.doc.reference_distance_px = imgui.slider_float("reference distance px", self.doc.reference_distance_px, 1.0, 2000.0, "%.2f")
 
             # solver specific parameters
             match self.doc.solver_mode:
@@ -282,6 +283,7 @@ class PerspyApp():
                     self.update_solve()
                     error_msg = None
                 except Exception as e:
+                    pass
                     error_msg = e
                     import traceback
                     traceback.print_exc()
@@ -312,17 +314,11 @@ class PerspyApp():
                 # control points
                 _, self.doc.origin = ui.viewer.control_point("o", self.doc.origin)
 
-                # reference_pos = self.doc.origin + imgui.ImVec2( self.doc.reference_distance, 0)
-                # _, reference_pos = ui.viewer.control_point("reference", reference_pos, color=imgui.ImVec4(0.0, 1.0, 1.0, 1.0))
-                # if _:
-                #     self.doc.reference_distance = glm.distance(glm.vec2(*self.doc.origin), glm.vec2(*reference_pos))
-                # ui.viewer.guide(self.doc.origin, reference_pos, imgui.ImVec4(0.0, 1.0, 1.0, 1.0), '>')
-
                 control_line = ui.comp(ui.viewer.control_point)
                 control_lines = ui.comp(control_line)
                 _, self.doc.first_vanishing_lines = control_lines("z", self.doc.first_vanishing_lines, color=get_axis_color(self.doc.first_axis) )
                 for line in self.doc.first_vanishing_lines:
-                    ui.viewer.guide(line[0], line[1], get_axis_color(self.doc.first_axis), '>')
+                    ui.viewer.guide(line[0], line[1], get_axis_color(self.doc.first_axis), head='>')
 
                 ui.viewer.axes(length=10)
 
@@ -343,7 +339,7 @@ class PerspyApp():
                             _, self.doc.second_vanishing_lines = control_lines("x", self.doc.second_vanishing_lines, color=get_axis_color(self.doc.second_axis) )
                         
                         for line in self.doc.second_vanishing_lines:
-                            ui.viewer.guide(line[0], line[1], get_axis_color(self.doc.second_axis), '>')
+                            ui.viewer.guide(line[0], line[1], get_axis_color(self.doc.second_axis), head='>')
 
                     case SolverMode.ThreeVP:
                         _, self.doc.principal = ui.viewer.control_point("p", self.doc.principal)
@@ -357,11 +353,11 @@ class PerspyApp():
                             _, self.doc.second_vanishing_lines = control_lines("x", self.doc.second_vanishing_lines, color=get_axis_color(self.doc.second_axis) )
                         
                         for line in self.doc.second_vanishing_lines:
-                            ui.viewer.guide(line[0], line[1], get_axis_color(self.doc.second_axis), '>')
+                            ui.viewer.guide(line[0], line[1], get_axis_color(self.doc.second_axis), head='>')
 
                         _, self.doc.third_vanishing_lines = control_lines("y", self.doc.third_vanishing_lines, color=get_axis_color(self.doc.third_axis) )
                         for line in self.doc.third_vanishing_lines:
-                            ui.viewer.guide(line[0], line[1], get_axis_color(self.doc.third_axis), '>')
+                            ui.viewer.guide(line[0], line[1], get_axis_color(self.doc.third_axis), head='>')
 
                 # draw vanishing lines to vanishing points
                 if self.first_vanishing_point is not None:
@@ -378,11 +374,6 @@ class PerspyApp():
 
                 if self.camera is not None:
 
-                    reference_pos = self.doc.origin + imgui.ImVec2( self.doc.reference_distance, 0)
-                    _, reference_pos = ui.viewer.control_point("reference", reference_pos, color=imgui.ImVec4(0.0, 1.0, 1.0, 1.0))
-                    if _:
-                        self.doc.reference_distance = glm.distance(glm.vec2(*self.doc.origin), glm.vec2(*reference_pos))
-                    ui.viewer.guide(self.doc.origin, reference_pos, imgui.ImVec4(0.0, 1.0, 1.0, 1.0), '>')
 
                     if ui.viewer.begin_scene(glm.scale(self.camera.projectionMatrix(), glm.vec3(1.0, -1.0, 1.0)), self.camera.viewMatrix()):
                         axes_name = {
@@ -819,9 +810,9 @@ class PerspyApp():
                     O =                     self.doc.origin,
                     first_axis =            self.doc.first_axis,
                     second_axis =           self.doc.second_axis,
-                    scale =                 self.doc.scene_scale,
                     reference_distance_mode= self.doc.reference_distance_mode,
-                    reference_distance =    self.doc.reference_distance
+                    reference_distance =    self.doc.reference_distance_px,
+                    scale =                 self.doc.scene_scale
                 )
 
                 
@@ -847,9 +838,9 @@ class PerspyApp():
                     O =                  self.doc.origin,
                     first_axis =         self.doc.first_axis,
                     second_axis =        self.doc.second_axis,
-                    scale =              self.doc.scene_scale,
-                    reference_distance_mode= self.doc.reference_distance_mode,
-                    reference_distance = self.doc.reference_distance
+                    reference_distance_mode = self.doc.reference_distance_mode,
+                    reference_distance = self.doc.reference_distance_px,
+                    scale =              self.doc.scene_scale
                 )
 
                 # create camera
@@ -883,8 +874,9 @@ class PerspyApp():
                     O =                  self.doc.origin,
                     first_axis =         self.doc.first_axis,
                     second_axis =        self.doc.second_axis,
-                    scale =              self.doc.scene_scale,
-                    reference_distance = self.doc.reference_distance
+                    reference_distance_mode= self.doc.reference_distance_mode,
+                    reference_distance = self.doc.reference_distance_px,
+                    scale =              self.doc.scene_scale
                 )
 
                 # create camera

@@ -201,11 +201,11 @@ def solve1vp(
         f:float, # focal length (in width and height units)
         P:glm.vec2,
         O:glm.vec2,
-        first_axis = Axis.PositiveZ,
-        second_axis = Axis.PositiveX,
-        scale:float=10.0, # referenmce worlds space size
-        reference_distance_mode:ReferenceDistanceMode=ReferenceDistanceMode.Screen,
-        reference_distance:float=0.5 # 2D distance from origin to camera
+        first_axis,
+        second_axis,
+        reference_distance_mode:ReferenceDistanceMode,
+        reference_distance:float, # 2D distance from origin to camera
+        scale:float
     )->SolverResults:
         """
         Solve camera orientation from a single vanishing point and focal length,
@@ -262,8 +262,7 @@ def solve1vp(
             view_matrix,
             projection_matrix,
             O,
-            scale,
-            reference_distance
+            scale
         )
 
         # apply translation
@@ -273,10 +272,16 @@ def solve1vp(
         # 5. Apply reference distance #
         ###############################
         imgui.text(f"reference distance adjustment... {reference_distance}")
-        scale_factor = calc_reference_distance_scale_factor(reference_distance_mode, reference_distance, viewport, view_matrix, projection_matrix)
+        scale_factor = calc_reference_distance_scale_factor(
+            reference_distance_mode, 
+            reference_distance, 
+            viewport, 
+            view_matrix, 
+            projection_matrix
+        )
 
         #set camera distance from origin
-        view_matrix = glm.translate(view_matrix, camera_position*scale_factor)
+        # view_matrix = glm.translate(view_matrix, camera_position*scale_factor)
 
         #########################
         # 3. Adjust Camera Roll #
@@ -325,11 +330,11 @@ def solve2vp(
         Fv: glm.vec2,
         P: glm.vec2,
         O: glm.vec2,
-        first_axis = Axis.PositiveZ,
-        second_axis = Axis.PositiveX,
-        scale:float=10.0, # referenmce worlds space size
-        reference_distance_mode:ReferenceDistanceMode=ReferenceDistanceMode.Screen,
-        reference_distance:float=0.5 # 2D distance from origin to camera
+        first_axis,
+        second_axis,
+        reference_distance_mode:ReferenceDistanceMode,
+        reference_distance:float, # 2D distance from origin to camera
+        scale:float, # referenmce worlds space size
     )->SolverResults:
     """ Solve camera intrinsics and orientation from 3 orthogonal vanishing points.
     returns (fovy in radians, camera_orientation_matrix, camera_position)
@@ -391,17 +396,48 @@ def solve2vp(
         view_matrix, 
         projection_matrix,
         O,
-        scale,
-        reference_distance
+        1.0
     )
 
     # apply translation
     view_matrix = glm.translate(view_matrix, camera_position)
+    
+    ###############################
+    # 5. Apply reference distance #
+    ###############################
 
-    scale_factor = calc_reference_distance_scale_factor(reference_distance_mode, reference_distance, viewport, view_matrix, projection_matrix)
+    # 1. Project the Scene Origin (0,0,0) to screen space
+    forward = glm.normalize(-view_orientation_matrix[2]) # forward vector is -Z in view space
+    right =   glm.normalize(view_orientation_matrix[0])    # right vector is +X in view space
+    up =      glm.normalize(view_orientation_matrix[1])       # up vector is +Y in view space
 
+    origin_screen = imgui.ImVec2(*glm.project(glm.vec3(0, 0, 0), view_matrix, projection_matrix, viewport).xy)
+    
+    match reference_distance_mode:
+        case ReferenceDistanceMode.X_Axis:
+            ref_point_world = glm.vec3(1, 0, 0)
+        case ReferenceDistanceMode.Y_Axis:
+            ref_point_world = glm.vec3(0, 1, 0)
+        case ReferenceDistanceMode.Z_Axis:
+            ref_point_world = glm.vec3(0, 0, 1)
+        case ReferenceDistanceMode.Screen | _:
+            # In 'Screen' mode, we use the Camera's Right Vector in World Space.
+            ref_point_world = glm.normalize(glm.vec3(
+                view_matrix[0][0], # Col 0, Row 0
+                view_matrix[0][1], # Col 0, Row 1
+                view_matrix[0][2]  # Col 0, Row 2
+            ))
+
+    # 3. Project the Reference Point to screen space
+
+    # Calculate the world unit length in screen pixels
+    ref_point_screen = imgui.ImVec2(*glm.project(ref_point_world, view_matrix, projection_matrix, viewport).xy)
+    current_length_px = glm.distance(glm.vec2(*origin_screen), glm.vec2(*ref_point_screen))
+    scale_factor = current_length_px / reference_distance
+    ui.viewer.guide(origin_screen, origin_screen+imgui.ImVec2(reference_distance,0), imgui.ImVec4(0,1,1,1), text=f"ref distance in pixels {current_length_px:.0f}->{reference_distance:.0f} {scale_factor}", head="o", tail="o")
+    ui.viewer.circle(origin_screen, reference_distance, imgui.ImVec4(1,0,1,1))
     #set camera distance from origin
-    view_matrix = glm.translate(view_matrix, camera_position*scale_factor)
+    view_matrix = glm.translate(glm.mat4(view_orientation_matrix), camera_position/scale*scale_factor)
 
     # world transform from view_matrix
     camera_transform = glm.inverse(view_matrix)
@@ -410,7 +446,7 @@ def solve2vp(
     # 5. Apply axis assignment #
     ############################
     axis_assignment_matrix:glm.mat3 = create_axis_assignment_matrix(first_axis, second_axis)       
-    camera_transform= glm.mat4(axis_assignment_matrix)*camera_transform
+    camera_transform = glm.mat4(axis_assignment_matrix)*camera_transform
 
     return SolverResults(
         compute_space=viewport,
@@ -525,93 +561,13 @@ def world_point_from_screen_center_by_distance(view_matrix, projection_matrix, v
     point_world = camera_pos + ray_dir * distance
     return point_world
 
-def calc_reference_distance_scale_factor(
-    reference_distance_mode: ReferenceDistanceMode, 
-    reference_distance: float, 
-    viewport: Viewport, 
-    view_matrix: glm.mat4, 
-    projection_matrix: glm.mat4
-) -> float:
-    """ 
-    Calculates the scale factor required to adjust the camera position such that 
-    1 World Unit equals 'reference_distance' pixels on screen.
-    
-    Returns:
-        float: The multiplier to apply to the camera's distance from the origin.
-               (e.g., new_dist = old_dist * factor)
-    """
-    if reference_distance <= 0.001:
-        return 1.0
-
-    # 1. Project the Scene Origin (0,0,0) to screen space
-    # glm.project returns (x, y, z) in window coordinates
-    origin_world = glm.vec3(0, 0, 0)
-    origin_screen = glm.project(origin_world, view_matrix, projection_matrix, viewport)
-    
-    # 2. Determine the World Space Reference Point based on the mode
-    # We define a point exactly 1.0 unit away from the origin.
-    ref_point_world = glm.vec3(0, 0, 0)
-
-    match reference_distance_mode:
-        case ReferenceDistanceMode.X_Axis:
-            ref_point_world = glm.vec3(1, 0, 0)
-            
-        case ReferenceDistanceMode.Y_Axis:
-            ref_point_world = glm.vec3(0, 1, 0)
-            
-        case ReferenceDistanceMode.Z_Axis:
-            ref_point_world = glm.vec3(0, 0, 1)
-            
-        case ReferenceDistanceMode.Screen | _:
-            # In 'Screen' mode, we use the Camera's Right Vector in World Space.
-            # This represents a vector parallel to the image plane, ensuring an 
-            # undistorted measurement of scale regardless of camera pitch/yaw.
-            
-            # Since view_matrix is World->Camera, the Camera->World rotation is the Transpose (inverse).
-            # The Camera's Right vector (1,0,0 in Cam space) corresponds to the 
-            # first ROW of the view matrix (assuming standard orthonormal rotation).
-            # GLM is column-major: m[col][row]
-            camera_right_world = glm.normalize(glm.vec3(
-                view_matrix[0][0], # Col 0, Row 0
-                view_matrix[1][0], # Col 1, Row 0
-                view_matrix[2][0]  # Col 2, Row 0
-            ))
-            ref_point_world = origin_world + camera_right_world
-
-    # 3. Project the Reference Point to screen space
-    ref_point_screen = glm.project(ref_point_world, view_matrix, projection_matrix, viewport)
-
-    # 4. Calculate the current length in pixels
-    # We only care about X/Y distance (Screen Plane), not Z-depth
-    current_length_px = glm.distance(glm.vec2(origin_screen), glm.vec2(ref_point_screen))
-
-    # ui.viewer.guide((0,0,0), (100,100,100))
-
-    if current_length_px < 1e-5:
-        logger.warning("Reference length on screen is effectively zero. Camera might be too far or axis is parallel to view direction.")
-        return 1.0
-
-    # 5. Calculate Scale Factor
-    # Perspective projection relationship: Size_Screen ~ 1 / Distance_Camera
-    # If we want the size to match 'reference_distance', we compare:
-    # Scale_Factor = Current_Size / Target_Size
-    #
-    # Example: 
-    # Current = 100px, Target = 50px. 
-    # To make it smaller, we must move the camera FARTHER away.
-    # Factor = 100 / 50 = 2.0. New Distance = Old Distance * 2.0.
-    scale_factor = current_length_px / reference_distance
-
-    return scale_factor
 
 def compute_camera_position(
         viewport: Viewport,
         view_matrix:glm.mat4,
         projection_matrix:glm.mat4,
         O:glm.vec2,
-        scale:float=1.0,
-        reference_distance:float=0.5,
-        reference_distance_mode:Literal['Screen','X_Axis', 'Y_Axis', 'Z_Axis']='Screen'
+        scale:float
     )-> glm.vec3:
     """
     Computes the camera position in 3D space from 2D image coordinates and camera parameters.
@@ -631,7 +587,7 @@ def compute_camera_position(
         glm.vec3(
             O.x, 
             O.y, 
-            _world_depth_to_ndc_z(1.0, near, far)
+            _world_depth_to_ndc_z(scale, near, far)
         ),
         view_matrix,  # Identity matrix - no transformation yet
         projection_matrix, 

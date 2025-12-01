@@ -286,7 +286,7 @@ class PerspyDocument(BaseDocument):
 
         # reference distance
         self.reference_distance_mode:solver.ReferenceDistanceMode = solver.ReferenceDistanceMode.Screen
-        self.reference_distance = 100.0
+        self.reference_distance_px = 100.0
 
     def extension(self)->str:
         return '.prsy'
