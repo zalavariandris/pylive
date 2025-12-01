@@ -447,7 +447,7 @@ def solve2vp(
     ############################
     axis_assignment_matrix:glm.mat3 = create_axis_assignment_matrix(first_axis, second_axis)       
     camera_transform = glm.mat4(axis_assignment_matrix)*camera_transform
-
+git
     return SolverResults(
         compute_space=viewport,
         transform=camera_transform,
