@@ -783,108 +783,139 @@ class PerspyApp():
         # Solve for camera
         self.first_vanishing_point:glm.vec2|None = None
         self.second_vanishing_point:glm.vec2|None = None
+        self.third_vanishing_point:glm.vec2|None = None
         self.camera:Camera|None = None
 
         if self.doc.enable_auto_principal_point:
             self.doc.principal = glm.vec2(self.doc.content_size.x / 2, self.doc.content_size.y / 2)
 
-        match self.doc.solver_mode:
-            case solver.SolverMode.OneVP:
-                ###############################
-                # 1. COMPUTE vanishing points #
-                ###############################
-                self.first_vanishing_point =  solver.least_squares_intersection_of_lines(self.doc.first_vanishing_lines)
+        self.solver_results:solver.SolverResults = solver.solve(
+            mode =                    self.doc.solver_mode,
+            viewport =                solver.Viewport(0,0,self.doc.content_size.x, self.doc.content_size.y),
+            
+            first_vanishing_lines =  self.doc.first_vanishing_lines,
+            second_vanishing_lines = self.doc.second_vanishing_lines,
+            third_vanishing_lines =  self.doc.third_vanishing_lines,
+
+            first_axis =              self.doc.first_axis,
+            second_axis =             self.doc.second_axis,
+
+            P =                       self.doc.principal,
+            O =                       self.doc.origin,
+            f =                       solver.focal_length_from_fov(math.radians(self.doc.fov_degrees), self.doc.content_size.y),
+
+            reference_distance_mode = self.doc.reference_distance_mode,
+            reference_distance =      self.doc.reference_distance_px,
+            reference_scale =         self.doc.scene_scale
+        )
+
+        self.first_vanishing_point = self.solver_results.first_vanishing_point
+        self.second_vanishing_point = self.solver_results.second_vanishing_point
+        self.third_vanishing_point = self.solver_results.third_vanishing_point
+
+        # create camera
+        self.camera = Camera()
+        self.camera.transform = self.solver_results.transform
+        self.camera.setFoVY(math.degrees(self.solver_results.fovy))
+        self.camera.setAspectRatio(self.doc.content_size.x / self.doc.content_size.y)
+        self.camera.set_lens_shift(self.solver_results.shift_x, self.solver_results.shift_y)
+
+        # match self.doc.solver_mode:
+        #     case solver.SolverMode.OneVP:
+        #         ###############################
+        #         # 1. COMPUTE vanishing points #
+        #         ###############################
+        #         self.first_vanishing_point =  solver.least_squares_intersection_of_lines(self.doc.first_vanishing_lines)
                 
-                ###################
-                # 2. Solve Camera #
-                ###################
-                fovy = math.radians(self.doc.fov_degrees)
-                focal_length_pixel = solver.focal_length_from_fov(fovy, self.doc.content_size.y)
+        #         ###################
+        #         # 2. Solve Camera #
+        #         ###################
+        #         focal_length_pixel = solver.focal_length_from_fov(math.radians(self.doc.fov_degrees), self.doc.content_size.y)
 
-                self.solver_results:solver.SolverResults = solver.solve1vp(
-                    viewport =              solver.Viewport(0,0,self.doc.content_size.x, self.doc.content_size.y),
-                    Fu=                     self.first_vanishing_point,
-                    second_vanishing_line = self.doc.second_vanishing_lines[0],
-                    f =                     focal_length_pixel,
-                    P =                     self.doc.principal,
-                    O =                     self.doc.origin,
-                    first_axis =            self.doc.first_axis,
-                    second_axis =           self.doc.second_axis,
-                    reference_distance_mode= self.doc.reference_distance_mode,
-                    reference_distance =    self.doc.reference_distance_px,
-                    scale =                 self.doc.scene_scale
-                )
+        #         self.solver_results:solver.SolverResults = solver.solve1vp(
+        #             viewport =                solver.Viewport(0,0,self.doc.content_size.x, self.doc.content_size.y),
+        #             Fu=                       self.first_vanishing_point,
+        #             second_vanishing_line =   self.doc.second_vanishing_lines[0],
+        #             f =                       focal_length_pixel,
+        #             P =                       self.doc.principal,
+        #             O =                       self.doc.origin,
+        #             first_axis =              self.doc.first_axis,
+        #             second_axis =             self.doc.second_axis,
+        #             reference_distance_mode = self.doc.reference_distance_mode,
+        #             reference_distance =      self.doc.reference_distance_px,
+        #             reference_scale =         self.doc.scene_scale
+        #         )
 
                 
 
-                # create camera
-                self.camera = Camera()
-                self.camera.setFoVY(math.degrees(self.solver_results.fovy))
-                self.camera.transform = self.solver_results.transform
-                self.camera.setAspectRatio(self.doc.content_size.x / self.doc.content_size.y)
+        #         # create camera
+        #         self.camera = Camera()
+        #         self.camera.setFoVY(math.degrees(self.solver_results.fovy))
+        #         self.camera.transform = self.solver_results.transform
+        #         self.camera.setAspectRatio(self.doc.content_size.x / self.doc.content_size.y)
 
-            case solver.SolverMode.TwoVP:
-                # compute vanishing points
-                self.first_vanishing_point =  solver.least_squares_intersection_of_lines(
-                    self.doc.first_vanishing_lines)
-                self.second_vanishing_point = solver.least_squares_intersection_of_lines(
-                    self.doc.second_vanishing_lines)
+        #     case solver.SolverMode.TwoVP:
+        #         # compute vanishing points
+        #         self.first_vanishing_point =  solver.least_squares_intersection_of_lines(
+        #             self.doc.first_vanishing_lines)
+        #         self.second_vanishing_point = solver.least_squares_intersection_of_lines(
+        #             self.doc.second_vanishing_lines)
 
-                self.solver_results = solver.solve2vp(
-                    viewport =           solver.Viewport(0,0,self.doc.content_size.x, self.doc.content_size.y),
-                    Fu =                 self.first_vanishing_point,
-                    Fv =                 self.second_vanishing_point,
-                    P =                  self.doc.principal,
-                    O =                  self.doc.origin,
-                    first_axis =         self.doc.first_axis,
-                    second_axis =        self.doc.second_axis,
-                    reference_distance_mode = self.doc.reference_distance_mode,
-                    reference_distance = self.doc.reference_distance_px,
-                    scale =              self.doc.scene_scale
-                )
+        #         self.solver_results = solver.solve2vp(
+        #             viewport =           solver.Viewport(0,0,self.doc.content_size.x, self.doc.content_size.y),
+        #             Fu =                 self.first_vanishing_point,
+        #             Fv =                 self.second_vanishing_point,
+        #             P =                  self.doc.principal,
+        #             O =                  self.doc.origin,
+        #             first_axis =         self.doc.first_axis,
+        #             second_axis =        self.doc.second_axis,
+        #             reference_distance_mode = self.doc.reference_distance_mode,
+        #             reference_distance = self.doc.reference_distance_px,
+        #             scale =              self.doc.scene_scale
+        #         )
 
-                # create camera
-                self.camera = Camera()
-                self.camera.transform = self.solver_results.transform
-                self.camera.setFoVY(math.degrees(self.solver_results.fovy))
-                self.camera.setAspectRatio(self.doc.content_size.x / self.doc.content_size.y)
-                self.camera.set_lens_shift(self.solver_results.shift_x, self.solver_results.shift_y)
+        #         # create camera
+        #         self.camera = Camera()
+        #         self.camera.transform = self.solver_results.transform
+        #         self.camera.setFoVY(math.degrees(self.solver_results.fovy))
+        #         self.camera.setAspectRatio(self.doc.content_size.x / self.doc.content_size.y)
+        #         self.camera.set_lens_shift(self.solver_results.shift_x, self.solver_results.shift_y)
 
-            case solver.SolverMode.ThreeVP:
-                # compute vanishing points
-                self.first_vanishing_point =  solver.least_squares_intersection_of_lines(
-                    self.doc.first_vanishing_lines)
-                self.second_vanishing_point = solver.least_squares_intersection_of_lines(
-                    self.doc.second_vanishing_lines)
-                self.third_vanishing_point = solver.least_squares_intersection_of_lines(
-                    self.doc.third_vanishing_lines)
+        #     case solver.SolverMode.ThreeVP:
+        #         # compute vanishing points
+        #         self.first_vanishing_point =  solver.least_squares_intersection_of_lines(
+        #             self.doc.first_vanishing_lines)
+        #         self.second_vanishing_point = solver.least_squares_intersection_of_lines(
+        #             self.doc.second_vanishing_lines)
+        #         self.third_vanishing_point = solver.least_squares_intersection_of_lines(
+        #             self.doc.third_vanishing_lines)
                 
-                computed_principal = solver.triangle_ortho_center(
-                    self.first_vanishing_point,
-                    self.second_vanishing_point,
-                    self.third_vanishing_point
-                )
-                self.doc.principal = computed_principal
+        #         computed_principal = solver.triangle_ortho_center(
+        #             self.first_vanishing_point,
+        #             self.second_vanishing_point,
+        #             self.third_vanishing_point
+        #         )
+        #         self.doc.principal = computed_principal
 
-                self.solver_results = solver.solve2vp(
-                    viewport =           solver.Viewport(0,0,self.doc.content_size.x, self.doc.content_size.y),
-                    Fu =                 self.first_vanishing_point,
-                    Fv =                 self.second_vanishing_point,
-                    P =                  self.doc.principal,
-                    O =                  self.doc.origin,
-                    first_axis =         self.doc.first_axis,
-                    second_axis =        self.doc.second_axis,
-                    reference_distance_mode= self.doc.reference_distance_mode,
-                    reference_distance = self.doc.reference_distance_px,
-                    scale =              self.doc.scene_scale
-                )
+        #         self.solver_results = solver.solve2vp(
+        #             viewport =           solver.Viewport(0,0,self.doc.content_size.x, self.doc.content_size.y),
+        #             Fu =                 self.first_vanishing_point,
+        #             Fv =                 self.second_vanishing_point,
+        #             P =                  self.doc.principal,
+        #             O =                  self.doc.origin,
+        #             first_axis =         self.doc.first_axis,
+        #             second_axis =        self.doc.second_axis,
+        #             reference_distance_mode= self.doc.reference_distance_mode,
+        #             reference_distance = self.doc.reference_distance_px,
+        #             scale =              self.doc.scene_scale
+        #         )
 
-                # create camera
-                self.camera = Camera()
-                self.camera.transform = self.solver_results.transform
-                self.camera.setFoVY(math.degrees(self.solver_results.fovy))
-                self.camera.setAspectRatio(self.doc.content_size.x / self.doc.content_size.y)
-                self.camera.set_lens_shift(self.solver_results.shift_x, self.solver_results.shift_y)
+        #         # create camera
+        #         self.camera = Camera()
+        #         self.camera.transform = self.solver_results.transform
+        #         self.camera.setFoVY(math.degrees(self.solver_results.fovy))
+        #         self.camera.setAspectRatio(self.doc.content_size.x / self.doc.content_size.y)
+        #         self.camera.set_lens_shift(self.solver_results.shift_x, self.solver_results.shift_y)
        
     def update_texture(self):
         # Load image with PIL

@@ -100,6 +100,9 @@ class SolverResults:
     far_plane: float = 1000.0
     shift_x: float = 0.0
     shift_y: float = 0.0
+    first_vanishing_point: glm.vec2|None = None
+    second_vanishing_point: glm.vec2|None = None
+    third_vanishing_point: glm.vec2|None = None
 
     def get_projection(self)->glm.mat4|None:
         # Camera parameters
@@ -225,8 +228,92 @@ class SolverMode(IntEnum):
 #########################
 # MAIN SOLVER FUNCTIONS #
 #########################
-def solve():
-    ...
+def solve(
+        mode:SolverMode, 
+        viewport: Viewport,
+        first_vanishing_lines: List[Tuple[glm.vec2, glm.vec2]],
+        second_vanishing_lines: List[Tuple[glm.vec2, glm.vec2]],
+        third_vanishing_lines: List[Tuple[glm.vec2, glm.vec2]],
+        
+        first_axis:Axis,
+        second_axis:Axis,
+
+        P:glm.vec2,
+        O:glm.vec2,
+        f:float, # focal length (in height units)
+
+        reference_distance_mode:ReferenceDistanceMode,
+        reference_distance:float, # 2D distance from origin to camera
+        reference_scale:float
+        
+    )->SolverResults:
+    
+    match mode:
+        case SolverMode.OneVP:
+            vp1 =  least_squares_intersection_of_lines(first_vanishing_lines)
+            results = solve1vp(
+                    viewport =                viewport,
+                    Fu=                       vp1,
+                    second_vanishing_line =   second_vanishing_lines[0],
+                    f =                       f,
+                    P =                       P,
+                    O =                       O,
+                    first_axis =              first_axis,
+                    second_axis =             second_axis,
+                    reference_distance_mode = reference_distance_mode,
+                    reference_distance =      reference_distance,
+                    reference_scale =         reference_scale
+                )
+            results.first_vanishing_point = vp1
+            
+        case SolverMode.TwoVP:
+            vp1 =  least_squares_intersection_of_lines(first_vanishing_lines)
+            vp2 = least_squares_intersection_of_lines(second_vanishing_lines)
+
+            results = solve2vp(
+                viewport =                viewport,
+                Fu =                      vp1,
+                Fv =                      vp2,
+                P =                       P,
+                O =                       O,
+                first_axis =              first_axis,
+                second_axis =             second_axis,
+                reference_distance_mode = reference_distance_mode,
+                reference_distance =      reference_distance,
+                scale =                   reference_scale
+            )
+            results.first_vanishing_point = vp1
+            results.second_vanishing_point = vp2
+
+        case SolverMode.ThreeVP:
+                # compute vanishing points
+                vp1 =  least_squares_intersection_of_lines(first_vanishing_lines)
+                vp2 = least_squares_intersection_of_lines(second_vanishing_lines)
+                vp3 = least_squares_intersection_of_lines(third_vanishing_lines)
+                
+                computed_principal = triangle_ortho_center(
+                    vp1,
+                    vp2,
+                    vp3
+                )
+
+                results = solve2vp(
+                    viewport =                viewport,
+                    Fu =                      vp1,
+                    Fv =                      vp2,
+                    P =                       P,
+                    O =                       O,
+                    first_axis =              first_axis,
+                    second_axis =             second_axis,
+                    reference_distance_mode = reference_distance_mode,
+                    reference_distance =      reference_distance,
+                    scale =                   reference_scale
+                )
+                results.first_vanishing_point = vp1
+                results.second_vanishing_point = vp2
+                results.third_vanishing_point = vp3
+
+    return results
 
 def solve1vp(
         viewport: Viewport,
@@ -350,45 +437,6 @@ def solve1vp(
             shift_x=shift_x,
             shift_y=shift_y,  
         )
-
-def calc_reference_world_distance(
-        reference_distance_mode, 
-        reference_distance, 
-        view_matrix, 
-        projection_matrix, 
-        viewport
-    ):
-    """ Calculate the world distance from origin based on the reference distance mode and value."""
-    origin_screen = imgui.ImVec2(*glm.project(glm.vec3(0, 0, 0), view_matrix, projection_matrix, viewport).xy)
-    
-    match reference_distance_mode:
-        case ReferenceDistanceMode.X_Axis:
-            reference_axis = glm.vec3(1, 0, 0)
-        case ReferenceDistanceMode.Y_Axis:
-            reference_axis = glm.vec3(0, 1, 0)
-        case ReferenceDistanceMode.Z_Axis:
-            reference_axis = glm.vec3(0, 0, 1)
-        case ReferenceDistanceMode.Screen | _:
-            right =   glm.normalize(glm.mat3(view_matrix)[0])    # right vector is +X in view space
-            reference_axis = right
-
-    O_screen = glm.project(glm.vec3(0, 0, 0), view_matrix, projection_matrix, viewport).xy
-    Q_screen = glm.project(reference_axis, view_matrix, projection_matrix, viewport).xy
-    dir_screen = glm.normalize(glm.vec2(Q_screen.x - O_screen.x, Q_screen.y - O_screen.y))
-
-    reference_point_screen = O_screen+dir_screen*reference_distance
-    ui.viewer.guide(origin_screen, reference_point_screen, imgui.ImVec4(0,1,1,1))
-    reference_ray_origin, reference_ray_direction = cast_ray(reference_point_screen, view_matrix, projection_matrix, viewport)
-    reference_point_world = closest_point_on_line1_to_line2(
-        glm.vec3(0,0,0), 
-        reference_axis, 
-        reference_ray_origin, 
-        reference_ray_origin+reference_ray_direction*100
-    )
-                
-    imgui.text(f"Reference Point World: {reference_point_world}")
-    # ui.viewer.guide(origin_screen, glm.project(reference_point_world, view_matrix, projection_matrix, viewport), imgui.ImVec4(0,1,1,1))
-    return glm.distance(glm.vec3(0,0,0), reference_point_world)
 
 def solve2vp(
         viewport: Viewport,
@@ -600,6 +648,44 @@ def world_point_from_screen_center_by_distance(view_matrix, projection_matrix, v
     point_world = camera_pos + ray_dir * distance
     return point_world
 
+def calc_reference_world_distance(
+        reference_distance_mode, 
+        reference_distance, 
+        view_matrix, 
+        projection_matrix, 
+        viewport
+    ):
+    """ Calculate the world distance from origin based on the reference distance mode and value."""
+    origin_screen = imgui.ImVec2(*glm.project(glm.vec3(0, 0, 0), view_matrix, projection_matrix, viewport).xy)
+    
+    match reference_distance_mode:
+        case ReferenceDistanceMode.X_Axis:
+            reference_axis = glm.vec3(1, 0, 0)
+        case ReferenceDistanceMode.Y_Axis:
+            reference_axis = glm.vec3(0, 1, 0)
+        case ReferenceDistanceMode.Z_Axis:
+            reference_axis = glm.vec3(0, 0, 1)
+        case ReferenceDistanceMode.Screen | _:
+            right =   glm.normalize(glm.mat3(view_matrix)[0])    # right vector is +X in view space
+            reference_axis = right
+
+    O_screen = glm.project(glm.vec3(0, 0, 0), view_matrix, projection_matrix, viewport).xy
+    Q_screen = glm.project(reference_axis, view_matrix, projection_matrix, viewport).xy
+    dir_screen = glm.normalize(glm.vec2(Q_screen.x - O_screen.x, Q_screen.y - O_screen.y))
+
+    reference_point_screen = O_screen+dir_screen*reference_distance
+    ui.viewer.guide(origin_screen, reference_point_screen, imgui.ImVec4(0,1,1,1))
+    reference_ray_origin, reference_ray_direction = cast_ray(reference_point_screen, view_matrix, projection_matrix, viewport)
+    reference_point_world = closest_point_on_line1_to_line2(
+        glm.vec3(0,0,0), 
+        reference_axis, 
+        reference_ray_origin, 
+        reference_ray_origin+reference_ray_direction*100
+    )
+                
+    imgui.text(f"Reference Point World: {reference_point_world}")
+    # ui.viewer.guide(origin_screen, glm.project(reference_point_world, view_matrix, projection_matrix, viewport), imgui.ImVec4(0,1,1,1))
+    return glm.distance(glm.vec3(0,0,0), reference_point_world)
 
 def compute_camera_position(
         viewport: Viewport,
