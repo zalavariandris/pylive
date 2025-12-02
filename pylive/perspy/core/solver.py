@@ -302,12 +302,6 @@ def solve1vp(
         # apply translation
         view_matrix = glm.translate(view_matrix, camera_position)
 
-        ###############################
-        # 5. Apply reference distance #
-        ###############################
-
-        #set camera distance from origin
-        # view_matrix = glm.translate(view_matrix, camera_position*scale_factor)
 
         #########################
         # 3. Adjust Camera Roll #
@@ -326,6 +320,16 @@ def solve1vp(
 
             # apply roll
             view_matrix = view_matrix * roll_matrix
+
+        ###############################
+        # 5. Apply reference distance #
+        ###############################
+        current_world_distance = calc_reference_world_distance(reference_distance_mode, reference_distance, view_matrix, projection_matrix, viewport)
+
+        #override view_matrix position
+        view_position = glm.vec3(view_matrix[3])
+        view_matrix[3] = glm.vec4(view_position/current_world_distance, 1.0)
+
 
         # world transform from view_matrix
         camera_transform:glm.mat4 = glm.inverse(view_matrix)
@@ -465,16 +469,17 @@ def solve2vp(
     view_matrix = glm.translate(view_matrix, camera_position)
     
     ###############################
-    # 5. Calc reference distance #
+    # 5. Apply reference distance #
     ###############################
-    
-
     current_world_distance = calc_reference_world_distance(reference_distance_mode, reference_distance, view_matrix, projection_matrix, viewport)
-    #set camera distance from origin
-    view_matrix = glm.translate(glm.mat4(view_orientation_matrix), camera_position/current_world_distance)
+
+    #override view_matrix position
+    view_position = glm.vec3(view_matrix[3])
+    view_matrix[3] = glm.vec4(view_position/current_world_distance, 1.0)
+
 
     # world transform from view_matrix
-    camera_transform = glm.inverse(view_matrix)
+    camera_transform:glm.mat4 = glm.inverse(view_matrix)
 
     ############################
     # 5. Apply axis assignment #
