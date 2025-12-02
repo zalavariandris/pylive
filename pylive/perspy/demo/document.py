@@ -11,10 +11,6 @@ from struct import pack, unpack
 
 from typing import Literal
 import pyperclip
-class SolverMode(IntEnum):
-    OneVP = 0
-    TwoVP = 1
-    ThreeVP = 2
 
 
 from pylive.perspy import solver
@@ -259,7 +255,7 @@ class PerspyDocument(BaseDocument):
         self.content_size = imgui.ImVec2(1757.000000, 2040.000000)
 
         # - solver params
-        self.solver_mode=SolverMode.ThreeVP
+        self.solver_mode=solver.SolverMode.ThreeVP
         self.scene_scale=5.0
         self.first_axis=solver.Axis.NegativeX
         self.second_axis=solver.Axis.PositiveY
@@ -305,7 +301,7 @@ class PerspyDocument(BaseDocument):
         data = {
             'version': self._version,
             'solver_params': {
-                "mode": SolverMode(self.solver_mode).name,
+                "mode": solver.SolverMode(self.solver_mode).name,
                 "first_axis": solver.Axis(self.first_axis).name,
                 "second_axis": solver.Axis(self.second_axis).name,
                 "scene_scale": self.scene_scale,
@@ -393,7 +389,7 @@ class PerspyDocument(BaseDocument):
         # Load solver params
         if 'solver_params' in data:
             sp = data['solver_params']
-            self.solver_mode = SolverMode[sp['mode']] if 'mode' in sp else SolverMode.OneVP
+            self.solver_mode = solver.SolverMode[sp['mode']] if 'mode' in sp else solver.SolverMode.OneVP
             self.first_axis = solver.Axis[sp['first_axis']] if 'first_axis' in sp else solver.Axis.PositiveZ
             self.second_axis = solver.Axis[sp['second_axis']] if 'second_axis' in sp else solver.Axis.PositiveX
             self.scene_scale = sp.get('scene_scale', 5.0)
@@ -438,7 +434,7 @@ class PerspyDocument(BaseDocument):
             self.image_path: str|None = {self.image_path!r}
 
             # - solver params
-            self.solver_mode=SolverMode.{SolverMode(self.solver_mode).name}
+            self.solver_mode=SolverMode.{solver.SolverMode(self.solver_mode).name}
             self.scene_scale={self.scene_scale}
             self.first_axis=solver.Axis.{solver.Axis(self.first_axis).name}
             self.second_axis=solver.Axis.{solver.Axis(self.second_axis).name}

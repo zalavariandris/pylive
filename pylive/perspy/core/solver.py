@@ -72,8 +72,6 @@ def closest_point_on_line1_to_line2(A1, A2, B1, B2, tol=1e-9):
 
     return A1 + t * d1
 
-
-
 def pretty_matrix(value:np.array, separator:str='\t') -> str:
     """format a matrix nicely for printing"""
     text = np.array2string(
@@ -218,10 +216,18 @@ class ReferenceDistanceMode(IntEnum):
     Y_Axis = 2
     Z_Axis = 3
 
+class SolverMode(IntEnum):
+    OneVP = 0
+    TwoVP = 1
+    ThreeVP = 2
+
 
 #########################
 # MAIN SOLVER FUNCTIONS #
 #########################
+def solve():
+    ...
+
 def solve1vp(
         viewport: Viewport,
         Fu: glm.vec2,
@@ -299,14 +305,6 @@ def solve1vp(
         ###############################
         # 5. Apply reference distance #
         ###############################
-        imgui.text(f"reference distance adjustment... {reference_distance}")
-        scale_factor = calc_reference_distance_scale_factor(
-            reference_distance_mode, 
-            reference_distance, 
-            viewport, 
-            view_matrix, 
-            projection_matrix
-        )
 
         #set camera distance from origin
         # view_matrix = glm.translate(view_matrix, camera_position*scale_factor)
@@ -338,9 +336,6 @@ def solve1vp(
         axis_assignment_matrix:glm.mat3 = create_axis_assignment_matrix(first_axis, second_axis)       
         camera_transform = glm.mat4(axis_assignment_matrix)*camera_transform
 
-
-        
-
         return SolverResults(
             compute_space=viewport,
             transform=camera_transform,
@@ -351,6 +346,45 @@ def solve1vp(
             shift_x=shift_x,
             shift_y=shift_y,  
         )
+
+def calc_reference_world_distance(
+        reference_distance_mode, 
+        reference_distance, 
+        view_matrix, 
+        projection_matrix, 
+        viewport
+    ):
+    """ Calculate the world distance from origin based on the reference distance mode and value."""
+    origin_screen = imgui.ImVec2(*glm.project(glm.vec3(0, 0, 0), view_matrix, projection_matrix, viewport).xy)
+    
+    match reference_distance_mode:
+        case ReferenceDistanceMode.X_Axis:
+            reference_axis = glm.vec3(1, 0, 0)
+        case ReferenceDistanceMode.Y_Axis:
+            reference_axis = glm.vec3(0, 1, 0)
+        case ReferenceDistanceMode.Z_Axis:
+            reference_axis = glm.vec3(0, 0, 1)
+        case ReferenceDistanceMode.Screen | _:
+            right =   glm.normalize(glm.mat3(view_matrix)[0])    # right vector is +X in view space
+            reference_axis = right
+
+    O_screen = glm.project(glm.vec3(0, 0, 0), view_matrix, projection_matrix, viewport).xy
+    Q_screen = glm.project(reference_axis, view_matrix, projection_matrix, viewport).xy
+    dir_screen = glm.normalize(glm.vec2(Q_screen.x - O_screen.x, Q_screen.y - O_screen.y))
+
+    reference_point_screen = O_screen+dir_screen*reference_distance
+    ui.viewer.guide(origin_screen, reference_point_screen, imgui.ImVec4(0,1,1,1))
+    reference_ray_origin, reference_ray_direction = cast_ray(reference_point_screen, view_matrix, projection_matrix, viewport)
+    reference_point_world = closest_point_on_line1_to_line2(
+        glm.vec3(0,0,0), 
+        reference_axis, 
+        reference_ray_origin, 
+        reference_ray_origin+reference_ray_direction*100
+    )
+                
+    imgui.text(f"Reference Point World: {reference_point_world}")
+    # ui.viewer.guide(origin_screen, glm.project(reference_point_world, view_matrix, projection_matrix, viewport), imgui.ImVec4(0,1,1,1))
+    return glm.distance(glm.vec3(0,0,0), reference_point_world)
 
 def solve2vp(
         viewport: Viewport,
@@ -431,39 +465,11 @@ def solve2vp(
     view_matrix = glm.translate(view_matrix, camera_position)
     
     ###############################
-    # 5. Apply reference distance #
+    # 5. Calc reference distance #
     ###############################
-    origin_screen = imgui.ImVec2(*glm.project(glm.vec3(0, 0, 0), view_matrix, projection_matrix, viewport).xy)
     
-    match reference_distance_mode:
-        case ReferenceDistanceMode.X_Axis:
-            reference_axis = glm.vec3(1, 0, 0)
-        case ReferenceDistanceMode.Y_Axis:
-            reference_axis = glm.vec3(0, 1, 0)
-        case ReferenceDistanceMode.Z_Axis:
-            reference_axis = glm.vec3(0, 0, 1)
-        case ReferenceDistanceMode.Screen | _:
-            right =   glm.normalize(view_orientation_matrix[0])    # right vector is +X in view space
-            reference_axis = right
 
-    O_screen = glm.project(glm.vec3(0, 0, 0), view_matrix, projection_matrix, viewport).xy
-    Q_screen = glm.project(reference_axis, view_matrix, projection_matrix, viewport).xy
-    dir_screen = glm.normalize(glm.vec2(Q_screen.x - O_screen.x, Q_screen.y - O_screen.y))
-
-    reference_point_screen = O_screen+dir_screen*reference_distance
-    ui.viewer.guide(origin_screen, reference_point_screen, imgui.ImVec4(0,1,1,1))
-    reference_ray_origin, reference_ray_direction = cast_ray(reference_point_screen, view_matrix, projection_matrix, viewport)
-    reference_point_world = closest_point_on_line1_to_line2(
-        glm.vec3(0,0,0), 
-        reference_axis, 
-        reference_ray_origin, 
-        reference_ray_origin+reference_ray_direction*100
-    )
-                
-    imgui.text(f"Reference Point World: {reference_point_world}")
-    # ui.viewer.guide(origin_screen, glm.project(reference_point_world, view_matrix, projection_matrix, viewport), imgui.ImVec4(0,1,1,1))
-    current_world_distance = glm.distance(glm.vec3(0,0,0), reference_point_world)
-
+    current_world_distance = calc_reference_world_distance(reference_distance_mode, reference_distance, view_matrix, projection_matrix, viewport)
     #set camera distance from origin
     view_matrix = glm.translate(glm.mat4(view_orientation_matrix), camera_position/current_world_distance)
 

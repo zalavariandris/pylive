@@ -23,7 +23,7 @@ from imgui_bundle import portable_file_dialogs as pfd
 from pylive.glrenderer.utils.camera import Camera
 from pylive.perspy import solver
 import ui
-from document import PerspyDocument, SolverMode
+from document import PerspyDocument
 import pyperclip
 
 # ############ #
@@ -186,7 +186,7 @@ class PerspyApp():
             # imgui.bullet_text("Warning: Font scaling will NOT be smooth, because\nImGuiBackendFlags_RendererHasTextures is not set!")
             imgui.separator_text("Solver Parameters")
             imgui.set_next_item_width(buttons_width)
-            _, self.doc.solver_mode = imgui.combo("mode", self.doc.solver_mode, SolverMode._member_names_)
+            _, self.doc.solver_mode = imgui.combo("mode", self.doc.solver_mode, solver.SolverMode._member_names_)
 
             imgui.set_next_item_width(buttons_width)
             _, self.doc.scene_scale = imgui.slider_float("scene scale", self.doc.scene_scale, 1.0, 100.0, "%.2f")
@@ -200,15 +200,15 @@ class PerspyApp():
 
             # solver specific parameters
             match self.doc.solver_mode:
-                case SolverMode.OneVP:
+                case solver.SolverMode.OneVP:
                     imgui.set_next_item_width(buttons_width)
                     _, self.doc.fov_degrees = imgui.slider_float("fov°", self.doc.fov_degrees, 1.0, 179.0, "%.1f°")
 
-                case SolverMode.TwoVP:
+                case solver.SolverMode.TwoVP:
                     _, self.doc.enable_auto_principal_point = imgui.checkbox("auto principal point", self.doc.enable_auto_principal_point)
                     _, self.doc.quad_mode = imgui.checkbox("quad", self.doc.quad_mode)
 
-                case SolverMode.ThreeVP:
+                case solver.SolverMode.ThreeVP:
                     _, self.doc.quad_mode = imgui.checkbox("quad", self.doc.quad_mode)
 
             imgui.separator_text("Axes")
@@ -323,11 +323,11 @@ class PerspyApp():
                 ui.viewer.axes(length=10)
 
                 match self.doc.solver_mode:
-                    case SolverMode.OneVP:
+                    case solver.SolverMode.OneVP:
                         _, self.doc.second_vanishing_lines[0] = control_line("x", self.doc.second_vanishing_lines[0], color=get_axis_color(self.doc.second_axis))  
-                        ui.viewer.guide(self.doc.second_vanishing_lines[0][0], self.doc.second_vanishing_lines[0][1], get_axis_color(self.doc.second_axis), '>')
+                        ui.viewer.guide(self.doc.second_vanishing_lines[0][0], self.doc.second_vanishing_lines[0][1], get_axis_color(self.doc.second_axis), head='>')
                     
-                    case SolverMode.TwoVP:
+                    case solver.SolverMode.TwoVP:
                         _, self.doc.principal = ui.viewer.control_point("p", self.doc.principal)
                         if self.doc.quad_mode:
                             z0, z1 = self.doc.first_vanishing_lines
@@ -341,7 +341,7 @@ class PerspyApp():
                         for line in self.doc.second_vanishing_lines:
                             ui.viewer.guide(line[0], line[1], get_axis_color(self.doc.second_axis), head='>')
 
-                    case SolverMode.ThreeVP:
+                    case solver.SolverMode.ThreeVP:
                         _, self.doc.principal = ui.viewer.control_point("p", self.doc.principal)
                         if self.doc.quad_mode:
                             z0, z1 = self.doc.first_vanishing_lines
@@ -789,7 +789,7 @@ class PerspyApp():
             self.doc.principal = glm.vec2(self.doc.content_size.x / 2, self.doc.content_size.y / 2)
 
         match self.doc.solver_mode:
-            case SolverMode.OneVP:
+            case solver.SolverMode.OneVP:
                 ###############################
                 # 1. COMPUTE vanishing points #
                 ###############################
@@ -823,7 +823,7 @@ class PerspyApp():
                 self.camera.transform = self.solver_results.transform
                 self.camera.setAspectRatio(self.doc.content_size.x / self.doc.content_size.y)
 
-            case SolverMode.TwoVP:
+            case solver.SolverMode.TwoVP:
                 # compute vanishing points
                 self.first_vanishing_point =  solver.least_squares_intersection_of_lines(
                     self.doc.first_vanishing_lines)
@@ -850,7 +850,7 @@ class PerspyApp():
                 self.camera.setAspectRatio(self.doc.content_size.x / self.doc.content_size.y)
                 self.camera.set_lens_shift(self.solver_results.shift_x, self.solver_results.shift_y)
 
-            case SolverMode.ThreeVP:
+            case solver.SolverMode.ThreeVP:
                 # compute vanishing points
                 self.first_vanishing_point =  solver.least_squares_intersection_of_lines(
                     self.doc.first_vanishing_lines)
