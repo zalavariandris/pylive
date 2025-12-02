@@ -11,6 +11,12 @@ import types
 # ############ #
 # Viewer Style #
 # ############ #
+import numpy as np
+
+
+
+
+
 def fade_color(color:imgui.ImVec4, amount:float=0.5) -> imgui.ImVec4:
         r, g, b, a = color
         return imgui.ImVec4(r, g, b, a * amount)
