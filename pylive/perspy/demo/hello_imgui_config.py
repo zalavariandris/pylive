@@ -1,9 +1,10 @@
 from imgui_bundle import hello_imgui
 from imgui_bundle import imgui
 from imgui_bundle import icons_fontawesome_4
-import logging
 
-logger = logging.getLogger(__name__)
+
+from loguru import logger
+
 # Setup HelloImGui application parameters
 def create_fontawesome_assets_folder(self):
     """Create the proper assets folder structure for FontAwesome fonts"""

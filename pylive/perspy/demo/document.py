@@ -251,16 +251,16 @@ class PerspyDocument(BaseDocument):
         super().__init__()
         # solver inputs
         # - content image
-        self.image_path: str|None = 'C:\\Users\\and\\iCloudDrive\\_ANDRIS_\\dev\\blender_tools\\vanishing_lines_for_blender\\docs\\0a42f3b2-dc40-4f26-bae7-a14eaacc9488-1757x2040.jpg'
+        self.image_path: str|None = '0a42f3b2-dc40-4f26-bae7-a14eaacc9488-1757x2040.jpg'
         self.content_size = imgui.ImVec2(1757.000000, 2040.000000)
 
         # - solver params
         self.solver_mode=solver.SolverMode.ThreeVP
-        self.scene_scale=5.0
+        
         self.first_axis=solver.Axis.NegativeX
         self.second_axis=solver.Axis.PositiveY
         self.third_axis=solver.Axis.PositiveZ
-        self.fov_degrees=60.0 # only for OneVP mode
+        self.fov_degrees=240.0 # only for OneVP mode
         self.quad_mode=False # only for TwoVP mode. is this a ui state?
         self.enable_auto_principal_point=True
 
@@ -281,8 +281,10 @@ class PerspyDocument(BaseDocument):
         ]
 
         # reference distance
-        self.reference_distance_mode:solver.ReferenceDistanceMode = solver.ReferenceDistanceMode.Screen
-        self.reference_distance_px = 100.0
+        self.reference_world_size = 1.0
+        self.reference_distance_mode:solver.ReferenceAxis = solver.ReferenceAxis.Screen
+        self.reference_distance_start = 0.0
+        self.reference_distance_end =   100.0
 
     def extension(self)->str:
         return '.prsy'
@@ -304,9 +306,11 @@ class PerspyDocument(BaseDocument):
                 "mode": solver.SolverMode(self.solver_mode).name,
                 "first_axis": solver.Axis(self.first_axis).name,
                 "second_axis": solver.Axis(self.second_axis).name,
-                "scene_scale": self.scene_scale,
+                "scene_scale": self.reference_world_size,
                 "fov_degrees": self.fov_degrees,
-                "quad_mode": self.quad_mode
+                "quad_mode": self.quad_mode,
+                "reference_distance_mode": solver.ReferenceAxis(self.reference_distance_mode).name,
+                "reference_distance_segment": [self.reference_distance_start, self.reference_distance_end]
             },
 
             'control_points': {
@@ -392,7 +396,7 @@ class PerspyDocument(BaseDocument):
             self.solver_mode = solver.SolverMode[sp['mode']] if 'mode' in sp else solver.SolverMode.OneVP
             self.first_axis = solver.Axis[sp['first_axis']] if 'first_axis' in sp else solver.Axis.PositiveZ
             self.second_axis = solver.Axis[sp['second_axis']] if 'second_axis' in sp else solver.Axis.PositiveX
-            self.scene_scale = sp.get('scene_scale', 5.0)
+            self.reference_world_size = sp.get('scene_scale', 5.0)
             self.fov_degrees = sp.get('fov_degrees', 60.0)
             self.quad_mode = sp.get('quad_mode', False)
         
@@ -435,7 +439,7 @@ class PerspyDocument(BaseDocument):
 
             # - solver params
             self.solver_mode=SolverMode.{solver.SolverMode(self.solver_mode).name}
-            self.scene_scale={self.scene_scale}
+            self.scene_scale={self.reference_world_size}
             self.first_axis=solver.Axis.{solver.Axis(self.first_axis).name}
             self.second_axis=solver.Axis.{solver.Axis(self.second_axis).name}
             self.third_axis=solver.Axis.{solver.Axis(self.third_axis).name}

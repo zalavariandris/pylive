@@ -7,7 +7,9 @@ from typing import Any, List, Tuple, Dict
 from enum import IntEnum
 import json
 import base64
-import logging
+
+
+from loguru import logger
 
 # Third-party imports
 from PIL import Image
@@ -64,8 +66,8 @@ ModuleHotReloader([solver, ui.viewer]).start_file_watchers()
 
 
 # Configure logging to see shader compilation logs
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+# logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+# logger = logging.getLogger(__name__)
 
 
 def get_axis_color(axis:solver.Axis) -> Tuple[float, float, float]:
@@ -189,18 +191,21 @@ class PerspyApp():
             _, self.doc.solver_mode = imgui.combo("mode", self.doc.solver_mode, solver.SolverMode._member_names_)
 
             imgui.set_next_item_width(buttons_width)
-            _, self.doc.scene_scale = imgui.slider_float("scene scale", self.doc.scene_scale, 1.0, 100.0, "%.2f")
+            _, self.doc.reference_world_size = imgui.slider_float("scene scale", self.doc.reference_world_size, 1.0, 100.0, "%.2f")
 
             imgui.set_next_item_width(buttons_width)
-            _, self.doc.reference_distance_mode = imgui.combo("reference distance mode", self.doc.reference_distance_mode, solver.ReferenceDistanceMode._member_names_)
+            _, self.doc.reference_distance_mode = imgui.combo("reference distance mode", self.doc.reference_distance_mode, solver.ReferenceAxis._member_names_)
 
 
             imgui.set_next_item_width(buttons_width)
-            _, self.doc.reference_distance_px = imgui.slider_float("reference distance px", self.doc.reference_distance_px, 1.0, 2000.0, "%.2f")
+            _, self.doc.reference_distance_start = imgui.slider_float("reference distance start", self.doc.reference_distance_start, 1.0, 2000.0, "%.2f")
+            imgui.set_next_item_width(buttons_width)
+            _, self.doc.reference_distance_end = imgui.slider_float("reference distance end", self.doc.reference_distance_end, 1.0, 2000.0, "%.2f")
 
             # solver specific parameters
             match self.doc.solver_mode:
                 case solver.SolverMode.OneVP:
+                    _, self.doc.enable_auto_principal_point = imgui.checkbox("auto principal point", self.doc.enable_auto_principal_point)
                     imgui.set_next_item_width(buttons_width)
                     _, self.doc.fov_degrees = imgui.slider_float("fov°", self.doc.fov_degrees, 1.0, 179.0, "%.1f°")
 
@@ -267,16 +272,12 @@ class PerspyApp():
             imgui.set_item_tooltip(f"Second axis (ground plane axis 2)")
         ui.end_sidebar()
 
-
-
         # fullscreen viewer Window
         # style = imgui.get_style()
         display_size = imgui.get_io().display_size
         imgui.set_next_window_pos(imgui.ImVec2(0, menu_bar_height))
         imgui.set_next_window_size(imgui.ImVec2(display_size.x, display_size.y - menu_bar_height))       
         if imgui.begin("MainViewport", None, imgui.WindowFlags_.no_bring_to_front_on_focus | imgui.WindowFlags_.no_move | imgui.WindowFlags_.no_resize | imgui.WindowFlags_.no_collapse | imgui.WindowFlags_.no_title_bar):
-
-
             if ui.viewer.begin_viewer("viewer1", content_size=self.doc.content_size, size=imgui.ImVec2(-1,-1)):
                 # Solve the camera
                 try:
@@ -313,6 +314,7 @@ class PerspyApp():
 
                 # control points
                 _, self.doc.origin = ui.viewer.control_point("o", self.doc.origin)
+                _, self.doc.principal = ui.viewer.control_point("Principal", self.doc.principal)
 
                 control_line = ui.comp(ui.viewer.control_point)
                 control_lines = ui.comp(control_line)
@@ -328,7 +330,6 @@ class PerspyApp():
                         ui.viewer.guide(self.doc.second_vanishing_lines[0][0], self.doc.second_vanishing_lines[0][1], get_axis_color(self.doc.second_axis), head='>')
                     
                     case solver.SolverMode.TwoVP:
-                        _, self.doc.principal = ui.viewer.control_point("p", self.doc.principal)
                         if self.doc.quad_mode:
                             z0, z1 = self.doc.first_vanishing_lines
                             self.doc.second_vanishing_lines = [
@@ -342,7 +343,6 @@ class PerspyApp():
                             ui.viewer.guide(line[0], line[1], get_axis_color(self.doc.second_axis), head='>')
 
                     case solver.SolverMode.ThreeVP:
-                        _, self.doc.principal = ui.viewer.control_point("p", self.doc.principal)
                         if self.doc.quad_mode:
                             z0, z1 = self.doc.first_vanishing_lines
                             self.doc.second_vanishing_lines = [
@@ -464,11 +464,22 @@ class PerspyApp():
                         imgui.set_item_tooltip("Euler angles in degrees (x,y,z).\nNote: Rotation is applied in order order: ZXY (Yaw, Pitch, Roll)")
                         imgui.pop_style_var()
 
+                        ui.next_attribute("f")
+                        imgui.input_text("##f", f"{self.solver_results.focal_length}")
+
+
                         ui.next_attribute("fovy")
-                        imgui.input_text("##fovy", f"{math.degrees(self.camera.fovy):.2f}°")
+                        imgui.input_text("##fovy", f"{math.degrees(self.solver_results.fovy):.2f}°")
 
                         ui.next_attribute("fovx")
                         imgui.input_text("##fovx", f"{math.degrees(self.solver_results.get_fovx()):.2f}°")
+
+                        ui.next_attribute("shiftx")
+                        imgui.input_text("##shiftx", f"{self.solver_results.shift_x:.2f}")
+
+                        ui.next_attribute("shifty")
+                        imgui.input_text("##shifty", f"{self.solver_results.shift_y:.2f}")
+
 
                         ui.end_attribute_editor()
 
@@ -684,8 +695,6 @@ class PerspyApp():
         imgui.text("Developed with ❤ by András Zalavári")
         imgui.text_link_open_url("https://github.com/yourusername/camera-spy")
 
-    
-
     def show_io(self):
         from textwrap import dedent
         if imgui.collapsing_header("Document as Python Code", imgui.TreeNodeFlags_.default_open):
@@ -777,8 +786,9 @@ class PerspyApp():
 
     # update 
     def update_solve(self):
-        """Solve for camera based on current document state
-        throws exceptions on failure
+        """
+        Solve for camera based on current document state
+        throws exceptions on failure.
         """
         # Solve for camera
         self.first_vanishing_point:glm.vec2|None = None
@@ -790,140 +800,47 @@ class PerspyApp():
             self.doc.principal = glm.vec2(self.doc.content_size.x / 2, self.doc.content_size.y / 2)
 
         self.solver_results:solver.SolverResults = solver.solve(
-            mode =                    self.doc.solver_mode,
-            viewport =                solver.Viewport(0,0,self.doc.content_size.x, self.doc.content_size.y),
+            mode =                       self.doc.solver_mode,
+            viewport =                   solver.Viewport(0,0,self.doc.content_size.x, self.doc.content_size.y),
             
-            first_vanishing_lines =  self.doc.first_vanishing_lines,
-            second_vanishing_lines = self.doc.second_vanishing_lines,
-            third_vanishing_lines =  self.doc.third_vanishing_lines,
+            first_vanishing_lines =      self.doc.first_vanishing_lines,
+            second_vanishing_lines =     self.doc.second_vanishing_lines,
+            third_vanishing_lines =      self.doc.third_vanishing_lines,
 
-            first_axis =              self.doc.first_axis,
-            second_axis =             self.doc.second_axis,
-
-            P =                       self.doc.principal,
-            O =                       self.doc.origin,
-            f =                       solver.focal_length_from_fov(math.radians(self.doc.fov_degrees), self.doc.content_size.y),
-
-            reference_distance_mode = self.doc.reference_distance_mode,
-            reference_distance =      self.doc.reference_distance_px,
-            reference_scale =         self.doc.scene_scale
+            first_axis =                 self.doc.first_axis,
+            second_axis =                self.doc.second_axis,
+   
+            P =                          self.doc.principal,
+            O =                          self.doc.origin,
+            f =                          solver.focal_length_from_fov(math.radians(self.doc.fov_degrees), self.doc.content_size.y),
+   
+            reference_axis =    self.doc.reference_distance_mode,
+            reference_distance_segment = (self.doc.reference_distance_start, self.doc.reference_distance_end),
+            reference_world_size =       self.doc.reference_world_size
         )
 
-        self.first_vanishing_point = self.solver_results.first_vanishing_point
+        # apply solver to camera
+        self.first_vanishing_point =  self.solver_results.first_vanishing_point
         self.second_vanishing_point = self.solver_results.second_vanishing_point
-        self.third_vanishing_point = self.solver_results.third_vanishing_point
+        self.third_vanishing_point =  self.solver_results.third_vanishing_point
 
-        # create camera
+        self.doc.principal = self.solver_results.principal_point
+
         self.camera = Camera()
         self.camera.transform = self.solver_results.transform
         self.camera.setFoVY(math.degrees(self.solver_results.fovy))
         self.camera.setAspectRatio(self.doc.content_size.x / self.doc.content_size.y)
         self.camera.set_lens_shift(self.solver_results.shift_x, self.solver_results.shift_y)
 
-        # match self.doc.solver_mode:
-        #     case solver.SolverMode.OneVP:
-        #         ###############################
-        #         # 1. COMPUTE vanishing points #
-        #         ###############################
-        #         self.first_vanishing_point =  solver.least_squares_intersection_of_lines(self.doc.first_vanishing_lines)
-                
-        #         ###################
-        #         # 2. Solve Camera #
-        #         ###################
-        #         focal_length_pixel = solver.focal_length_from_fov(math.radians(self.doc.fov_degrees), self.doc.content_size.y)
-
-        #         self.solver_results:solver.SolverResults = solver.solve1vp(
-        #             viewport =                solver.Viewport(0,0,self.doc.content_size.x, self.doc.content_size.y),
-        #             Fu=                       self.first_vanishing_point,
-        #             second_vanishing_line =   self.doc.second_vanishing_lines[0],
-        #             f =                       focal_length_pixel,
-        #             P =                       self.doc.principal,
-        #             O =                       self.doc.origin,
-        #             first_axis =              self.doc.first_axis,
-        #             second_axis =             self.doc.second_axis,
-        #             reference_distance_mode = self.doc.reference_distance_mode,
-        #             reference_distance =      self.doc.reference_distance_px,
-        #             reference_scale =         self.doc.scene_scale
-        #         )
-
-                
-
-        #         # create camera
-        #         self.camera = Camera()
-        #         self.camera.setFoVY(math.degrees(self.solver_results.fovy))
-        #         self.camera.transform = self.solver_results.transform
-        #         self.camera.setAspectRatio(self.doc.content_size.x / self.doc.content_size.y)
-
-        #     case solver.SolverMode.TwoVP:
-        #         # compute vanishing points
-        #         self.first_vanishing_point =  solver.least_squares_intersection_of_lines(
-        #             self.doc.first_vanishing_lines)
-        #         self.second_vanishing_point = solver.least_squares_intersection_of_lines(
-        #             self.doc.second_vanishing_lines)
-
-        #         self.solver_results = solver.solve2vp(
-        #             viewport =           solver.Viewport(0,0,self.doc.content_size.x, self.doc.content_size.y),
-        #             Fu =                 self.first_vanishing_point,
-        #             Fv =                 self.second_vanishing_point,
-        #             P =                  self.doc.principal,
-        #             O =                  self.doc.origin,
-        #             first_axis =         self.doc.first_axis,
-        #             second_axis =        self.doc.second_axis,
-        #             reference_distance_mode = self.doc.reference_distance_mode,
-        #             reference_distance = self.doc.reference_distance_px,
-        #             scale =              self.doc.scene_scale
-        #         )
-
-        #         # create camera
-        #         self.camera = Camera()
-        #         self.camera.transform = self.solver_results.transform
-        #         self.camera.setFoVY(math.degrees(self.solver_results.fovy))
-        #         self.camera.setAspectRatio(self.doc.content_size.x / self.doc.content_size.y)
-        #         self.camera.set_lens_shift(self.solver_results.shift_x, self.solver_results.shift_y)
-
-        #     case solver.SolverMode.ThreeVP:
-        #         # compute vanishing points
-        #         self.first_vanishing_point =  solver.least_squares_intersection_of_lines(
-        #             self.doc.first_vanishing_lines)
-        #         self.second_vanishing_point = solver.least_squares_intersection_of_lines(
-        #             self.doc.second_vanishing_lines)
-        #         self.third_vanishing_point = solver.least_squares_intersection_of_lines(
-        #             self.doc.third_vanishing_lines)
-                
-        #         computed_principal = solver.triangle_ortho_center(
-        #             self.first_vanishing_point,
-        #             self.second_vanishing_point,
-        #             self.third_vanishing_point
-        #         )
-        #         self.doc.principal = computed_principal
-
-        #         self.solver_results = solver.solve2vp(
-        #             viewport =           solver.Viewport(0,0,self.doc.content_size.x, self.doc.content_size.y),
-        #             Fu =                 self.first_vanishing_point,
-        #             Fv =                 self.second_vanishing_point,
-        #             P =                  self.doc.principal,
-        #             O =                  self.doc.origin,
-        #             first_axis =         self.doc.first_axis,
-        #             second_axis =        self.doc.second_axis,
-        #             reference_distance_mode= self.doc.reference_distance_mode,
-        #             reference_distance = self.doc.reference_distance_px,
-        #             scale =              self.doc.scene_scale
-        #         )
-
-        #         # create camera
-        #         self.camera = Camera()
-        #         self.camera.transform = self.solver_results.transform
-        #         self.camera.setFoVY(math.degrees(self.solver_results.fovy))
-        #         self.camera.setAspectRatio(self.doc.content_size.x / self.doc.content_size.y)
-        #         self.camera.set_lens_shift(self.solver_results.shift_x, self.solver_results.shift_y)
-       
     def update_texture(self):
         # Load image with PIL
         path = self.doc.image_path
         try:
-            img = Image.open(path)
+            from imgui_bundle import hello_imgui
+             # to ensure asset exists
+            img = Image.open(hello_imgui.asset_file_full_path(path) )
         except FileNotFoundError:
-            logger.error(f"File not found: {path}")
+            logger.error(f"🚨|⚠️|💡|🔥 File not found: {path}")
             return
         self.doc.image = img
         self.doc.content_size = imgui.ImVec2(img.width, img.height)
@@ -986,7 +903,7 @@ if __name__ == "__main__":
     app = PerspyApp()
     assets_folder = Path(__file__).parent / "assets"
     assert assets_folder.exists(), f"Assets folder not found: {assets_folder.absolute()}"
-    print("setting assets folder:", assets_folder.absolute())
+    logger.info(f"setting assets folder: {assets_folder.absolute()}")
     hello_imgui.set_assets_folder(str(assets_folder.absolute()))
     runner_params = create_my_runner_params(app.draw_gui, app.setup_gui, app.on_file_drop, "Perspy v0.5.0")
     hello_imgui.run(runner_params)
