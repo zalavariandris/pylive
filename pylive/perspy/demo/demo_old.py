@@ -23,10 +23,7 @@ from imgui_bundle import portable_file_dialogs as pfd
 
 # Local application imports
 from pylive.glrenderer.utils.camera import Camera
-from pylive.perspy.core import solver
-from pylive.perspy.core.solver_builder import MultiSolverBuilder
-
-
+from pylive.perspy import solver
 import ui
 from document import PerspyDocument
 import pyperclip
@@ -115,9 +112,9 @@ class PerspyApp():
         # solver results
         self.camera:Camera|None = None
         self.current_euler_order = solver.EulerOrder.ZXY
+        self.first_vanishing_point:glm.vec2|None = None
+        self.second_vanishing_point:glm.vec2|None = None
         self.solver_results:solver.SolverResults|None = None
-
-        self.solver = MultiSolverBuilder()
         
         # misc
         """
@@ -282,6 +279,16 @@ class PerspyApp():
         imgui.set_next_window_size(imgui.ImVec2(display_size.x, display_size.y - menu_bar_height))       
         if imgui.begin("MainViewport", None, imgui.WindowFlags_.no_bring_to_front_on_focus | imgui.WindowFlags_.no_move | imgui.WindowFlags_.no_resize | imgui.WindowFlags_.no_collapse | imgui.WindowFlags_.no_title_bar):
             if ui.viewer.begin_viewer("viewer1", content_size=self.doc.content_size, size=imgui.ImVec2(-1,-1)):
+                # Solve the camera
+                try:
+                    self.update_solve()
+                    error_msg = None
+                except Exception as e:
+                    pass
+                    error_msg = e
+                    import traceback
+                    traceback.print_exc()
+
                 # background image
                 if self.image_texture_ref is not None:
                     tl = ui.viewer._get_window_coords(imgui.ImVec2(0,0))
@@ -304,81 +311,6 @@ class PerspyApp():
                         imgui.ImVec2(1,0), 
                         imgui.color_convert_float4_to_u32(tint)
                     )
-
-                # Solve the camera
-                try:
-                    
-                    # self.solver.set_viewport(0,0, self.doc.content_size.x, self.doc.content_size.y)\
-                    #     .set_origin(self.doc.origin.x, self.doc.origin.y)\
-                    #     .set_axes(self.doc.first_axis, self.doc.second_axis)\
-                    #     .scale_by_reference((0, 100.0), 1.0, solver.ReferenceAxis.X_Axis)
-                        
-                    # match self.doc.solver_mode:
-                    #     case solver.SolverMode.OneVP:
-                    #         self.solver.use_vanishing_lines(first=self.doc.first_vanishing_lines)\
-                    #             .set_focal_length(solver.utils.fov_to_focal_length(self.doc.fov_degrees, self.doc.content_size.y))\
-                    #             .set_roll_line(self.doc.second_vanishing_lines[0])
-                            
-                    #         if not self.doc.enable_auto_principal_point:
-                    #             self.solver.set_principal_point(self.doc.principal.x, self.doc.principal.y)
-
-                    #     case solver.SolverMode.TwoVP:
-                    #         self.solver.use_vanishing_lines(
-                    #             first=self.doc.first_vanishing_lines, 
-                    #             second=self.doc.second_vanishing_lines
-                    #         )
-
-                    #         if not self.doc.enable_auto_principal_point:
-                    #             self.solver.set_principal_point(self.doc.principal.x, self.doc.principal.y)
-
-                    #     case solver.SolverMode.ThreeVP:
-                    #         self.solver.use_vanishing_lines(
-                    #             first=self.doc.first_vanishing_lines, 
-                    #             second=self.doc.second_vanishing_lines,
-                    #             third=self.doc.third_vanishing_lines
-                    #         )
-
-                    # self.results = self.solver.solve()
-
-                    self.solver_results = solver.solve(
-                        mode = self.doc.solver_mode, 
-                        viewport=solver.Viewport(0,0,self.doc.content_size.x, self.doc.content_size.y),
-                        first_vanishing_lines=self.doc.first_vanishing_lines,
-                        second_vanishing_lines=self.doc.second_vanishing_lines,
-                        third_vanishing_lines=self.doc.third_vanishing_lines,
-                        
-                        first_axis=self.doc.first_axis,
-                        second_axis=self.doc.second_axis,
-
-                        P=glm.vec2(*self.doc.principal),
-                        O=glm.vec2(*self.doc.origin),
-                        f=solver.focal_length_from_fov(self.doc.fov_degrees, self.doc.content_size.y), # focal length (in height units)
-
-                        reference_world_size=self.doc.reference_world_size,
-                        reference_axis=self.doc.reference_axis,
-                        reference_distance_segment=(self.doc.reference_distance_start, self.doc.reference_distance_end), # 2D distance from origin to camera
-                        
-                    )
-
-                    if self.solver_results is not None:
-                        self.camera = Camera()
-                        self.camera.transform = glm.inverse(self.solver_results.view)
-                        self.camera.setFoVY(solver.fov_from_focal_length(self.solver_results.focal_length, self.doc.content_size.y))
-                        self.camera.setAspectRatio(self.doc.content_size.x / self.doc.content_size.y)
-                        self.camera.set_lens_shift(self.solver_results.shift_x, self.solver_results.shift_y)
-
-                        print("Camera created:", self.camera)
-                        print("Camera position:", self.camera.getPosition())
-                        print("Camera view matrix:", self.camera.viewMatrix())
-                    else:
-                        print("Warning: solver_results is None, camera not created")
-
-                    error_msg = None
-                except Exception as e:
-                    self.camera = None
-                    error_msg = e
-                    import traceback
-                    traceback.print_exc()
 
                 # control points
                 _, self.doc.origin = ui.viewer.control_point("o", self.doc.origin)
@@ -428,19 +360,21 @@ class PerspyApp():
                             ui.viewer.guide(line[0], line[1], get_axis_color(self.doc.third_axis), head='>')
 
                 # draw vanishing lines to vanishing points
-                if self.solver_results is not None:
-                    if self.solver_results.first_vanishing_point is not None:
-                        for line in self.doc.first_vanishing_lines:
-                            P = sorted([line[0], line[1]], key=lambda P: glm.distance2(P, self.solver_results.first_vanishing_point))[0]
-                            first_axis_color = get_axis_color(self.doc.first_axis)
-                            ui.viewer.guide(P, self.solver_results.first_vanishing_point, imgui.ImVec4(first_axis_color[0], first_axis_color[1], first_axis_color[2], 0.4))
-                    if self.solver_results.second_vanishing_point is not None:
-                        for line in self.doc.second_vanishing_lines:
-                            P = sorted([line[0], line[1]], key=lambda P: glm.distance2(P, self.solver_results.second_vanishing_point))[0]
-                            second_axis_color = get_axis_color(self.doc.second_axis)
-                            ui.viewer.guide(P, self.solver_results.second_vanishing_point, imgui.ImVec4(second_axis_color[0], second_axis_color[1], second_axis_color[2], 0.4))
+                if self.first_vanishing_point is not None:
+                    for line in self.doc.first_vanishing_lines:
+                        P = sorted([line[0], line[1]], key=lambda P: glm.distance2(P, self.first_vanishing_point))[0]
+                        first_axis_color = get_axis_color(self.doc.first_axis)
+                        ui.viewer.guide(P, self.first_vanishing_point, imgui.ImVec4(first_axis_color[0], first_axis_color[1], first_axis_color[2], 0.4))
+
+                if self.second_vanishing_point is not None:
+                    for line in self.doc.second_vanishing_lines:
+                        P = sorted([line[0], line[1]], key=lambda P: glm.distance2(P, self.second_vanishing_point))[0]
+                        second_axis_color = get_axis_color(self.doc.second_axis)
+                        ui.viewer.guide(P, self.second_vanishing_point, imgui.ImVec4(second_axis_color[0], second_axis_color[1], second_axis_color[2], 0.4))
 
                 if self.camera is not None:
+
+
                     if ui.viewer.begin_scene(glm.scale(self.camera.projectionMatrix(), glm.vec3(1.0, -1.0, 1.0)), self.camera.viewMatrix()):
                         axes_name = {
                             solver.Axis.PositiveX: "X",
@@ -455,7 +389,6 @@ class PerspyApp():
                             # draw the grid
                             if ground_axes == {'X', 'Y'}:
                                 for A, B in ui.viewer.make_gridXY_lines(step=1, size=10):
-                                    print("draw gtrid")
                                     ui.viewer.guide(A, B)
                             elif ground_axes == {'X', 'Z'}:
                                 for A, B in ui.viewer.make_gridXZ_lines(step=1, size=10):
@@ -499,112 +432,53 @@ class PerspyApp():
                 else:
                     if ui.begin_attribute_editor("res props"):
                         style = imgui.get_style()
+                        
+                        ui.next_attribute("transform")
+                        transform_text = solver.pretty_matrix(np.array(self.solver_results.transform).reshape(4,4), separator=" ")
+                        transform_text_size = imgui.calc_text_size(transform_text) + style.frame_padding * 2+imgui.ImVec2(0, 0)
+                        imgui.input_text_multiline("##transform", transform_text, size=transform_text_size, flags=imgui.InputTextFlags_.read_only)
 
-                        imgui.separator_text("Camera Parameters")
-                        ui.next_attribute("viewport")
-                        imgui.set_next_item_width(260)
-                        imgui.input_float4("##viewport", [0.0, 0.0, self.doc.content_size.x, self.doc.content_size.y], flags=imgui.InputTextFlags_.read_only)
-                        
-                        imgui.separator_text("Vanishing Points")
-                        ui.next_attribute("1st vp")
-                        imgui.set_next_item_width(260)
-                        imgui.input_text("##first_vp", f"{self.solver_results.first_vanishing_point.x:.2f}, {self.solver_results.first_vanishing_point.y:.2f}" if self.solver_results.first_vanishing_point is not None else "N/A", flags=imgui.InputTextFlags_.read_only)
-                        
-                        ui.next_attribute("2nd vp")
-                        imgui.set_next_item_width(260)
-                        imgui.input_text("##second_vp", f"{self.solver_results.second_vanishing_point.x:.2f}, {self.solver_results.second_vanishing_point.y:.2f}" if self.solver_results.second_vanishing_point is not None else "N/A", flags=imgui.InputTextFlags_.read_only)
-                        
-                        ui.next_attribute("3rd vp")
-                        imgui.set_next_item_width(260)
-                        imgui.input_text("##third_vp", f"{self.solver_results.third_vanishing_point.x:.2f}, {self.solver_results.third_vanishing_point.y:.2f}" if self.solver_results.third_vanishing_point is not None else "N/A", flags=imgui.InputTextFlags_.read_only)
-                        
-                        
-                        imgui.separator_text("Orientation")
+                        ui.next_attribute("position")
+                        position_text =  solver.pretty_matrix(np.array(self.solver_results.get_position()), separator=" ")
+                        imgui.input_text("##position", position_text, flags=imgui.InputTextFlags_.read_only)
 
-                        ui.next_attribute("Quaternion")
-                        quat = glm.quat()
-                        glm.decompose(self.solver_results.view, glm.vec3(), quat, glm.vec3(), glm.vec3(), glm.vec4())
-                        imgui.set_next_item_width(260)
-                        imgui.input_text("##quat", f"{quat.x:.2f}, {quat.y:.2f}, {quat.z:.2f}, {quat.w:.2f}" if self.solver_results.view is not None else "N/A", flags=imgui.InputTextFlags_.read_only)
-                        
-                        euler = glm.eulerAngles(quat)
-                        ui.next_attribute("Euler") #todo: set order
-                        imgui.set_next_item_width(260)
-                        imgui.input_text("##euler", f"{math.degrees(euler.x):.2f}, {math.degrees(euler.y):.2f}, {math.degrees(euler.z):.2f}" if self.solver_results.transform is not None else "N/A", flags=imgui.InputTextFlags_.read_only)
+                        ui.next_attribute("quaternion (xyzw)")
+                        quat = self.solver_results.get_quaternion()
+                        quat_text =      solver.pretty_matrix(np.array([quat.x, quat.y, quat.z, quat.w]), separator=" ")
+                        imgui.input_text("##quaternion", quat_text, flags=imgui.InputTextFlags_.read_only)
+                        imgui.set_item_tooltip("Quaternion representing camera rotation (x, y, z, w)")
 
-
-                        imgui.separator_text("Projection")
+                        ui.next_attribute(f"euler")
+                        imgui.push_style_var(imgui.StyleVar_.item_spacing, imgui.ImVec2(2, style.item_spacing.y))
+                        euler_order_options = solver.EulerOrder._member_names_
+                        max_text_width = max([imgui.calc_text_size(text).x for text in euler_order_options])
+                        total_width = max_text_width + style.frame_padding.x * 2.0 -10
+                        total_width+=imgui.get_frame_height() # for the arrow button todo: is it square for sure?
+                        imgui.set_next_item_width(total_width)
+                        _, self.current_euler_order = imgui.combo("##euler_order", self.current_euler_order, solver.EulerOrder._member_names_)
+                        imgui.set_item_tooltip("Select the Euler angle rotation order used for decomposition.")
+                        imgui.same_line()
+                        imgui.set_next_item_width(-1)
+                        euler_text = solver.pretty_matrix(np.array([math.degrees(radians) for radians in self.solver_results.get_euler(self.current_euler_order)]), separator="")
+                        imgui.input_text("##euler", euler_text, flags=imgui.InputTextFlags_.read_only)
+                        imgui.set_item_tooltip("Euler angles in degrees (x,y,z).\nNote: Rotation is applied in order order: ZXY (Yaw, Pitch, Roll)")
+                        imgui.pop_style_var()
 
                         ui.next_attribute("f")
-                        imgui.input_text("##f", f"{self.solver_results.focal_length:.2f}", flags=imgui.InputTextFlags_.read_only)
+                        imgui.input_text("##f", f"{self.solver_results.focal_length}")
 
-                        # ui.next_attribute("fovy")
-                        # imgui.input_text("##fovy", f"{math.degrees(self.solver_results.fovy):.2f}°")
 
-                        # ui.next_attribute("fovx")
-                        # imgui.input_text("##fovx", f"{math.degrees(self.solver_results.get_fovx()):.2f}°")
+                        ui.next_attribute("fovy")
+                        imgui.input_text("##fovy", f"{math.degrees(self.solver_results.fovy):.2f}°")
+
+                        ui.next_attribute("fovx")
+                        imgui.input_text("##fovx", f"{math.degrees(self.solver_results.get_fovx()):.2f}°")
 
                         ui.next_attribute("shiftx")
                         imgui.input_text("##shiftx", f"{self.solver_results.shift_x:.2f}")
 
                         ui.next_attribute("shifty")
                         imgui.input_text("##shifty", f"{self.solver_results.shift_y:.2f}")
-
-                        imgui.separator_text("Position")
-                        ui.next_attribute("View")
-                        imgui.set_next_item_width(260)
-                        text = "\n".join([",".join([f"{item:.2f}" for item in col]) for col in self.solver_results.view]) if self.solver_results.view is not None else "N/A"
-                        text_size = imgui.calc_text_size(text) + style.frame_padding * 2+imgui.ImVec2(0, 0)
-                        imgui.input_text_multiline("##view", text, size=text_size, flags=imgui.InputTextFlags_.read_only)
-
-                        ui.next_attribute("Transform")
-                        imgui.set_next_item_width(260)
-                        text = "\n".join([",".join([f"{item:.2f}" for item in col]) for col in glm.inverse(self.solver_results.view)]) if self.solver_results.view is not None else "N/A"
-                        text_size = imgui.calc_text_size(text) + style.frame_padding * 2+imgui.ImVec2(0, 0)
-                        imgui.input_text_multiline("##transform", text, size=text_size, flags=imgui.InputTextFlags_.read_only)
-
-
-                        ui.next_attribute("Position")
-                        imgui.set_next_item_width(260)
-                        quat = glm.quat()
-                        translation = glm.vec3()
-                        glm.decompose(self.solver_results.view, glm.vec3(), quat, translation, glm.vec3(), glm.vec4())
-                        imgui.input_text("##position", f"{translation.x:.2f}, {translation.y:.2f}, {translation.z:.2f}" if self.solver_results.view is not None else "N/A", flags=imgui.InputTextFlags_.read_only)
-                        
-                        
-
-                        # ui.next_attribute("transform")
-                        # transform_text = solver.pretty_matrix(np.array(self.solver_results.transform).reshape(4,4), separator=" ")
-                        # transform_text_size = imgui.calc_text_size(transform_text) + style.frame_padding * 2+imgui.ImVec2(0, 0)
-                        # imgui.input_text_multiline("##transform", transform_text, size=transform_text_size, flags=imgui.InputTextFlags_.read_only)
-
-                        # ui.next_attribute("position")
-                        # position_text =  solver.pretty_matrix(np.array(self.solver_results.get_position()), separator=" ")
-                        # imgui.input_text("##position", position_text, flags=imgui.InputTextFlags_.read_only)
-
-                        # ui.next_attribute("quaternion (xyzw)")
-                        # quat = self.solver_results.get_quaternion()
-                        # quat_text =      solver.pretty_matrix(np.array([quat.x, quat.y, quat.z, quat.w]), separator=" ")
-                        # imgui.input_text("##quaternion", quat_text, flags=imgui.InputTextFlags_.read_only)
-                        # imgui.set_item_tooltip("Quaternion representing camera rotation (x, y, z, w)")
-
-                        # ui.next_attribute(f"euler")
-                        # imgui.push_style_var(imgui.StyleVar_.item_spacing, imgui.ImVec2(2, style.item_spacing.y))
-                        # euler_order_options = solver.EulerOrder._member_names_
-                        # max_text_width = max([imgui.calc_text_size(text).x for text in euler_order_options])
-                        # total_width = max_text_width + style.frame_padding.x * 2.0 -10
-                        # total_width+=imgui.get_frame_height() # for the arrow button todo: is it square for sure?
-                        # imgui.set_next_item_width(total_width)
-                        # _, self.current_euler_order = imgui.combo("##euler_order", self.current_euler_order, solver.EulerOrder._member_names_)
-                        # imgui.set_item_tooltip("Select the Euler angle rotation order used for decomposition.")
-                        # imgui.same_line()
-                        # imgui.set_next_item_width(-1)
-                        # euler_text = solver.pretty_matrix(np.array([math.degrees(radians) for radians in self.solver_results.get_euler(self.current_euler_order)]), separator="")
-                        # imgui.input_text("##euler", euler_text, flags=imgui.InputTextFlags_.read_only)
-                        # imgui.set_item_tooltip("Euler angles in degrees (x,y,z).\nNote: Rotation is applied in order order: ZXY (Yaw, Pitch, Roll)")
-                        # imgui.pop_style_var()
-
-
 
 
                         ui.end_attribute_editor()
@@ -917,6 +791,9 @@ class PerspyApp():
         throws exceptions on failure.
         """
         # Solve for camera
+        self.first_vanishing_point:glm.vec2|None = None
+        self.second_vanishing_point:glm.vec2|None = None
+        self.third_vanishing_point:glm.vec2|None = None
         self.camera:Camera|None = None
 
         if self.doc.enable_auto_principal_point:
@@ -937,66 +814,22 @@ class PerspyApp():
             O =                          self.doc.origin,
             f =                          solver.focal_length_from_fov(math.radians(self.doc.fov_degrees), self.doc.content_size.y),
    
-            reference_axis =             self.doc.reference_axis,
+            reference_axis =    self.doc.reference_axis,
             reference_distance_segment = (self.doc.reference_distance_start, self.doc.reference_distance_end),
             reference_world_size =       self.doc.reference_world_size
         )
 
-
-
-        # scale scene
-        match self.doc.reference_axis:
-            case solver.ReferenceAxis.X_Axis:
-                reference_vector = glm.vec3(1, 0, 0)
-            case solver.ReferenceAxis.Y_Axis:
-                reference_vector = glm.vec3(0, 1, 0)
-            case solver.ReferenceAxis.Z_Axis:
-                reference_vector = glm.vec3(0, 0, 1)
-            case solver.ReferenceAxis.Screen | _:
-                # use camera right vector as reference axis
-                right = glm.mat3(glm.inverse(self.solver_results.view))[0]   # right vector is +X in view space
-                reference_vector = right
-
-        ref_point = glm.project(reference_vector, self.solver_results.view, self.solver_results.projection, tuple(self.solver_results.compute_space)).xy
-        ref_dir = glm.normalize(ref_point - glm.vec2(*self.doc.origin))
-        imgui.text(f"{self.doc.origin.x:.2f}, {self.doc.origin.y:.2f}->{ref_point.x:.2f}, {ref_point.y:.2f}")
-        ui.viewer.guide(
-            glm.vec2(*self.doc.origin) + ref_dir * self.doc.reference_distance_start, 
-            glm.vec2(*self.doc.origin) + ref_dir * self.doc.reference_distance_end, 
-            imgui.ImVec4(1.0, 1.0, 0.0, 1.0),
-            head='|',
-            tail='|',
-            head_size=16.0, tail_size=16.0,
-            thickness=5.0
-        )
-
-        _, value = ui.viewer.control_point("ref-start", glm.vec2(*self.doc.origin) + ref_dir * self.doc.reference_distance_start, color=imgui.ImVec4(1.0, 1.0, 0.0, 1.0))
-        if _:
-            distance_along_ray = glm.dot(value - glm.vec2(*self.doc.origin), ref_dir)
-            self.doc.reference_distance_start = distance_along_ray
-
-        _, value = ui.viewer.control_point("ref-end", glm.vec2(*self.doc.origin) + ref_dir * self.doc.reference_distance_end, color=imgui.ImVec4(1.0, 1.0, 0.0, 1.0))
-        if _:
-            distance_along_ray = glm.dot(value - glm.vec2(*self.doc.origin), ref_dir)
-            self.doc.reference_distance_end = distance_along_ray
-
-        self.solver_results.view = solver.apply_reference_world_distance(
-            reference_axis=self.doc.reference_axis,
-            reference_screen_length_segment=(self.doc.reference_distance_start, self.doc.reference_distance_end),
-            reference_world_size=self.doc.reference_world_size,
-            view_matrix=self.solver_results.view,
-            projection_matrix=self.solver_results.projection,
-            viewport=self.solver_results.compute_space
-        )
-
-
         # apply solver to camera
+        self.first_vanishing_point =  self.solver_results.first_vanishing_point
+        self.second_vanishing_point = self.solver_results.second_vanishing_point
+        self.third_vanishing_point =  self.solver_results.third_vanishing_point
+
         self.doc.principal = self.solver_results.principal_point
 
         self.camera = Camera()
-        self.camera.transform = glm.inverse(self.solver_results.view)
-        self.camera.setFoVY(math.degrees(solver.fov_from_focal_length(self.solver_results.focal_length, self.solver_results.compute_space.height)))
-        self.camera.setAspectRatio(self.solver_results.compute_space.width / self.solver_results.compute_space.height)
+        self.camera.transform = self.solver_results.transform
+        self.camera.setFoVY(math.degrees(self.solver_results.fovy))
+        self.camera.setAspectRatio(self.doc.content_size.x / self.doc.content_size.y)
         self.camera.set_lens_shift(self.solver_results.shift_x, self.solver_results.shift_y)
 
     def update_texture(self):

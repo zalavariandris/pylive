@@ -1,5 +1,5 @@
 from . solver import *
-from abc import ABC
+from abc import ABC, abstractmethod
 from typing import Tuple, Self, List
 from . solver import *
 

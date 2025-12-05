@@ -21,6 +21,9 @@ class Camera:
 		# Perspective projection matrix
 		self._update_projection()
 
+	def __str__(self) -> str:
+		return f"Camera(transform={self.transform}, focal_length={self._focal_length}, lens_shift={self._lens_shift})"
+
 	def __copy__(self):
 		new_camera = Camera()
 		new_camera.transform = glm.mat4(self.transform)

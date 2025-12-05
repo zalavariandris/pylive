@@ -282,7 +282,7 @@ class PerspyDocument(BaseDocument):
 
         # reference distance
         self.reference_world_size = 1.0
-        self.reference_distance_mode:solver.ReferenceAxis = solver.ReferenceAxis.Screen
+        self.reference_axis:solver.ReferenceAxis = solver.ReferenceAxis.Screen
         self.reference_distance_start = 0.0
         self.reference_distance_end =   100.0
 
@@ -309,7 +309,7 @@ class PerspyDocument(BaseDocument):
                 "scene_scale": self.reference_world_size,
                 "fov_degrees": self.fov_degrees,
                 "quad_mode": self.quad_mode,
-                "reference_distance_mode": solver.ReferenceAxis(self.reference_distance_mode).name,
+                "reference_distance_mode": solver.ReferenceAxis(self.reference_axis).name,
                 "reference_distance_segment": [self.reference_distance_start, self.reference_distance_end]
             },
 
