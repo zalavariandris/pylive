@@ -465,9 +465,19 @@ def circle(center:imgui.ImVec2Like, radius:float, color:imgui.ImVec4=None):
 
 def guide(P:imgui.ImVec2Like, Q:imgui.ImVec2Like, color:imgui.ImVec4=None, *, 
           text:str='',
-          head:Literal['', '>', '<', 'o']='',
-          tail:Literal['', '>', '<', 'o']=''
+          head:Literal['', '>', '<', 'o', '|']='',
+          tail:Literal['', '>', '<', 'o', '|']='',
+          head_size=8.0,
+          tail_size=8.0,
+          thickness=2.0
     ):
+    """Draw a guide line from point A to point B in the current viewer.
+    P, Q: world-space endpoints of the line (2D or 3D)
+    color: line color (imgui.ImVec4), default is viewer guide color
+    text: optional text to display at the midpoint of the line
+    head: line head style ('', '>', '<', 'o', '|')
+    tail: line tail style ('', '>', '<', 'o', '|')
+    """
     if not isinstance(color, imgui.ImVec4) and color is not None:
         raise TypeError(f"color must be of type imgui.ImVec4 or None, got: {color}")
     
@@ -475,7 +485,6 @@ def guide(P:imgui.ImVec2Like, Q:imgui.ImVec2Like, color:imgui.ImVec4=None, *,
         style = imgui.get_style()
         color = get_viewer_style().GUIDE_COLOR
     
-
     current_viewport = get_current_viewer()
     assert current_viewport is not None, "guide: no current viewer"
 
@@ -493,6 +502,7 @@ def guide(P:imgui.ImVec2Like, Q:imgui.ImVec2Like, color:imgui.ImVec4=None, *,
         P = glm.vec3(P[0], P[1], 0)
     else:
         P = glm.vec3(P[0], P[1], P[2])
+
     # clip line against near plane if using camera
     if current_viewport.use_camera:
         near = 0.1  # TODO: get from camera
@@ -517,10 +527,10 @@ def guide(P:imgui.ImVec2Like, Q:imgui.ImVec2Like, color:imgui.ImVec4=None, *,
         text_pos = imgui.ImVec2( mid.x - text_size.x * 0.5, mid.y+10 )
         draw_list.add_text(text_pos, imgui.color_convert_float4_to_u32(color), text)
 
-    # draw line head front
+    # draw line head front TODO: refactor endpoint drawing
     dir = glm.vec2(Q.x, Q.y) - glm.vec2(P.x, P.y)
     dir = glm.normalize(dir)
-    head_size = 12.0
+
     perp = glm.vec2(-dir.y, dir.x) * (head_size * 0.5)
 
     match head:
@@ -528,26 +538,50 @@ def guide(P:imgui.ImVec2Like, Q:imgui.ImVec2Like, color:imgui.ImVec4=None, *,
             A = imgui.ImVec2(Q.x - dir.x * head_size + perp.x, Q.y - dir.y * head_size + perp.y)
             B = imgui.ImVec2(Q.x, Q.y)
             C = imgui.ImVec2(Q.x - dir.x * head_size - perp.x, Q.y - dir.y * head_size - perp.y)
-            draw_list.add_line(A,B,imgui.color_convert_float4_to_u32(color))
-            draw_list.add_line(C,B,imgui.color_convert_float4_to_u32(color))
+            draw_list.add_line(A,B,imgui.color_convert_float4_to_u32(color), thickness)
+            draw_list.add_line(C,B,imgui.color_convert_float4_to_u32(color), thickness)
             draw_list.add_triangle_filled(A, B, C, imgui.color_convert_float4_to_u32(color))
+
+        case '<':
+            A = imgui.ImVec2(Q.x + dir.x * head_size + perp.x, Q.y + dir.y * head_size + perp.y)
+            B = imgui.ImVec2(Q.x, Q.y)
+            C = imgui.ImVec2(Q.x + dir.x * head_size - perp.x, Q.y + dir.y * head_size - perp.y)
+            draw_list.add_line(A,B,imgui.color_convert_float4_to_u32(color), thickness)
+            draw_list.add_line(C,B,imgui.color_convert_float4_to_u32(color), thickness)
+            draw_list.add_triangle_filled(A, B, C, imgui.color_convert_float4_to_u32(color))
+        case '|':
+            A = imgui.ImVec2(Q.x + perp.x, Q.y + perp.y)
+            B = imgui.ImVec2(Q.x - perp.x, Q.y - perp.y)
+            draw_list.add_line(A,B,imgui.color_convert_float4_to_u32(color), thickness)
         case _:
             pass
-
 
     # draw line head back (backwards arrow)
     match tail:
         case '>':
             draw_list.add_line(
-                imgui.ImVec2(P.x - dir.x * head_size + perp.x, P.y - dir.y * head_size + perp.y),
+                imgui.ImVec2(P.x - dir.x * tail_size + perp.x, P.y - dir.y * tail_size + perp.y),
                 P,
                 imgui.color_convert_float4_to_u32(color)
             )
             draw_list.add_line(
-                imgui.ImVec2(P.x - dir.x * head_size - perp.x, P.y - dir.y * head_size - perp.y),
+                imgui.ImVec2(P.x - dir.x * tail_size - perp.x, P.y - dir.y * tail_size - perp.y),
                 P,
                 imgui.color_convert_float4_to_u32(color)
             )
+        case '<':
+            A = imgui.ImVec2(P.x + dir.x * tail_size + perp.x, P.y + dir.y * tail_size + perp.y)
+            B = imgui.ImVec2(P.x, P.y)
+            C = imgui.ImVec2(P.x + dir.x * tail_size - perp.x, P.y + dir.y * tail_size - perp.y)
+            draw_list.add_line(A,B,imgui.color_convert_float4_to_u32(color), thickness)
+            draw_list.add_line(C,B,imgui.color_convert_float4_to_u32(color), thickness)
+            draw_list.add_triangle_filled(A, B, C, imgui.color_convert_float4_to_u32(color))
+        case '|':
+            A = imgui.ImVec2(P.x + perp.x, P.y + perp.y)
+            B = imgui.ImVec2(P.x - perp.x, P.y - perp.y)
+            draw_list.add_line(A,B,imgui.color_convert_float4_to_u32(color), thickness)
+        case _:
+            pass
 
 def axes(length:float=1.0, thickness:float=1.0):
     current_viewport = get_current_viewer()
