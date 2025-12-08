@@ -72,7 +72,6 @@ def triangle_orthocenter(A: glm.vec2, B: glm.vec2, C: glm.vec2)-> glm.vec2:
 
     return glm.vec2(x, y)
 
-# Create rotation matrix
 def rotate_point_around_center(point: glm.vec2, center: glm.vec2, rotation_angle:float) -> glm.vec2:
     # Rotation matrix components
     cos_angle = math.cos(rotation_angle)

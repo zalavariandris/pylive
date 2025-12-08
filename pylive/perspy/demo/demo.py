@@ -308,68 +308,69 @@ class PerspyApp():
                 # Solve the camera
                 try:
                     
-                    # self.solver.set_viewport(0,0, self.doc.content_size.x, self.doc.content_size.y)\
-                    #     .set_origin(self.doc.origin.x, self.doc.origin.y)\
-                    #     .set_axes(self.doc.first_axis, self.doc.second_axis)\
-                    #     .scale_by_reference((0, 100.0), 1.0, solver.ReferenceAxis.X_Axis)
+                    self.solver.set_viewport(0,0, self.doc.content_size.x, self.doc.content_size.y)\
+                        .set_origin(self.doc.origin.x, self.doc.origin.y)\
+                        .set_axes(self.doc.first_axis, self.doc.second_axis)\
+                        .scale_by_reference((0, 100.0), 1.0, solver.ReferenceAxis.X_Axis)
                         
-                    # match self.doc.solver_mode:
-                    #     case solver.SolverMode.OneVP:
-                    #         self.solver.use_vanishing_lines(first=self.doc.first_vanishing_lines)\
-                    #             .set_focal_length(solver.utils.fov_to_focal_length(self.doc.fov_degrees, self.doc.content_size.y))\
-                    #             .set_roll_line(self.doc.second_vanishing_lines[0])
+                    match self.doc.solver_mode:
+                        case solver.SolverMode.OneVP:
+                            self.solver.use_vanishing_lines(first=self.doc.first_vanishing_lines)\
+                                .set_focal_length(solver.utils.fov_to_focal_length(self.doc.fov_degrees, self.doc.content_size.y))\
+                                .set_roll_line(self.doc.second_vanishing_lines[0])
                             
-                    #         if not self.doc.enable_auto_principal_point:
-                    #             self.solver.set_principal_point(self.doc.principal.x, self.doc.principal.y)
+                            if not self.doc.enable_auto_principal_point:
+                                self.solver.set_principal_point(self.doc.principal.x, self.doc.principal.y)
 
-                    #     case solver.SolverMode.TwoVP:
-                    #         self.solver.use_vanishing_lines(
-                    #             first=self.doc.first_vanishing_lines, 
-                    #             second=self.doc.second_vanishing_lines
-                    #         )
+                        case solver.SolverMode.TwoVP:
+                            self.solver.use_vanishing_lines(
+                                first=self.doc.first_vanishing_lines, 
+                                second=self.doc.second_vanishing_lines
+                            )
 
-                    #         if not self.doc.enable_auto_principal_point:
-                    #             self.solver.set_principal_point(self.doc.principal.x, self.doc.principal.y)
+                            if not self.doc.enable_auto_principal_point:
+                                self.solver.set_principal_point(self.doc.principal.x, self.doc.principal.y)
 
-                    #     case solver.SolverMode.ThreeVP:
-                    #         self.solver.use_vanishing_lines(
-                    #             first=self.doc.first_vanishing_lines, 
-                    #             second=self.doc.second_vanishing_lines,
-                    #             third=self.doc.third_vanishing_lines
-                    #         )
+                        case solver.SolverMode.ThreeVP:
+                            self.solver.use_vanishing_lines(
+                                first=self.doc.first_vanishing_lines, 
+                                second=self.doc.second_vanishing_lines,
+                                third=self.doc.third_vanishing_lines
+                            )
 
-                    # self.results = self.solver.solve()
+                    self.solver_results = self.solver.solve()
 
-                    self.solver_results = solver.solve(
-                        mode = self.doc.solver_mode, 
-                        viewport=solver.Viewport(0,0,self.doc.content_size.x, self.doc.content_size.y),
-                        first_vanishing_lines=self.doc.first_vanishing_lines,
-                        second_vanishing_lines=self.doc.second_vanishing_lines,
-                        third_vanishing_lines=self.doc.third_vanishing_lines,
+                    # self.solver_results = solver.solve(
+                    #     mode = self.doc.solver_mode, 
+                    #     viewport=solver.Viewport(0,0,self.doc.content_size.x, self.doc.content_size.y),
+                    #     first_vanishing_lines=self.doc.first_vanishing_lines,
+                    #     second_vanishing_lines=self.doc.second_vanishing_lines,
+                    #     third_vanishing_lines=self.doc.third_vanishing_lines,
                         
-                        first_axis=self.doc.first_axis,
-                        second_axis=self.doc.second_axis,
+                    #     first_axis=self.doc.first_axis,
+                    #     second_axis=self.doc.second_axis,
 
-                        P=glm.vec2(*self.doc.principal),
-                        O=glm.vec2(*self.doc.origin),
-                        f=solver.focal_length_from_fov(self.doc.fov_degrees, self.doc.content_size.y), # focal length (in height units)
+                    #     P=glm.vec2(*self.doc.principal),
+                    #     O=glm.vec2(*self.doc.origin),
+                    #     f=solver.focal_length_from_fov(self.doc.fov_degrees, self.doc.content_size.y), # focal length (in height units)
 
-                        reference_world_size=self.doc.reference_world_size,
-                        reference_axis=self.doc.reference_axis,
-                        reference_distance_segment=(self.doc.reference_distance_start, self.doc.reference_distance_end), # 2D distance from origin to camera
+                    #     reference_world_size=self.doc.reference_world_size,
+                    #     reference_axis=self.doc.reference_axis,
+                    #     reference_distance_segment=(self.doc.reference_distance_start, self.doc.reference_distance_end), # 2D distance from origin to camera
                         
-                    )
+                    # )
 
                     if self.solver_results is not None:
                         self.camera = Camera()
                         self.camera.transform = glm.inverse(self.solver_results.view)
-                        self.camera.setFoVY(solver.fov_from_focal_length(self.solver_results.focal_length, self.doc.content_size.y))
+                        fovy = solver.fov_from_focal_length(self.solver_results.focal_length, self.doc.content_size.y)
+                        self.camera.setFoVY(math.degrees(fovy))
                         self.camera.setAspectRatio(self.doc.content_size.x / self.doc.content_size.y)
                         self.camera.set_lens_shift(self.solver_results.shift_x, self.solver_results.shift_y)
 
-                        print("Camera created:", self.camera)
-                        print("Camera position:", self.camera.getPosition())
-                        print("Camera view matrix:", self.camera.viewMatrix())
+                        # print("Camera created:", self.camera)
+                        # print("Camera position:", self.camera.getPosition())
+                        # print("Camera view matrix:", self.camera.viewMatrix())
                     else:
                         print("Warning: solver_results is None, camera not created")
 
@@ -455,7 +456,6 @@ class PerspyApp():
                             # draw the grid
                             if ground_axes == {'X', 'Y'}:
                                 for A, B in ui.viewer.make_gridXY_lines(step=1, size=10):
-                                    print("draw gtrid")
                                     ui.viewer.guide(A, B)
                             elif ground_axes == {'X', 'Z'}:
                                 for A, B in ui.viewer.make_gridXZ_lines(step=1, size=10):
@@ -527,10 +527,10 @@ class PerspyApp():
                         imgui.set_next_item_width(260)
                         imgui.input_text("##quat", f"{quat.x:.2f}, {quat.y:.2f}, {quat.z:.2f}, {quat.w:.2f}" if self.solver_results.view is not None else "N/A", flags=imgui.InputTextFlags_.read_only)
                         
-                        euler = glm.eulerAngles(quat)
-                        ui.next_attribute("Euler") #todo: set order
-                        imgui.set_next_item_width(260)
-                        imgui.input_text("##euler", f"{math.degrees(euler.x):.2f}, {math.degrees(euler.y):.2f}, {math.degrees(euler.z):.2f}" if self.solver_results.transform is not None else "N/A", flags=imgui.InputTextFlags_.read_only)
+                        # euler = glm.eulerAngles(quat)
+                        # ui.next_attribute("Euler") #todo: set order
+                        # imgui.set_next_item_width(260)
+                        # imgui.input_text("##euler", f"{math.degrees(euler.x):.2f}, {math.degrees(euler.y):.2f}, {math.degrees(euler.z):.2f}" if self.solver_results.transform is not None else "N/A", flags=imgui.InputTextFlags_.read_only)
 
 
                         imgui.separator_text("Projection")
