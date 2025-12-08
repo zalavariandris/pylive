@@ -95,7 +95,7 @@ def cast_ray(
     P: glm.vec2, 
     view_matrix: glm.mat4, 
     projection_matrix: glm.mat4, 
-    viewport: glm.vec4
+    viewport: glm.vec4 | Tuple[float, float, float, float]
 ) -> Ray3:
     """
     Cast a ray from the camera through a pixel in screen space.
@@ -340,84 +340,97 @@ def perspective_tiltshift(fovy:float, aspect:float, near:float, far:float, shift
     # Create the projection matrix with lens shift
     return glm.frustum(left, right, bottom, top, near, far)
 
-def decompose_projection_matrix(
-        P: glm.mat4,
-        viewport_width: float,
-        viewport_height: float,
-        viewport_x: float = 0.0,
-        viewport_y: float = 0.0):
-    """
-    Extract near/far planes, focal lengths, and principal point from
-    a standard OpenGL perspective projection matrix (pyglm).
+def decompose_frustum(P: glm.mat4):
+    # near / far
+    near = P[3][2] / (P[2][2] - 1.0)
+    far  = P[3][2] / (P[2][2] + 1.0)
 
-    Supports viewports with non-zero position.
+    # left / right
+    left  =  near * (P[2][0] - 1.0) / P[0][0]
+    right =  near * (P[2][0] + 1.0) / P[0][0]
+
+    # bottom / top
+    bottom = near * (P[2][1] - 1.0) / P[1][1]
+    top    = near * (P[2][1] + 1.0) / P[1][1]
+
+    return left, right, bottom, top, near, far
+
+import math
+import glm
+import warnings
+
+def decompose_perspective(P: glm.mat4):
+    """
+    Decompose a perspective projection matrix.
+    Works for both symmetric and tilt-shift (off-center) variants.
 
     Returns:
-        near_plane, far_plane
-        fx, fy
-        shift_x, shift_y
-        cx_viewport, cy_viewport   (principal point in viewport space)
-        cx_abs, cy_abs             (principal point in render target space)
-        left, right, top, bottom   (frustum edges)
+        fovy (degrees)
+        aspect
+        near
+        far
+        shift_x  # principal point shift in X (0 for symmetric)
+        shift_y  # principal point shift in Y (0 for symmetric)
     """
 
-    P = glm.mat4(P)
+    # --- tilt-shift detection and extraction ---
+    # P[2][0] = (r + l) / (r - l)
+    # P[2][1] = (t + b) / (t - b)
+    shift_x = P[2][0]
+    shift_y = P[2][1]
 
-    # ---- Near & Far -------------------------------------------------
-    A = P[2][2]
-    B = P[2][3]
+    eps = 1e-6
+    if abs(P[2][0]) > eps or abs(P[2][1]) > eps:
+        warnings.warn(
+            "Perspective matrix is not symmetric (tilt-shift / off-center projection detected). "
+            "fovy and aspect will not fully describe this projection.",
+            RuntimeWarning
+        )
 
-    near_plane = B / (A - 1.0)
-    far_plane  = B / (A + 1.0)
+    # --- near / far ---
+    near = P[3][2] / (P[2][2] - 1.0)
+    far  = P[3][2] / (P[2][2] + 1.0)
 
-    # ---- Horizontal Frustum ----------------------------------------
-    rl = 2.0 * near_plane / P[0][0]      # right - left
-    rpl = P[0][2] * rl                   # right + left
+    # --- fovy ---
+    fovy_rad = 2.0 * math.atan(1.0 / P[1][1])
+    fovy = math.degrees(fovy_rad)
 
-    right = 0.5 * (rl + rpl)
-    left  = 0.5 * (rpl - rl)
+    # --- aspect ---
+    aspect = P[1][1] / P[0][0]
 
-    # ---- Vertical Frustum ------------------------------------------
-    tb  = 2.0 * near_plane / P[1][1]     # top - bottom
-    tpb = P[1][2] * tb                   # top + bottom
 
-    top    = 0.5 * (tb + tpb)
-    bottom = 0.5 * (tpb - tb)
 
-    # ---- Focal Lengths (pixels) ------------------------------------
-    fx = near_plane / right * (viewport_width  * 0.5)
-    fy = near_plane / top   * (viewport_height * 0.5)
+    return fovy, aspect, near, far
 
-    # ---- Normalized OpenGL Shifts ([-1, +1] mapped) ----------------
-    shift_x = P[0][2] * 0.5
-    shift_y = P[1][2] * 0.5
+def decompose_perspective_tiltshift(P: glm.mat4):
+    """
+    Decompose a perspective projection matrix.
+    Works for both symmetric and tilt-shift (off-center) variants.
 
-    # ---- Principal Point (viewport-local pixel coordinates) --------
-    cx_viewport = (P[0][2] + 1.0) * 0.5 * viewport_width
-    cy_viewport = (P[1][2] + 1.0) * 0.5 * viewport_height
+    Returns:
+        fovy (degrees)
+        aspect
+        near
+        far
+        shift_x  # principal point shift in X (0 for symmetric)
+        shift_y  # principal point shift in Y (0 for symmetric)
+    """
 
-    # ---- Principal Point (absolute pixel coordinates) --------------
-    cx_abs = viewport_x + cx_viewport
-    cy_abs = viewport_y + cy_viewport
+    # --- near / far ---
+    near = P[3][2] / (P[2][2] - 1.0)
+    far  = P[3][2] / (P[2][2] + 1.0)
 
-    return {
-        "near_plane": near_plane,
-        "far_plane": far_plane,
+    # --- fovy ---
+    fovy_rad = 2.0 * math.atan(1.0 / P[1][1])
+    fovy = math.degrees(fovy_rad)
 
-        "fx": fx,
-        "fy": fy,
+    # --- aspect ---
+    aspect = P[1][1] / P[0][0]
 
-        "shift_x": shift_x,
-        "shift_y": shift_y,
+    # --- tilt-shift detection and extraction ---
+    # P[2][0] = (r + l) / (r - l)
+    # P[2][1] = (t + b) / (t - b)
+    shift_x = P[2][0]
+    shift_y = P[2][1]
 
-        "cx_viewport": cx_viewport,
-        "cy_viewport": cy_viewport,
-
-        "cx_abs": cx_abs,
-        "cy_abs": cy_abs,
-
-        "left": left,
-        "right": right,
-        "top": top,
-        "bottom": bottom,
-    }
+    return fovy, aspect, near, far, shift_x, shift_y

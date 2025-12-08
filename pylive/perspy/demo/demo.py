@@ -199,9 +199,9 @@ class PerspyApp():
             imgui.set_next_item_width(buttons_width)
             _, self.doc.reference_axis = imgui.combo("reference distance mode", self.doc.reference_axis, solver.ReferenceAxis._member_names_)
 
-
             imgui.set_next_item_width(buttons_width)
             _, self.doc.reference_distance_start = imgui.slider_float("reference distance start", self.doc.reference_distance_start, 1.0, 2000.0, "%.2f")
+            
             imgui.set_next_item_width(buttons_width)
             _, self.doc.reference_distance_end = imgui.slider_float("reference distance end", self.doc.reference_distance_end, 1.0, 2000.0, "%.2f")
 
@@ -307,58 +307,35 @@ class PerspyApp():
 
                 # Solve the camera
                 try:
-                    
-                    self.solver.set_viewport(0,0, self.doc.content_size.x, self.doc.content_size.y)\
-                        .set_origin(self.doc.origin.x, self.doc.origin.y)\
-                        .set_axes(self.doc.first_axis, self.doc.second_axis)\
-                        .scale_by_reference((0, 100.0), 1.0, solver.ReferenceAxis.X_Axis)
+                    self.solver_results = solver.solve(
                         
-                    match self.doc.solver_mode:
-                        case solver.SolverMode.OneVP:
-                            self.solver.use_vanishing_lines(first=self.doc.first_vanishing_lines)\
-                                .set_focal_length(solver.utils.fov_to_focal_length(self.doc.fov_degrees, self.doc.content_size.y))\
-                                .set_roll_line(self.doc.second_vanishing_lines[0])
-                            
-                            if not self.doc.enable_auto_principal_point:
-                                self.solver.set_principal_point(self.doc.principal.x, self.doc.principal.y)
+                        viewport=solver.Rect(0,0,self.doc.content_size.x, self.doc.content_size.y),
 
-                        case solver.SolverMode.TwoVP:
-                            self.solver.use_vanishing_lines(
-                                first=self.doc.first_vanishing_lines, 
-                                second=self.doc.second_vanishing_lines
-                            )
+                        # 1. compute vanishing points
+                        first_vanishing_lines =  self.doc.first_vanishing_lines,
+                        second_vanishing_lines = self.doc.second_vanishing_lines,
+                        third_vanishing_lines =  self.doc.third_vanishing_lines,
 
-                            if not self.doc.enable_auto_principal_point:
-                                self.solver.set_principal_point(self.doc.principal.x, self.doc.principal.y)
+                        # 2. camera intrinsics
+                        mode = self.doc.solver_mode,
+                        f=solver.focal_length_from_fov(self.doc.fov_degrees, self.doc.content_size.y), # focal length (in height units)
+                        P=glm.vec2(*self.doc.principal),
 
-                        case solver.SolverMode.ThreeVP:
-                            self.solver.use_vanishing_lines(
-                                first=self.doc.first_vanishing_lines, 
-                                second=self.doc.second_vanishing_lines,
-                                third=self.doc.third_vanishing_lines
-                            )
-
-                    self.solver_results = self.solver.solve()
-
-                    # self.solver_results = solver.solve(
-                    #     mode = self.doc.solver_mode, 
-                    #     viewport=solver.Viewport(0,0,self.doc.content_size.x, self.doc.content_size.y),
-                    #     first_vanishing_lines=self.doc.first_vanishing_lines,
-                    #     second_vanishing_lines=self.doc.second_vanishing_lines,
-                    #     third_vanishing_lines=self.doc.third_vanishing_lines,
+                        # 3. compute orientation
                         
-                    #     first_axis=self.doc.first_axis,
-                    #     second_axis=self.doc.second_axis,
 
-                    #     P=glm.vec2(*self.doc.principal),
-                    #     O=glm.vec2(*self.doc.origin),
-                    #     f=solver.focal_length_from_fov(self.doc.fov_degrees, self.doc.content_size.y), # focal length (in height units)
+                        # 4. camera position
+                        O=glm.vec2(*self.doc.origin),
 
-                    #     reference_world_size=self.doc.reference_world_size,
-                    #     reference_axis=self.doc.reference_axis,
-                    #     reference_distance_segment=(self.doc.reference_distance_start, self.doc.reference_distance_end), # 2D distance from origin to camera
+                        # 5. adjust scene scale
+                        reference_world_size=self.doc.reference_world_size,
+                        reference_axis=self.doc.reference_axis,
+                        reference_distance_segment=(self.doc.reference_distance_start, self.doc.reference_distance_end), # 2D distance from origin to camera  
                         
-                    # )
+                        # 6. adjust axes
+                        first_axis=self.doc.first_axis,
+                        second_axis=self.doc.second_axis,
+                    )
 
                     if self.solver_results is not None:
                         self.camera = Camera()
@@ -366,7 +343,15 @@ class PerspyApp():
                         fovy = solver.fov_from_focal_length(self.solver_results.focal_length, self.doc.content_size.y)
                         self.camera.setFoVY(math.degrees(fovy))
                         self.camera.setAspectRatio(self.doc.content_size.x / self.doc.content_size.y)
-                        self.camera.set_lens_shift(self.solver_results.shift_x, self.solver_results.shift_y)
+
+                        shift = (glm.vec2(*self.solver_results.principal_point) - self.solver_results.viewport.center) / (self.solver_results.viewport.size / 2.0)
+                        self.camera.set_lens_shift(shift.x, shift.y)
+
+                        # print(shift)
+                        # print(self.solver_results.shift_x, self.solver_results.shift_y)
+                        # print()
+
+                        # self.camera.set_lens_shift(self.solver_results.shift_x, self.solver_results.shift_y)
 
                         # print("Camera created:", self.camera)
                         # print("Camera position:", self.camera.getPosition())
@@ -428,6 +413,35 @@ class PerspyApp():
                         for line in self.doc.third_vanishing_lines:
                             ui.viewer.guide(line[0], line[1], get_axis_color(self.doc.third_axis), head='>')
 
+                # adjust scale
+                if self.solver_results is not None:
+                    match self.doc.reference_axis:
+                        case solver.ReferenceAxis.X_Axis:
+                            reference_axis_vector = glm.vec3(1,0,0)
+                        case solver.ReferenceAxis.Y_Axis:
+                            reference_axis_vector = glm.vec3(0,1,0)
+                        case solver.ReferenceAxis.Z_Axis:
+                            reference_axis_vector = glm.vec3(0,0,1)
+                        case solver.ReferenceAxis.Screen:
+                            reference_axis_vector = glm.normalize(glm.vec3(glm.inverse(self.solver_results.view)[0]))
+
+                    reference_screen_dir = glm.normalize(
+                            glm.vec2(
+                                glm.project(reference_axis_vector, self.solver_results.view, self.solver_results.projection, glm.vec4(*self.solver_results.viewport))
+                            )
+                         - glm.vec2(*self.doc.origin))
+                    ORANGE = imgui.ImVec4(1.0, 0.5, 0.0, 1.0)
+                    reference_segment_endpoint = self.doc.origin + imgui.ImVec2(*reference_screen_dir) * self.doc.reference_distance_end
+                    end_changed, reference_segment_endpoint = ui.viewer.control_point("S", reference_segment_endpoint, color=ORANGE)
+                    reference_segment_startpoint = self.doc.origin + imgui.ImVec2(*reference_screen_dir) * self.doc.reference_distance_start
+                    start_changed, reference_segment_startpoint = ui.viewer.control_point("E", reference_segment_startpoint, color=ORANGE)
+                    ui.viewer.guide(reference_segment_startpoint, reference_segment_endpoint, color=ORANGE, head='|', tail='|')
+                    if start_changed or end_changed:
+                        self.doc.reference_distance_start = glm.distance(glm.vec2(*self.doc.origin), glm.vec2(*reference_segment_startpoint))
+                        self.doc.reference_distance_end = glm.distance(glm.vec2(*self.doc.origin), glm.vec2(*reference_segment_endpoint))
+
+                    
+
                 # draw vanishing lines to vanishing points
                 if self.solver_results is not None:
                     if self.solver_results.first_vanishing_point is not None:
@@ -435,6 +449,7 @@ class PerspyApp():
                             P = sorted([line[0], line[1]], key=lambda P: glm.distance2(P, self.solver_results.first_vanishing_point))[0]
                             first_axis_color = get_axis_color(self.doc.first_axis)
                             ui.viewer.guide(P, self.solver_results.first_vanishing_point, imgui.ImVec4(first_axis_color[0], first_axis_color[1], first_axis_color[2], 0.4))
+
                     if self.solver_results.second_vanishing_point is not None:
                         for line in self.doc.second_vanishing_lines:
                             P = sorted([line[0], line[1]], key=lambda P: glm.distance2(P, self.solver_results.second_vanishing_point))[0]
@@ -544,11 +559,11 @@ class PerspyApp():
                         # ui.next_attribute("fovx")
                         # imgui.input_text("##fovx", f"{math.degrees(self.solver_results.get_fovx()):.2f}°")
 
-                        ui.next_attribute("shiftx")
-                        imgui.input_text("##shiftx", f"{self.solver_results.shift_x:.2f}")
+                        # ui.next_attribute("shiftx")
+                        # imgui.input_text("##shiftx", f"{self.solver_results.shift_x:.2f}")
 
-                        ui.next_attribute("shifty")
-                        imgui.input_text("##shifty", f"{self.solver_results.shift_y:.2f}")
+                        # ui.next_attribute("shifty")
+                        # imgui.input_text("##shifty", f"{self.solver_results.shift_y:.2f}")
 
                         imgui.separator_text("Position")
                         ui.next_attribute("View")
@@ -911,93 +926,93 @@ class PerspyApp():
             traceback.print_exc()
 
     # update 
-    def update_solve(self):
-        """
-        Solve for camera based on current document state
-        throws exceptions on failure.
-        """
-        # Solve for camera
-        self.camera:Camera|None = None
+    # def update_solve(self):
+    #     """
+    #     Solve for camera based on current document state
+    #     throws exceptions on failure.
+    #     """
+    #     # Solve for camera
+    #     self.camera:Camera|None = None
 
-        if self.doc.enable_auto_principal_point:
-            self.doc.principal = glm.vec2(self.doc.content_size.x / 2, self.doc.content_size.y / 2)
+    #     if self.doc.enable_auto_principal_point:
+    #         self.doc.principal = glm.vec2(self.doc.content_size.x / 2, self.doc.content_size.y / 2)
 
-        self.solver_results:solver.SolverResults = solver.solve(
-            mode =                       self.doc.solver_mode,
-            viewport =                   solver.Viewport(0,0,self.doc.content_size.x, self.doc.content_size.y),
+    #     self.solver_results:solver.SolverResults = solver.solve(
+    #         mode =                       self.doc.solver_mode,
+    #         viewport =                   solver.Rect(0,0,self.doc.content_size.x, self.doc.content_size.y),
             
-            first_vanishing_lines =      self.doc.first_vanishing_lines,
-            second_vanishing_lines =     self.doc.second_vanishing_lines,
-            third_vanishing_lines =      self.doc.third_vanishing_lines,
+    #         first_vanishing_lines =      self.doc.first_vanishing_lines,
+    #         second_vanishing_lines =     self.doc.second_vanishing_lines,
+    #         third_vanishing_lines =      self.doc.third_vanishing_lines,
 
-            first_axis =                 self.doc.first_axis,
-            second_axis =                self.doc.second_axis,
+    #         first_axis =                 self.doc.first_axis,
+    #         second_axis =                self.doc.second_axis,
    
-            P =                          self.doc.principal,
-            O =                          self.doc.origin,
-            f =                          solver.focal_length_from_fov(math.radians(self.doc.fov_degrees), self.doc.content_size.y),
+    #         P =                          self.doc.principal,
+    #         O =                          self.doc.origin,
+    #         f =                          solver.focal_length_from_fov(math.radians(self.doc.fov_degrees), self.doc.content_size.y),
    
-            reference_axis =             self.doc.reference_axis,
-            reference_distance_segment = (self.doc.reference_distance_start, self.doc.reference_distance_end),
-            reference_world_size =       self.doc.reference_world_size
-        )
+    #         reference_axis =             self.doc.reference_axis,
+    #         reference_distance_segment = (self.doc.reference_distance_start, self.doc.reference_distance_end),
+    #         reference_world_size =       self.doc.reference_world_size
+    #     )
 
 
 
-        # scale scene
-        match self.doc.reference_axis:
-            case solver.ReferenceAxis.X_Axis:
-                reference_vector = glm.vec3(1, 0, 0)
-            case solver.ReferenceAxis.Y_Axis:
-                reference_vector = glm.vec3(0, 1, 0)
-            case solver.ReferenceAxis.Z_Axis:
-                reference_vector = glm.vec3(0, 0, 1)
-            case solver.ReferenceAxis.Screen | _:
-                # use camera right vector as reference axis
-                right = glm.mat3(glm.inverse(self.solver_results.view))[0]   # right vector is +X in view space
-                reference_vector = right
+    #     # scale scene
+    #     match self.doc.reference_axis:
+    #         case solver.ReferenceAxis.X_Axis:
+    #             reference_vector = glm.vec3(1, 0, 0)
+    #         case solver.ReferenceAxis.Y_Axis:
+    #             reference_vector = glm.vec3(0, 1, 0)
+    #         case solver.ReferenceAxis.Z_Axis:
+    #             reference_vector = glm.vec3(0, 0, 1)
+    #         case solver.ReferenceAxis.Screen | _:
+    #             # use camera right vector as reference axis
+    #             right = glm.mat3(glm.inverse(self.solver_results.view))[0]   # right vector is +X in view space
+    #             reference_vector = right
 
-        ref_point = glm.project(reference_vector, self.solver_results.view, self.solver_results.projection, tuple(self.solver_results.compute_space)).xy
-        ref_dir = glm.normalize(ref_point - glm.vec2(*self.doc.origin))
-        imgui.text(f"{self.doc.origin.x:.2f}, {self.doc.origin.y:.2f}->{ref_point.x:.2f}, {ref_point.y:.2f}")
-        ui.viewer.guide(
-            glm.vec2(*self.doc.origin) + ref_dir * self.doc.reference_distance_start, 
-            glm.vec2(*self.doc.origin) + ref_dir * self.doc.reference_distance_end, 
-            imgui.ImVec4(1.0, 1.0, 0.0, 1.0),
-            head='|',
-            tail='|',
-            head_size=16.0, tail_size=16.0,
-            thickness=5.0
-        )
+    #     ref_point = glm.project(reference_vector, self.solver_results.view, self.solver_results.projection, tuple(self.solver_results.compute_space)).xy
+    #     ref_dir = glm.normalize(ref_point - glm.vec2(*self.doc.origin))
+    #     imgui.text(f"{self.doc.origin.x:.2f}, {self.doc.origin.y:.2f}->{ref_point.x:.2f}, {ref_point.y:.2f}")
+    #     ui.viewer.guide(
+    #         glm.vec2(*self.doc.origin) + ref_dir * self.doc.reference_distance_start, 
+    #         glm.vec2(*self.doc.origin) + ref_dir * self.doc.reference_distance_end, 
+    #         imgui.ImVec4(1.0, 1.0, 0.0, 1.0),
+    #         head='|',
+    #         tail='|',
+    #         head_size=16.0, tail_size=16.0,
+    #         thickness=5.0
+    #     )
 
-        _, value = ui.viewer.control_point("ref-start", glm.vec2(*self.doc.origin) + ref_dir * self.doc.reference_distance_start, color=imgui.ImVec4(1.0, 1.0, 0.0, 1.0))
-        if _:
-            distance_along_ray = glm.dot(value - glm.vec2(*self.doc.origin), ref_dir)
-            self.doc.reference_distance_start = distance_along_ray
+    #     _, value = ui.viewer.control_point("ref-start", glm.vec2(*self.doc.origin) + ref_dir * self.doc.reference_distance_start, color=imgui.ImVec4(1.0, 1.0, 0.0, 1.0))
+    #     if _:
+    #         distance_along_ray = glm.dot(value - glm.vec2(*self.doc.origin), ref_dir)
+    #         self.doc.reference_distance_start = distance_along_ray
 
-        _, value = ui.viewer.control_point("ref-end", glm.vec2(*self.doc.origin) + ref_dir * self.doc.reference_distance_end, color=imgui.ImVec4(1.0, 1.0, 0.0, 1.0))
-        if _:
-            distance_along_ray = glm.dot(value - glm.vec2(*self.doc.origin), ref_dir)
-            self.doc.reference_distance_end = distance_along_ray
+    #     _, value = ui.viewer.control_point("ref-end", glm.vec2(*self.doc.origin) + ref_dir * self.doc.reference_distance_end, color=imgui.ImVec4(1.0, 1.0, 0.0, 1.0))
+    #     if _:
+    #         distance_along_ray = glm.dot(value - glm.vec2(*self.doc.origin), ref_dir)
+    #         self.doc.reference_distance_end = distance_along_ray
 
-        self.solver_results.view = solver.apply_reference_world_distance(
-            reference_axis=self.doc.reference_axis,
-            reference_screen_length_segment=(self.doc.reference_distance_start, self.doc.reference_distance_end),
-            reference_world_size=self.doc.reference_world_size,
-            view_matrix=self.solver_results.view,
-            projection_matrix=self.solver_results.projection,
-            viewport=self.solver_results.compute_space
-        )
+    #     self.solver_results.view = solver.apply_reference_world_distance(
+    #         reference_axis=self.doc.reference_axis,
+    #         reference_screen_length_segment=(self.doc.reference_distance_start, self.doc.reference_distance_end),
+    #         reference_world_size=self.doc.reference_world_size,
+    #         view_matrix=self.solver_results.view,
+    #         projection_matrix=self.solver_results.projection,
+    #         viewport=self.solver_results.compute_space
+    #     )
 
 
-        # apply solver to camera
-        self.doc.principal = self.solver_results.principal_point
-
-        self.camera = Camera()
-        self.camera.transform = glm.inverse(self.solver_results.view)
-        self.camera.setFoVY(math.degrees(solver.fov_from_focal_length(self.solver_results.focal_length, self.solver_results.compute_space.height)))
-        self.camera.setAspectRatio(self.solver_results.compute_space.width / self.solver_results.compute_space.height)
-        self.camera.set_lens_shift(self.solver_results.shift_x, self.solver_results.shift_y)
+    #     # apply solver to camera
+    #     self.doc.principal = self.solver_results.compute_space
+    #     shift = (self.solver_results.compute_space - self.solver_results.compute_space.center) / (self.solver_results.compute_space.size / 2.0)
+    #     self.camera = Camera()
+    #     self.camera.transform = glm.inverse(self.solver_results.view)
+    #     self.camera.setFoVY(math.degrees(solver.fov_from_focal_length(self.solver_results.focal_length, self.solver_results.compute_space.height)))
+    #     self.camera.setAspectRatio(self.solver_results.compute_space.width / self.solver_results.compute_space.height)
+    #     self.camera.set_lens_shift(shift.x, shift.y)
 
     def update_texture(self):
         # Load image with PIL

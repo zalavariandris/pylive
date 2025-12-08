@@ -801,7 +801,7 @@ class PerspyApp():
 
         self.solver_results:solver.SolverResults = solver.solve(
             mode =                       self.doc.solver_mode,
-            viewport =                   solver.Viewport(0,0,self.doc.content_size.x, self.doc.content_size.y),
+            viewport =                   solver.Rect(0,0,self.doc.content_size.x, self.doc.content_size.y),
             
             first_vanishing_lines =      self.doc.first_vanishing_lines,
             second_vanishing_lines =     self.doc.second_vanishing_lines,

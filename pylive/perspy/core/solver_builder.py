@@ -5,7 +5,7 @@ from . solver import *
 
 
 class Solver(ABC):
-    viewport: Viewport
+    viewport: Rect
     first_vanishing_lines: List[Tuple[glm.vec2, glm.vec2]]
 
     first_axis: Axis
@@ -24,7 +24,7 @@ class Solver(ABC):
     shift_x: float
     shift_y: float
 
-    def set_viewport(self, viewport:Viewport)->Self:
+    def set_viewport(self, viewport:Rect)->Self:
         self.viewport = viewport
         return self
     
@@ -84,7 +84,7 @@ class ThreeVPSolver(Solver):
 
 class MultiSolverBuilder(Solver):
     def __init__(self):
-        self.viewport: Viewport|None = None
+        self.viewport: Rect|None = None
         self.vanishing_lines:  List[List[Tuple[glm.vec2, glm.vec2]]] = []
 
         self.roll_line: Tuple[glm.vec2, glm.vec2]|None = None
@@ -105,7 +105,7 @@ class MultiSolverBuilder(Solver):
         self.reference_world_size: float|None = None
 
     def set_viewport(self, x, y, w, h)->Self:
-        self.viewport = Viewport(x,y,w,h)
+        self.viewport = Rect(x,y,w,h)
         return self
     
     def use_vanishing_lines(self, 
@@ -277,7 +277,7 @@ class MultiSolverBuilder(Solver):
             )
 
         return SolverResults(
-            compute_space=self.viewport,
+            viewport=self.viewport,
             view=self.view,
             projection=self.projection,
             principal_point=self.principal,

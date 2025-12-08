@@ -1,20 +1,20 @@
 # standard library
 from collections import namedtuple
-from typing import List, Tuple, Literal
+from typing import List, Tuple, Literal, Final
 from enum import IntEnum
 import math
-import logging
 from dataclasses import dataclass
 from textwrap import dedent
+from abc import ABC, abstractmethod
 
 # third party library
 import glm
 import numpy as np
-from imgui_bundle import imgui # imgui for debugging
+from imgui_bundle import imgui
+from pyparsing import Iterable # imgui for debugging
 from pylive.perspy.demo import ui
 
-# set up logger
-logger = logging.getLogger(__name__)
+import warnings
 
 from . constants import (
     EPSILON, 
@@ -74,13 +74,12 @@ class SolverMode(IntEnum):
     TwoVP = 1
     ThreeVP = 2
 
-
 @dataclass
-class Viewport:
-    x: int
-    y: int
-    width: int
-    height: int
+class Rect:
+    x: float
+    y: float
+    width: float
+    height: float
 
     @property
     def size(self) -> glm.vec2:
@@ -96,11 +95,10 @@ class Viewport:
         yield self.width
         yield self.height
 
-
 @dataclass
 class SolverResults:
     # initial parameters
-    compute_space: Viewport
+    viewport: Rect
 
     # vanishing points
     first_vanishing_point: glm.vec2|None = None
@@ -199,7 +197,7 @@ class SolverResults:
         try:
             script = Path(blender_template_path).read_text()
         except Exception as e:
-            logger.error(f"Failed to read Blender template: {e}")
+            warnings.warn(f"Failed to read Blender template: {e}")
             return "# Failed to read Blender template."
 
         fovx = 2.0 * math.degrees(math.atan(math.tan(math.radians(self.fovy) * 0.5) * self.aspect))
@@ -251,124 +249,165 @@ class SolverResults:
 # MAIN SOLVER FUNCTIONS #
 #########################
 
-from abc import ABC, abstractmethod
+# def pipeline(
+#         viewport: Rect, 
+#         mode:SolverMode, 
+#         first_vanishing_lines: List[Tuple[glm.vec2, glm.vec2]],
+#         second_vanishing_lines: List[Tuple[glm.vec2, glm.vec2]],
+#         third_vanishing_lines: List[Tuple[glm.vec2, glm.vec2]]
+#     ):
+
+#     vp1 = least_squares_intersection_of_lines(first_vanishing_lines)
+
+#     if mode in (SolverMode.TwoVP, SolverMode.ThreeVP):
+#         vp2 = least_squares_intersection_of_lines(second_vanishing_lines)
+#         f = compute_focal_length_from_vanishing_points(Fu=vp1,Fv=vp2,P=P)
+
+#     if mode == SolverMode.ThreeVP:
+#         vp3 = least_squares_intersection_of_lines(third_vanishing_lines)
+#         P = triangle_orthocenter(vp1,vp2,vp3)
+
+#     def compute_projection(viewport, P, f):
+#         shift = (P - viewport.center) / (viewport.size / 2.0)
+#         return perspective_tiltshift(
+#             fov_from_focal_length(f, viewport.height), 
+#             viewport.width/viewport.height, 
+#             DEFAULT_NEAR_PLANE,
+#             DEFAULT_FAR_PLANE, 
+#             shift.x, 
+#             -shift.y # TODO: note the negation here to match unProject convention TODO: double check why? see roll matrix later.
+#         )
+    
+#     projection = compute_projection(viewport, P, f)
+
+ 
+#     # 3. compute orientation
+#     match mode:
+#         case SolverMode.OneVP:
+#             view_matrix:glm.mat4x4 = glm.mat4x4(compute_orientation_from_single_vanishing_point(
+#                 Fu=vp1,
+#                 P=P,
+#                 f=f,
+#                 glm.vec3(1,0,0)
+#             ))
+
+#             # Adjust Camera Roll to match second vanishing line
+#             view_matrix:glm.mat4 = view_matrix * compute_roll_matrix(
+#                 second_vanishing_lines[0], # Roll the camera based on the horizon line projected to 3D
+#                 view_matrix,
+#                 projection,
+#                 viewport
+#             )
+
+#         case SolverMode.TwoVP:
+#             view_matrix:glm.mat4 = glm.mat4(compute_orientation_from_two_vanishing_points(
+#                 Fu=vp1,
+#                 Fv=vp2,
+#                 P=P,
+#                 f=f
+#             ))
+
+#         case SolverMode.ThreeVP:
+#             view_matrix:glm.mat4 = glm.mat4(compute_orientation_from_two_vanishing_points(
+#                 Fu=vp1,
+#                 Fv=vp2,
+#                 P=P,
+#                 f=f
+#             ))
 
 
 def solve(
         mode:SolverMode, 
-        viewport: Viewport,
+        viewport: Rect,
         first_vanishing_lines: List[Tuple[glm.vec2, glm.vec2]],
         second_vanishing_lines: List[Tuple[glm.vec2, glm.vec2]],
         third_vanishing_lines: List[Tuple[glm.vec2, glm.vec2]],
-        
-        first_axis:Axis,
-        second_axis:Axis,
 
+        f:float, # focal length (in height units)
         P:glm.vec2,
         O:glm.vec2,
-        f:float, # focal length (in height units)
 
         reference_axis:ReferenceAxis,
         reference_distance_segment:Tuple[float, float], # 2D distance from origin to camera
-        reference_world_size:float
-        
+        reference_world_size:float,
+
+        first_axis:Axis,
+        second_axis:Axis
     )->SolverResults:
 
-    results = SolverResults(viewport)
+    results:Final[SolverResults] = SolverResults(viewport)
 
-    nr_of_vps = {
-        SolverMode.OneVP:   1,
-        SolverMode.TwoVP:   2,
-        SolverMode.ThreeVP: 3
-    }[mode]
-    
-    # compute vanishing points
-    vp1 = vp2 = vp3 = None
-    if nr_of_vps >=1:
-        vp1 =  least_squares_intersection_of_lines(first_vanishing_lines)
-    if nr_of_vps >=2:
-        vp2 =  least_squares_intersection_of_lines(second_vanishing_lines)
-    if nr_of_vps >=3:
-        vp3 =  least_squares_intersection_of_lines(third_vanishing_lines)
+    # 1. compute vanishing points
+    vp1 = least_squares_intersection_of_lines(first_vanishing_lines)
+    if mode in (SolverMode.TwoVP, SolverMode.ThreeVP):
+        vp2 = least_squares_intersection_of_lines(second_vanishing_lines)
+    else:
+        vp2 = None
+    if mode == SolverMode.ThreeVP:
+        vp3 = least_squares_intersection_of_lines(third_vanishing_lines)
+    else:
+        vp3 = None
 
-    results.first_vanishing_point =  vp1
-    results.second_vanishing_point = vp2
-    results.third_vanishing_point =  vp3
+    # 2. compute intrinsics
+    if mode == SolverMode.ThreeVP:
+        P = triangle_orthocenter(vp1,vp2,vp3)
 
-    # compute orientation
-    match nr_of_vps:
-        case 1:
-            view_matrix = glm.mat4(compute_orientation_from_single_vanishing_point(
-                Fu=vp1,
-                P=P,
-                f=f
-            ))
-        case 2:
-            f = compute_focal_length_from_vanishing_points(Fu=vp1,Fv=vp2,P=P)
-            results.focal_length = f
-            fovy = fov_from_focal_length(f, viewport.height)
-            view_matrix = glm.mat4(compute_orientation_from_two_vanishing_points(
-                Fu=vp1,
-                Fv=vp2,
-                P=P,
-                f=f
-            ))
-
-        case 3:
-            P = triangle_orthocenter(vp1,vp2,vp3)
-            results.principal_point = P
-            f = compute_focal_length_from_vanishing_points(Fu=vp1,Fv=vp2,P=P)
-            results.focal_length = f
-            fovy = fov_from_focal_length(f, viewport.height)
-            view_matrix = glm.mat4(compute_orientation_from_two_vanishing_points(
-                Fu=vp1,
-                Fv=vp2,
-                P=P,
-                f=f
-            ))
-
-    # compute projection
-    center_x = viewport.x + viewport.width / 2
-    center_y = viewport.y + viewport.height / 2
-    shift_x = -(P.x - center_x) / (viewport.width / 2)
-    shift_y = (P.y - center_y) / (viewport.height / 2)
-
+    if mode in (SolverMode.TwoVP, SolverMode.ThreeVP):
+        f = compute_focal_length_from_vanishing_points(Fu=vp1,Fv=vp2,P=P)
+        
+    shift = (P - viewport.center) / (viewport.size / 2.0)
     projection = perspective_tiltshift(
         fov_from_focal_length(f, viewport.height), 
         viewport.width/viewport.height, 
         DEFAULT_NEAR_PLANE,
         DEFAULT_FAR_PLANE, 
-        shift_x, 
-        -shift_y # TODO: note the negation here to match unProject convention TODO: double check why? see roll matrix later.
+        shift.x, 
+        -shift.y # TODO: note the negation here to match unProject convention TODO: double check why? see roll matrix later.
     )
 
-    results.projection = projection
-    results.shift_x = shift_x
-    results.shift_y = shift_y
-    results.near_plane = DEFAULT_NEAR_PLANE
-    results.far_plane = DEFAULT_FAR_PLANE
+    # 3. compute orientation
+    match mode:
+        case SolverMode.OneVP:
+            view_matrix:glm.mat4x4 = glm.mat4(compute_orientation_from_single_vanishing_point(
+                Fu=vp1,
+                P=P,
+                f=f,
+                horizon_direction=glm.vec2(1,0)
+            ))
+            # Adjust Camera Roll to match second vanishing line
+            view_matrix:glm.mat4 = view_matrix * compute_roll_matrix(
+                second_vanishing_lines[0], # Roll the camera based on the horizon line projected to 3D
+                view_matrix,
+                projection,
+                viewport
+            )
 
-    # set position
+        case SolverMode.TwoVP:
+            view_matrix:glm.mat4 = glm.mat4(compute_orientation_from_two_vanishing_points(
+                Fu=vp1,
+                Fv=vp2,
+                P=P,
+                f=f
+            ))
+
+        case SolverMode.ThreeVP:
+            view_matrix:glm.mat4 = glm.mat4(compute_orientation_from_two_vanishing_points(
+                Fu=vp1,
+                Fv=vp2,
+                P=P,
+                f=f
+            ))
+
+    # 4. Adjust position
     ray = cast_ray(O, view_matrix, projection, tuple(viewport))
     camera_position = glm.normalize(ray[1] - glm.vec3(0,0,0))
     view_matrix = glm.translate(view_matrix, camera_position)
-    results.view = view_matrix
 
-    if nr_of_vps == 1:
-        # Adjust Camera Roll to match second vanishing line
-        view_matrix = view_matrix * compute_roll_matrix(
-            second_vanishing_lines[0], # Roll the camera based on the horizon line projected to 3D
-            view_matrix,
-            projection,
-            viewport
-        )
-        results.view = view_matrix
 
-    # Apply axis assignment
+    # 5. Adjust axis assignment
     view_matrix = view_matrix * glm.mat4(create_axis_assignment_matrix(first_axis, second_axis))
-    results.view = view_matrix
 
-    # scale scene
+    # 6. Adjust scale scene
     view_matrix = apply_reference_world_distance(
         reference_axis, 
         reference_distance_segment, 
@@ -378,11 +417,9 @@ def solve(
         viewport
     )
 
-    results.view = view_matrix
-
     return SolverResults(
         # initial parameters
-        compute_space=viewport,
+        viewport=viewport,
 
         # vanishing points
         first_vanishing_point=vp1,
@@ -393,8 +430,8 @@ def solve(
         # projection
         projection=projection,
         focal_length=f,
-        shift_x=shift_x,
-        shift_y=shift_y,
+        shift_x=shift.x,
+        shift_y=shift.y,
         near_plane=DEFAULT_NEAR_PLANE,
         far_plane=DEFAULT_FAR_PLANE,
 
@@ -402,8 +439,43 @@ def solve(
         view = view_matrix
     )
 
+def orientation_from_one_vanishing_point(viewport, vp1, horizonDir, f, P)->Tuple[glm.mat4, glm.mat3]:
+    vp2 = second_vanishing_point_from_focal_length(Fu=vp1, f=f, P=P, horizonDir=horizonDir)
+    ...
+
+def orientation_from_two_vanishing_points(viewport, vp1, vp2, P)->Tuple[glm.mat4, glm.mat3]:
+    ...
+
+def orientation_from_three_vanishing_points(viewport, vp1, vp2, vp3)->Tuple[glm.mat4, glm.mat3]:
+    ...
+
+def adjust_position_to_origin(
+        viewport, 
+        projection_matrix:glm.mat4, 
+        O:glm.vec2, 
+        view_matrix:glm.mat4
+    )->glm.mat4:
+    ...
+
+def adjust_scale_to_reference_distance(
+        viewport, 
+        projection_matrix:glm.mat4,
+        reference_world_size:float, 
+        reference_axis:ReferenceAxis,
+        reference_distance_segment:Tuple[float, float],
+        view_matrix:glm.mat4, 
+    )->glm.mat4:
+    ...
+
+def adjust_axis_assignment(
+        first_axis, 
+        second_axis, 
+        view_matrix:glm.mat4
+    )->glm.mat4:
+    ...
+
 def solve1vp(
-        viewport: Viewport,
+        viewport: Rect,
         Fu: glm.vec2,
         second_vanishing_line: Tuple[glm.vec2, glm.vec2],
 
@@ -500,7 +572,7 @@ def solve1vp(
         view_matrix = view_matrix * glm.mat4(axis_assignment_matrix)
 
         return SolverResults(
-            compute_space=viewport,
+            viewport=viewport,
             transform=glm.inverse(view_matrix) ,
             fovy=fov_from_focal_length(f, viewport.height),
             aspect=viewport.width/viewport.height,
@@ -512,7 +584,7 @@ def solve1vp(
         )
 
 def solve2vp(
-        viewport: Viewport,
+        viewport: Rect,
         Fu: glm.vec2,
         Fv: glm.vec2,
         P: glm.vec2,
@@ -589,7 +661,7 @@ def solve2vp(
     view_matrix = view_matrix * glm.mat4(axis_assignment_matrix)
 
     return SolverResults(
-        compute_space=viewport,
+        viewport=viewport,
         transform=glm.inverse(view_matrix),
         fovy=fovy,
         aspect=viewport.width/viewport.height,
@@ -600,10 +672,10 @@ def solve2vp(
         principal_point=P
     )
 
-#############################
-# VANISHING POINT FUNCTIONS #
-#############################
-def _second_vanishing_point_from_focal_length(
+###########
+# HELPERS #
+###########
+def second_vanishing_point_from_focal_length(
         Fu: glm.vec2, 
         f: float, 
         P: glm.vec2, 
@@ -633,36 +705,6 @@ def _second_vanishing_point_from_focal_length(
 
     return Fv
 
-#########################
-# ORIENTATION FUNCTIONS #
-#########################
-
-def compute_orientation_from_single_vanishing_point(
-        Fu:glm.vec2,
-        P:glm.vec2,
-        f:float,
-        horizon_direction:glm.vec3=glm.vec3(1,0,0)
-    ):
-    """
-    Computes the camera orientation matrix from a single vanishing point.
-    """
-
-    # Direction from principal point to vanishing point
-    forward = glm.normalize( glm.vec3(Fu-P, -f))
-    up =      glm.normalize( glm.cross(horizon_direction, forward))
-    right =   glm.normalize( glm.cross(up, forward))
-
-    #
-    view_orientation_matrix = glm.mat3(forward, right, up)
-
-    # validate if matrix is a purely rotational matrix
-    determinant = glm.determinant(view_orientation_matrix)
-    if math.fabs(determinant - 1) > EPSILON:
-        view_orientation_matrix = apply_gram_schmidt_orthogonalization(view_orientation_matrix)
-        logger.warning(f'Warning: Invalid vanishing point configuration. Rotation determinant {determinant}\n'+"View orientation matrix was not orthogonal, applied Gram-Schmidt orthogonalization")
-    
-    return view_orientation_matrix
-
 def compute_focal_length_from_vanishing_points(
         Fu: glm.vec2, # first vanishing point
         Fv: glm.vec2, # second vanishing point
@@ -684,7 +726,7 @@ def compute_focal_length_from_vanishing_points(
     
     # For very distant VPs, clamp them to reasonable bounds to prevent numerical issues
     if Fu_distance > max_reasonable_distance or Fv_distance > max_reasonable_distance:
-        logger.warning(f"Warning: Very distant vanishing points detected (Fu: {Fu_distance:.1f}, Fv: {Fv_distance:.1f})")
+        warnings.warn(f"Warning: Very distant vanishing points detected (Fu: {Fu_distance:.1f}, Fv: {Fv_distance:.1f})")
         
         # Clamp to reasonable distance while preserving direction
         if Fu_distance > max_reasonable_distance:
@@ -695,7 +737,7 @@ def compute_focal_length_from_vanishing_points(
             direction = glm.normalize(Fv - P)
             Fv = P + direction * max_reasonable_distance
 
-        logger.warning(f"  Clamped vanishing points to Fu: {Fu}, Fv: {Fv}")
+        warnings.warn(f"  Clamped vanishing points to Fu: {Fu}, Fv: {Fv}")
     
     # Use the standard cross-ratio formula with improved numerical precision
     horizon_vector = Fu - Fv
@@ -732,6 +774,107 @@ def compute_focal_length_from_vanishing_points(
     focal_length = math.sqrt(focal_length_squared)
     return focal_length
 
+@warnings.deprecated("Use compute_focal_length_from_vanishing_points instead")
+def _compute_focal_length_from_vanishing_points_simple(
+        Fu: glm.vec2, # first vanishing point
+        Fv: glm.vec2, # second vanishing point
+        P: glm.vec2   # principal point
+    )-> float:
+    """
+    Computes the focal length from two orthogonal vanishing points using the cross-ratio formula.
+    
+    The formula is derived from the constraint that orthogonal directions in 3D space
+    project to vanishing points that satisfy: f² = |Fv_Puv| * |Fu_Puv| - |P_Puv|²
+    where Puv is the orthogonal projection of P onto the line FuFv.
+    
+    Args:
+        Fu: First vanishing point in pixel coordinates
+        Fv: Second vanishing point in pixel coordinates  
+        P: Principal point in pixel coordinates
+        
+    Returns:
+        Focal length in pixels
+        
+    Raises:
+        ValueError: If vanishing points are too close, collinear with principal point,
+                   or configuration is otherwise invalid
+    """
+    # Check for degenerate cases
+    Fu_Fv_distance = glm.distance(Fu, Fv)
+    if Fu_Fv_distance < EPSILON:
+        raise ValueError(f"Vanishing points are too close together: distance = {Fu_Fv_distance:.2e}")
+    
+    # Compute Puv: orthogonal projection of principal point P onto line segment Fu-Fv
+    horizon_vector = Fu - Fv
+    horizon_direction = glm.normalize(horizon_vector)
+    
+    # Vector from Fv to principal point
+    principal_to_fv = P - Fv
+    
+    # Project onto horizon line
+    projection_length = glm.dot(horizon_direction, principal_to_fv)
+    projection_point = Fv + projection_length * horizon_direction
+    
+    # Compute distances for focal length formula
+    # f² = |Fv_Puv| * |Fu_Puv| - |P_Puv|²
+    distance_fv_to_proj = glm.distance(Fv, projection_point)
+    distance_fu_to_proj = glm.distance(Fu, projection_point)
+    distance_p_to_proj = glm.distance(P, projection_point)
+    
+    # Apply focal length formula
+    focal_length_squared = distance_fv_to_proj * distance_fu_to_proj - distance_p_to_proj * distance_p_to_proj
+    
+    # Validate result
+    if focal_length_squared <= 0:
+        # Provide detailed diagnostic information
+        vanishing_point_distance = glm.distance(Fu, Fv)
+        angle_deg = math.degrees(math.acos(glm.clamp(
+            glm.dot(glm.normalize(Fu - P), glm.normalize(Fv - P)), -1.0, 1.0
+        )))
+        
+        raise ValueError(
+            f"Invalid vanishing point configuration: cannot compute focal length.\n"
+            f"  f² = {focal_length_squared:.6f} (must be > 0)\n"
+            f"  Vanishing point separation: {vanishing_point_distance:.2f} pixels\n"
+            f"  Angle between VP directions: {angle_deg:.1f}° (should be close to 90°)\n"
+            f"  Distance Fu->projection: {distance_fu_to_proj:.2f}\n"
+            f"  Distance Fv->projection: {distance_fv_to_proj:.2f}\n"
+            f"  Distance P->projection: {distance_p_to_proj:.2f}\n"
+            f"  Possible causes: VPs too close to principal point, VPs not orthogonal, or VPs collinear with principal point"
+        )
+    
+    return math.sqrt(focal_length_squared)
+
+#########################
+# ORIENTATION FUNCTIONS #
+#########################
+
+def compute_orientation_from_single_vanishing_point(
+        Fu:glm.vec2,
+        P:glm.vec2,
+        f:float,
+        horizon_direction:glm.vec2
+    ):
+    """
+    Computes the camera orientation matrix from a single vanishing point.
+    """
+
+    # Direction from principal point to vanishing point
+    forward = glm.normalize( glm.vec3(Fu-P, -f))
+    up =      glm.normalize( glm.cross(glm.vec3(horizon_direction, 0), forward))
+    right =   glm.normalize( glm.cross(up, forward))
+
+    #
+    view_orientation_matrix = glm.mat3(forward, right, up)
+
+    # validate if matrix is a purely rotational matrix
+    determinant = glm.determinant(view_orientation_matrix)
+    if math.fabs(determinant - 1) > EPSILON:
+        view_orientation_matrix = apply_gram_schmidt_orthogonalization(view_orientation_matrix)
+        warnings.warn(f'Warning: Invalid vanishing point configuration. Rotation determinant {determinant}\n'+"View orientation matrix was not orthogonal, applied Gram-Schmidt orthogonalization")
+    
+    return view_orientation_matrix
+
 def compute_orientation_from_two_vanishing_points(
         Fu:glm.vec2, # first vanishing point
         Fv:glm.vec2, # second vanishing point
@@ -749,7 +892,7 @@ def compute_orientation_from_two_vanishing_points(
     determinant = glm.determinant(view_orientation_matrix)
     if math.fabs(determinant - 1) > EPSILON:
         view_orientation_matrix = apply_gram_schmidt_orthogonalization(view_orientation_matrix)
-        logger.warning(f'Warning: Invalid vanishing point configuration. Rotation determinant {determinant}\n'+"View orientation matrix was not orthogonal, applied Gram-Schmidt orthogonalization")
+        warnings.warn(f'Warning: Invalid vanishing point configuration. Rotation determinant {determinant}\n'+"View orientation matrix was not orthogonal, applied Gram-Schmidt orthogonalization")
 
     return view_orientation_matrix
 
@@ -762,7 +905,7 @@ def compute_roll_matrix(
         second_vanishing_line:Tuple[glm.vec2, glm.vec2],
         view_matrix:glm.mat4,
         projection_matrix:glm.mat4,
-        viewport: Viewport,
+        viewport: Rect,
         first_axis:Axis=Axis.PositiveX, # TODO: are these needed?
         second_axis:Axis=Axis.PositiveY
 )->glm.mat4:
@@ -779,7 +922,10 @@ def compute_roll_matrix(
     B_ray = cast_ray(B, view_matrix, projection_matrix, tuple(viewport))
 
     # define the plane coordinate system (the plane facing against the camera screen, orineted by the first axis)
-    plane_origin = glm.vec3(0, 0, 0)
+    view_origin = glm.vec3(view_matrix[3])
+    forward = glm.normalize(glm.vec3(view_matrix[0][2], view_matrix[1][2], view_matrix[2][2]))
+
+    plane_origin = view_origin + forward*0.01# glm.vec3(0, 0, 0) TODO: the computation is dependent on the plane position. Consider removeing this dependency from the algorithm.
     plane_normal = _axis_positive_vector(first_axis)
     plane_y_axis = glm.cross(plane_normal, _third_axis_vector(first_axis, second_axis)) # along the line
     plane_x_axis = glm.cross(plane_normal, plane_y_axis)  # perpendicular in the plane
@@ -799,7 +945,6 @@ def compute_roll_matrix(
     roll_axis = plane_normal # plane normal
     roll_matrix = glm.rotate(glm.mat4(1.0), angle, roll_axis)
     return roll_matrix
-
 
 def apply_reference_world_distance(
         reference_axis:ReferenceAxis, 
@@ -907,82 +1052,9 @@ def flip_coordinate_handness(mat: glm.mat4) -> glm.mat4:
     return flipZ * mat # todo: check order
 
 
-###########################
-# Solver helper functions #
-###########################
-
-def _compute_focal_length_from_vanishing_points_simple(
-        Fu: glm.vec2, # first vanishing point
-        Fv: glm.vec2, # second vanishing point
-        P: glm.vec2   # principal point
-    )-> float:
-    """
-    Computes the focal length from two orthogonal vanishing points using the cross-ratio formula.
-    
-    The formula is derived from the constraint that orthogonal directions in 3D space
-    project to vanishing points that satisfy: f² = |Fv_Puv| * |Fu_Puv| - |P_Puv|²
-    where Puv is the orthogonal projection of P onto the line FuFv.
-    
-    Args:
-        Fu: First vanishing point in pixel coordinates
-        Fv: Second vanishing point in pixel coordinates  
-        P: Principal point in pixel coordinates
-        
-    Returns:
-        Focal length in pixels
-        
-    Raises:
-        ValueError: If vanishing points are too close, collinear with principal point,
-                   or configuration is otherwise invalid
-    """
-    # Check for degenerate cases
-    Fu_Fv_distance = glm.distance(Fu, Fv)
-    if Fu_Fv_distance < EPSILON:
-        raise ValueError(f"Vanishing points are too close together: distance = {Fu_Fv_distance:.2e}")
-    
-    # Compute Puv: orthogonal projection of principal point P onto line segment Fu-Fv
-    horizon_vector = Fu - Fv
-    horizon_direction = glm.normalize(horizon_vector)
-    
-    # Vector from Fv to principal point
-    principal_to_fv = P - Fv
-    
-    # Project onto horizon line
-    projection_length = glm.dot(horizon_direction, principal_to_fv)
-    projection_point = Fv + projection_length * horizon_direction
-    
-    # Compute distances for focal length formula
-    # f² = |Fv_Puv| * |Fu_Puv| - |P_Puv|²
-    distance_fv_to_proj = glm.distance(Fv, projection_point)
-    distance_fu_to_proj = glm.distance(Fu, projection_point)
-    distance_p_to_proj = glm.distance(P, projection_point)
-    
-    # Apply focal length formula
-    focal_length_squared = distance_fv_to_proj * distance_fu_to_proj - distance_p_to_proj * distance_p_to_proj
-    
-    # Validate result
-    if focal_length_squared <= 0:
-        # Provide detailed diagnostic information
-        vanishing_point_distance = glm.distance(Fu, Fv)
-        angle_deg = math.degrees(math.acos(glm.clamp(
-            glm.dot(glm.normalize(Fu - P), glm.normalize(Fv - P)), -1.0, 1.0
-        )))
-        
-        raise ValueError(
-            f"Invalid vanishing point configuration: cannot compute focal length.\n"
-            f"  f² = {focal_length_squared:.6f} (must be > 0)\n"
-            f"  Vanishing point separation: {vanishing_point_distance:.2f} pixels\n"
-            f"  Angle between VP directions: {angle_deg:.1f}° (should be close to 90°)\n"
-            f"  Distance Fu->projection: {distance_fu_to_proj:.2f}\n"
-            f"  Distance Fv->projection: {distance_fv_to_proj:.2f}\n"
-            f"  Distance P->projection: {distance_p_to_proj:.2f}\n"
-            f"  Possible causes: VPs too close to principal point, VPs not orthogonal, or VPs collinear with principal point"
-        )
-    
-    return math.sqrt(focal_length_squared)
-
-
-
+#####################
+# UTILITY FUNCTIONS #
+#####################
 def _axis_vector(axis: Axis)->glm.vec3:
     match axis:
       case Axis.NegativeX:
@@ -1021,11 +1093,6 @@ def _vectorAxis(vector: glm.vec3)->Axis:
       return Axis.PositiveX if vector.x > 0 else Axis.NegativeX
     
     raise ValueError('Invalid axis vector')
-
-
-#####################
-# UTILITY FUNCTIONS #
-#####################
 
 def adjust_vanishing_lines(
         old_vp:glm.vec2, 
@@ -1093,16 +1160,21 @@ def adjust_vanishing_lines_by_rotation(
     
     return new_vanishing_lines
 
-def vanishing_points_from_camera(
+def calc_vanishing_points_from_camera(
         view_matrix: glm.mat3, 
         projection_matrix: glm.mat4, 
-        viewport: Viewport
+        viewport: Rect
     ) -> Tuple[glm.vec2, glm.vec2, glm.vec2]:
+    """
+    Calculate the projected vanishing points from the camera matrices.
+    """
+    
     # Project vanishing Points
     MAX_FLOAT32 = (2 - 2**-23) * 2**127
     VPX = glm.project(glm.vec3(MAX_FLOAT32,0,0), view_matrix, projection_matrix, viewport)
     VPY = glm.project(glm.vec3(0,MAX_FLOAT32,0), view_matrix, projection_matrix, viewport)
     VPZ = glm.project(glm.vec3(0,0,MAX_FLOAT32), view_matrix, projection_matrix, viewport)
+
     return glm.vec2(VPX), glm.vec2( VPY), glm.vec2(VPZ)
 
 
