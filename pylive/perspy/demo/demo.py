@@ -200,10 +200,10 @@ class PerspyApp():
             _, self.doc.reference_axis = imgui.combo("reference distance mode", self.doc.reference_axis, solver.ReferenceAxis._member_names_)
 
             imgui.set_next_item_width(buttons_width)
-            _, self.doc.reference_distance_start = imgui.slider_float("reference distance start", self.doc.reference_distance_start, 1.0, 2000.0, "%.2f")
+            _, self.doc.reference_distance_offset = imgui.slider_float("reference distance offset", self.doc.reference_distance_offset, 0.0, 2000.0, "%.2f")
             
             imgui.set_next_item_width(buttons_width)
-            _, self.doc.reference_distance_end = imgui.slider_float("reference distance end", self.doc.reference_distance_end, 1.0, 2000.0, "%.2f")
+            _, self.doc.reference_distance_length = imgui.slider_float("reference distance length", self.doc.reference_distance_length, 1.0, 2000.0, "%.2f")
 
             # solver specific parameters
             match self.doc.solver_mode:
@@ -330,7 +330,7 @@ class PerspyApp():
                         # 5. adjust scene scale
                         reference_world_size=self.doc.reference_world_size,
                         reference_axis=self.doc.reference_axis,
-                        reference_distance_segment=(self.doc.reference_distance_start, self.doc.reference_distance_end), # 2D distance from origin to camera  
+                        reference_distance_segment=(self.doc.reference_distance_offset, self.doc.reference_distance_length), # 2D distance from origin to camera  
                         
                         # 6. adjust axes
                         first_axis=self.doc.first_axis,
@@ -431,14 +431,17 @@ class PerspyApp():
                             )
                          - glm.vec2(*self.doc.origin))
                     ORANGE = imgui.ImVec4(1.0, 0.5, 0.0, 1.0)
-                    reference_segment_endpoint = self.doc.origin + imgui.ImVec2(*reference_screen_dir) * self.doc.reference_distance_end
-                    end_changed, reference_segment_endpoint = ui.viewer.control_point("S", reference_segment_endpoint, color=ORANGE)
-                    reference_segment_startpoint = self.doc.origin + imgui.ImVec2(*reference_screen_dir) * self.doc.reference_distance_start
+
+                    reference_segment_startpoint = self.doc.origin + imgui.ImVec2(*reference_screen_dir) * self.doc.reference_distance_offset
                     start_changed, reference_segment_startpoint = ui.viewer.control_point("E", reference_segment_startpoint, color=ORANGE)
+
+                    reference_segment_endpoint = self.doc.origin + imgui.ImVec2(*reference_screen_dir) * (self.doc.reference_distance_offset+self.doc.reference_distance_length)
+                    end_changed, reference_segment_endpoint = ui.viewer.control_point("S", reference_segment_endpoint, color=ORANGE)
+                    
                     ui.viewer.guide(reference_segment_startpoint, reference_segment_endpoint, color=ORANGE, head='|', tail='|')
                     if start_changed or end_changed:
-                        self.doc.reference_distance_start = glm.distance(glm.vec2(*self.doc.origin), glm.vec2(*reference_segment_startpoint))
-                        self.doc.reference_distance_end = glm.distance(glm.vec2(*self.doc.origin), glm.vec2(*reference_segment_endpoint))
+                        self.doc.reference_distance_offset = glm.distance(glm.vec2(*self.doc.origin), glm.vec2(*reference_segment_startpoint))
+                        self.doc.reference_distance_length = glm.distance(glm.vec2(*reference_segment_startpoint), glm.vec2(*reference_segment_endpoint))
 
                     
 
@@ -512,117 +515,91 @@ class PerspyApp():
                 if self.solver_results is None:
                     imgui.text("No results yet.")
                 else:
-                    if ui.begin_attribute_editor("res props"):
-                        style = imgui.get_style()
-
-                        imgui.separator_text("Camera Parameters")
-                        ui.next_attribute("viewport")
-                        imgui.set_next_item_width(260)
-                        imgui.input_float4("##viewport", [0.0, 0.0, self.doc.content_size.x, self.doc.content_size.y], flags=imgui.InputTextFlags_.read_only)
-                        
-                        imgui.separator_text("Vanishing Points")
-                        ui.next_attribute("1st vp")
-                        imgui.set_next_item_width(260)
-                        imgui.input_text("##first_vp", f"{self.solver_results.first_vanishing_point.x:.2f}, {self.solver_results.first_vanishing_point.y:.2f}" if self.solver_results.first_vanishing_point is not None else "N/A", flags=imgui.InputTextFlags_.read_only)
-                        
-                        ui.next_attribute("2nd vp")
-                        imgui.set_next_item_width(260)
-                        imgui.input_text("##second_vp", f"{self.solver_results.second_vanishing_point.x:.2f}, {self.solver_results.second_vanishing_point.y:.2f}" if self.solver_results.second_vanishing_point is not None else "N/A", flags=imgui.InputTextFlags_.read_only)
-                        
-                        ui.next_attribute("3rd vp")
-                        imgui.set_next_item_width(260)
-                        imgui.input_text("##third_vp", f"{self.solver_results.third_vanishing_point.x:.2f}, {self.solver_results.third_vanishing_point.y:.2f}" if self.solver_results.third_vanishing_point is not None else "N/A", flags=imgui.InputTextFlags_.read_only)
-                        
-                        
-                        imgui.separator_text("Orientation")
-
-                        ui.next_attribute("Quaternion")
-                        quat = glm.quat()
-                        glm.decompose(self.solver_results.view, glm.vec3(), quat, glm.vec3(), glm.vec3(), glm.vec4())
-                        imgui.set_next_item_width(260)
-                        imgui.input_text("##quat", f"{quat.x:.2f}, {quat.y:.2f}, {quat.z:.2f}, {quat.w:.2f}" if self.solver_results.view is not None else "N/A", flags=imgui.InputTextFlags_.read_only)
-                        
-                        # euler = glm.eulerAngles(quat)
-                        # ui.next_attribute("Euler") #todo: set order
-                        # imgui.set_next_item_width(260)
-                        # imgui.input_text("##euler", f"{math.degrees(euler.x):.2f}, {math.degrees(euler.y):.2f}, {math.degrees(euler.z):.2f}" if self.solver_results.transform is not None else "N/A", flags=imgui.InputTextFlags_.read_only)
 
 
-                        imgui.separator_text("Projection")
+                    imgui.separator_text("Camera Parameters")
+                    imgui.input_float4("Viewport", [*self.solver_results.viewport], format="%.0f", flags=imgui.InputTextFlags_.read_only)
+                    
 
-                        ui.next_attribute("f")
-                        imgui.input_text("##f", f"{self.solver_results.focal_length:.2f}", flags=imgui.InputTextFlags_.read_only)
-
-                        # ui.next_attribute("fovy")
-                        # imgui.input_text("##fovy", f"{math.degrees(self.solver_results.fovy):.2f}°")
-
-                        # ui.next_attribute("fovx")
-                        # imgui.input_text("##fovx", f"{math.degrees(self.solver_results.get_fovx()):.2f}°")
-
-                        # ui.next_attribute("shiftx")
-                        # imgui.input_text("##shiftx", f"{self.solver_results.shift_x:.2f}")
-
-                        # ui.next_attribute("shifty")
-                        # imgui.input_text("##shifty", f"{self.solver_results.shift_y:.2f}")
-
-                        imgui.separator_text("Position")
-                        ui.next_attribute("View")
-                        imgui.set_next_item_width(260)
-                        text = "\n".join([",".join([f"{item:.2f}" for item in col]) for col in self.solver_results.view]) if self.solver_results.view is not None else "N/A"
-                        text_size = imgui.calc_text_size(text) + style.frame_padding * 2+imgui.ImVec2(0, 0)
-                        imgui.input_text_multiline("##view", text, size=text_size, flags=imgui.InputTextFlags_.read_only)
-
-                        ui.next_attribute("Transform")
-                        imgui.set_next_item_width(260)
-                        text = "\n".join([",".join([f"{item:.2f}" for item in col]) for col in glm.inverse(self.solver_results.view)]) if self.solver_results.view is not None else "N/A"
-                        text_size = imgui.calc_text_size(text) + style.frame_padding * 2+imgui.ImVec2(0, 0)
-                        imgui.input_text_multiline("##transform", text, size=text_size, flags=imgui.InputTextFlags_.read_only)
+                    imgui.separator_text("Vanishing Points")
+                    imgui.input_float2("1st VP", [*self.solver_results.first_vanishing_point]  if self.solver_results.first_vanishing_point  is not None else [0.0, 0.0], flags=imgui.InputTextFlags_.read_only)
+                    imgui.input_float2("2nd VP", [*self.solver_results.second_vanishing_point] if self.solver_results.second_vanishing_point is not None else [0.0, 0.0], flags=imgui.InputTextFlags_.read_only)
+                    imgui.input_float2("3rd VP", [*self.solver_results.third_vanishing_point]  if self.solver_results.third_vanishing_point  is not None else [0.0, 0.0], flags=imgui.InputTextFlags_.read_only)
+                    
+                    
+                    # euler = glm.eulerAngles(quat)
+                    # ui.next_attribute("Euler") #todo: set order
+                    # imgui.set_next_item_width(260)
+                    # imgui.input_text("##euler", f"{math.degrees(euler.x):.2f}, {math.degrees(euler.y):.2f}, {math.degrees(euler.z):.2f}" if self.solver_results.transform is not None else "N/A", flags=imgui.InputTextFlags_.read_only)
 
 
-                        ui.next_attribute("Position")
-                        imgui.set_next_item_width(260)
-                        quat = glm.quat()
-                        translation = glm.vec3()
-                        glm.decompose(self.solver_results.view, glm.vec3(), quat, translation, glm.vec3(), glm.vec4())
-                        imgui.input_text("##position", f"{translation.x:.2f}, {translation.y:.2f}, {translation.z:.2f}" if self.solver_results.view is not None else "N/A", flags=imgui.InputTextFlags_.read_only)
-                        
-                        
+                    imgui.separator_text("Projection")
+                    imgui.input_float2("Principal", [*self.solver_results.principal_point], flags=imgui.InputTextFlags_.read_only)
+                    imgui.input_float("Focal Length", self.solver_results.focal_length, flags=imgui.InputTextFlags_.read_only)
 
-                        # ui.next_attribute("transform")
-                        # transform_text = solver.pretty_matrix(np.array(self.solver_results.transform).reshape(4,4), separator=" ")
-                        # transform_text_size = imgui.calc_text_size(transform_text) + style.frame_padding * 2+imgui.ImVec2(0, 0)
-                        # imgui.input_text_multiline("##transform", transform_text, size=transform_text_size, flags=imgui.InputTextFlags_.read_only)
+                    # imgui.input_text("fovy", f"{math.degrees(self.solver_results.fovy):.2f}°")
+                    # imgui.input_text("fovx", f"{math.degrees(self.solver_results.get_fovx()):.2f}°")
+                    # imgui.input_text("shiftx", f"{self.solver_results.shift_x:.2f}")
+                    # imgui.input_text("shifty", f"{self.solver_results.shift_y:.2f}")
 
-                        # ui.next_attribute("position")
-                        # position_text =  solver.pretty_matrix(np.array(self.solver_results.get_position()), separator=" ")
-                        # imgui.input_text("##position", position_text, flags=imgui.InputTextFlags_.read_only)
+                    imgui.separator_text("Position")
+                    imgui.separator_text("Orientation")
+                    quat = glm.quat()
+                    glm.decompose(self.solver_results.view, glm.vec3(), quat, glm.vec3(), glm.vec3(), glm.vec4())
+                    imgui.input_float4("Quaternion", [*quat] if self.solver_results.view is not None else [0.0, 0.0, 0.0, 0.0], flags=imgui.InputTextFlags_.read_only)
+                    
+                    imgui.push_style_var_y(imgui.StyleVar_.item_spacing, imgui.get_style().item_spacing.x/4)
+                    for i, row in enumerate(glm.transpose(self.solver_results.view)):
+                        imgui.input_float4(f"View {i}", [*row], flags=imgui.InputTextFlags_.read_only)
+                    imgui.pop_style_var()
+                    # text = "\n".join([",".join([f"{item:.2f}" for item in col]) for col in self.solver_results.view]) if self.solver_results.view is not None else "N/A"
+                    # text_size = imgui.calc_text_size(text) + style.frame_padding * 2+imgui.ImVec2(0, 0)
+                    # imgui.input_text_multiline("View", text, size=text_size, flags=imgui.InputTextFlags_.read_only)
 
-                        # ui.next_attribute("quaternion (xyzw)")
-                        # quat = self.solver_results.get_quaternion()
-                        # quat_text =      solver.pretty_matrix(np.array([quat.x, quat.y, quat.z, quat.w]), separator=" ")
-                        # imgui.input_text("##quaternion", quat_text, flags=imgui.InputTextFlags_.read_only)
-                        # imgui.set_item_tooltip("Quaternion representing camera rotation (x, y, z, w)")
+                    # text = "\n".join([",".join([f"{item:.2f}" for item in col]) for col in glm.inverse(self.solver_results.view)]) if self.solver_results.view is not None else "N/A"
+                    # text_size = imgui.calc_text_size(text) + style.frame_padding * 2+imgui.ImVec2(0, 0)
+                    # imgui.input_text_multiline("Transform", text, size=text_size, flags=imgui.InputTextFlags_.read_only)
 
-                        # ui.next_attribute(f"euler")
-                        # imgui.push_style_var(imgui.StyleVar_.item_spacing, imgui.ImVec2(2, style.item_spacing.y))
-                        # euler_order_options = solver.EulerOrder._member_names_
-                        # max_text_width = max([imgui.calc_text_size(text).x for text in euler_order_options])
-                        # total_width = max_text_width + style.frame_padding.x * 2.0 -10
-                        # total_width+=imgui.get_frame_height() # for the arrow button todo: is it square for sure?
-                        # imgui.set_next_item_width(total_width)
-                        # _, self.current_euler_order = imgui.combo("##euler_order", self.current_euler_order, solver.EulerOrder._member_names_)
-                        # imgui.set_item_tooltip("Select the Euler angle rotation order used for decomposition.")
-                        # imgui.same_line()
-                        # imgui.set_next_item_width(-1)
-                        # euler_text = solver.pretty_matrix(np.array([math.degrees(radians) for radians in self.solver_results.get_euler(self.current_euler_order)]), separator="")
-                        # imgui.input_text("##euler", euler_text, flags=imgui.InputTextFlags_.read_only)
-                        # imgui.set_item_tooltip("Euler angles in degrees (x,y,z).\nNote: Rotation is applied in order order: ZXY (Yaw, Pitch, Roll)")
-                        # imgui.pop_style_var()
+                    # imgui.set_next_item_width(260)
+                    quat = glm.quat()
+                    translation = glm.vec3()
+                    glm.decompose(self.solver_results.view, glm.vec3(), quat, translation, glm.vec3(), glm.vec4())
+                    imgui.input_float3("Position", [*translation] if self.solver_results.view is not None else "N/A", flags=imgui.InputTextFlags_.read_only)
+                    
+                    
+
+                    # ui.next_attribute("transform")
+                    # transform_text = solver.pretty_matrix(np.array(self.solver_results.transform).reshape(4,4), separator=" ")
+                    # transform_text_size = imgui.calc_text_size(transform_text) + style.frame_padding * 2+imgui.ImVec2(0, 0)
+                    # imgui.input_text_multiline("##transform", transform_text, size=transform_text_size, flags=imgui.InputTextFlags_.read_only)
+
+                    # ui.next_attribute("position")
+                    # position_text =  solver.pretty_matrix(np.array(self.solver_results.get_position()), separator=" ")
+                    # imgui.input_text("##position", position_text, flags=imgui.InputTextFlags_.read_only)
+
+                    # ui.next_attribute("quaternion (xyzw)")
+                    # quat = self.solver_results.get_quaternion()
+                    # quat_text =      solver.pretty_matrix(np.array([quat.x, quat.y, quat.z, quat.w]), separator=" ")
+                    # imgui.input_text("##quaternion", quat_text, flags=imgui.InputTextFlags_.read_only)
+                    # imgui.set_item_tooltip("Quaternion representing camera rotation (x, y, z, w)")
+
+                    # ui.next_attribute(f"euler")
+                    # imgui.push_style_var(imgui.StyleVar_.item_spacing, imgui.ImVec2(2, style.item_spacing.y))
+                    # euler_order_options = solver.EulerOrder._member_names_
+                    # max_text_width = max([imgui.calc_text_size(text).x for text in euler_order_options])
+                    # total_width = max_text_width + style.frame_padding.x * 2.0 -10
+                    # total_width+=imgui.get_frame_height() # for the arrow button todo: is it square for sure?
+                    # imgui.set_next_item_width(total_width)
+                    # _, self.current_euler_order = imgui.combo("##euler_order", self.current_euler_order, solver.EulerOrder._member_names_)
+                    # imgui.set_item_tooltip("Select the Euler angle rotation order used for decomposition.")
+                    # imgui.same_line()
+                    # imgui.set_next_item_width(-1)
+                    # euler_text = solver.pretty_matrix(np.array([math.degrees(radians) for radians in self.solver_results.get_euler(self.current_euler_order)]), separator="")
+                    # imgui.input_text("##euler", euler_text, flags=imgui.InputTextFlags_.read_only)
+                    # imgui.set_item_tooltip("Euler angles in degrees (x,y,z).\nNote: Rotation is applied in order order: ZXY (Yaw, Pitch, Roll)")
+                    # imgui.pop_style_var()
 
 
-
-
-                        ui.end_attribute_editor()
 
                     if self.camera is not None:
                         data = {

@@ -2,6 +2,8 @@ from typing import Tuple, List
 
 import glm
 import math
+import warnings
+
 from . constants import EPSILON
 
 ###########################
@@ -354,10 +356,6 @@ def decompose_frustum(P: glm.mat4):
     top    = near * (P[2][1] + 1.0) / P[1][1]
 
     return left, right, bottom, top, near, far
-
-import math
-import glm
-import warnings
 
 def decompose_perspective(P: glm.mat4):
     """

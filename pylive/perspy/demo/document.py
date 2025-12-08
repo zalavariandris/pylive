@@ -283,8 +283,8 @@ class PerspyDocument(BaseDocument):
         # reference distance
         self.reference_world_size = 1.0
         self.reference_axis:solver.ReferenceAxis = solver.ReferenceAxis.Screen
-        self.reference_distance_start = 0.0
-        self.reference_distance_end =   100.0
+        self.reference_distance_offset = 0.0
+        self.reference_distance_length =   100.0
 
     def extension(self)->str:
         return '.prsy'
@@ -310,7 +310,7 @@ class PerspyDocument(BaseDocument):
                 "fov_degrees": self.fov_degrees,
                 "quad_mode": self.quad_mode,
                 "reference_distance_mode": solver.ReferenceAxis(self.reference_axis).name,
-                "reference_distance_segment": [self.reference_distance_start, self.reference_distance_end]
+                "reference_distance_segment": [self.reference_distance_offset, self.reference_distance_length]
             },
 
             'control_points': {

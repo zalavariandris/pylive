@@ -198,9 +198,9 @@ class PerspyApp():
 
 
             imgui.set_next_item_width(buttons_width)
-            _, self.doc.reference_distance_start = imgui.slider_float("reference distance start", self.doc.reference_distance_start, 1.0, 2000.0, "%.2f")
+            _, self.doc.reference_distance_offset = imgui.slider_float("reference distance start", self.doc.reference_distance_offset, 1.0, 2000.0, "%.2f")
             imgui.set_next_item_width(buttons_width)
-            _, self.doc.reference_distance_end = imgui.slider_float("reference distance end", self.doc.reference_distance_end, 1.0, 2000.0, "%.2f")
+            _, self.doc.reference_distance_length = imgui.slider_float("reference distance end", self.doc.reference_distance_length, 1.0, 2000.0, "%.2f")
 
             # solver specific parameters
             match self.doc.solver_mode:
@@ -815,7 +815,7 @@ class PerspyApp():
             f =                          solver.focal_length_from_fov(math.radians(self.doc.fov_degrees), self.doc.content_size.y),
    
             reference_axis =    self.doc.reference_axis,
-            reference_distance_segment = (self.doc.reference_distance_start, self.doc.reference_distance_end),
+            reference_distance_segment = (self.doc.reference_distance_offset, self.doc.reference_distance_length),
             reference_world_size =       self.doc.reference_world_size
         )
 
