@@ -19,11 +19,14 @@ import pyperclip
 
 # Local application imports
 from pylive.glrenderer.utils.camera import Camera
-from pylive.perspy.core import solver
-from pylive.perspy.core.solver_builder import MultiSolverBuilder
+from pylive.perspy.core import solver_functional as solver
 from pylive.perspy.core import utils
+from pylive.perspy.core.types import *
 import ui
 from document import PerspyDocument
+
+from pylive.perspy.app.hot_reloader import HotModuleReloader
+HotModuleReloader([solver]).start_file_watchers()
 
 
 class PerspyApp():
@@ -50,11 +53,12 @@ class PerspyApp():
         self.view_axes: bool = True
 
         # solver results
-        self.camera:Camera|None = None
+        # self.camera:Camera|None = None
+        self.view_matrix:glm.mat4|None = None
+        self.projection_matrix:glm.mat4|None = None
+
         self.current_euler_order = solver.EulerOrder.ZXY
         self.solver_results:Dict|None = None
-
-        self.solver = MultiSolverBuilder()
         
         # misc
         """
@@ -123,17 +127,17 @@ class PerspyApp():
             if self.image_texture_ref is None:
                 if imgui.button("open image", size=imgui.ImVec2(-1,0)):
                     self.open_image()
-                imgui.set_next_item_width(buttons_width)
-                _, value = imgui.input_int2("image size", [int(self.doc.content_size.x), int(self.doc.content_size.y)])
-                if _:
-                    self.doc.content_size = imgui.ImVec2(value[0], value[1])
+
             else:
                 image_aspect = self.doc.content_size.x / self.doc.content_size.y
                 width = imgui.get_content_region_avail().x-imgui.get_style().frame_padding.x*2
                 if imgui.image_button("open", self.image_texture_ref, imgui.ImVec2(width, width/image_aspect)):
                     self.open_image()
-                imgui.set_next_item_width(buttons_width)
-                imgui.input_int2("image size", [int(self.doc.content_size.x), int(self.doc.content_size.y)], imgui.InputTextFlags_.read_only)
+
+            imgui.set_next_item_width(buttons_width)
+            _, value = imgui.input_int2("image size", [int(self.doc.content_size.x), int(self.doc.content_size.y)])
+            if _:
+                self.doc.content_size = imgui.ImVec2(value[0], value[1])
 
             _, self.dim_background = imgui.checkbox("dim background", self.dim_background)
 
@@ -234,7 +238,11 @@ class PerspyApp():
         imgui.set_next_window_pos(imgui.ImVec2(0, menu_bar_height))
         imgui.set_next_window_size(imgui.ImVec2(display_size.x, display_size.y - menu_bar_height))       
         if imgui.begin("MainViewport", None, imgui.WindowFlags_.no_bring_to_front_on_focus | imgui.WindowFlags_.no_move | imgui.WindowFlags_.no_resize | imgui.WindowFlags_.no_collapse | imgui.WindowFlags_.no_title_bar):
-            if ui.viewer.begin_viewer("viewer1", content_size=self.doc.content_size, size=imgui.ImVec2(-1,-1)):
+            self.misc.setdefault('viewer1_coord_sys', 0) # 0: top-left, 1: bottom-left
+            coord_options = ["top-left", "bottom-left"]
+            _, self.misc['viewer1_coord_sys'] = imgui.combo("coord-sys", self.misc['viewer1_coord_sys'], coord_options) # hack to prevent focusing this window when clicking on it
+
+            if ui.viewer.begin_viewer("viewer1", content_size=self.doc.content_size, size=imgui.ImVec2(-1,-1), coordinate_system=coord_options[self.misc['viewer1_coord_sys']]):
                 # background image
                 if self.image_texture_ref is not None:
                     tl = ui.viewer._get_window_coords(imgui.ImVec2(0,0))
@@ -261,11 +269,11 @@ class PerspyApp():
                 # Solve the camera
                 try:
                     if self.doc.solver_mode in [solver.SolverMode.OneVP, solver.SolverMode.TwoVP] and self.doc.enable_auto_principal_point:
-                        self.doc.principal = self.doc.content_size * 0.5
+                        self.doc.principal = self.doc.content_size * 0.5 # TODO: set principal to center of image, consider using the solver viewport directly or stick to doc content size? the vieqwport is created from content size anyway
 
                     self.solver_results = solver.solve(
                         mode = self.doc.solver_mode,
-                        viewport=solver.Rect(0,0,self.doc.content_size.x, self.doc.content_size.y),
+                        viewport=Rect(0,0,self.doc.content_size.x, self.doc.content_size.y),
                         first_vanishing_lines =  self.doc.first_vanishing_lines,
                         second_vanishing_lines = self.doc.second_vanishing_lines,
                         third_vanishing_lines =  self.doc.third_vanishing_lines,
@@ -285,23 +293,22 @@ class PerspyApp():
                     )
 
                     # apply solver results to camera
-                    P, f, shift = solver.decompose_intrinsics(
-                        self.solver_results['viewport'],
-                        self.solver_results['projection']
-                    )
-                    self.camera = Camera()
-                    self.camera.transform = glm.inverse(self.solver_results['view'])
-                    fovy = utils.fov_from_focal_length(self.solver_results['focal_length'], self.solver_results['viewport'].size.y)
-                    self.camera.setFoVY(math.degrees(fovy))
-                    self.camera.setAspectRatio(self.solver_results['viewport'].size.x / self.solver_results['viewport'].size.y)
-                    self.camera.set_lens_shift(self.solver_results['shift_x'], self.solver_results['shift_y'])
+                    # P, f, shift = solver.decompose_intrinsics(
+                    #     self.solver_results['viewport'],
+                    #     self.solver_results['projection']
+                    # )
+
+                    self.view_matrix = self.solver_results['view']
+                    self.projection_matrix = self.solver_results['projection']
 
                     # update document parameters TODO: consider removing this and instead drawing the solver results only
-                    self.doc.principal = imgui.ImVec2(P.x, P.y)
+                    # self.doc.principal = imgui.ImVec2(P.x, P.y)
 
                     error_msg = None
                 except Exception as e:
-                    self.camera = None
+                    # self.camera = None
+                    self.view_matrix = None
+                    self.projection_matrix = None
                     error_msg = e
                     import traceback
                     traceback.print_exc()
@@ -397,8 +404,10 @@ class PerspyApp():
                 #             second_axis_color = self.get_axis_color(self.doc.second_axis)
                 #             ui.viewer.guide(P, imgui.ImVec2(*results.second_vanishing_point), ui.viewer.fade_color(second_axis_color))
 
-                if self.camera is not None:
-                    if ui.viewer.begin_scene(glm.scale(self.camera.projectionMatrix(), glm.vec3(1.0, -1.0, 1.0)), self.camera.viewMatrix()):
+                if self.view_matrix and self.projection_matrix:
+                    # proj = glm.scale(self.projection_matrix, glm.vec3(1.0, -1.0, 1.0))
+                    # view = glm.scale(self.view_matrix, glm.vec3(1.0, -1.0, 1.0))
+                    if ui.viewer.begin_scene(self.projection_matrix, self.view_matrix):
                         axes_name = {
                             solver.Axis.PositiveX: "X",
                             solver.Axis.NegativeX: "X",
@@ -459,9 +468,9 @@ class PerspyApp():
                     
 
                     imgui.separator_text("Vanishing Points")
-                    imgui.input_float2("1st VP", [*self.solver_results['first_vanishing_point']]  if self.solver_results['first_vanishing_point']  is not None else [0.0, 0.0], flags=imgui.InputTextFlags_.read_only)
-                    imgui.input_float2("2nd VP", [*self.solver_results['second_vanishing_point']] if self.solver_results['second_vanishing_point'] is not None else [0.0, 0.0], flags=imgui.InputTextFlags_.read_only)
-                    imgui.input_float2("3rd VP", [*self.solver_results['third_vanishing_point']]  if self.solver_results['third_vanishing_point']  is not None else [0.0, 0.0], flags=imgui.InputTextFlags_.read_only)
+                    imgui.input_float2("1st VP", [*self.solver_results['first_vanishing_point']]  if self.solver_results.get('first_vanishing_point')  is not None else [0.0, 0.0], flags=imgui.InputTextFlags_.read_only)
+                    imgui.input_float2("2nd VP", [*self.solver_results['second_vanishing_point']] if self.solver_results.get('second_vanishing_point') is not None else [0.0, 0.0], flags=imgui.InputTextFlags_.read_only)
+                    imgui.input_float2("3rd VP", [*self.solver_results['third_vanishing_point']]  if self.solver_results.get('third_vanishing_point')  is not None else [0.0, 0.0], flags=imgui.InputTextFlags_.read_only)
                     
                     
                     # euler = glm.eulerAngles(quat)
@@ -471,10 +480,10 @@ class PerspyApp():
 
 
                     imgui.separator_text("Projection")
-                    P, f, shift = solver.decompose_intrinsics(self.solver_results['viewport'], self.solver_results['projection'])
-                    imgui.input_float2("Principal (decompose)", [*P], flags=imgui.InputTextFlags_.read_only)
-                    imgui.input_float2("Shift (decompose)", [*shift], flags=imgui.InputTextFlags_.read_only)
-                    imgui.input_float("Focal Length (decompose)", f, flags=imgui.InputTextFlags_.read_only)
+                    # P, f, shift = solver.decompose_intrinsics(self.solver_results['viewport'], self.solver_results['projection'])
+                    # imgui.input_float2("Principal (decompose)", [*P], flags=imgui.InputTextFlags_.read_only)
+                    # imgui.input_float2("Shift (decompose)", [*shift], flags=imgui.InputTextFlags_.read_only)
+                    # imgui.input_float("Focal Length (decompose)", f, flags=imgui.InputTextFlags_.read_only)
 
                     # imgui.input_text("fovy", f"{math.degrees(self.solver_results.fovy):.2f}°")
                     # imgui.input_text("fovx", f"{math.degrees(self.solver_results.get_fovx()):.2f}°")
@@ -482,9 +491,9 @@ class PerspyApp():
                     # imgui.input_text("shifty", f"{self.solver_results.shift_y:.2f}")
 
                     imgui.separator_text("Transform")
-                    position, quat = solver.decompose_extrinsics(self.solver_results['view'])
-                    imgui.input_float3("Position (decompose)", [*position] if self.solver_results['view'] is not None else [0.0, 0.0, 0.0], flags=imgui.InputTextFlags_.read_only)
-                    imgui.input_float4("Quaternion", [*quat] if self.solver_results['view'] is not None else [0.0, 0.0, 0.0, 0.0], flags=imgui.InputTextFlags_.read_only)
+                    # position, quat = solver.decompose_extrinsics(glm.inverse(self.solver_results['view']))
+                    # imgui.input_float3("Position (decompose)", [*position] if self.solver_results['view'] is not None else [0.0, 0.0, 0.0], flags=imgui.InputTextFlags_.read_only)
+                    # imgui.input_float4("Quaternion", [*quat] if self.solver_results['view'] is not None else [0.0, 0.0, 0.0, 0.0], flags=imgui.InputTextFlags_.read_only)
 
                     combo_width = max([imgui.calc_text_size(text).x for text in solver.EulerOrder._member_names_]) + style.frame_padding.x * 2.0 -10
                     combo_width+=imgui.get_frame_height() # add room for the dropdown arrow. (TODO: is it square for sure?)
@@ -781,7 +790,7 @@ class PerspyApp():
         except FileNotFoundError:
             logger.error(f"🚨|⚠️|💡|🔥 File not found: {path}")
             return
-        
+        logger.info(f"Update texture")
         self.doc.content_size = imgui.ImVec2(img.width, img.height)
         logger.info(f"✓ Loaded: {path} ({img.width}x{img.height})")
         

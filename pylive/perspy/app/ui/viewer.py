@@ -137,18 +137,12 @@ class ViewerWidget:
         self.size:imgui.ImVec2 = None
 
     def get_canvas_projection(self)->glm.mat4:
-        # Setup 2D projection with overscan
+        # Setup 2D projection (always in standard orientation)
         left, right = 0.0, float(self.content_size.x)
         bottom, top = 0.0, float(self.content_size.y)
-
-        match self.coordinate_system:
-            case 'bottom-left':
-                top, bottom = bottom, top
-                projection_2d = glm.ortho(left, right, bottom, top,-1.0, 1.0)
-            case 'top-left':
-                projection_2d = glm.ortho(left, right, bottom, top,-1.0, 1.0)
         
-
+        projection_2d = glm.ortho(left, right, bottom, top, -1.0, 1.0)
+        
         x, y = self.pos.x, self.pos.y
         w, h = self.size.x, self.size.y
         projection_2d = overscan_projection(projection_2d,
@@ -183,7 +177,21 @@ class ViewerWidget:
         return content_fit_center_matrix
 
     def get_canvas_view(self)->glm.mat4:
-        return self.content_fit_center_matrix() * self.interactive_pan_and_zoom # update view_2d
+        view = self.content_fit_center_matrix() * self.interactive_pan_and_zoom
+        
+        # Apply Y-flip for bottom-left coordinate system AFTER pan/zoom
+        # This flips only the content, not the pan/zoom behavior
+        if self.coordinate_system == 'bottom-left':
+            # Translate to origin, flip Y, translate back
+            flip_matrix = glm.translate(glm.mat4(), glm.vec3(0, self.content_size.y, 0))
+            flip_matrix = glm.scale(flip_matrix, glm.vec3(1, -1, 1))
+            view = view * flip_matrix
+        
+        return view
+
+    def get_canvas_view_no_flip(self)->glm.mat4:
+        """Get canvas view without coordinate system flip, for pan/zoom calculations"""
+        return self.content_fit_center_matrix() * self.interactive_pan_and_zoom
 
     def _project(self, point: glm.vec3) -> glm.vec3:
         assert len(point) in (2, 3), f"point must be of length 2 or 3, got {len(point)}"
@@ -192,12 +200,12 @@ class ViewerWidget:
         else:
             point = glm.vec3(*point)
             
-        widget_rect = (self.pos.x, self.pos.y, self.size.x, self.size.y)
+        screen_rect = (self.pos.x, self.pos.y, self.size.x, self.size.y)
         if self.use_camera:
-            P1 = glm.project(point, self.camera_view_matrix, self.camera_projection_matrix, widget_rect)
+            P1 = glm.project(point, self.camera_view_matrix, self.camera_projection_matrix, screen_rect)
             return imgui.ImVec2(P1.x, P1.y)
         else:
-            P1 = glm.project(point, self.get_canvas_view(), self.get_canvas_projection(), widget_rect)
+            P1 = glm.project(point, self.get_canvas_view(), self.get_canvas_projection(), screen_rect)
             return imgui.ImVec2(P1.x, P1.y)
 
     def _unproject(self, screen_point: glm.vec3) -> glm.vec3:
@@ -205,12 +213,12 @@ class ViewerWidget:
         if len(screen_point)==2:
             screen_point = glm.vec3(*screen_point, 0)
 
-        widget_rect = (self.pos.x, self.pos.y, self.size.x, self.size.y)
+        screen_rect = (self.pos.x, self.pos.y, self.size.x, self.size.y)
         if self.use_camera:
-            P1 = glm.unProject(screen_point, self.camera_view_matrix, self.camera_projection_matrix, widget_rect)
+            P1 = glm.unProject(screen_point, self.camera_view_matrix, self.camera_projection_matrix, screen_rect)
             return P1
         else:
-            P1 = glm.unProject(screen_point, self.get_canvas_view(), self.get_canvas_projection(), widget_rect)
+            P1 = glm.unProject(screen_point, self.get_canvas_view(), self.get_canvas_projection(), screen_rect)
             return P1
 
 
@@ -317,25 +325,50 @@ def begin_viewer(name: str,
     window_hovered = imgui.is_window_hovered(imgui.HoveredFlags_.child_windows)
     imgui.is_any_item_focused()
     if imgui.is_item_active():
-        mouse_world_before = current_viewport._unproject(io.mouse_pos_prev)
-        
-        mouse_world_after = current_viewport._unproject(io.mouse_pos)
-        offset = glm.vec3(mouse_world_before.x - mouse_world_after.x, mouse_world_before.y - mouse_world_after.y, 0)
-        current_viewport.interactive_pan_and_zoom = glm.translate(current_viewport.interactive_pan_and_zoom, -offset)
+        # Pan: use mouse delta directly in screen space
+        delta = imgui.get_io().mouse_delta
+        if math.fabs(delta.x) > 0.0 or math.fabs(delta.y) > 0.0:
+            # Get the current scale from content_fit_center_matrix
+            widget_aspect = current_viewport.size.x / current_viewport.size.y
+            content_aspect = current_viewport.content_size.x / current_viewport.content_size.y
+            if widget_aspect > content_aspect:
+                scale = current_viewport.size.y / current_viewport.content_size.y
+            else:
+                scale = current_viewport.size.x / current_viewport.content_size.x
+            
+            # Convert screen space delta to content space delta (accounting for current scale)
+            # Get current zoom from interactive_pan_and_zoom matrix
+            current_zoom = current_viewport.interactive_pan_and_zoom[0][0]  # x-scale component
+            total_scale = scale * current_zoom
+            
+            content_delta = glm.vec3(delta.x / total_scale, delta.y / total_scale, 0)
+            current_viewport.interactive_pan_and_zoom = glm.translate(current_viewport.interactive_pan_and_zoom, content_delta)
 
     elif window_hovered and not imgui.is_any_item_active() and not imgui.is_any_item_focused() and math.fabs(imgui.get_io().mouse_wheel) > 0.0:
-        # Zooming
+        # Zooming - need to unproject to keep mouse position fixed
         zoom_speed = 0.1
         scale = 1.0
         mouse_wheel = io.mouse_wheel
         scale_factor = 1.0 + mouse_wheel * zoom_speed
         scale *= scale_factor
 
-        mouse_world_before = current_viewport._unproject(io.mouse_pos_prev)
+        screen_rect = (current_viewport.pos.x, current_viewport.pos.y, current_viewport.size.x, current_viewport.size.y)
+        mouse_world_before = glm.unProject(
+            glm.vec3(io.mouse_pos_prev.x, io.mouse_pos_prev.y, 0),
+            current_viewport.get_canvas_view_no_flip(),
+            current_viewport.get_canvas_projection(),
+            screen_rect
+        )
         
         # Apply scale
         current_viewport.interactive_pan_and_zoom = glm.scale(current_viewport.interactive_pan_and_zoom, glm.vec3(scale_factor, scale_factor, 1.0))
-        mouse_world_after = current_viewport._unproject(io.mouse_pos)
+        
+        mouse_world_after = glm.unProject(
+            glm.vec3(io.mouse_pos.x, io.mouse_pos.y, 0),
+            current_viewport.get_canvas_view_no_flip(),
+            current_viewport.get_canvas_projection(),
+            screen_rect
+        )
 
         # keep the mouse position fixed in world space during zoom
         offset = glm.vec3(mouse_world_before.x - mouse_world_after.x, mouse_world_before.y - mouse_world_after.y, 0)
@@ -359,36 +392,58 @@ def end_viewer():
     
     content_screen_tl = current_viewport._project( (0,0,0))
     content_screen_br = current_viewport._project( (current_viewport.content_size.x, current_viewport.content_size.y, 0))
-    if current_viewport.coordinate_system == 'bottom-left':
-        # flip Y for margin drawing
-        content_screen_tl.y, content_screen_br.y = content_screen_br.y, content_screen_tl.y
+    # if current_viewport.coordinate_system == 'bottom-left':
+    #     # flip Y for margin drawing
+    #     content_screen_tl.y, content_screen_br.y = content_screen_br.y, content_screen_tl.y
 
     draw_list.add_rect(content_screen_tl, content_screen_br, imgui.color_convert_float4_to_u32(get_viewer_style().margin_stroke_color), thickness=1.0)
 
-    # Top rectangle
-    draw_list.add_rect_filled(
-        imgui.ImVec2(viewport_tl.x, viewport_tl.y),
-        imgui.ImVec2(viewport_br.x, content_screen_tl.y),
-        imgui.color_convert_float4_to_u32(get_viewer_style().margin_fill_color)
-    )
-    # Bottom rectangle
-    draw_list.add_rect_filled(
-        imgui.ImVec2(viewport_tl.x, content_screen_br.y),
-        imgui.ImVec2(viewport_br.x, viewport_br.y),
-        imgui.color_convert_float4_to_u32(get_viewer_style().margin_fill_color)
-    )
-    # Left rectangle
-    draw_list.add_rect_filled(
-        imgui.ImVec2(viewport_tl.x, content_screen_tl.y),
-        imgui.ImVec2(content_screen_tl.x, content_screen_br.y),
-        imgui.color_convert_float4_to_u32(get_viewer_style().margin_fill_color)
-    )
-    # Right rectangle
-    draw_list.add_rect_filled(
-        imgui.ImVec2(content_screen_br.x, content_screen_tl.y),
-        imgui.ImVec2(viewport_br.x, content_screen_br.y),
-        imgui.color_convert_float4_to_u32(get_viewer_style().margin_fill_color)
-    )
+    # # Top rectangle
+    # draw_list.add_rect_filled(
+    #     imgui.ImVec2(viewport_tl.x, viewport_tl.y),
+    #     imgui.ImVec2(viewport_br.x, content_screen_tl.y),
+    #     imgui.color_convert_float4_to_u32(get_viewer_style().margin_fill_color)
+    # )
+    # # Bottom rectangle
+    # draw_list.add_rect_filled(
+    #     imgui.ImVec2(viewport_tl.x, content_screen_br.y),
+    #     imgui.ImVec2(viewport_br.x, viewport_br.y),
+    #     imgui.color_convert_float4_to_u32(get_viewer_style().margin_fill_color)
+    # )
+    # # Left rectangle
+    # draw_list.add_rect_filled(
+    #     imgui.ImVec2(viewport_tl.x, content_screen_tl.y),
+    #     imgui.ImVec2(content_screen_tl.x, content_screen_br.y),
+    #     imgui.color_convert_float4_to_u32(get_viewer_style().margin_fill_color)
+    # )
+    # # Right rectangle
+    # draw_list.add_rect_filled(
+    #     imgui.ImVec2(content_screen_br.x, content_screen_tl.y),
+    #     imgui.ImVec2(viewport_br.x, content_screen_br.y),
+    #     imgui.color_convert_float4_to_u32(get_viewer_style().margin_fill_color)
+    # )
+
+    # draw ruler
+    for x in np.arange(0,current_viewport.content_size.x, 100):
+        pos = current_viewport._project(glm.vec3(x, 0, 0))
+        white_int = imgui.color_convert_float4_to_u32(imgui.ImVec4(1,1,1,1)) 
+        draw_list.add_line(
+            imgui.ImVec2(pos.x, pos.y-5),
+            imgui.ImVec2(pos.x, pos.y+5),
+            white_int
+        )
+        draw_list.add_text(pos, white_int, f"{int(x)}")
+        current_viewport.content_size
+
+    for y in np.arange(0,current_viewport.content_size.y, 100):
+        pos = current_viewport._project(glm.vec3(0, y, 0))
+        white_int = imgui.color_convert_float4_to_u32(imgui.ImVec4(1,1,1,1)) 
+        draw_list.add_line(
+            imgui.ImVec2(pos.x-5, pos.y),
+            imgui.ImVec2(pos.x+5, pos.y),
+            white_int
+        )
+        draw_list.add_text(pos, white_int, f"{int(y)}")
 
     # display viewport info
     style = imgui.get_style()
@@ -705,21 +760,21 @@ def begin_scene(projection:glm.mat4, view:glm.mat4):
 
     content_screen_tl = current_viewport._project( glm.vec3(0, 0, 0))
     content_screen_br = current_viewport._project( glm.vec3(current_viewport.content_size.x, current_viewport.content_size.y, 0))
-    if current_viewport.coordinate_system == 'bottom-left':
-        # flip Y for margin drawing
-        content_screen_tl.y, content_screen_br.y = content_screen_br.y, content_screen_tl.y
+    # if current_viewport.coordinate_system == 'bottom-left':
+    #     # flip Y for margin drawing
+    #     content_screen_tl.y, content_screen_br.y = content_screen_br.y, content_screen_tl.y
 
     viewport_tl = current_viewport.pos
     viewport_br = current_viewport.pos + current_viewport.size
 
     # flip Y
     projection = glm.mat4(projection)
-    match current_viewport.coordinate_system:
-        case 'bottom-left':
-            pass
-        case 'top-left':
-            ...
-            projection[1][1] *= -1
+    # match current_viewport.coordinate_system:
+    #     case 'bottom-left':
+    #         pass
+    #     case 'top-left':
+    #         ...
+    #         projection[1][1] *= -1
 
     projection = overscan_projection(projection,
         glm.vec2(content_screen_tl.x, content_screen_tl.y),

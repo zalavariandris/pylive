@@ -11,10 +11,6 @@ from textwrap import dedent
 # third party library
 import glm
 import numpy as np
-from imgui_bundle import imgui
-
-# local library
-from pylive.perspy.demo import ui
 
 # set up logger
 logger = logging.getLogger(__name__)
@@ -46,141 +42,141 @@ Viewport named tuple
     height: height of the viewport
 """
 
-Viewport = namedtuple('Viewport', ['x', 'y', 'width', 'height'])
+Rect = namedtuple('Rect', ['x', 'y', 'width', 'height'])
 
 
-@dataclass
-class SolverResults:
-    compute_space: Viewport
-    transform: glm.mat4
-    fovy: float
-    aspect: float
-    principal_point: glm.vec2
-    first_vanishing_point: glm.vec2|None = None
-    second_vanishing_point: glm.vec2|None = None
-    third_vanishing_point: glm.vec2|None = None
-    near_plane: float = 0.1
-    far_plane: float = 1000.0
-    shift_x: float = 0.0
-    shift_y: float = 0.0
+# @dataclass
+# class SolverResults:
+#     compute_space: Viewport
+#     transform: glm.mat4
+#     fovy: float
+#     aspect: float
+#     principal_point: glm.vec2
+#     first_vanishing_point: glm.vec2|None = None
+#     second_vanishing_point: glm.vec2|None = None
+#     third_vanishing_point: glm.vec2|None = None
+#     near_plane: float = 0.1
+#     far_plane: float = 1000.0
+#     shift_x: float = 0.0
+#     shift_y: float = 0.0
 
-    @property
-    def view(self)->glm.mat4:
-        return glm.inverse(self.transform)
+#     @property
+#     def view(self)->glm.mat4:
+#         return glm.inverse(self.transform)
     
-    @property
-    def focal_length(self)->float:
-        return focal_length_from_fov(self.fovy, self.compute_space.height)
+#     @property
+#     def focal_length(self)->float:
+#         return focal_length_from_fov(self.fovy, self.compute_space.height)
     
 
-    def get_projection(self)->glm.mat4|None:
-        # Camera parameters
+#     def get_projection(self)->glm.mat4|None:
+#         # Camera parameters
 
-        top = self.near_plane * glm.tan(self.fovy / 2)
-        bottom = -top
-        right = top * self.aspect
-        left = -right
+#         top = self.near_plane * glm.tan(self.fovy / 2)
+#         bottom = -top
+#         right = top * self.aspect
+#         left = -right
 
-        # Apply shifts
-        width = right - left
-        height = top - bottom
+#         # Apply shifts
+#         width = right - left
+#         height = top - bottom
 
-        left += self.shift_x * width / 2
-        right += self.shift_x * width / 2
-        bottom += self.shift_y * height / 2
-        top += self.shift_y * height / 2
+#         left += self.shift_x * width / 2
+#         right += self.shift_x * width / 2
+#         bottom += self.shift_y * height / 2
+#         top += self.shift_y * height / 2
 
-        # Create the projection matrix with lens shift
-        return glm.frustum(left, right, bottom, top, self.near_plane, self.far_plane)
+#         # Create the projection matrix with lens shift
+#         return glm.frustum(left, right, bottom, top, self.near_plane, self.far_plane)
     
-    def get_fovx(self)->float:
-        return 2.0 * math.atan(math.tan(self.fovy * 0.5) * self.aspect)
+#     def get_fovx(self)->float:
+#         return 2.0 * math.atan(math.tan(self.fovy * 0.5) * self.aspect)
 
-    def get_position(self) -> glm.vec3|None:
-        scale = glm.vec3()
-        quat = glm.quat()  # This will be our quaternion
-        translation = glm.vec3()
-        skew = glm.vec3()
-        perspective = glm.vec4()
-        success = glm.decompose(self.transform, scale, quat, translation, skew, perspective)
-        if not success:
-            logger.error("Failed to decompose transformation matrix")
-            return None
-        return translation
+#     def get_position(self) -> glm.vec3|None:
+#         scale = glm.vec3()
+#         quat = glm.quat()  # This will be our quaternion
+#         translation = glm.vec3()
+#         skew = glm.vec3()
+#         perspective = glm.vec4()
+#         success = glm.decompose(self.transform, scale, quat, translation, skew, perspective)
+#         if not success:
+#             logger.error("Failed to decompose transformation matrix")
+#             return None
+#         return translation
     
-    def get_quaternion(self) -> glm.quat|None:
-        scale = glm.vec3()
-        quat = glm.quat()  # This will be our quaternion
-        translation = glm.vec3()
-        skew = glm.vec3()
-        perspective = glm.vec4()
-        success = glm.decompose(self.transform, scale, quat, translation, skew, perspective)
-        if not success:
-            logger.error("Failed to decompose transformation matrix")
-            return None
-        return quat
+#     def get_quaternion(self) -> glm.quat|None:
+#         scale = glm.vec3()
+#         quat = glm.quat()  # This will be our quaternion
+#         translation = glm.vec3()
+#         skew = glm.vec3()
+#         perspective = glm.vec4()
+#         success = glm.decompose(self.transform, scale, quat, translation, skew, perspective)
+#         if not success:
+#             logger.error("Failed to decompose transformation matrix")
+#             return None
+#         return quat
     
-    def get_euler(self, order: EulerOrder=EulerOrder.ZXY) -> glm.vec3:
-        return glm.vec3(extract_euler(self.transform, order))
+#     def get_euler(self, order: EulerOrder=EulerOrder.ZXY) -> glm.vec3:
+#         return glm.vec3(extract_euler(self.transform, order))
 
-    def as_dict(self)->dict:
-        position = self.get_position()
-        quaternion = self.get_quaternion()
-        projection = self.get_projection()
-        return {
-            "transform": np.array(self.transform).reshape(4,4).tolist(),
-            "fovy": self.fovy,
-            "position": tuple(position) if position else None,
-            "quaternion": tuple(quaternion) if quaternion else None,
-            "euler_order": EulerOrder.ZXY.name,
-            "euler": tuple(self.get_euler(order=EulerOrder.ZXY)),
-            "projection": np.array(projection).reshape(4,4).tolist() if projection is not None else None,
-            "aspect": self.aspect,
-            "near_plane": self.near_plane,
-            "far_plane": self.far_plane,
-            "shift_x": self.shift_x,
-            "shift_y": self.shift_y
-        }
+#     def as_dict(self)->dict:
+#         position = self.get_position()
+#         quaternion = self.get_quaternion()
+#         projection = self.get_projection()
+#         return {
+#             "transform": np.array(self.transform).reshape(4,4).tolist(),
+#             "fovy": self.fovy,
+#             "position": tuple(position) if position else None,
+#             "quaternion": tuple(quaternion) if quaternion else None,
+#             "euler_order": EulerOrder.ZXY.name,
+#             "euler": tuple(self.get_euler(order=EulerOrder.ZXY)),
+#             "projection": np.array(projection).reshape(4,4).tolist() if projection is not None else None,
+#             "aspect": self.aspect,
+#             "near_plane": self.near_plane,
+#             "far_plane": self.far_plane,
+#             "shift_x": self.shift_x,
+#             "shift_y": self.shift_y
+#         }
 
-    def as_blender_script(self, camera_name: str="VLCamera")-> str:
-        """Generate a Blender Python script to recreate the camera setup."""
-        from imgui_bundle import hello_imgui
-        from pathlib import Path
+#     def as_blender_script(self, camera_name: str="VLCamera")-> str:
+#         """Generate a Blender Python script to recreate the camera setup."""
+#         from imgui_bundle import hello_imgui
+#         from pathlib import Path
 
-        blender_template_path = hello_imgui.asset_file_full_path("blender_camera_factory_template.py")
-        try:
-            script = Path(blender_template_path).read_text()
-        except Exception as e:
-            logger.error(f"Failed to read Blender template: {e}")
-            return "# Failed to read Blender template."
+#         blender_template_path = hello_imgui.asset_file_full_path("blender_camera_factory_template.py")
+#         try:
+#             script = Path(blender_template_path).read_text()
+#         except Exception as e:
+#             logger.error(f"Failed to read Blender template: {e}")
+#             return "# Failed to read Blender template."
 
-        fovx = 2.0 * math.degrees(math.atan(math.tan(math.radians(self.fovy) * 0.5) * self.aspect))
-        script = script.replace("<CAMERA_FOV>", str(math.radians(max(fovx, self.fovy))))
-        transform_list = [[v for v in row] for row in glm.transpose(self.transform)]
-        script = script.replace("<CAMERA_TRANSFORM>", str(transform_list))
-        script = script.replace("<CAMERA_NAME>", f"'{camera_name}'")
-        return script
+#         fovx = 2.0 * math.degrees(math.atan(math.tan(math.radians(self.fovy) * 0.5) * self.aspect))
+#         script = script.replace("<CAMERA_FOV>", str(math.radians(max(fovx, self.fovy))))
+#         transform_list = [[v for v in row] for row in glm.transpose(self.transform)]
+#         script = script.replace("<CAMERA_TRANSFORM>", str(transform_list))
+#         script = script.replace("<CAMERA_NAME>", f"'{camera_name}'")
+#         return script
 
-    def __str__(self)->str:
-        from textwrap import dedent
-        transform_text = pretty_matrix(np.array(self.transform).reshape(4,4), separator=" ") if self.transform is not None else "N/A"
-        position_text =  pretty_matrix(np.array(self.get_position()), separator=" ")
-        quat_text =      pretty_matrix(np.array(self.get_quaternion()), separator=" ")
-        euler_text =     pretty_matrix(np.array([math.degrees(radians) for radians in self.get_euler()]), separator=" ")
+#     def __str__(self)->str:
+#         from textwrap import dedent
+#         transform_text = pretty_matrix(np.array(self.transform).reshape(4,4), separator=" ") if self.transform is not None else "N/A"
+#         position_text =  pretty_matrix(np.array(self.get_position()), separator=" ")
+#         quat_text =      pretty_matrix(np.array(self.get_quaternion()), separator=" ")
+#         euler_text =     pretty_matrix(np.array([math.degrees(radians) for radians in self.get_euler()]), separator=" ")
 
-        projection_text = pretty_matrix(np.array(self.get_projection()).reshape(4,4), separator=" ") if self.get_projection() is not None else "N/A"
+#         projection_text = pretty_matrix(np.array(self.get_projection()).reshape(4,4), separator=" ") if self.get_projection() is not None else "N/A"
 
-        return dedent(f"""Solver Results:\n
-transform:\n{transform_text}\n
-position:\n{position_text}\n
-quaternion:\n{quat_text}\n
-euler (degrees):\n{euler_text}\n
-projection:\n{projection_text}\n
-fovy: {math.degrees(self.fovy)}\n
-fovx: {math.degrees(self.get_fovx())}\n
-shift_x: {self.shift_x}\n
-shift_y: {self.shift_y}\n
-        """)
+#         return dedent(f"""Solver Results:\n
+# transform:\n{transform_text}\n
+# position:\n{position_text}\n
+# quaternion:\n{quat_text}\n
+# euler (degrees):\n{euler_text}\n
+# projection:\n{projection_text}\n
+# fovy: {math.degrees(self.fovy)}\n
+# fovx: {math.degrees(self.get_fovx())}\n
+# shift_x: {self.shift_x}\n
+# shift_y: {self.shift_y}\n
+#         """)
     
 class ReferenceAxis(IntEnum):
     Screen = 0
@@ -198,7 +194,7 @@ class SolverMode(IntEnum):
 #########################
 # MAIN SOLVER FUNCTIONS #
 #########################
-def solve(*args, **kwargs)->SolverResults:
+def solve(*args, **kwargs)->dict:
 
     return solve_new(*args, **kwargs)
 
@@ -220,7 +216,7 @@ def solve_new(
     reference_axis,
     reference_distance_segment,
     reference_world_size,
-    )->SolverResults:
+    )->dict:
 
     match mode:
         case SolverMode.OneVP:
@@ -239,7 +235,7 @@ def solve_new(
                 scale=reference_world_size
             )
         
-            result.first_vanishing_point = vp1
+            result["first_vanishing_point"] = vp1
             return result
 
         case SolverMode.TwoVP:
@@ -258,8 +254,8 @@ def solve_new(
                 scale=reference_world_size
             )
         
-            result.first_vanishing_point = vp1
-            result.second_vanishing_point = vp2
+            result["first_vanishing_point"] = vp1
+            result["second_vanishing_point"] = vp2
             return result
         
         case SolverMode.ThreeVP:
@@ -282,14 +278,14 @@ def solve_new(
                 scale=reference_world_size
             )
 
-            result.principal_point = P
-            result.first_vanishing_point = vp1
-            result.second_vanishing_point = vp2
-            result.third_vanishing_point = vp3
+            result["principal_point"] = P
+            result["first_vanishing_point"] = vp1
+            result["second_vanishing_point"] = vp2
+            result["third_vanishing_point"] = vp3
             return result
 
 def solve1vp(
-        viewport: Viewport,
+        viewport: Rect,
         Fu: glm.vec2,
         second_vanishing_line: Tuple[glm.vec2, glm.vec2],
         f:float, # focal length (in width and height units)
@@ -300,7 +296,7 @@ def solve1vp(
         reference_axis:ReferenceAxis,
         reference_distance:float, # 2D distance from origin to camera
         scale:float
-    )->SolverResults:
+    )->dict:
         """
         Solve camera orientation from a single vanishing point and focal length,
         and computes the camera position from the scene origin 'O'.
@@ -400,17 +396,23 @@ def solve1vp(
         axis_assignment_matrix:glm.mat3 = create_axis_assignment_matrix(first_axis, second_axis)       
         camera_transform = glm.mat4(axis_assignment_matrix)*camera_transform
 
-        return SolverResults(
-            compute_space=viewport,
-            transform=camera_transform,
-            fovy=fov_from_focal_length(f, viewport.height),
-            aspect=viewport.width/viewport.height,
-            principal_point=P,
-            near_plane=0.1,
-            far_plane=100.0,
-            shift_x=shift_x,
-            shift_y=shift_y,  
-        )
+        return {
+            'first_vanishing_point': Fu,
+            'second_vanishing_point': None,
+            'third_vanishing_point': None,
+            'viewport': viewport,
+            'projection': projection_matrix,
+            'view': view_matrix,
+            'compute_space':viewport,
+            'transform':camera_transform,
+            'fovy': fov_from_focal_length(f, viewport.height),
+            'aspect':viewport.width/viewport.height,
+            'principal_point':P,
+            'near_plane':0.1,
+            'far_plane':100.0,
+            'shift_x':shift_x,
+            'shift_y':shift_y,  
+        }
 
 def calc_reference_world_distance(
         reference_distance_mode, 
@@ -420,8 +422,7 @@ def calc_reference_world_distance(
         viewport
     ):
     """ Calculate the world distance from origin based on the reference distance mode and value."""
-    origin_screen = imgui.ImVec2(*glm.project(glm.vec3(0, 0, 0), view_matrix, projection_matrix, viewport).xy)
-    
+
     match reference_distance_mode:
         case ReferenceAxis.X_Axis:
             reference_axis = glm.vec3(1, 0, 0)
@@ -433,12 +434,12 @@ def calc_reference_world_distance(
             right =   glm.normalize(glm.mat3(view_matrix)[0])    # right vector is +X in view space
             reference_axis = right
 
-    O_screen = glm.project(glm.vec3(0, 0, 0), view_matrix, projection_matrix, viewport).xy
-    Q_screen = glm.project(reference_axis, view_matrix, projection_matrix, viewport).xy
+    O_screen = glm.project(glm.vec3(0, 0, 0), view_matrix, projection_matrix, glm.vec4(*viewport)).xy
+    Q_screen = glm.project(reference_axis, view_matrix, projection_matrix, glm.vec4(*viewport)).xy
     dir_screen = glm.normalize(glm.vec2(Q_screen.x - O_screen.x, Q_screen.y - O_screen.y))
 
     reference_point_screen = O_screen+dir_screen*reference_distance
-    ui.viewer.guide(origin_screen, reference_point_screen, imgui.ImVec4(0,1,1,1))
+    # ui.viewer.guide(origin_screen, reference_point_screen, imgui.ImVec4(0,1,1,1))
     reference_ray_origin, reference_ray_direction = cast_ray(reference_point_screen, view_matrix, projection_matrix, viewport)
     reference_point_world = closest_point_on_line1_to_line2(
         glm.vec3(0,0,0), 
@@ -447,12 +448,12 @@ def calc_reference_world_distance(
         reference_ray_origin+reference_ray_direction*100
     )
                 
-    imgui.text(f"Reference Point World: {reference_point_world}")
+    # imgui.text(f"Reference Point World: {reference_point_world}")
     # ui.viewer.guide(origin_screen, glm.project(reference_point_world, view_matrix, projection_matrix, viewport), imgui.ImVec4(0,1,1,1))
     return glm.distance(glm.vec3(0,0,0), reference_point_world)
 
 def solve2vp(
-        viewport: Viewport,
+        viewport: Rect,
         Fu: glm.vec2,
         Fv: glm.vec2,
         P: glm.vec2,
@@ -462,7 +463,7 @@ def solve2vp(
         reference_distance_mode:ReferenceAxis,
         reference_distance:float, # 2D distance from origin to camera
         scale:float, # referenmce worlds space size
-    )->SolverResults:
+    )->dict:
     """ Solve camera intrinsics and orientation from 3 orthogonal vanishing points.
     returns (fovy in radians, camera_orientation_matrix, camera_position)
     """
@@ -542,17 +543,23 @@ def solve2vp(
     axis_assignment_matrix:glm.mat3 = create_axis_assignment_matrix(first_axis, second_axis)       
     camera_transform = glm.mat4(axis_assignment_matrix)*camera_transform
 
-    return SolverResults(
-        compute_space=viewport,
-        transform=camera_transform,
-        fovy=fovy,
-        aspect=viewport.width/viewport.height,
-        principal_point=P,
-        near_plane=0.1,
-        far_plane=100.0,
-        shift_x=shift_x,
-        shift_y=shift_y
-    )
+    return {
+        'viewport': viewport,
+        'first_vanishing_point': Fu,
+        'second_vanishing_point': Fv,
+        'third_vanishing_point': None,
+        'projection': projection_matrix,
+        'view': view_matrix,
+        'compute_space':viewport,
+        'transform':camera_transform,
+        'fovy':fovy,
+        'aspect':viewport.width/viewport.height,
+        'principal_point':P,
+        'near_plane':0.1,
+        'far_plane':100.0,
+        'shift_x':shift_x,
+        'shift_y':shift_y
+    }
 
 ########################
 # CORE SOLVER FUNCTIOS #
@@ -657,7 +664,7 @@ def world_point_from_screen_center_by_distance(view_matrix, projection_matrix, v
     return point_world
 
 def compute_camera_position(
-        viewport: Viewport,
+        viewport: Rect,
         view_matrix:glm.mat4,
         projection_matrix:glm.mat4,
         O:glm.vec2,
@@ -685,13 +692,13 @@ def compute_camera_position(
         ),
         view_matrix,  # Identity matrix - no transformation yet
         projection_matrix, 
-        viewport
+        glm.vec4(*viewport)
     )
 
     return -origin_3D_world_space
 
 def compute_roll_matrix(
-        viewport: Viewport,
+        viewport: Rect,
         second_vanishing_line:Tuple[glm.vec2, glm.vec2],
         projection_matrix:glm.mat4,
         view_matrix:glm.mat4,
@@ -1079,7 +1086,7 @@ def cast_ray(
     pos: glm.vec2, 
     view_matrix: glm.mat4, 
     projection_matrix: glm.mat4, 
-    viewport: Viewport
+    viewport: Rect
 ) -> Tuple[glm.vec3, glm.vec3]:
     """
     Cast a ray from the camera through a pixel in screen space.
@@ -1095,12 +1102,12 @@ def cast_ray(
 
     ray_origin = glm.unProject(
         glm.vec3(pos.x, pos.y, 0.0),
-        view_matrix, projection_matrix, viewport
+        view_matrix, projection_matrix, glm.vec4(*viewport)
     )
 
     ray_target = glm.unProject(
         glm.vec3(pos.x, pos.y, 1.0),
-        view_matrix, projection_matrix, viewport
+        view_matrix, projection_matrix, glm.vec4(*viewport)
     )
 
     ray_direction = glm.normalize(ray_target - ray_origin)
@@ -1266,7 +1273,7 @@ def adjust_vanishing_lines_by_rotation(
 def vanishing_points_from_camera(
         view_matrix: glm.mat3, 
         projection_matrix: glm.mat4, 
-        viewport: Viewport
+        viewport: Rect
     ) -> Tuple[glm.vec2, glm.vec2, glm.vec2]:
     # Project vanishing Points
     MAX_FLOAT32 = (2 - 2**-23) * 2**127

@@ -13,7 +13,7 @@ from typing import Literal
 import pyperclip
 
 
-from pylive.perspy import solver
+from pylive.perspy.core.types import *
 
 import logging
 
@@ -258,11 +258,11 @@ class PerspyDocument(BaseDocument):
         self.content_size = imgui.ImVec2(1757.000000, 2040.000000)
 
         # - solver params
-        self.solver_mode=solver.SolverMode.ThreeVP
+        self.solver_mode=SolverMode.ThreeVP
         
-        self.first_axis=solver.Axis.NegativeX
-        self.second_axis=solver.Axis.PositiveY
-        self.third_axis=solver.Axis.PositiveZ
+        self.first_axis=Axis.NegativeX
+        self.second_axis=Axis.PositiveY
+        self.third_axis=Axis.PositiveZ
         self.fov_degrees=240.0 # only for OneVP mode
         self.quad_mode=False # only for TwoVP mode. is this a ui state?
         self.enable_auto_principal_point=True
@@ -285,7 +285,7 @@ class PerspyDocument(BaseDocument):
 
         # reference distance
         self.reference_world_size = 1.0
-        self.reference_axis:solver.ReferenceAxis = solver.ReferenceAxis.Screen
+        self.reference_axis:ReferenceAxis = ReferenceAxis.Screen
         self.reference_distance_offset = 0.0
         self.reference_distance_length =   100.0
 
@@ -306,13 +306,13 @@ class PerspyDocument(BaseDocument):
         data = {
             'version': self._version,
             'solver_params': {
-                "mode": solver.SolverMode(self.solver_mode).name,
-                "first_axis": solver.Axis(self.first_axis).name,
-                "second_axis": solver.Axis(self.second_axis).name,
+                "mode": SolverMode(self.solver_mode).name,
+                "first_axis": Axis(self.first_axis).name,
+                "second_axis": Axis(self.second_axis).name,
                 "scene_scale": self.reference_world_size,
                 "fov_degrees": self.fov_degrees,
                 "quad_mode": self.quad_mode,
-                "reference_distance_mode": solver.ReferenceAxis(self.reference_axis).name,
+                "reference_distance_mode": ReferenceAxis(self.reference_axis).name,
                 "reference_distance_segment": [self.reference_distance_offset, self.reference_distance_length]
             },
 
@@ -396,9 +396,9 @@ class PerspyDocument(BaseDocument):
         # Load solver params
         if 'solver_params' in data:
             sp = data['solver_params']
-            self.solver_mode = solver.SolverMode[sp['mode']] if 'mode' in sp else solver.SolverMode.OneVP
-            self.first_axis = solver.Axis[sp['first_axis']] if 'first_axis' in sp else solver.Axis.PositiveZ
-            self.second_axis = solver.Axis[sp['second_axis']] if 'second_axis' in sp else solver.Axis.PositiveX
+            self.solver_mode = SolverMode[sp['mode']] if 'mode' in sp else SolverMode.OneVP
+            self.first_axis = Axis[sp['first_axis']] if 'first_axis' in sp else Axis.PositiveZ
+            self.second_axis = Axis[sp['second_axis']] if 'second_axis' in sp else Axis.PositiveX
             self.reference_world_size = sp.get('scene_scale', 5.0)
             self.fov_degrees = sp.get('fov_degrees', 60.0)
             self.quad_mode = sp.get('quad_mode', False)
@@ -441,11 +441,11 @@ class PerspyDocument(BaseDocument):
             self.image_path: str|None = {self.image_path!r}
 
             # - solver params
-            self.solver_mode=SolverMode.{solver.SolverMode(self.solver_mode).name}
+            self.solver_mode=SolverMode.{SolverMode(self.solver_mode).name}
             self.scene_scale={self.reference_world_size}
-            self.first_axis=solver.Axis.{solver.Axis(self.first_axis).name}
-            self.second_axis=solver.Axis.{solver.Axis(self.second_axis).name}
-            self.third_axis=solver.Axis.{solver.Axis(self.third_axis).name}
+            self.first_axis=solver.Axis.{Axis(self.first_axis).name}
+            self.second_axis=solver.Axis.{Axis(self.second_axis).name}
+            self.third_axis=solver.Axis.{Axis(self.third_axis).name}
             self.fov_degrees={self.fov_degrees} # only for OneVP mode
             self.quad_mode={self.quad_mode} # only for TwoVP mode. is this a ui state?
             self.enable_auto_principal_point=True

@@ -21,157 +21,8 @@ from . constants import (
 )
 
 from . import utils
+from . types import *
 
-
-#########
-# TYPES #
-#########
-class Axis(IntEnum):
-    PositiveX = 0
-    NegativeX = 1
-    PositiveY = 2
-    NegativeY = 3
-    PositiveZ = 4
-    NegativeZ = 5
-
-class EulerOrder(IntEnum):
-    XYZ = 0
-    XZY = 1
-    YZX = 2
-    YXZ = 3
-    ZXY = 4
-    ZYX = 5
-
-class ReferenceAxis(IntEnum):
-    Screen = 0
-    X_Axis = 1
-    Y_Axis = 2
-    Z_Axis = 3
-
-class SolverMode(IntEnum):
-    OneVP = 0
-    TwoVP = 1
-    ThreeVP = 2
-
-@dataclass
-class Rect:
-    x: float
-    y: float
-    width: float
-    height: float
-
-    @property
-    def size(self) -> glm.vec2:
-        return glm.vec2(self.width, self.height)
-
-    @property
-    def center(self) -> glm.vec2:
-        return glm.vec2(self.x + self.width / 2, self.y + self.height / 2)
-    
-    def __iter__(self):
-        yield self.x
-        yield self.y
-        yield self.width
-        yield self.height
-
-# @dataclass
-# class SolverResults:
-#     # initial parameters
-#     viewport: Rect
-
-#     # vanishing points
-#     first_vanishing_point: glm.vec2|None = None
-#     second_vanishing_point: glm.vec2|None = None
-#     third_vanishing_point: glm.vec2|None = None
-
-#     # projection
-#     projection: glm.mat4|None = None
-
-#     # transform
-#     view: glm.mat4|None = None   
-
-#     # principal_point: glm.vec2|None = None
-    
-#     # focal_length: float|None = None
-#     # shift_x: float = 0.0
-#     # shift_y: float = 0.0
-
-#     # # serialization
-#     # def as_dict(self)->dict:
-#     #     position = self.get_position()
-#     #     quaternion = self.get_quaternion()
-#     #     projection = self.get_projection()
-#     #     return {
-#     #         "transform": np.array(self.transform).reshape(4,4).tolist(),
-#     #         "fovy": self.fovy,
-#     #         "position": tuple(position) if position else None,
-#     #         "quaternion": tuple(quaternion) if quaternion else None,
-#     #         "euler_order": EulerOrder.ZXY.name,
-#     #         "euler": tuple(self.get_euler(order=EulerOrder.ZXY)),
-#     #         "projection": np.array(projection).reshape(4,4).tolist() if projection is not None else None,
-#     #         "aspect": self.aspect,
-#     #         "near_plane": self.near_plane,
-#     #         "far_plane": self.far_plane,
-#     #         "shift_x": self.shift_x,
-#     #         "shift_y": self.shift_y
-#     #     }
-
-#     # def as_blender_script(self, camera_name: str="VLCamera")-> str:
-#     #     """Generate a Blender Python script to recreate the camera setup."""
-#     #     from imgui_bundle import hello_imgui
-#     #     from pathlib import Path
-
-#     #     blender_template_path = hello_imgui.asset_file_full_path("blender_camera_factory_template.py")
-#     #     try:
-#     #         script = Path(blender_template_path).read_text()
-#     #     except Exception as e:
-#     #         warnings.warn(f"Failed to read Blender template: {e}")
-#     #         return "# Failed to read Blender template."
-
-#     #     fovx = 2.0 * math.degrees(math.atan(math.tan(math.radians(self.fovy) * 0.5) * self.aspect))
-#     #     script = script.replace("<CAMERA_FOV>", str(math.radians(max(fovx, self.fovy))))
-#     #     transform_list = [[v for v in row] for row in glm.transpose(self.transform)]
-#     #     script = script.replace("<CAMERA_TRANSFORM>", str(transform_list))
-#     #     script = script.replace("<CAMERA_NAME>", f"'{camera_name}'")
-#     #     return script
-
-#     # def __str__(self)->str:
-#     #     from textwrap import dedent
-#     #     def pretty_matrix(value:np.array, separator:str='\t') -> str:
-#     #         """format a matrix nicely for printing"""
-#     #         text = np.array2string(
-#     #             value,
-#     #             precision=3,
-#     #             suppress_small=True,
-#     #             separator=separator,  # Use double space as separator
-#     #             prefix='',
-#     #             suffix='',
-#     #             formatter={'float_kind': lambda x: f"{'+' if np.sign(x)>=0 else '-'}{abs(x):.3f}"}  # Right-aligned with 8 characters width
-#     #         )
-            
-#     #         text = text.replace('[', ' ').replace(']', '')
-#     #         text = dedent(text).strip()
-#     #         text = text.replace('+', ' ')
-#     #         return text
-        
-#     #     transform_text = pretty_matrix(np.array(self.transform).reshape(4,4), separator=" ") if self.transform is not None else "N/A"
-#     #     position_text =  pretty_matrix(np.array(self.get_position()), separator=" ")
-#     #     quat_text =      pretty_matrix(np.array(self.get_quaternion()), separator=" ")
-#     #     euler_text =     pretty_matrix(np.array([math.degrees(radians) for radians in self.get_euler()]), separator=" ")
-
-#     #     projection_text = pretty_matrix(np.array(self.get_projection()).reshape(4,4), separator=" ") if self.get_projection() is not None else "N/A"
-
-#     #     return dedent(f"""Solver Results:\n
-#     #         transform:\n{transform_text}\n
-#     #         position:\n{position_text}\n
-#     #         quaternion:\n{quat_text}\n
-#     #         euler (degrees):\n{euler_text}\n
-#     #         projection:\n{projection_text}\n
-#     #         fovy: {math.degrees(self.fovy)}\n
-#     #         fovx: {math.degrees(self.get_fovx())}\n
-#     #         shift_x: {self.shift_x}\n
-#     #         shift_y: {self.shift_y}\n
-#     #     """)
 
 #########################
 # MAIN SOLVER FUNCTIONS #
@@ -179,125 +30,6 @@ class Rect:
 
 def solve(*args, **kwargs)->Dict:
     return _solve_functional_impl(*args, **kwargs)
-
-@warnings.deprecated("Use the '_solve_functional_impl' function instead.")
-def _solve_imperative_impl(
-        mode:SolverMode, 
-        viewport: Rect,
-        first_vanishing_lines:  List[Tuple[glm.vec2, glm.vec2]],
-        second_vanishing_lines: List[Tuple[glm.vec2, glm.vec2]],
-        third_vanishing_lines:  List[Tuple[glm.vec2, glm.vec2]],
-
-        f:float, # focal length (in height units)
-        P:glm.vec2,
-        O:glm.vec2,
-
-        reference_axis:ReferenceAxis,
-        reference_distance_segment:Tuple[float, float], # 2D distance from origin to camera
-        reference_world_size:float,
-
-        first_axis:Axis,
-        second_axis:Axis
-    )->Dict:
-    # 1. compute vanishing points
-    vp1 = utils.least_squares_intersection_of_lines(first_vanishing_lines)
-    if mode in (SolverMode.TwoVP, SolverMode.ThreeVP):
-        vp2 = utils.least_squares_intersection_of_lines(second_vanishing_lines)
-    else:
-        vp2 = None
-    if mode == SolverMode.ThreeVP:
-        vp3 = utils.least_squares_intersection_of_lines(third_vanishing_lines)
-    else:
-        vp3 = None
-
-    # 2. compute intrinsics
-    if mode == SolverMode.ThreeVP:
-        P = utils.triangle_orthocenter(vp1,vp2,vp3)
-
-    if mode in (SolverMode.TwoVP, SolverMode.ThreeVP):
-        f = compute_focal_length_from_vanishing_points(Fu=vp1,Fv=vp2,P=P)
-        
-    shift = (P - viewport.center) / (viewport.size / 2.0)
-    projection = utils.perspective_tiltshift(
-        utils.fov_from_focal_length(f, viewport.height), 
-        viewport.width/viewport.height, 
-        DEFAULT_NEAR_PLANE,
-        DEFAULT_FAR_PLANE, 
-        shift.x, 
-        -shift.y # TODO: note the negation here to match unProject convention TODO: double check why? see roll matrix later.
-    )
-
-    # 3. compute orientation
-    match mode:
-        case SolverMode.OneVP:
-            view_matrix:glm.mat4x4 = glm.mat4(compute_orientation_from_single_vanishing_point(
-                Fu=vp1,
-                P=P,
-                f=f,
-                horizon_direction=glm.vec2(1,0)
-            ))
-            # Adjust Camera Roll to match second vanishing line
-            view_matrix:glm.mat4 = view_matrix * compute_roll_matrix(
-                second_vanishing_lines[0], # Roll the camera based on the horizon line projected to 3D
-                view_matrix,
-                projection,
-                viewport
-            )
-
-        case SolverMode.TwoVP:
-            view_matrix:glm.mat4 = glm.mat4(compute_orientation_from_two_vanishing_points(
-                Fu=vp1,
-                Fv=vp2,
-                P=P,
-                f=f
-            ))
-
-        case SolverMode.ThreeVP:
-            view_matrix:glm.mat4 = glm.mat4(compute_orientation_from_two_vanishing_points(
-                Fu=vp1,
-                Fv=vp2,
-                P=P,
-                f=f
-            ))
-
-    # 4. Adjust position
-    ray = utils.cast_ray(O, view_matrix, projection, tuple(viewport))
-    camera_position = glm.normalize(ray[1] - glm.vec3(0,0,0))
-    view_matrix = glm.translate(view_matrix, camera_position)
-
-
-    # 5. Adjust axis assignment
-    view_matrix = view_matrix * glm.mat4(create_axis_assignment_matrix(first_axis, second_axis))
-
-    # 6. Adjust scale scene
-    view_matrix = apply_reference_world_distance(
-        reference_axis, 
-        reference_distance_segment, 
-        reference_world_size,
-        view_matrix, 
-        projection, 
-        viewport
-    )
-
-    return {
-        # initial parameters
-        'viewport':viewport,
-
-        # vanishing points
-        'first_vanishing_point':vp1,
-        'second_vanishing_point':vp2,
-        'third_vanishing_point':vp3,
-        'principal_point':P,
-
-        # projection
-        'projection':projection,
-        'focal_length':f,
-        'shift_x':shift.x,
-        'shift_y':shift.y,
-
-        # position
-        'view': view_matrix
-    }
 
 def _solve_functional_impl(
         mode:SolverMode, 
@@ -379,16 +111,16 @@ def _solve_functional_impl(
     # retrive principal point from projection matrix
     # - TODO: refactor making, and decomposing projection matrices
     # - TODO: create a utility functions, to retreive xcamera instrinsic parameters from projection matrix, note, that currently, height and fovy are used to compute focal length
-    left, right, top, bottom, near, far = utils.decompose_frustum(projection)
-    Ppx = ((right + left) / (top - bottom)) * near
-    Ppy = ((top + bottom) / (top - bottom)) * near
-    P = glm.vec2(
-        viewport.center.x - (Ppx / near) * (viewport.height / 2),
-        viewport.center.y + (Ppy / near) * (viewport.height / 2)
-    )
+    # left, right, top, bottom, near, far = utils.decompose_frustum(projection)
+    # Ppx = ((right + left) / (top - bottom)) * near
+    # Ppy = ((top + bottom) / (top - bottom)) * near
+    # P = glm.vec2(
+    #     viewport.center.x - (Ppx / near) * (viewport.height / 2),
+    #     viewport.center.y + (Ppy / near) * (viewport.height / 2)
+    # )
 
-    f = near/(bottom-top) * viewport.height
-    shift = (P - viewport.center) / (viewport.size / 2.0)
+    # f = near/(bottom-top) * viewport.height
+    # shift = (P - viewport.center) / (viewport.size / 2.0)
 
     return {
         # initial parameters
@@ -401,10 +133,10 @@ def _solve_functional_impl(
         
         # projection
         'projection':   projection,
-        'principal_point': P,
-        'focal_length': f,
-        'shift_x':      shift.x,
-        'shift_y':      shift.y,
+        # 'principal_point': P,
+        # 'focal_length': f,
+        # 'shift_x':      shift.x,
+        # 'shift_y':      shift.y,
 
         # position
         'view': view
@@ -412,15 +144,7 @@ def _solve_functional_impl(
 
 def orientation_from_one_vanishing_point(viewport, vp1, second_line, f, P)->Tuple[glm.mat4, glm.mat4]:
     # compute projection
-    shift = (P - viewport.center) / (viewport.size / 2.0)
-    projection = utils.perspective_tiltshift(
-        utils.fov_from_focal_length(f, viewport.height), 
-        viewport.width/viewport.height, 
-        DEFAULT_NEAR_PLANE,
-        DEFAULT_FAR_PLANE, 
-        shift.x, 
-        -shift.y # TODO: note the negation here to match unProject convention TODO: double check why? see roll matrix later.
-    )
+    projection = compose_intrinsics_matrix(viewport, f, P)
 
     # compute orientation
     view_matrix:glm.mat4x4 = glm.mat4(compute_orientation_from_single_vanishing_point(
@@ -440,19 +164,46 @@ def orientation_from_one_vanishing_point(viewport, vp1, second_line, f, P)->Tupl
 
     return projection, view_matrix
 
+def compose_intrinsics_matrix(viewport:Rect, f:float, P:glm.vec2)->glm.mat4:
+        # compute projection
+    shift = -(P - viewport.center) / (viewport.size / 2.0)  # Negated to match convention
+    fovy = utils.fov_from_focal_length(f, viewport.height)
+    aspect = viewport.width/viewport.height
+
+
+
+    # return glm.perspective(fovy, aspect, DEFAULT_NEAR_PLANE, DEFAULT_FAR_PLANE)
+    # Compute top/bottom/left/right in view space
+    top = DEFAULT_NEAR_PLANE * glm.tan(fovy / 2)
+    bottom = -top
+    right = top * aspect
+    left = -right
+
+    # Apply shifts
+    width = right - left
+    height = top - bottom
+
+    left   += shift.x * width / 2
+    right  += shift.x * width / 2
+    bottom += shift.y * height / 2
+    top    += shift.y * height / 2
+
+    # Create the projection matrix with lens shift
+    return glm.frustum(left, right, bottom, top, DEFAULT_NEAR_PLANE, DEFAULT_FAR_PLANE)
+    # return utils.perspective_tiltshift(
+    #     utils.fov_from_focal_length(f, viewport.height), 
+    #     viewport.width/viewport.height, 
+    #     DEFAULT_NEAR_PLANE,
+    #     DEFAULT_FAR_PLANE, 
+    #     shift.x, 
+    #     shift.y # TODO: note the negation here to match unProject convention TODO: double check why? see roll matrix later.
+    # )
+
 def orientation_from_two_vanishing_points(viewport, vp1, vp2, P)->Tuple[glm.mat4, glm.mat4]:
     f = compute_focal_length_from_vanishing_points(Fu=vp1,Fv=vp2,P=P)
 
     # compute projection
-    shift = (P - viewport.center) / (viewport.size / 2.0)
-    projection = utils.perspective_tiltshift(
-        utils.fov_from_focal_length(f, viewport.height), 
-        viewport.width/viewport.height, 
-        DEFAULT_NEAR_PLANE,
-        DEFAULT_FAR_PLANE, 
-        shift.x, 
-        -shift.y # TODO: note the negation here to match unProject convention TODO: double check why? see roll matrix later.
-    )
+    projection = compose_intrinsics_matrix(viewport, f, P)
 
     # compute orientation
     view_matrix:glm.mat4 = glm.mat4(compute_orientation_from_two_vanishing_points(
@@ -469,15 +220,7 @@ def orientation_from_three_vanishing_points(viewport, vp1, vp2, vp3)->Tuple[glm.
     f = compute_focal_length_from_vanishing_points(Fu=vp1,Fv=vp2,P=P)
 
     # compute projection
-    shift = (P - viewport.center) / (viewport.size / 2.0)
-    projection = utils.perspective_tiltshift(
-        utils.fov_from_focal_length(f, viewport.height), 
-        viewport.width/viewport.height, 
-        DEFAULT_NEAR_PLANE,
-        DEFAULT_FAR_PLANE, 
-        shift.x, 
-        -shift.y # TODO: note the negation here to match unProject convention TODO: double check why? see roll matrix later.
-    )
+    projection = compose_intrinsics_matrix(viewport, f, P)
 
     # compute orientation
     view_matrix:glm.mat4 = glm.mat4(compute_orientation_from_two_vanishing_points(
@@ -495,8 +238,33 @@ def adjust_position_to_origin(
         O:glm.vec2, 
         view:glm.mat4
     )->glm.mat4:
-    ray = utils.cast_ray(O, view, projection, tuple(viewport))
-    camera_position = glm.normalize(ray[1] - glm.vec3(0,0,0))
+    
+    # Convert world distance 1.0 to NDC z-coordinate
+    distance = 1.0
+    near = DEFAULT_NEAR_PLANE
+    far = DEFAULT_FAR_PLANE
+    
+    # Perspective-correct depth calculation
+    ndc_z = (far + near) / (far - near) + (2 * far * near) / ((far - near) * distance)
+    ndc_z = (ndc_z + 1) / 2  # Convert from [-1, 1] to [0, 1]
+    
+    # Unproject the origin point at distance 1.0
+    viewport_tuple = (
+        viewport.x, 
+        viewport.y, 
+        viewport.width, 
+        viewport.height
+    )
+    origin_3d = glm.unProject(
+        glm.vec3(O.x, O.y, ndc_z),
+        view,
+        projection,
+        viewport_tuple
+    )
+    
+    # Move camera so this point becomes the world origin
+    camera_position = -origin_3d
+    
     view = glm.translate(view, camera_position)
 
     return view
@@ -526,203 +294,6 @@ def adjust_axis_assignment(
     )->glm.mat4:
     return view_matrix * glm.mat4(create_axis_assignment_matrix(first_axis, second_axis))
 
-def solve1vp(
-        viewport: Rect,
-        Fu: glm.vec2,
-        second_vanishing_line: Tuple[glm.vec2, glm.vec2],
-
-        f:float, # focal length (in width and height units)
-        P:glm.vec2,
-        O:glm.vec2,
-
-        first_axis,
-        second_axis,
-
-        reference_axis:ReferenceAxis,
-        reference_distance_segment:Tuple[float, float], # 2D distance from origin to camera
-        reference_world_size:float
-    )->Dict:
-        """
-        Solve camera orientation from a single vanishing point and focal length,
-        and computes the camera position from the scene origin 'O'.
-        
-        params:
-            width: image width in pixels
-            height: image height in pixels
-            Fu: first vanishing point in pixel coordinates
-            second_vanishing_line: used to compute camera roll
-            f: focal length in pixels
-            P: principal point in pixel coordinates
-            O: the scene origin in pixel coordinates
-            first_axis: the world axis that the first vanishing point represents
-            second_axis: the world axis that the second vanishing point represents
-            scale: scene scale factor
-
-        returns:
-            the camera transformation matrix.
-        """
-
-        ##############################
-        # COMPUTE Camera Orientation #
-        ##############################
-        view_matrix = glm.mat4(compute_orientation_from_single_vanishing_point(
-            Fu,
-            P,
-            f
-        ))
-
-        ######################
-        # COMPUTE Projection #
-        ######################
-        # compute lens shift from principal point
-        shift = (viewport.center - P) / (viewport.size / 2)
-
-        # construct projection matrix with lens shift
-        projection_matrix = utils.perspective_tiltshift(
-            utils.fov_from_focal_length(f, viewport.height), 
-            viewport.width/viewport.height, 
-            DEFAULT_NEAR_PLANE,
-            DEFAULT_FAR_PLANE, 
-            shift.x, 
-            shift.y
-        )
-
-        ############################
-        # 4. Apply Camera Position #
-        ############################
-        ray = utils.cast_ray(O, view_matrix, projection_matrix, tuple(viewport))
-        camera_position = glm.normalize(ray[1] - glm.vec3(0,0,0))
-        view_matrix = glm.translate(view_matrix, camera_position)
-
-
-        #####################
-        # Apply Camera Roll #
-        #####################
-        view_matrix = compute_roll_matrix(
-            second_vanishing_line, # Roll the camera based on the horizon line projected to 3D
-            view_matrix,
-            projection_matrix,
-            viewport
-        )
-
-        ############################
-        # Apply reference distance #
-        ############################
-        view_matrix = apply_reference_world_distance(
-            reference_axis, 
-            reference_distance_segment, 
-            reference_world_size,
-            view_matrix, 
-            projection_matrix, 
-            viewport
-        )
-
-        #########################
-        # Apply axis assignment #
-        #########################
-        axis_assignment_matrix:glm.mat3 = create_axis_assignment_matrix(first_axis, second_axis)   
-        view_matrix = view_matrix * glm.mat4(axis_assignment_matrix)
-
-        return {
-            'viewport':viewport,
-            'transform':glm.inverse(view_matrix) ,
-            'fovy':utils.fov_from_focal_length(f, viewport.height),
-            'aspect':viewport.width/viewport.height,
-            'near_plane':DEFAULT_NEAR_PLANE,
-            'far_plane':DEFAULT_FAR_PLANE,
-            'shift_x':shift.x,
-            'shift_y':shift.y,
-            'principal_point':P
-        }
-
-def solve2vp(
-        viewport: Rect,
-        Fu: glm.vec2,
-        Fv: glm.vec2,
-        P: glm.vec2,
-        O: glm.vec2,
-        first_axis,
-        second_axis,
-        reference_distance_mode:ReferenceAxis,
-        reference_distance_segment_screen:Tuple[float, float], # 2D distance from origin to camera
-        reference_world_size:float, # referenmce worlds space size
-    )->Dict:
-    """ Solve camera intrinsics and orientation from 3 orthogonal vanishing points.
-    returns (fovy in radians, camera_orientation_matrix, camera_position)
-    """
-
-    ########################
-    # COMPUTE Focal Length #
-    ########################
-    f = compute_focal_length_from_vanishing_points(Fu=Fu,Fv=Fv,P=P)
-    fovy = utils.fov_from_focal_length(f, viewport.height)
-
-    ##############################
-    # COMPUTE Camera Orientation #
-    ##############################
-    view_matrix = glm.mat4(compute_orientation_from_two_vanishing_points(
-        Fu=Fu,
-        Fv=Fv,
-        P=P,
-        f=f
-    ))
-
-    #########################
-    # 4. COMPUTE Projection #
-    #########################
-    # compute lens shift from principal point
-    center_x = viewport.x + viewport.width / 2
-    center_y = viewport.y + viewport.height / 2
-    shift_x = -(P.x - center_x) / (viewport.width / 2)
-    shift_y = (P.y - center_y) / (viewport.height / 2)
-
-    # construct projection matrix with lens shift
-    projection_matrix = utils.perspective_tiltshift(
-        utils.fov_from_focal_length(f, viewport.height), 
-        viewport.width/viewport.height, 
-        DEFAULT_NEAR_PLANE,
-        DEFAULT_FAR_PLANE, 
-        shift_x, 
-        shift_y
-    )
-
-    #########################
-    # Apply Camera Position #
-    #########################
-    ray = utils.cast_ray(O, view_matrix, projection_matrix, tuple(viewport))
-    camera_position = glm.normalize(ray[1] - glm.vec3(0,0,0))
-    view_matrix = glm.translate(view_matrix, camera_position)
-    
-    
-    ############################
-    # Apply reference distance #
-    ############################
-    view_matrix = apply_reference_world_distance(
-        reference_distance_mode, 
-        reference_distance_segment_screen, 
-        reference_world_size,
-        view_matrix, 
-        projection_matrix, 
-        viewport
-    ) 
-
-    #########################
-    # Apply axis assignment #
-    #########################
-    axis_assignment_matrix:glm.mat3 = create_axis_assignment_matrix(first_axis, second_axis)   
-    view_matrix = view_matrix * glm.mat4(axis_assignment_matrix)
-
-    return {
-        'viewport': viewport,
-        'transform': glm.inverse(view_matrix),
-        'fovy': fovy,
-        'aspect': viewport.width/viewport.height,
-        'near_plane': DEFAULT_NEAR_PLANE,
-        'far_plane': DEFAULT_FAR_PLANE,
-        'shift_x': shift_x,
-        'shift_y': shift_y,
-        'principal_point': P
-    }
 
 ###########
 # HELPERS #
@@ -1240,6 +811,37 @@ def decompose_intrinsics(viewport, projection)->Tuple[glm.vec2, float, glm.vec2]
     f = near/(bottom-top) * viewport.height
     shift = (P - viewport.center) / (viewport.size / 2.0)
     return P, f, shift
+
+def compose_intrinsics(viewport:Rect, f:float, P:glm.vec2|None)->glm.mat4:
+    """Composes a projection matrix from principal point and focal length.
+
+    viewport: x, y, width, height
+    P: principal point in the same coordinate system as viewport, if None, use viewport center
+    f: focal length in the same units as viewport width/height
+    returns: projection matrix
+
+    You can think of the parameters in terms of a camera sensor, 
+    where the actual units don't matter as long as they are consistent.
+    - viewport.width/height: sensor size
+    - P: principal point
+    - f: focal length
+    """
+
+    if P is None:
+        P = viewport.center
+    
+    fovy = utils.fov_from_focal_length(f, viewport.height)
+    aspect = viewport.width/viewport.height
+    shift = (P - viewport.center) / (viewport.size / 2.0)
+    projection = utils.perspective_tiltshift(
+        fovy, 
+        aspect, 
+        DEFAULT_NEAR_PLANE,
+        DEFAULT_FAR_PLANE, 
+        shift.x, 
+        -shift.y # TODO: note the negation here to match unProject convention TODO: double check why? see roll matrix later.
+    )
+    return projection
 
 def decompose_extrinsics(view, euler_order=None | Literal['XYZ', 'XZY', 'YXZ', 'YZX', 'ZXY', 'ZYX'])->Tuple[glm.vec3, glm.quat]:
     """ Decomposes the view matrix to retreive position and orientation.
