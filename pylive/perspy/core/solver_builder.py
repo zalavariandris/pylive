@@ -38,7 +38,7 @@ class Solver(ABC):
         return self
 
     @abstractmethod
-    def solve(self) -> SolverResults:
+    def solve(self) -> Dict:
         pass
 
 
@@ -186,7 +186,7 @@ class MultiSolverBuilder(Solver):
         self.reference_world_size = distance
         return self
     
-    def solve(self) -> SolverResults:
+    def solve(self) -> Dict:
         self.vanishing_points = [least_squares_intersection_of_lines(lines) for lines in self.vanishing_lines]
         
         match len(self.vanishing_points):
@@ -276,18 +276,18 @@ class MultiSolverBuilder(Solver):
                 self.viewport
             )
 
-        return SolverResults(
-            viewport=self.viewport,
-            view=self.view,
-            projection=self.projection,
-            principal_point=self.principal,
-            focal_length=self.focal_length,
-            first_vanishing_point=self.vanishing_points[0],
-            second_vanishing_point=self.vanishing_points[1] if len(self.vanishing_points) > 1 else None,
-            third_vanishing_point=self.vanishing_points[2] if len(self.vanishing_points) > 2 else None,
-            shift_x=self.shift_x,
-            shift_y=self.shift_y
-        )
+        return {
+            'viewport': self.viewport,
+            'view': self.view,
+            'projection': self.projection,
+            'principal_point': self.principal,
+            'focal_length': self.focal_length,
+            'first_vanishing_point': self.vanishing_points[0],
+            'second_vanishing_point': self.vanishing_points[1] if len(self.vanishing_points) > 1 else None,
+            'third_vanishing_point': self.vanishing_points[2] if len(self.vanishing_points) > 2 else None,
+            'shift_x': self.shift_x,
+            'shift_y': self.shift_y
+        }
 
 
 if __name__ == "__main__":
