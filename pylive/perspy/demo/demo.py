@@ -26,6 +26,9 @@ from pylive.glrenderer.utils.camera import Camera
 from pylive.perspy.core import solver
 from pylive.perspy.core.solver_builder import MultiSolverBuilder
 
+from pylive.perspy.core import utils
+
+
 
 import ui
 from document import PerspyDocument
@@ -47,12 +50,12 @@ class ModuleHotReloader:
         import watchfiles, importlib
         path = module.__file__
         for changes in watchfiles.watch(path):
-            print(f"File changed: {changes}")
+            logger.info(f"File changed: {changes}")
             try:
                 importlib.reload(module)
-                print(f"Reloaded {module.__name__}")
+                logger.info(f"Reloaded {module.__name__}")
             except Exception as e:
-                print(f"Error reloading {module.__name__}: {e}")
+                logger.error(f"Error reloading {module.__name__}: {e}")
 
     def start_file_watchers(self):
         import threading
@@ -318,7 +321,7 @@ class PerspyApp():
 
                         # 2. camera intrinsics
                         mode = self.doc.solver_mode,
-                        f=solver.focal_length_from_fov(self.doc.fov_degrees, self.doc.content_size.y), # focal length (in height units)
+                        f=utils.focal_length_from_fov(self.doc.fov_degrees, self.doc.content_size.y), # focal length (in height units)
                         P=glm.vec2(*self.doc.principal),
 
                         # 3. compute orientation
@@ -340,24 +343,17 @@ class PerspyApp():
                     if self.solver_results is not None:
                         self.camera = Camera()
                         self.camera.transform = glm.inverse(self.solver_results.view)
-                        fovy = solver.fov_from_focal_length(self.solver_results.focal_length, self.doc.content_size.y)
+                        fovy = utils.fov_from_focal_length(self.solver_results.focal_length, self.doc.content_size.y)
                         self.camera.setFoVY(math.degrees(fovy))
                         self.camera.setAspectRatio(self.doc.content_size.x / self.doc.content_size.y)
 
                         shift = (glm.vec2(*self.solver_results.principal_point) - self.solver_results.viewport.center) / (self.solver_results.viewport.size / 2.0)
                         self.camera.set_lens_shift(shift.x, shift.y)
 
-                        # print(shift)
-                        # print(self.solver_results.shift_x, self.solver_results.shift_y)
-                        # print()
-
-                        # self.camera.set_lens_shift(self.solver_results.shift_x, self.solver_results.shift_y)
-
-                        # print("Camera created:", self.camera)
-                        # print("Camera position:", self.camera.getPosition())
-                        # print("Camera view matrix:", self.camera.viewMatrix())
+                        # update document parameters TODO: consider removing this and instead drawing the solver results only
+                        self.doc.principal = self.solver_results.principal_point
                     else:
-                        print("Warning: solver_results is None, camera not created")
+                        logger.warning("Warning: solver_results is None, camera not created")
 
                     error_msg = None
                 except Exception as e:
@@ -442,8 +438,6 @@ class PerspyApp():
                     if start_changed or end_changed:
                         self.doc.reference_distance_offset = glm.distance(glm.vec2(*self.doc.origin), glm.vec2(*reference_segment_startpoint))
                         self.doc.reference_distance_length = glm.distance(glm.vec2(*reference_segment_startpoint), glm.vec2(*reference_segment_endpoint))
-
-                    
 
                 # draw vanishing lines to vanishing points
                 if self.solver_results is not None:
@@ -534,72 +528,47 @@ class PerspyApp():
 
 
                     imgui.separator_text("Projection")
-                    imgui.input_float2("Principal", [*self.solver_results.principal_point], flags=imgui.InputTextFlags_.read_only)
-                    imgui.input_float("Focal Length", self.solver_results.focal_length, flags=imgui.InputTextFlags_.read_only)
+                    P, f, shift = solver.decompose_intrinsics(self.solver_results.viewport, self.solver_results.projection)
+                    imgui.input_float2("Principal (decompose)", [*P], flags=imgui.InputTextFlags_.read_only)
+                    imgui.input_float2("Shift (decompose)", [*shift], flags=imgui.InputTextFlags_.read_only)
+                    imgui.input_float("Focal Length (decompose)", f, flags=imgui.InputTextFlags_.read_only)
 
                     # imgui.input_text("fovy", f"{math.degrees(self.solver_results.fovy):.2f}°")
                     # imgui.input_text("fovx", f"{math.degrees(self.solver_results.get_fovx()):.2f}°")
                     # imgui.input_text("shiftx", f"{self.solver_results.shift_x:.2f}")
                     # imgui.input_text("shifty", f"{self.solver_results.shift_y:.2f}")
 
-                    imgui.separator_text("Position")
-                    imgui.separator_text("Orientation")
-                    quat = glm.quat()
-                    glm.decompose(self.solver_results.view, glm.vec3(), quat, glm.vec3(), glm.vec3(), glm.vec4())
+                    imgui.separator_text("Transform")
+                    position, quat = solver.decompose_extrinsics(self.solver_results.view)
+                    imgui.input_float3("Position (decompose)", [*position] if self.solver_results.view is not None else [0.0, 0.0, 0.0], flags=imgui.InputTextFlags_.read_only)
                     imgui.input_float4("Quaternion", [*quat] if self.solver_results.view is not None else [0.0, 0.0, 0.0, 0.0], flags=imgui.InputTextFlags_.read_only)
+
+                    combo_width = max([imgui.calc_text_size(text).x for text in solver.EulerOrder._member_names_]) + style.frame_padding.x * 2.0 -10
+                    combo_width+=imgui.get_frame_height() # add room for the dropdown arrow. (TODO: is it square for sure?)
+                    imgui.set_next_item_width(imgui.calc_item_width()-combo_width - style.frame_padding.x*2)
+                    match self.current_euler_order:
+                            case solver.EulerOrder.XYZ:
+                                euler = utils.extract_euler_XYZ(self.solver_results.view)
+                            case solver.EulerOrder.XZY:
+                                euler = utils.extract_euler_XZY(self.solver_results.view)
+                            case solver.EulerOrder.YXZ:
+                                euler = utils.extract_euler_YXZ(self.solver_results.view)
+                            case solver.EulerOrder.YZX:
+                                euler = utils.extract_euler_YZX(self.solver_results.view)
+                            case solver.EulerOrder.ZXY:
+                                euler = utils.extract_euler_ZXY(self.solver_results.view)
+                            case solver.EulerOrder.ZYX:
+                                euler = utils.extract_euler_ZYX(self.solver_results.view)
+                            
+                    imgui.input_float3("##euler_values", [math.degrees(radians) for radians in euler], flags=imgui.InputTextFlags_.read_only)
+                    imgui.set_item_tooltip("Euler angles in degrees (x,y,z).\nNote: Rotation is applied in order order: ZXY (Yaw, Pitch, Roll)")
+
+                    imgui.same_line()
+
+                    imgui.set_next_item_width(combo_width)
+                    _, self.current_euler_order = imgui.combo("euler##euler_order", self.current_euler_order, solver.EulerOrder._member_names_)
+                    imgui.set_item_tooltip("Select the Euler angle rotation order used for decomposition.")
                     
-                    imgui.push_style_var_y(imgui.StyleVar_.item_spacing, imgui.get_style().item_spacing.x/4)
-                    for i, row in enumerate(glm.transpose(self.solver_results.view)):
-                        imgui.input_float4(f"View {i}", [*row], flags=imgui.InputTextFlags_.read_only)
-                    imgui.pop_style_var()
-                    # text = "\n".join([",".join([f"{item:.2f}" for item in col]) for col in self.solver_results.view]) if self.solver_results.view is not None else "N/A"
-                    # text_size = imgui.calc_text_size(text) + style.frame_padding * 2+imgui.ImVec2(0, 0)
-                    # imgui.input_text_multiline("View", text, size=text_size, flags=imgui.InputTextFlags_.read_only)
-
-                    # text = "\n".join([",".join([f"{item:.2f}" for item in col]) for col in glm.inverse(self.solver_results.view)]) if self.solver_results.view is not None else "N/A"
-                    # text_size = imgui.calc_text_size(text) + style.frame_padding * 2+imgui.ImVec2(0, 0)
-                    # imgui.input_text_multiline("Transform", text, size=text_size, flags=imgui.InputTextFlags_.read_only)
-
-                    # imgui.set_next_item_width(260)
-                    quat = glm.quat()
-                    translation = glm.vec3()
-                    glm.decompose(self.solver_results.view, glm.vec3(), quat, translation, glm.vec3(), glm.vec4())
-                    imgui.input_float3("Position", [*translation] if self.solver_results.view is not None else "N/A", flags=imgui.InputTextFlags_.read_only)
-                    
-                    
-
-                    # ui.next_attribute("transform")
-                    # transform_text = solver.pretty_matrix(np.array(self.solver_results.transform).reshape(4,4), separator=" ")
-                    # transform_text_size = imgui.calc_text_size(transform_text) + style.frame_padding * 2+imgui.ImVec2(0, 0)
-                    # imgui.input_text_multiline("##transform", transform_text, size=transform_text_size, flags=imgui.InputTextFlags_.read_only)
-
-                    # ui.next_attribute("position")
-                    # position_text =  solver.pretty_matrix(np.array(self.solver_results.get_position()), separator=" ")
-                    # imgui.input_text("##position", position_text, flags=imgui.InputTextFlags_.read_only)
-
-                    # ui.next_attribute("quaternion (xyzw)")
-                    # quat = self.solver_results.get_quaternion()
-                    # quat_text =      solver.pretty_matrix(np.array([quat.x, quat.y, quat.z, quat.w]), separator=" ")
-                    # imgui.input_text("##quaternion", quat_text, flags=imgui.InputTextFlags_.read_only)
-                    # imgui.set_item_tooltip("Quaternion representing camera rotation (x, y, z, w)")
-
-                    # ui.next_attribute(f"euler")
-                    # imgui.push_style_var(imgui.StyleVar_.item_spacing, imgui.ImVec2(2, style.item_spacing.y))
-                    # euler_order_options = solver.EulerOrder._member_names_
-                    # max_text_width = max([imgui.calc_text_size(text).x for text in euler_order_options])
-                    # total_width = max_text_width + style.frame_padding.x * 2.0 -10
-                    # total_width+=imgui.get_frame_height() # for the arrow button todo: is it square for sure?
-                    # imgui.set_next_item_width(total_width)
-                    # _, self.current_euler_order = imgui.combo("##euler_order", self.current_euler_order, solver.EulerOrder._member_names_)
-                    # imgui.set_item_tooltip("Select the Euler angle rotation order used for decomposition.")
-                    # imgui.same_line()
-                    # imgui.set_next_item_width(-1)
-                    # euler_text = solver.pretty_matrix(np.array([math.degrees(radians) for radians in self.solver_results.get_euler(self.current_euler_order)]), separator="")
-                    # imgui.input_text("##euler", euler_text, flags=imgui.InputTextFlags_.read_only)
-                    # imgui.set_item_tooltip("Euler angles in degrees (x,y,z).\nNote: Rotation is applied in order order: ZXY (Yaw, Pitch, Roll)")
-                    # imgui.pop_style_var()
-
-
 
                     if self.camera is not None:
                         data = {
@@ -852,7 +821,7 @@ class PerspyApp():
                 ]
                 open_file_dialog = pfd.open_file("Select Image", "", filters, pfd.opt.none)
                 paths = open_file_dialog.result()
-                print("results: ", paths)
+                
                 if len(paths)>0:
                     path = paths[0]
                 else:
