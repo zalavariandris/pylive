@@ -238,7 +238,7 @@ class PerspyApp():
         imgui.set_next_window_pos(imgui.ImVec2(0, menu_bar_height))
         imgui.set_next_window_size(imgui.ImVec2(display_size.x, display_size.y - menu_bar_height))       
         if imgui.begin("MainViewport", None, imgui.WindowFlags_.no_bring_to_front_on_focus | imgui.WindowFlags_.no_move | imgui.WindowFlags_.no_resize | imgui.WindowFlags_.no_collapse | imgui.WindowFlags_.no_title_bar):
-            self.misc.setdefault('viewer1_coord_sys', 0) # 0: top-left, 1: bottom-left
+            self.misc.setdefault('viewer1_coord_sys', 1) # 0: top-left, 1: bottom-left
             coord_options = ["top-left", "bottom-left"]
             _, self.misc['viewer1_coord_sys'] = imgui.combo("coord-sys", self.misc['viewer1_coord_sys'], coord_options) # hack to prevent focusing this window when clicking on it
 
