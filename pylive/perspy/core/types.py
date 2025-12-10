@@ -28,8 +28,8 @@ class ReferenceAxis(IntEnum):
     Z_Axis = 3
 
 class SolverMode(IntEnum):
-    OneVP = 0
-    TwoVP = 1
+    OneVP =   0
+    TwoVP =   1
     ThreeVP = 2
 
 @dataclass

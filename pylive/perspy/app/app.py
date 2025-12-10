@@ -18,10 +18,10 @@ from imgui_bundle import portable_file_dialogs as pfd
 import pyperclip
 
 # Local application imports
-from pylive.glrenderer.utils.camera import Camera
 from pylive.perspy.core import solver_functional as solver
 from pylive.perspy.core import utils
 from pylive.perspy.core.types import *
+
 import ui
 from document import PerspyDocument
 
@@ -41,8 +41,6 @@ class PerspyApp():
 
         # - manage windows
         self.show_about_popup: bool = False
-        self.show_emoji_window: bool = False
-        self.show_fontawesome_window: bool = False
         self.show_data_window: bool = False
         self.show_styleeditor_window: bool = False
 
@@ -53,7 +51,6 @@ class PerspyApp():
         self.view_axes: bool = True
 
         # solver results
-        # self.camera:Camera|None = None
         self.view_matrix:glm.mat4|None = None
         self.projection_matrix:glm.mat4|None = None
 
@@ -241,11 +238,7 @@ class PerspyApp():
         imgui.set_next_window_pos(imgui.ImVec2(0, menu_bar_height))
         imgui.set_next_window_size(imgui.ImVec2(display_size.x, display_size.y - menu_bar_height))       
         if imgui.begin("MainViewport", None, imgui.WindowFlags_.no_bring_to_front_on_focus | imgui.WindowFlags_.no_move | imgui.WindowFlags_.no_resize | imgui.WindowFlags_.no_collapse | imgui.WindowFlags_.no_title_bar):
-            self.misc.setdefault('viewer1_coord_sys', 1) # 0: top-left, 1: bottom-left
-            coord_options = ["top-left", "bottom-left"]
-            _, self.misc['viewer1_coord_sys'] = imgui.combo("coord-sys", self.misc['viewer1_coord_sys'], coord_options) # hack to prevent focusing this window when clicking on it
-
-            if ui.viewer.begin_viewer("viewer1", content_size=self.doc.content_size, size=imgui.ImVec2(-1,-1), coordinate_system=coord_options[self.misc['viewer1_coord_sys']]):
+            if ui.viewer.begin_viewer("viewer1", content_size=self.doc.content_size, size=imgui.ImVec2(-1,-1), coordinate_system='bottom-left'):
                 # background image
                 if self.image_texture_ref is not None:
                     tl = ui.viewer._get_window_coords(imgui.ImVec2(0,0))
@@ -273,10 +266,12 @@ class PerspyApp():
                 try:
                     if self.doc.solver_mode in [solver.SolverMode.OneVP, solver.SolverMode.TwoVP] and self.doc.enable_auto_principal_point:
                         self.doc.principal = self.doc.content_size * 0.5 # TODO: set principal to center of image, consider using the solver viewport directly or stick to doc content size? the vieqwport is created from content size anyway
-
+      
                     self.solver_results = solver.solve(
                         mode = self.doc.solver_mode,
                         viewport=Rect(0,0,self.doc.content_size.x, self.doc.content_size.y),
+
+                        # vanishing lines
                         first_vanishing_lines =  self.doc.first_vanishing_lines,
                         second_vanishing_lines = self.doc.second_vanishing_lines,
                         third_vanishing_lines =  self.doc.third_vanishing_lines,
@@ -285,27 +280,28 @@ class PerspyApp():
                         P=glm.vec2(*self.doc.principal),
                         O=glm.vec2(*self.doc.origin),
 
-                        # 5. adjust scene scale
+                        # adjust scene scale
                         reference_world_size=self.doc.reference_world_size,
                         reference_axis=self.doc.reference_axis,
                         reference_distance_segment=(self.doc.reference_distance_offset, self.doc.reference_distance_length), # 2D distance from origin to camera  
                         
-                        # 6. adjust axes
+                        # adjust axes
                         first_axis=self.doc.first_axis,
                         second_axis=self.doc.second_axis,
                     )
 
                     # apply solver results to camera
-                    # P, f, shift = solver.decompose_intrinsics(
-                    #     self.solver_results['viewport'],
-                    #     self.solver_results['projection']
-                    # )
+
 
                     self.view_matrix = self.solver_results['view']
                     self.projection_matrix = self.solver_results['projection']
 
-                    # update document parameters TODO: consider removing this and instead drawing the solver results only
-                    # self.doc.principal = imgui.ImVec2(P.x, P.y)
+                    if self.doc.solver_mode in [solver.SolverMode.ThreeVP]:
+                        P, f, shift = solver.decompose_intrinsics(
+                            self.solver_results['viewport'],
+                            self.solver_results['projection']
+                        )
+                        self.doc.principal = imgui.ImVec2(P.x, P.y)
 
                     error_msg = None
                 except Exception as e:
@@ -648,15 +644,6 @@ class PerspyApp():
                 imgui.end_menu()
             
             if imgui.begin_menu("Windows"):
-                smile_icon = getattr(icons_fontawesome_4, 'ICON_FA_SMILE_O', getattr(icons_fontawesome_4, 'ICON_FA_SMILE', ''))
-                star_icon = getattr(icons_fontawesome_4, 'ICON_FA_STAR', '')
-
-                if imgui.menu_item_simple(f"{smile_icon} Emoji Test", None, self.show_emoji_window):
-                    self.show_emoji_window = not self.show_emoji_window
-
-                if imgui.menu_item_simple(f"{star_icon} FontAwesome Icons", None, self.show_fontawesome_window):
-                    self.show_fontawesome_window = not self.show_fontawesome_window
-
                 if imgui.menu_item_simple("Style Window", None, self.show_styleeditor_window):
                     self.show_styleeditor_window = not self.show_styleeditor_window
 

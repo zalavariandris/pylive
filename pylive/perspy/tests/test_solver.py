@@ -4,6 +4,10 @@ import numpy as np
 
 from pylive.perspy.core import solver_functional as solver
 
+############################
+# test main solve function #
+############################
+
 def test_solve_with_one_vp():
     results = solver.solve(
         mode = solver.SolverMode.OneVP,
@@ -171,6 +175,10 @@ def test_solve_with_three_vp():
     assert np.allclose(np.array(expected_projection), np.array(expected_projection)),\
         f"View matrix does not match expected."\
         f"\nGot:\n{projection}\nExpected:\n{expected_view}"
+
+##########################
+# test solver components #
+##########################
 
 if __name__ == "__main__":
     pytest.main([

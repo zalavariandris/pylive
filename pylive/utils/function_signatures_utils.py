@@ -50,11 +50,3 @@ def format_signature(fn):
 	
 	return text
 	
-
-import unittest
-class TestBuiltIns(unittest.TestCase):
-	def test_print_function(self):
-		pass
-
-class TestSimplefunctions(unittest.TestCase):
-	...
