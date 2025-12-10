@@ -1,4 +1,5 @@
 from .widgets.radio_group import radio_group
+from .widgets.image_button import image_button
 from .widgets.touch_pad import touch_pad
 from .widgets.sidebar import begin_sidebar, end_sidebar
 
@@ -35,11 +36,13 @@ def combo_enum(label: str, current: T, enum_type: Type[T] | None = None) -> Tupl
 __all__ = [
     # widgets
     "radio_group",
+    "image_button",
+    "combo_enum",
+
     "touch_pad",
     "begin_sidebar",
     "end_sidebar",
-    "combo_enum",
-
+    
     # viewer
     "viewer",
     

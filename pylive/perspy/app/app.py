@@ -129,9 +129,12 @@ class PerspyApp():
                     self.open_image()
 
             else:
-                image_aspect = self.doc.content_size.x / self.doc.content_size.y
-                width = imgui.get_content_region_avail().x-imgui.get_style().frame_padding.x*2
-                if imgui.image_button("open", self.image_texture_ref, imgui.ImVec2(width, width/image_aspect)):
+                if ui.image_button("open", 
+                        self.image_texture_ref, 
+                        imgui.ImVec2(self.doc.content_size.x, self.doc.content_size.y),
+                        imgui.ImVec2(350, 200),
+                        fit='contain'
+                    ):
                     self.open_image()
 
             imgui.set_next_item_width(buttons_width)
