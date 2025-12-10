@@ -263,6 +263,7 @@ class PerspyDocument(BaseDocument):
         self.first_axis=Axis.NegativeX
         self.second_axis=Axis.PositiveY
         self.third_axis=Axis.PositiveZ
+
         self.fov_degrees=240.0 # only for OneVP mode
         self.quad_mode=False # only for TwoVP mode. is this a ui state?
         self.enable_auto_principal_point=True
@@ -377,22 +378,10 @@ class PerspyDocument(BaseDocument):
         
         # Convert JSON data to string
         json_text = document_data.decode('utf-8')
-        
-        # Helper functions for deserialization
-        def deserialize_vec2(obj)->imgui.ImVec2:
-            """Convert dict to imgui.ImVec2"""
-            if isinstance(obj, dict) and 'x' in obj and 'y' in obj:
-                return imgui.ImVec2(obj['x'], obj['y'])
-            return obj
-        
-        def deserialize_imgui_vec2(obj):
-            """Convert dict to imgui.ImVec2"""
-            if isinstance(obj, dict) and 'x' in obj and 'y' in obj:
-                return imgui.ImVec2(obj['x'], obj['y'])
-            return obj
-        
+                
         data:dict = json.loads(json_text)
         
+
         # Load solver params
         if 'solver_params' in data:
             sp = data['solver_params']

@@ -18,7 +18,6 @@ if __name__ == "__main__":
     from imgui_bundle import hello_imgui
     from hello_imgui_config import create_my_runner_params
     
-
     app = PerspyApp()
     assets_folder = Path(__file__).parent / "assets"
     assert assets_folder.exists(), f"Assets folder not found: {assets_folder.absolute()}"

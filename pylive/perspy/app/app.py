@@ -552,6 +552,20 @@ class PerspyApp():
                         # Create OpenGL texture
                         self.update_texture()
 
+                if imgui.begin_menu("Open Template"):
+                    templates = {
+                        "One VP (Famous)": solver.SolverMode.OneVP,
+                        "Two VP (Building Corner)": solver.SolverMode.TwoVP,
+                        "Three VP (Cubic Room)": solver.SolverMode.ThreeVP
+                    }
+                    for template_name, mode in templates.items():
+                        if imgui.menu_item_simple(template_name):
+                            ...
+                            if self.doc.image_path:
+                                # Create OpenGL texture
+                                self.update_texture()
+                    imgui.end_menu()
+
                 if imgui.menu_item_simple(f"{fa.ICON_FA_SAVE} Save", "Ctrl+S"):
                     self.doc.save()
                 
@@ -562,6 +576,8 @@ class PerspyApp():
 
                 if imgui.menu_item_simple(f"{fa.ICON_FA_FOLDER_OPEN} Load Image", "Ctrl+O"):
                     self.open_image()
+
+                
 
                 imgui.separator()
 

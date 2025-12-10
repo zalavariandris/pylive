@@ -36,6 +36,7 @@ def get_viewer_style():
 #######################
 # STATELESS UTILITIES #
 #######################
+
 def overscan_projection(projection:glm.mat4, rect_tl, rect_br, overscan_tl, overscan_br)->glm.mat4:
     # Calculate canvas and widget dimensions
     canvas_width = rect_br.x - rect_tl.x
@@ -423,27 +424,72 @@ def end_viewer():
     #     imgui.color_convert_float4_to_u32(get_viewer_style().margin_fill_color)
     # )
 
-    # draw ruler
-    for x in np.arange(0,current_viewport.content_size.x, 100):
-        pos = current_viewport._project(glm.vec3(x, 0, 0))
-        white_int = imgui.color_convert_float4_to_u32(imgui.ImVec4(1,1,1,1)) 
-        draw_list.add_line(
-            imgui.ImVec2(pos.x, pos.y-5),
-            imgui.ImVec2(pos.x, pos.y+5),
-            white_int
-        )
-        draw_list.add_text(pos, white_int, f"{int(x)}")
-        current_viewport.content_size
+    # draw ruler with adaptive step using 1-2-5 progression
+    # Calculate scale by projecting a 100-unit segment
+    p0 = current_viewport._project(glm.vec3(0, 0, 0))
+    p100 = current_viewport._project(glm.vec3(100, 0, 0))
+    pixels_per_100_units = glm.distance(glm.vec2(p0.x, p0.y), glm.vec2(p100.x, p100.y))
+    
+    # Find the step that fits into ~100px using 1-2-5 progression
+    target_screen_pixels = 100.0
+    content_units_per_100px = 100.0 * target_screen_pixels / pixels_per_100_units
+    
+    # Standard ruler progression: 1, 2, 5, 10, 20, 50, 100, 200, 500...
+    # Break down into: base_power * multiplier where multiplier is 1, 2, or 5
+    log_value = math.log10(content_units_per_100px)
+    base_power = math.floor(log_value)
+    base = 10 ** base_power
+    
+    # Determine which multiplier (1, 2, or 5) to use
+    ratio = content_units_per_100px / base
+    if ratio < 1.5:
+        current_multiplier = 1
+        next_multiplier = 2
+        t = glm.lerp(1.0, 1.5, ratio)
+    elif ratio < 3.5:
+        current_multiplier = 2
+        next_multiplier = 5
+        t = glm.lerp(1.5, 3.5, ratio)
+    else:
+        current_multiplier = 5
+        next_multiplier = 10  # which becomes 1 * 10^(base_power+1)
+        t = glm.lerp(3.5, 10.0, ratio)
+    # Calculate current and next step sizes
+    current_step = base * current_multiplier
+    if next_multiplier == 10:
+        next_step = base * 10  # Next power of 10
+    else:
+        next_step = base * next_multiplier
+    
+    def draw_rulers(ruler_step:float, opacity:float=1.0, label_opacity:float=1.0):
+        # Draw X-axis ruler marks
+        ticks_color = imgui.color_convert_float4_to_u32(imgui.ImVec4(1,1,1,opacity))
+        labels_color = imgui.color_convert_float4_to_u32(imgui.ImVec4(1,1,1,label_opacity))
+        for x in np.arange(0, current_viewport.content_size.x, ruler_step):
+            pos = current_viewport._project(glm.vec3(x, 0, 0))
+            draw_list.add_line(
+                imgui.ImVec2(pos.x, pos.y-5),
+                imgui.ImVec2(pos.x, pos.y+5),
+                ticks_color
+            )
+            draw_list.add_text(pos, labels_color, f"{int(x)}")
 
-    for y in np.arange(0,current_viewport.content_size.y, 100):
-        pos = current_viewport._project(glm.vec3(0, y, 0))
-        white_int = imgui.color_convert_float4_to_u32(imgui.ImVec4(1,1,1,1)) 
-        draw_list.add_line(
-            imgui.ImVec2(pos.x-5, pos.y),
-            imgui.ImVec2(pos.x+5, pos.y),
-            white_int
-        )
-        draw_list.add_text(pos, white_int, f"{int(y)}")
+        # Draw Y-axis ruler marks
+        for y in np.arange(0, current_viewport.content_size.y, ruler_step):
+            pos = current_viewport._project(glm.vec3(0, y, 0))
+            draw_list.add_line(
+                imgui.ImVec2(pos.x-5, pos.y),
+                imgui.ImVec2(pos.x+5, pos.y),
+                ticks_color
+            )
+            draw_list.add_text(pos, labels_color, f"{int(y)}")
+    
+    # Fade out current step, fade in next step with easing
+    current_opacity = glm.lerp(1.0, 0.0, glm.smoothstep(0.0, 1.0, t))
+    next_opacity =    glm.lerp(0.0, 1.0, glm.smoothstep(0.0, 1.0, t))
+    
+    draw_rulers(current_step, opacity=current_opacity, label_opacity=current_opacity)
+    draw_rulers(next_step,    opacity=next_opacity,    label_opacity=next_opacity)
 
     # display viewport info
     style = imgui.get_style()
