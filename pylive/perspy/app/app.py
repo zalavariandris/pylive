@@ -18,9 +18,7 @@ from imgui_bundle import portable_file_dialogs as pfd
 import pyperclip
 
 # Local application imports
-from pylive.perspy.core import solver_functional as solver
-from pylive.perspy.core import utils
-from pylive.perspy.core.types import *
+from pylive.perspy import solver
 
 import ui
 from document import PerspyDocument
@@ -28,6 +26,7 @@ from document import PerspyDocument
 from pylive.perspy.app.hot_reloader import HotModuleReloader
 HotModuleReloader([solver]).start_file_watchers()
 
+from reloading import reloading
 
 class PerspyApp():
     def __init__(self):
@@ -54,8 +53,8 @@ class PerspyApp():
         self.view_matrix:glm.mat4|None = None
         self.projection_matrix:glm.mat4|None = None
 
-        self.current_euler_order = solver.EulerOrder.ZXY
-        self.solver_results:Dict|None = None
+        # displaying results
+        self.current_euler_order = solver.types.EulerOrder.ZXY
         
         # misc
         """
@@ -68,13 +67,13 @@ class PerspyApp():
         self.misc:Dict[str, Any] = dict() # miscellaneous state variables for development. 
 
     @staticmethod
-    def get_axis_color(axis:solver.Axis) -> imgui.ImVec4:
+    def get_axis_color(axis:solver.types.Axis) -> imgui.ImVec4:
         match axis:
-            case solver.Axis.PositiveX | solver.Axis.NegativeX:
+            case solver.types.Axis.PositiveX | solver.types.Axis.NegativeX:
                 return ui.viewer.get_viewer_style().AXIS_COLOR_X
-            case solver.Axis.PositiveY | solver.Axis.NegativeY:
+            case solver.types.Axis.PositiveY | solver.types.Axis.NegativeY:
                 return ui.viewer.get_viewer_style().AXIS_COLOR_Y
-            case solver.Axis.PositiveZ | solver.Axis.NegativeZ:
+            case solver.types.Axis.PositiveZ | solver.types.Axis.NegativeZ:
                 return ui.viewer.get_viewer_style().AXIS_COLOR_Z
             case _:
                 return imgui.ImVec4(1.0, 1.0, 1.0, 1.0)
@@ -144,7 +143,7 @@ class PerspyApp():
             # imgui.bullet_text("Warning: Font scaling will NOT be smooth, because\nImGuiBackendFlags_RendererHasTextures is not set!")
             imgui.separator_text("Solver Parameters")
             imgui.set_next_item_width(buttons_width)
-            _, self.doc.solver_mode = ui.combo_enum("mode", self.doc.solver_mode, solver.SolverMode)
+            _, self.doc.solver_mode = ui.combo_enum("mode", self.doc.solver_mode, solver.types.SolverMode)
             # _, self.doc.solver_mode = imgui.combo("mode", self.doc.solver_mode, solver.SolverMode._member_names_)
 
             imgui.set_next_item_width(buttons_width)
@@ -152,7 +151,7 @@ class PerspyApp():
 
             imgui.set_next_item_width(buttons_width)
             
-            _, self.doc.reference_axis = ui.combo_enum("reference distance mode", self.doc.reference_axis, solver.ReferenceAxis)
+            _, self.doc.reference_axis = ui.combo_enum("reference distance mode", self.doc.reference_axis, solver.types.ReferenceAxis)
 
             imgui.set_next_item_width(buttons_width)
             _, self.doc.reference_distance_offset = imgui.slider_float("reference distance offset", self.doc.reference_distance_offset, 0.0, 2000.0, "%.2f")
@@ -162,23 +161,23 @@ class PerspyApp():
 
             # solver specific parameters
             match self.doc.solver_mode:
-                case solver.SolverMode.OneVP:
+                case solver.types.SolverMode.OneVP:
                     _, self.doc.enable_auto_principal_point = imgui.checkbox("auto principal point", self.doc.enable_auto_principal_point)
                     imgui.set_next_item_width(buttons_width)
                     _, self.doc.fov_degrees = imgui.slider_float("fov°", self.doc.fov_degrees, 1.0, 179.0, "%.1f°")
 
-                case solver.SolverMode.TwoVP:
+                case solver.types.SolverMode.TwoVP:
                     _, self.doc.enable_auto_principal_point = imgui.checkbox("auto principal point", self.doc.enable_auto_principal_point)
                     _, self.doc.quad_mode = imgui.checkbox("quad", self.doc.quad_mode)
 
-                case solver.SolverMode.ThreeVP:
+                case solver.types.SolverMode.ThreeVP:
                     _, self.doc.quad_mode = imgui.checkbox("quad", self.doc.quad_mode)
 
             imgui.separator_text("Axes")
             axes_presets = {
                 "default": 0,
-                'blender':1,
-                'maya':2
+                'blender': 1,
+                'maya': 2
             }
             self.misc.setdefault('axes_preset', 0)
             imgui.set_next_item_width(buttons_width)
@@ -193,7 +192,7 @@ class PerspyApp():
                         y: left/right axis
                         z: up/down axis
                         """
-                        self.doc.first_axis, self.doc.second_axis = solver.Axis.PositiveX, solver.Axis.PositiveY
+                        self.doc.first_axis, self.doc.second_axis = solver.types.Axis.PositiveX, solver.types.Axis.PositiveY
 
                     case "blender":
                         """
@@ -202,10 +201,10 @@ class PerspyApp():
                         Y is the front/back axis, 
                         Z is the up/down axis.
                         """
-                        self.doc.first_axis, self.doc.second_axis = solver.Axis.PositiveY, solver.Axis.NegativeX
+                        self.doc.first_axis, self.doc.second_axis = solver.types.Axis.PositiveY, solver.types.Axis.NegativeX
 
                     case "maya":
-                        self.doc.first_axis, self.doc.second_axis = solver.Axis.PositiveZ, solver.Axis.NegativeX
+                        self.doc.first_axis, self.doc.second_axis = solver.types.Axis.PositiveZ, solver.types.Axis.NegativeX
             
                 try:
                     axis_matrix = solver.create_axis_assignment_matrix(self.doc.first_axis, self.doc.second_axis)
@@ -215,12 +214,12 @@ class PerspyApp():
                     imgui.text(f"Error: {e}")
             
             axes_short_names = {
-                solver.Axis.PositiveX: "X+",
-                solver.Axis.NegativeX: "X-",
-                solver.Axis.PositiveY: "Y+",
-                solver.Axis.NegativeY: "Y-",
-                solver.Axis.PositiveZ: "Z+",
-                solver.Axis.NegativeZ: "Z-"
+                solver.types.Axis.PositiveX: "X+",
+                solver.types.Axis.NegativeX: "X-",
+                solver.types.Axis.PositiveY: "Y+",
+                solver.types.Axis.NegativeY: "Y-",
+                solver.types.Axis.PositiveZ: "Z+",
+                solver.types.Axis.NegativeZ: "Z-"
             }
             style = imgui.get_style()
             imgui.set_next_item_width(buttons_width/2-style.frame_padding.x)
@@ -233,7 +232,6 @@ class PerspyApp():
         ui.end_sidebar()
 
         # fullscreen viewer Window
-        # style = imgui.get_style()
         display_size = imgui.get_io().display_size
         imgui.set_next_window_pos(imgui.ImVec2(0, menu_bar_height))
         imgui.set_next_window_size(imgui.ImVec2(display_size.x, display_size.y - menu_bar_height))       
@@ -264,19 +262,19 @@ class PerspyApp():
 
                 # Solve the camera
                 try:
-                    if self.doc.solver_mode in [solver.SolverMode.OneVP, solver.SolverMode.TwoVP] and self.doc.enable_auto_principal_point:
+                    if self.doc.solver_mode in [solver.types.SolverMode.OneVP, solver.types.SolverMode.TwoVP] and self.doc.enable_auto_principal_point:
                         self.doc.principal = self.doc.content_size * 0.5 # TODO: set principal to center of image, consider using the solver viewport directly or stick to doc content size? the vieqwport is created from content size anyway
       
-                    self.solver_results = solver.solve(
+                    projection, view = solver.core.solve(
                         mode = self.doc.solver_mode,
-                        viewport=Rect(0,0,self.doc.content_size.x, self.doc.content_size.y),
+                        viewport=solver.types.Rect(0,0,self.doc.content_size.x, self.doc.content_size.y),
 
                         # vanishing lines
                         first_vanishing_lines =  self.doc.first_vanishing_lines,
                         second_vanishing_lines = self.doc.second_vanishing_lines,
                         third_vanishing_lines =  self.doc.third_vanishing_lines,
                         
-                        f=utils.focal_length_from_fov(self.doc.fov_degrees, self.doc.content_size.y), # focal length (in height units)
+                        f=solver.utils.focal_length_from_fov(self.doc.fov_degrees, self.doc.content_size.y), # focal length (in height units)
                         P=glm.vec2(*self.doc.principal),
                         O=glm.vec2(*self.doc.origin),
 
@@ -291,16 +289,11 @@ class PerspyApp():
                     )
 
                     # apply solver results to camera
+                    self.view_matrix = view
+                    self.projection_matrix = projection
 
-
-                    self.view_matrix = self.solver_results['view']
-                    self.projection_matrix = self.solver_results['projection']
-
-                    if self.doc.solver_mode in [solver.SolverMode.ThreeVP]:
-                        P, f, shift = solver.decompose_intrinsics(
-                            self.solver_results['viewport'],
-                            self.solver_results['projection']
-                        )
+                    if self.doc.solver_mode in [solver.types.SolverMode.ThreeVP]:
+                        P, f = solver.utils.decompose_intrinsics(solver.types.Rect(0,0,self.doc.content_size.x, self.doc.content_size.y), projection)
                         self.doc.principal = imgui.ImVec2(P.x, P.y)
 
                     error_msg = None
@@ -325,11 +318,11 @@ class PerspyApp():
                 ui.viewer.axes(length=10)
 
                 match self.doc.solver_mode:
-                    case solver.SolverMode.OneVP:
+                    case solver.types.SolverMode.OneVP:
                         _, self.doc.second_vanishing_lines[0] = control_line("x", self.doc.second_vanishing_lines[0], color=self.get_axis_color(self.doc.second_axis))  
                         ui.viewer.guide(self.doc.second_vanishing_lines[0][0], self.doc.second_vanishing_lines[0][1], self.get_axis_color(self.doc.second_axis), head='>')
                     
-                    case solver.SolverMode.TwoVP:
+                    case solver.types.SolverMode.TwoVP:
                         if self.doc.quad_mode:
                             z0, z1 = self.doc.first_vanishing_lines
                             self.doc.second_vanishing_lines = [
@@ -342,7 +335,7 @@ class PerspyApp():
                         for line in self.doc.second_vanishing_lines:
                             ui.viewer.guide(line[0], line[1], self.get_axis_color(self.doc.second_axis), head='>')
 
-                    case solver.SolverMode.ThreeVP:
+                    case solver.types.SolverMode.ThreeVP:
                         if self.doc.quad_mode:
                             z0, z1 = self.doc.first_vanishing_lines
                             self.doc.second_vanishing_lines = [
@@ -360,20 +353,20 @@ class PerspyApp():
                             ui.viewer.guide(line[0], line[1], self.get_axis_color(self.doc.third_axis), head='>')
 
                 # adjust scale
-                if self.solver_results is not None:
+                if self.view_matrix and self.projection_matrix:
                     match self.doc.reference_axis:
-                        case solver.ReferenceAxis.X_Axis:
+                        case solver.types.ReferenceAxis.X_Axis:
                             reference_axis_vector = glm.vec3(1,0,0)
-                        case solver.ReferenceAxis.Y_Axis:
+                        case solver.types.ReferenceAxis.Y_Axis:
                             reference_axis_vector = glm.vec3(0,1,0)
-                        case solver.ReferenceAxis.Z_Axis:
+                        case solver.types.ReferenceAxis.Z_Axis:
                             reference_axis_vector = glm.vec3(0,0,1)
-                        case solver.ReferenceAxis.Screen:
-                            reference_axis_vector = glm.normalize(glm.vec3(glm.inverse(self.solver_results['view'])[0]))
+                        case solver.types.ReferenceAxis.Screen:
+                            reference_axis_vector = glm.normalize(glm.vec3(glm.inverse(self.view_matrix)[0]))
 
                     reference_screen_dir = glm.normalize(
                             glm.vec2(
-                                glm.project(reference_axis_vector, self.solver_results['view'], self.solver_results['projection'], glm.vec4(*self.solver_results['viewport']))
+                                glm.project(reference_axis_vector, self.view_matrix, self.projection_matrix, glm.vec4(0,0,self.doc.content_size.x, self.doc.content_size.y))
                             )
                          - glm.vec2(*self.doc.origin))
                     ORANGE = imgui.ImVec4(1.0, 0.5, 0.0, 1.0)
@@ -408,12 +401,12 @@ class PerspyApp():
                     # view = glm.scale(self.view_matrix, glm.vec3(1.0, -1.0, 1.0))
                     if ui.viewer.begin_scene(self.projection_matrix, self.view_matrix):
                         axes_name = {
-                            solver.Axis.PositiveX: "X",
-                            solver.Axis.NegativeX: "X",
-                            solver.Axis.PositiveY: "Y",
-                            solver.Axis.NegativeY: "Y",
-                            solver.Axis.PositiveZ: "Z",
-                            solver.Axis.NegativeZ: "Z"
+                            solver.types.Axis.PositiveX: "X",
+                            solver.types.Axis.NegativeX: "X",
+                            solver.types.Axis.PositiveY: "Y",
+                            solver.types.Axis.NegativeY: "Y",
+                            solver.types.Axis.PositiveZ: "Z",
+                            solver.types.Axis.NegativeZ: "Z"
                         }
                         ground_axes = set([axes_name[self.doc.first_axis], axes_name[self.doc.second_axis]])
                         if self.view_grid:
@@ -431,7 +424,7 @@ class PerspyApp():
                                     ui.viewer.guide(A, B)
 
                             else:
-                                logger.warning(f"Cannot draw grid for the selected axes. {solver.Axis(self.doc.first_axis).name}, {solver.Axis(self.doc.second_axis).name}")
+                                logger.warning(f"Cannot draw grid for the selected axes. {solver.types.Axis(self.doc.first_axis).name}, {solver.types.Axis(self.doc.second_axis).name}")
                         
                         if self.view_axes:
                             ui.viewer.axes(length=1.0)
@@ -445,7 +438,7 @@ class PerspyApp():
                             elif ground_axes == {'Y', 'Z'}:
                                 ui.viewer.horizon_line(ground='yz')
                             else:
-                                logger.warning(f"Cannot draw horizon line for the selected axes. {solver.Axis(self.doc.first_axis).name}, {solver.Axis(self.doc.second_axis).name}")
+                                logger.warning(f"Cannot draw horizon line for the selected axes. {solver.types.Axis(self.doc.first_axis).name}, {solver.types.Axis(self.doc.second_axis).name}")
                         
 
                     ui.viewer.end_scene()
@@ -461,56 +454,44 @@ class PerspyApp():
                 imgui.text_wrapped(f"{error_msg}")
                 imgui.pop_style_color()
             else:
-                if results:=self.solver_results:
-                    imgui.separator_text("Camera Parameters")
-                    imgui.input_float4("Viewport", [*self.solver_results['viewport']], format="%.0f", flags=imgui.InputTextFlags_.read_only)
-                    
-
-                    imgui.separator_text("Vanishing Points")
-                    imgui.input_float2("1st VP", [*self.solver_results['first_vanishing_point']]  if self.solver_results.get('first_vanishing_point')  is not None else [0.0, 0.0], flags=imgui.InputTextFlags_.read_only)
-                    imgui.input_float2("2nd VP", [*self.solver_results['second_vanishing_point']] if self.solver_results.get('second_vanishing_point') is not None else [0.0, 0.0], flags=imgui.InputTextFlags_.read_only)
-                    imgui.input_float2("3rd VP", [*self.solver_results['third_vanishing_point']]  if self.solver_results.get('third_vanishing_point')  is not None else [0.0, 0.0], flags=imgui.InputTextFlags_.read_only)
-                    
-                    
-                    # euler = glm.eulerAngles(quat)
-                    # ui.next_attribute("Euler") #todo: set order
-                    # imgui.set_next_item_width(260)
-                    # imgui.input_text("##euler", f"{math.degrees(euler.x):.2f}, {math.degrees(euler.y):.2f}, {math.degrees(euler.z):.2f}" if self.solver_results.transform is not None else "N/A", flags=imgui.InputTextFlags_.read_only)
-
+                if self.view_matrix and self.projection_matrix:
+                    # imgui.separator_text("Camera Parameters")
+                    # imgui.input_float4("Viewport", [*self.solver_results['viewport']], format="%.0f", flags=imgui.InputTextFlags_.read_only)
 
                     imgui.separator_text("Projection")
-                    # P, f, shift = solver.decompose_intrinsics(self.solver_results['viewport'], self.solver_results['projection'])
-                    # imgui.input_float2("Principal (decompose)", [*P], flags=imgui.InputTextFlags_.read_only)
+                    P, f = solver.utils.decompose_intrinsics(solver.types.Rect(0,0,self.doc.content_size.x, self.doc.content_size.y), self.projection_matrix)
+                    imgui.input_float2("Principal", [*P], flags=imgui.InputTextFlags_.read_only)
                     # imgui.input_float2("Shift (decompose)", [*shift], flags=imgui.InputTextFlags_.read_only)
-                    # imgui.input_float("Focal Length (decompose)", f, flags=imgui.InputTextFlags_.read_only)
-
-                    # imgui.input_text("fovy", f"{math.degrees(self.solver_results.fovy):.2f}°")
-                    # imgui.input_text("fovx", f"{math.degrees(self.solver_results.get_fovx()):.2f}°")
+                    fovy = solver.utils.fov_from_focal_length(f, self.doc.content_size.y)
+                    fovx = solver.utils.fov_from_focal_length(f, self.doc.content_size.x)
+                    imgui.input_float("Focal Length", f, flags=imgui.InputTextFlags_.read_only)
+                    imgui.input_text("Field of View (horizontal)", f"{math.degrees(fovy):.2f}°")
+                    imgui.input_text("Field of View (vertical)", f"{math.degrees(fovx):.2f}°")
                     # imgui.input_text("shiftx", f"{self.solver_results.shift_x:.2f}")
                     # imgui.input_text("shifty", f"{self.solver_results.shift_y:.2f}")
 
                     imgui.separator_text("Transform")
-                    # position, quat = solver.decompose_extrinsics(glm.inverse(self.solver_results['view']))
-                    # imgui.input_float3("Position (decompose)", [*position] if self.solver_results['view'] is not None else [0.0, 0.0, 0.0], flags=imgui.InputTextFlags_.read_only)
-                    # imgui.input_float4("Quaternion", [*quat] if self.solver_results['view'] is not None else [0.0, 0.0, 0.0, 0.0], flags=imgui.InputTextFlags_.read_only)
+                    position, quat = solver.utils.decompose_extrinsics(glm.inverse(self.view_matrix))
+                    imgui.input_float3("Position", [*position] if self.view_matrix is not None else [0.0, 0.0, 0.0], flags=imgui.InputTextFlags_.read_only)
+                    imgui.input_float4("Quaternion", [*quat] if self.view_matrix is not None else [0.0, 0.0, 0.0, 0.0], flags=imgui.InputTextFlags_.read_only)
 
-                    combo_width = max([imgui.calc_text_size(text).x for text in solver.EulerOrder._member_names_]) + style.frame_padding.x * 2.0 -10
+                    combo_width = max([imgui.calc_text_size(text).x for text in solver.types.EulerOrder._member_names_]) + style.frame_padding.x * 2.0 -10
                     combo_width+=imgui.get_frame_height() # add room for the dropdown arrow. (TODO: is it square for sure?)
                     imgui.set_next_item_width(imgui.calc_item_width()-combo_width - style.frame_padding.x*2)
-                    view_matrix = self.solver_results['view']
+                    view_matrix = self.view_matrix
                     match self.current_euler_order:
-                        case solver.EulerOrder.XYZ:
-                            euler = utils.extract_euler_XYZ(view_matrix)
-                        case solver.EulerOrder.XZY:
-                            euler = utils.extract_euler_XZY(view_matrix)
-                        case solver.EulerOrder.YXZ:
-                            euler = utils.extract_euler_YXZ(view_matrix)
-                        case solver.EulerOrder.YZX:
-                            euler = utils.extract_euler_YZX(view_matrix)
-                        case solver.EulerOrder.ZXY:
-                            euler = utils.extract_euler_ZXY(view_matrix)
-                        case solver.EulerOrder.ZYX:
-                            euler = utils.extract_euler_ZYX(view_matrix)
+                        case solver.types.EulerOrder.XYZ:
+                            euler = solver.utils.extract_euler_XYZ(view_matrix)
+                        case solver.types.EulerOrder.XZY:
+                            euler = solver.utils.extract_euler_XZY(view_matrix)
+                        case solver.types.EulerOrder.YXZ:
+                            euler = solver.utils.extract_euler_YXZ(view_matrix)
+                        case solver.types.EulerOrder.YZX:
+                            euler = solver.utils.extract_euler_YZX(view_matrix)
+                        case solver.types.EulerOrder.ZXY:
+                            euler = solver.utils.extract_euler_ZXY(view_matrix)
+                        case solver.types.EulerOrder.ZYX:
+                            euler = solver.utils.extract_euler_ZYX(view_matrix)
                             
                     imgui.input_float3("##euler_values", [math.degrees(radians) for radians in euler], flags=imgui.InputTextFlags_.read_only)
                     imgui.set_item_tooltip("Euler angles in degrees (x,y,z).\nNote: Rotation is applied in order order: ZXY (Yaw, Pitch, Roll)")
@@ -518,7 +499,7 @@ class PerspyApp():
                     imgui.same_line()
 
                     imgui.set_next_item_width(combo_width)
-                    _, self.current_euler_order = imgui.combo("euler##euler_order", self.current_euler_order, solver.EulerOrder._member_names_)
+                    _, self.current_euler_order = imgui.combo("euler##euler_order", self.current_euler_order, solver.types.EulerOrder._member_names_)
                     imgui.set_item_tooltip("Select the Euler angle rotation order used for decomposition.")
                 else:
                     imgui.text("No results.")
@@ -553,9 +534,9 @@ class PerspyApp():
 
                 if imgui.begin_menu("Open Template"):
                     templates = {
-                        "One VP (Famous)": solver.SolverMode.OneVP,
-                        "Two VP (Building Corner)": solver.SolverMode.TwoVP,
-                        "Three VP (Cubic Room)": solver.SolverMode.ThreeVP
+                        "One VP (Famous)": solver.types.SolverMode.OneVP,
+                        "Two VP (Building Corner)": solver.types.SolverMode.TwoVP,
+                        "Three VP (Cubic Room)": solver.types.SolverMode.ThreeVP
                     }
                     for template_name, mode in templates.items():
                         if imgui.menu_item_simple(template_name):
@@ -578,42 +559,41 @@ class PerspyApp():
 
                 
 
-                imgui.separator()
+                # imgui.separator()
 
-                if imgui.begin_menu("Export results"):
-                    if imgui.menu_item_simple("JSON"):
-                        self.export(
-                            default_name="perspy_camera_factory.py",
-                            content=json.dumps(self.solver_results.as_dict(), indent=4),
-                            file_type="JSON",
-                            extension=".json"
-                        )
+                # if imgui.begin_menu("Export results"):
+                #     if imgui.menu_item_simple("JSON"):
+                #         self.export(
+                #             default_name="perspy_camera_factory.py",
+                #             content=json.dumps(self.solver_results.as_dict(), indent=4),
+                #             file_type="JSON",
+                #             extension=".json"
+                #         )
 
-                    if imgui.menu_item_simple("blender script"):
-                        self.export(
-                            default_name="perspy_camera_factory.py",
-                            content=self.solver_results.as_blender_script(),
-                            file_type="Blender Python Script",
-                            extension=".py"
-                        )
+                #     if imgui.menu_item_simple("blender script"):
+                #         self.export(
+                #             default_name="perspy_camera_factory.py",
+                #             content=self.solver_results.as_blender_script(),
+                #             file_type="Blender Python Script",
+                #             extension=".py"
+                #         )
 
-                    imgui.end_menu()
+                #     imgui.end_menu()
                 
-                if imgui.begin_menu("Copy results to clipboard"):
-                    if imgui.menu_item_simple("JSON"):
-                        pyperclip.copy(json.dumps(self.solver_results.as_dict(), indent=4))
+                # if imgui.begin_menu("Copy results to clipboard"):
+                #     if imgui.menu_item_simple("JSON"):
+                #         pyperclip.copy(json.dumps(self.solver_results.as_dict(), indent=4))
 
-                    if imgui.menu_item_simple("blender script"):
-                        pyperclip.copy(self.solver_results.as_blender_script())
+                #     if imgui.menu_item_simple("blender script"):
+                #         pyperclip.copy(self.solver_results.as_blender_script())
 
-                    imgui.end_menu()
+                #     imgui.end_menu()
 
-                if imgui.begin_menu("Copy document to clipboard"):
-                    if imgui.menu_item_simple("Python code"):
-                        pyperclip.copy(self.doc.as_python_script())
+                # if imgui.begin_menu("Copy document to clipboard"):
+                #     if imgui.menu_item_simple("Python code"):
+                #         pyperclip.copy(self.doc.as_python_script())
 
-                    imgui.end_menu()
-                
+                #     imgui.end_menu()
                 
                 imgui.separator()
                 if imgui.menu_item_simple(f"Quit", "Ctrl+Q"):
@@ -706,15 +686,15 @@ class PerspyApp():
         if imgui.collapsing_header("Document as Dict", imgui.TreeNodeFlags_.default_open):
             imgui.text_unformatted("TODO. implement doc.to_dict()")
 
-        if imgui.collapsing_header("Results Dictionary", imgui.TreeNodeFlags_.default_open):
-            data = self.solver_results.as_dict()
-            text = pformat(data, indent=2, width=80, compact=False)
-            imgui.text_unformatted(text)
+        # if imgui.collapsing_header("Results Dictionary", imgui.TreeNodeFlags_.default_open):
+        #     data = self.solver_results.as_dict()
+        #     text = pformat(data, indent=2, width=80, compact=False)
+        #     imgui.text_unformatted(text)
 
-        if imgui.collapsing_header("Blender Script", imgui.TreeNodeFlags_.default_open):
-            data = self.results_to_blender_script()
-            text = pformat(data, indent=2, width=80, compact=False)
-            imgui.text_unformatted(text)
+        # if imgui.collapsing_header("Blender Script", imgui.TreeNodeFlags_.default_open):
+        #     data = self.results_to_blender_script()
+        #     text = pformat(data, indent=2, width=80, compact=False)
+        #     imgui.text_unformatted(text)
 
     # Events
     def on_file_drop(self, window, paths):
