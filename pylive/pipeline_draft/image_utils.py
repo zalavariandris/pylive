@@ -73,6 +73,36 @@ def checkerboard(size:Size, square_size:int=32, color:Color=(1.0, 1.0, 1.0, 1.0)
     # return an RGBA image cropped to the requested size
     return board[:height, :width]
 
+def constant(size:Size, color:Color=(1.0, 1.0, 1.0, 1.0)) -> ImageRGBA:
+    """create an RGBA constant color image of given size"""
+    width, height = size
+    img = np.zeros( (height, width, 4), dtype=np.float32 )
+    img[:,:,:] = color
+    return img
+
+def gradient(size:Size, direction:Vec2=(1,0), color_start:Color=(0,0,0,1), color_end:Color=(1,1,1,1)) -> ImageRGBA:
+    """create an RGBA gradient image of given size"""
+    width, height = size
+    dir_x, dir_y = direction
+    length = math.sqrt(dir_x**2 + dir_y**2)
+    if length == 0:
+        raise ValueError("Direction vector cannot be zero.")
+    dir_x /= length
+    dir_y /= length
+
+    img = np.zeros( (height, width, 4), dtype=np.float32 )
+    for y in range(height):
+        for x in range(width):
+            t = (x * dir_x + y * dir_y) / (width * abs(dir_x) + height * abs(dir_y))
+            t = np.clip(t, 0.0, 1.0)
+            img[y,x,:] = [
+                (1-t)*color_start[0] + t*color_end[0],
+                (1-t)*color_start[1] + t*color_end[1],
+                (1-t)*color_start[2] + t*color_end[2],
+                (1-t)*color_start[3] + t*color_end[3],
+            ]
+    return img
+
 # IO
 from pathlib import Path
 def read_image(path:Union[str, Path]) -> ImageRGBA:
@@ -238,6 +268,15 @@ def reformat(img: ImageRGBA, size: Tuple[int,int], interpolation=cv2.INTER_LINEA
 
 #filter
 def add_grain(img: ImageRGBA, variance:float):
+    """Add Gaussian noise (grain) to an RGBA image.
+    
+    Args:
+        img: Input RGBA float32 image
+        variance: Noise variance. Typical range: 0.0001-0.01 (subtle to moderate grain).
+    
+    Returns:
+        RGBA float32 image with added grain
+    """
     assert img.dtype == np.float32
 
     row,col,ch= img.shape
@@ -311,7 +350,7 @@ def encode_jpg(img: ImageRGBA, quality:int=75) -> bytes:
     return buffer.tobytes()
 
 # merge
-def merge_over(A: ImageRGBA, B: ImageRGBA) -> ImageRGBA:
+def merge_over(A: ImageRGBA, B: ImageRGBA, mix:float) -> ImageRGBA:
     """Merge two RGBA float32 images using the 'over' compositing operation.
     
     Composites image A over image B using Porter-Duff 'over' operator.
@@ -323,12 +362,18 @@ def merge_over(A: ImageRGBA, B: ImageRGBA) -> ImageRGBA:
         Foreground image (H x W x 4) RGBA float32 (straight alpha)
     B : ImageRGBA
         Background image (H x W x 4) RGBA float32 (straight alpha)
+    mix : float
+        Blend factor between A and B (0.0 = only B, 1.0 = only A)
     
     Returns:
     --------
     ImageRGBA
         Composited RGBA float32 image (A over B)
     """
+
+    assert isinstance(A, np.ndarray) and A.dtype == np.float32 and A.shape[2] == 4, f"Image A must be an RGBA float32 numpy array. got: {type(A), A.dtype, A.shape}"
+    assert isinstance(B, np.ndarray) and B.dtype == np.float32 and B.shape[2] == 4, f"Image B must be an RGBA float32 numpy array. got: {type(B), B.dtype, B.shape}"
+    assert A.shape == B.shape, "Images A and B must have the same dimensions."
 
     A_alpha = A[:,:,3:4]
     B_alpha = B[:,:,3:4]
@@ -341,6 +386,34 @@ def merge_over(A: ImageRGBA, B: ImageRGBA) -> ImageRGBA:
     
     # Divide by output alpha to convert from premultiplied back to straight alpha
     out_rgb = np.divide(out_rgb, out_alpha, out=np.zeros_like(out_rgb), where=out_alpha > 1e-6)
+    
+    composite = np.dstack([out_rgb, out_alpha])
+    
+    # Apply mix: blend between B (background) and composite
+    return B * (1 - mix) + composite * mix
+
+def merge_multiply(A: ImageRGBA, B: ImageRGBA) -> ImageRGBA:
+    """Merge two RGBA float32 images using the 'multiply' blending mode.
+    
+    Parameters:
+    -----------
+    A : ImageRGBA
+        First image (H x W x 4) RGBA float32 (straight alpha)
+    B : ImageRGBA
+        Second image (H x W x 4) RGBA float32 (straight alpha)
+    
+    Returns:
+    --------
+    ImageRGBA
+        Blended RGBA float32 image (A multiplied by B)
+    """
+    # Multiply RGB channels
+    out_rgb = A[:,:,:3] * B[:,:,:3]
+    
+    # Combine alpha channels using 'over' operation
+    A_alpha = A[:,:,3:4]
+    B_alpha = B[:,:,3:4]
+    out_alpha = A_alpha + B_alpha * (1 - A_alpha)
     
     return np.dstack([out_rgb, out_alpha])
 
