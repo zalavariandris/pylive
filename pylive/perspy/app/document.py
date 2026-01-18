@@ -262,7 +262,8 @@ class PerspyDocument(BaseDocument):
         
         self.first_axis=solver.types.Axis.NegativeX
         self.second_axis=solver.types.Axis.PositiveY
-        self.third_axis=solver.types.Axis.PositiveZ
+        # self.third_axis=solver.types.Axis.PositiveZ
+        self.handedness='right-handed'  # 'right-handed' | 'left-handed'
         self.fov_degrees=240.0 # only for OneVP mode
         self.quad_mode=False # only for TwoVP mode. is this a ui state?
         self.enable_auto_principal_point=True
@@ -433,7 +434,6 @@ class PerspyDocument(BaseDocument):
             self.scene_scale={self.reference_world_size}
             self.first_axis=solver.types.Axis.{solver.types.Axis(self.first_axis).name}
             self.second_axis=solver.types.Axis.{solver.types.Axis(self.second_axis).name}
-            self.third_axis=solver.types.Axis.{solver.types.Axis(self.third_axis).name}
             self.fov_degrees={self.fov_degrees} # only for OneVP mode
             self.quad_mode={self.quad_mode} # only for TwoVP mode. is this a ui state?
             self.enable_auto_principal_point=True

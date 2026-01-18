@@ -222,13 +222,19 @@ class PerspyApp():
                 solver.types.Axis.NegativeZ: "Z-"
             }
             style = imgui.get_style()
-            imgui.set_next_item_width(buttons_width/2-style.frame_padding.x)
-            _, self.doc.first_axis = imgui.combo("##first axis",   self.doc.first_axis, list(axes_short_names.values()))
+            # imgui.set_next_item_width(buttons_width/2-style.frame_padding.x)
+            _, self.doc.first_axis = imgui.combo("first axis",   self.doc.first_axis, list(axes_short_names.values()))
             imgui.set_item_tooltip(f"First axis (ground plane axis 1)")
-            imgui.same_line()
-            imgui.set_next_item_width(buttons_width/2-style.frame_padding.x)
-            _, self.doc.second_axis = imgui.combo("##second axis", self.doc.second_axis, list(axes_short_names.values()))
+
+            # imgui.set_next_item_width(buttons_width/2-style.frame_padding.x)
+            _, self.doc.second_axis = imgui.combo("second axis", self.doc.second_axis, list(axes_short_names.values()))
             imgui.set_item_tooltip(f"Second axis (ground plane axis 2)")
+
+            items = ["right-handed", "left-handed"]
+            self.misc.setdefault('handedness_idx', 0)
+            _, self.misc['handedness_idx'] = imgui.combo("handedness", self.misc['handedness_idx'], items)
+
+
         ui.end_sidebar()
 
         # fullscreen viewer Window
@@ -286,6 +292,7 @@ class PerspyApp():
                         # adjust axes
                         first_axis=self.doc.first_axis,
                         second_axis=self.doc.second_axis,
+                        handedness=items[self.misc['handedness_idx']]
                     )
 
                     # apply solver results to camera
@@ -348,9 +355,10 @@ class PerspyApp():
                         for line in self.doc.second_vanishing_lines:
                             ui.viewer.guide(line[0], line[1], self.get_axis_color(self.doc.second_axis), head='>')
 
-                        _, self.doc.third_vanishing_lines = control_lines("y", self.doc.third_vanishing_lines, color=self.get_axis_color(self.doc.third_axis) )
+                        third_axis = solver.helpers.third_axis(self.doc.first_axis, self.doc.second_axis, handedness=items[self.misc['handedness_idx']])
+                        _, self.doc.third_vanishing_lines = control_lines("y", self.doc.third_vanishing_lines, color=self.get_axis_color(third_axis) )
                         for line in self.doc.third_vanishing_lines:
-                            ui.viewer.guide(line[0], line[1], self.get_axis_color(self.doc.third_axis), head='>')
+                            ui.viewer.guide(line[0], line[1], self.get_axis_color(third_axis), head='>')
 
                 # adjust scale
                 if self.view_matrix and self.projection_matrix:

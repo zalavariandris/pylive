@@ -54,7 +54,8 @@ def execute(pipeline:Iterable[OperatorType], *args, **kwargs)->Any: #TODO: suppo
         # print(f"Executing: {func.__name__} with args={args_evaluated} kwargs={kwargs_evaluated}")
         current_value = func(*args_evaluated, **kwargs_evaluated)
     return current_value
-    
+
+
 if __name__ == "__main__":
     import rich
     from pathlib import Path
