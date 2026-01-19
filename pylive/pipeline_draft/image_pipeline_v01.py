@@ -67,7 +67,7 @@ if __name__ == "__main__":
     rich.print(f"  - {Path.cwd()}")
 
     # model
-    pipeline = Pipeline(
+    image_pipeline = Pipeline(
         utils.read_image,
         path="./assets/IMG_0885.JPG")\
     .append(
@@ -83,7 +83,7 @@ if __name__ == "__main__":
         variance=0.1)
     
     # update
-    result = execute(pipeline)
+    result = execute(image_pipeline)
 
     # view
     import cv2
