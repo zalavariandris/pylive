@@ -107,7 +107,8 @@ def gradient(size:Size, direction:Vec2=(1,0), color_start:Color=(0,0,0,1), color
 from pathlib import Path
 def read_image(path:Union[str, Path]) -> ImageRGBA:
     """Read image from disk as RGBA float32 (0-1)"""
-    assert Path(path).exists(), f"File does not exist: {path}"
+    if not Path(path).exists():
+        raise FileNotFoundError(f"File does not exist: {path}")
 
     img_bgr = cv2.imread(str(path), cv2.IMREAD_UNCHANGED)
     if img_bgr is None:
@@ -350,47 +351,37 @@ def encode_jpg(img: ImageRGBA, quality:int=75) -> bytes:
     return buffer.tobytes()
 
 # merge
-def merge_over(A: ImageRGBA, B: ImageRGBA, mix:float) -> ImageRGBA:
-    """Merge two RGBA float32 images using the 'over' compositing operation.
-    
-    Composites image A over image B using Porter-Duff 'over' operator.
-    Properly handles straight (non-premultiplied) alpha compositing.
-    
-    Parameters:
-    -----------
-    A : ImageRGBA
-        Foreground image (H x W x 4) RGBA float32 (straight alpha)
-    B : ImageRGBA
-        Background image (H x W x 4) RGBA float32 (straight alpha)
-    mix : float
-        Blend factor between A and B (0.0 = only B, 1.0 = only A)
-    
-    Returns:
-    --------
-    ImageRGBA
-        Composited RGBA float32 image (A over B)
-    """
+def merge_over(A: np.ndarray, B: np.ndarray, mix: float) -> np.ndarray:
+    # 1. Determine common dimensions (the intersection)
+    h_overlap = min(A.shape[0], B.shape[0])
+    w_overlap = min(A.shape[1], B.shape[1])
 
-    assert isinstance(A, np.ndarray) and A.dtype == np.float32 and A.shape[2] == 4, f"Image A must be an RGBA float32 numpy array. got: {type(A), A.dtype, A.shape}"
-    assert isinstance(B, np.ndarray) and B.dtype == np.float32 and B.shape[2] == 4, f"Image B must be an RGBA float32 numpy array. got: {type(B), B.dtype, B.shape}"
-    assert A.shape == B.shape, "Images A and B must have the same dimensions."
+    # 2. Create views of the intersection
+    # This prevents broadcasting errors because A_part and B_part will have same H, W
+    A_part = A[:h_overlap, :w_overlap]
+    B_part = B[:h_overlap, :w_overlap]
 
-    A_alpha = A[:,:,3:4]
-    B_alpha = B[:,:,3:4]
+    # --- Your Original Logic starts here, but uses the slices ---
+    A_alpha = A_part[:, :, 3:4]
+    B_alpha = B_part[:, :, 3:4]
     
-    # Composite alpha channel
     out_alpha = A_alpha + B_alpha * (1 - A_alpha)
     
-    # Composite RGB channels with proper alpha blending
-    out_rgb = A[:,:,:3] * A_alpha + B[:,:,:3] * B_alpha * (1 - A_alpha)
-    
-    # Divide by output alpha to convert from premultiplied back to straight alpha
+    out_rgb = A_part[:, :, :3] * A_alpha + B_part[:, :, :3] * B_alpha * (1 - A_alpha)
     out_rgb = np.divide(out_rgb, out_alpha, out=np.zeros_like(out_rgb), where=out_alpha > 1e-6)
     
-    composite = np.dstack([out_rgb, out_alpha])
+    composite = np.concatenate([out_rgb, out_alpha], axis=2)
     
-    # Apply mix: blend between B (background) and composite
-    return B * (1 - mix) + composite * mix
+    # Apply mix to the intersection
+    blended_part = B_part * (1 - mix) + composite * mix
+    # --- End of logic ---
+
+    # 3. Construct the final output
+    # We start with a copy of B so that the areas NOT covered by A remain untouched
+    result = A.copy()
+    result[:h_overlap, :w_overlap] = blended_part
+    
+    return result
 
 def merge_multiply(A: ImageRGBA, B: ImageRGBA) -> ImageRGBA:
     """Merge two RGBA float32 images using the 'multiply' blending mode.

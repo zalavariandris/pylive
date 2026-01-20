@@ -73,7 +73,8 @@ if __name__ == "__main__":
         utils.merge_over,
         B=Pipeline(
             utils.checkerboard, size=(512,512), square_size=8
-        ))\
+        ), 
+        mix=0.5)\
     .append(
         utils.add_grain, 
         variance=0.1)
