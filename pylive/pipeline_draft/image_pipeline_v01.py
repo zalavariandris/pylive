@@ -25,33 +25,38 @@ class Pipeline:
     def __getitem__(self, index: slice|int)->OperatorType|List[OperatorType]:
         return self._operators[index]
 
-    def __call__(self, operator:Callable, *args, **kwds):
-        return self.append(operator, *args, **kwds)
-    
-def execute(pipeline:Iterable[OperatorType], *args, **kwargs)->Any: #TODO: support  arguments to the first operator:
+
+class Input:
+    def __init__(self, name:str):
+        self._name = name
+
+    @property
+    def name(self)->str:
+        return self._name
+
+
+def execute(pipeline:Iterable[OperatorType], *opargs, **op_kwargs)->Any: #TODO: support  arguments to the first operator:
     pipeline_iterator = iter(pipeline)
     # initial operator
     
     func, op_args, op_kwargs = next(pipeline_iterator)
-    # print(f"Executing: {func.__name__} with args={op_args} kwargs={op_kwargs}")
     current_value = func(*op_args, **op_kwargs)
 
     # subsequent operators
-    for func, args, kwargs in pipeline_iterator:
-        args = (current_value, ) + args
+    for func, opargs, op_kwargs in pipeline_iterator:
+        opargs = (current_value, ) + opargs
         args_evaluated = []
-        for arg in args:
+        for arg in opargs:
             if isinstance(arg, Pipeline):
                 arg = execute(arg)
             args_evaluated.append(arg)
         
         kwargs_evaluated = {}
-        for key, value in kwargs.items():
+        for key, value in op_kwargs.items():
             if isinstance(value, Pipeline):
                 value = execute(value)
             kwargs_evaluated[key] = value
             
-        # print(f"Executing: {func.__name__} with args={args_evaluated} kwargs={kwargs_evaluated}")
         current_value = func(*args_evaluated, **kwargs_evaluated)
     return current_value
 
@@ -63,7 +68,7 @@ if __name__ == "__main__":
     rich.print(f"  - {Path.cwd()}")
 
     # model
-    pipeline = Pipeline(
+    image_pipeline = Pipeline(
         utils.read_image,
         path="./assets/IMG_0885.JPG")\
     .append(
@@ -80,7 +85,7 @@ if __name__ == "__main__":
         variance=0.1)
     
     # update
-    result = execute(pipeline)
+    result = execute(image_pipeline)
 
     # view
     import cv2
