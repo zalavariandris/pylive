@@ -175,27 +175,31 @@ def crop_to_rect(img: ImageRGBA, x1:int, x2:int, y1:int, y2:int) -> ImageRGBA:
 
     return img[y1:y2, x1:x2]
 
-def transform(img: ImageRGBA, translate:Vec2=(0,0), scale:Vec2=(1,1), pivot:Vec2=(0.5, 0.5)):
-    # calc scale and position
+def transform(img: ImageRGBA, translate: Vec2=(0,0), scale: Vec2=(1,1), pivot: Vec2=(0.5, 0.5)):
+    # 1. Calculate dimensions based on scale
     width = img.shape[1] * scale[0]
     height = img.shape[0] * scale[1]
 
-    x = (img.shape[1] - width) * pivot[0]
-    y = (img.shape[0] - height) * pivot[1]
+    # 2. Calculate pivot-based offset AND add translation
+    # The pivot logic finds the "anchor," and translate moves it from there.
+    x = (img.shape[1] - width) * pivot[0] + translate[0]
+    y = (img.shape[0] - height) * pivot[1] + translate[1]
 
-    # if scaleing is smaller then machine precision the simple will it with black (honestly I dont know why we need to use float16 instead of float32)
-    e =  np.finfo(np.float16).eps * 1
-    if (scale[0] <= e or scale[1]<=e):
-        img[:,:,:] = [0,0,0,0]
+    # 3. Precision Check
+    # Using float32 epsilon is generally safer for CV2 operations
+    e = np.finfo(np.float32).eps
+    if (scale[0] <= e or scale[1] <= e):
+        img.fill(0) # More efficient way to clear the image
         return img
 
-    # calc transformation matrix
+    # 4. Construct the Affine Matrix
+    # M = [ [sx, 0, tx], [0, sy, ty] ]
     M = np.array([
-        [scale[0],0, x],
-        [0,scale[1], y]
-    ]).astype(np.float32)
+        [scale[0], 0, x],
+        [0, scale[1], y]
+    ], dtype=np.float32)
 
-    # warp
+    # 5. Warp
     return cv2.warpAffine(img, M, (img.shape[1], img.shape[0]))
     
 def card3D(img: ImageRGBA, translate:Vec3=(0,0,0), rotate:Vec3=(0,0,0), scale:Vec3=(1,1,1), camera=Camera(fov=math.radians(90), eye=(0,0,0), target=(0,0,1))) -> ImageRGBA:
@@ -490,7 +494,7 @@ def get_sequence_frame_range(image_sequence_pattern: str) -> Tuple[int, int]:
     
     
     if not frames:
-        raise Exception(f"No image files found matching pattern: '{image_sequence_pattern}'")
+        raise ValueError(f"No image files found matching pattern: '{image_sequence_pattern}'")
     
     frame_numbers = sorted(frames.keys())
     first_frame = frame_numbers[0]
