@@ -142,3 +142,57 @@ read_node = (
       MergeOver
 )
 ```
+
+### Using Lambda
+__simple pythonic__ but how to do the cache. what about a with statement?
+```python
+def read(sequence: str, frame: int, roi: Tuple[float, float, float, float]):
+    return None
+
+def blur(image: np.ndarray, radius: float) -> np.ndarray:
+    return image
+
+def merg_over(A: np.ndarray, B: np.ndarray, mix: float) -> np.ndarray:
+    return A
+
+def identity(value):
+    return value
+
+with Graph() as graph:
+    offset_node = lambda frame, offset: frame + offset
+    read_node =   lambda frame, roi: read(sequence=r"assets\SMPTE_Color_Bars_animation\SMPTE_Color_Bars_animation_%05d.png", frame=frame, roi=roi)
+    blur_node =   lambda frame, roi: blur(image=read_node(frame, roi), radius=5.0)
+    merge_node =  lambda frame, roi: merg_over(A=blur_node(frame, roi), B=read_node(frame+10, roi), mix=0.5)
+    # execute
+    result = merge_node(10, (0,0,512,512))
+```
+
+alternative, that might able to use cache on request?
+
+```python
+class Graph():
+    def __init__(self, *inputs, **kwargs):
+        ...
+
+    def node(self, fn:Callable):
+        ...
+
+    def __call__(self, ...):
+        ...
+
+graph = Graph(
+    sequence_path=r"assets\SMPTE_Color_Bars_animation\SMPTE_Color_Bars_animation_%05d.png", 
+    offset=10
+
+)
+with graph:
+    offset_node = graph.node(lambda: frame, offset: frame + offset)
+    read_node =   graph.node(lambda: frame, roi: read(sequence=graph.input['sequence_path'], frame=frame, roi=roi))
+    blur_node =   graph.node(lambda: frame, roi: blur(image=read_node(frame, roi), radius=5.0))
+    merge_node =  graph.node(lambda: frame, roi: merg_over(A=blur_node(frame, roi), B=read_node(frame+graph.input['offset'], roi), mix=0.5))
+
+    graph.output = merge_node
+
+# execute
+result = graph.execute(10, (0,0,512,512))
+```

@@ -1,3 +1,4 @@
+import functools
 from importlib.resources import path
 import time
 from typing import Generic, TypeVar, Tuple, List
@@ -8,6 +9,13 @@ import imageio
 
 RequestType = TypeVar('RequestType')
 OutputType = TypeVar('OutputType')
+
+class Node():
+    ...
+
+
+
+
 
 import copy
 
