@@ -186,11 +186,9 @@ graph = Graph(
 
 )
 with graph:
-    offset_node = graph.node(lambda: frame, offset: frame + offset)
     read_node =   graph.node(lambda: frame, roi: read(sequence=graph.input['sequence_path'], frame=frame, roi=roi))
     blur_node =   graph.node(lambda: frame, roi: blur(image=read_node(frame, roi), radius=5.0))
     merge_node =  graph.node(lambda: frame, roi: merg_over(A=blur_node(frame, roi), B=read_node(frame+graph.input['offset'], roi), mix=0.5))
-
     graph.output = merge_node
 
 # execute
