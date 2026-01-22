@@ -1,5 +1,3 @@
-import functools
-from importlib.resources import path
 import time
 from typing import Generic, TypeVar, Tuple, List
 import numpy as np
@@ -158,6 +156,7 @@ class Read(Node[_VideoFrameRequest, ImageRGBA]):
             case _:
                 raise ValueError(f"Unsupported number of channels: {img.shape[-1]}")
 
+
 class Cache(Node[_VideoFrameRequest, ImageRGBA]):
     def __init__(self, source:Node[_VideoFrameRequest, ImageRGBA]):
         super().__init__()
@@ -174,6 +173,7 @@ class Cache(Node[_VideoFrameRequest, ImageRGBA]):
             self.cache[key] = self.source.process(request)
         return self.cache[key]
 
+
 class TimeOffset(Node[_VideoFrameRequest, ImageRGBA]):
     def __init__(self, source:Node[_VideoFrameRequest, ImageRGBA], offset:int):
         super().__init__()
@@ -185,7 +185,8 @@ class TimeOffset(Node[_VideoFrameRequest, ImageRGBA]):
 
     def _execute(self, request:_VideoFrameRequest)->ImageRGBA:
         return self.source.process(request.replace(frame=request.frame + self.offset))
-    
+
+
 class Transform(Node[_VideoFrameRequest, ImageRGBA]):
     def __init__(self, source:Node[_VideoFrameRequest, ImageRGBA], translate:Tuple[float, float], scale:Tuple[float, float]=(1.0,1.0), pivot:Tuple[float, float]=(0.5,0.5)):
         self.source = source
