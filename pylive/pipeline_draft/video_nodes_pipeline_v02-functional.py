@@ -110,23 +110,14 @@ if __name__ == "__main__":
     import cv2
 
     graph = VideoGraph()
-    read_node =       graph.node(read, r"assets\SMPTE_Color_Bars_animation\SMPTE_Color_Bars_animation_%05d.png")
-    transform_node =  graph.node(transform, read_node, translate=(50,50))
+    read_node =            graph.node(read, r"assets\SMPTE_Color_Bars_animation\SMPTE_Color_Bars_animation_%05d.png")
+    transform_node =       graph.node(transform, read_node, translate=(50,50))
     merge_over_transform = graph.node(merge, transform_node, read_node, mix=0.5)
-    offset_node =     graph.node(time_offset, read_node, 5)
-    merge_over_node = graph.node(merge, merge_over_transform, offset_node, mix=0.5)
-    cache_node =      graph.node(cache, merge_over_node)
+    offset_node =          graph.node(time_offset, read_node, 5)
+    merge_over_node =      graph.node(merge, merge_over_transform, offset_node, mix=0.5)
+    cache_node =           graph.node(cache, merge_over_node)
     graph.output(cache_node)
 
-
-
-    # read_node = read(r"assets\SMPTE_Color_Bars_animation\SMPTE_Color_Bars_animation_%05d.png")
-    # transform_node = transform(read_node, translate=(50,50))
-    # offset_node = time_offset(read_node, 5)
-    # merge_node = merge(transform_node, offset_node, mix=0.5)
-    # OUTPUT_NODE = merge_node
-    
-    # result_cache_node = Cache(merge_over_node)
 
     # Assume 100 frames for demo, adjust as needed
     NUM_FRAMES = 24
