@@ -26,8 +26,13 @@ Size = Tuple[int, int]
 Rect = Tuple[int, int, int, int]
 
 # Image type aliases
+from typing import Annotated
+import numpy as np
+import numpy.typing as npt
+
+# Semantic type hint
+ImageRGBA = Annotated[npt.NDArray[np.float32], "(H, W, 4)"] # consider using jaxtyping library for runtime exceptions
 Color = Tuple[float, float, float, float]  # RGBA float32 (0-1)
-ImageRGBA = np.ndarray  # HxWx4 float32 (RGBA with values 0-1)
 Image_sRGB = np.ndarray   # HxWx3 RG uint8
 
 # dataclasses
@@ -175,7 +180,7 @@ def crop_to_rect(img: ImageRGBA, x1:int, x2:int, y1:int, y2:int) -> ImageRGBA:
 
     return img[y1:y2, x1:x2]
 
-def transform(img: ImageRGBA, translate: Vec2=(0,0), scale: Vec2=(1,1), pivot: Vec2=(0.5, 0.5)):
+def transform(img: ImageRGBA, translate: Vec2=(0,0), scale: Vec2=(1,1), pivot: Vec2=(0.5, 0.5))->ImageRGBA:
     # 1. Calculate dimensions based on scale
     width = img.shape[1] * scale[0]
     height = img.shape[0] * scale[1]

@@ -1,58 +1,121 @@
-from typing import Callable
+from typing import Callable, Tuple
 import numpy as np
 import imageio
 import time
 import image_utils
 
-VideoType = Callable[[int], np.ndarray]
 
 
-def read(path:str)->VideoType:
-    def func(frame:int):
+type Time = int
+VideoNodeType = Callable[[Time], image_utils.ImageRGBA]
+
+
+def read(path:str)->VideoNodeType:
+    def func(frame:Time)->np.ndarray:
+        print("reading frame from disc:", frame)
         try:
-            return imageio.v3.imread(path%frame)
+            img = image_utils.read_image(path%frame)
+            assert img.shape[2]==4, f"Input image must be RGBA, got shape: {img.shape}"
+            return img
         except FileNotFoundError:
-            return image_utils.constant(size=(720,576), color=(0,1,1,1))
+            return image_utils.constant(size=(720,512), color=(0,1,1,1))
     return func
 
-def transform(video:VideoType, translate)->VideoType:
-    def func(frame:int):
-        img = video(frame)
-        return image_utils.transform(img, translate)
+def transform(video:VideoNodeType, translate:Tuple[int, int])->VideoNodeType:
+    def func(frame:Time)->np.ndarray:
+        source = video(frame)
+        assert source.shape[2]==4, f"Input image must be RGBA, got shape: {source.shape}"
+        result = image_utils.transform(source, translate)
+        return result
     return func
 
-def time_offset(A:VideoType, offset:int)->VideoType:
-    def func(frame):
+def time_offset(A:VideoNodeType, offset:Time)->VideoNodeType:
+    def func(frame:Time)->np.ndarray:
         return A(frame+offset)
 
     return func
 
-def merge(A:VideoType, B:VideoType, mix:float)->VideoType:
-    def func(frame:int):
-        return A(frame)+B(frame)
+def merge(fg:VideoNodeType, bg:VideoNodeType, mix:float)->VideoNodeType:
+    def func(frame:Time)->np.ndarray:
+        # return fg(frame) * (1 - mix) + bg(frame) * mix
+        fg_img = fg(frame)
+        assert fg_img.shape[2]==4, f"Input image must be RGBA, got shape: {fg_img.shape}"
+        bg_img = bg(frame)
+        assert bg_img.shape[2]==4, f"Input image must be RGBA, got shape: {bg_img.shape}"
+        A, a = np.split(fg_img, [3], axis=-1)
+        B, b = np.split(bg_img, [3], axis=-1)
+        rgb_result = A*mix + B * (1 - a*mix)
+        result_rgba = np.concatenate([rgb_result, a], axis=-1)
+        assert result_rgba.shape[2]==4, f"Input image must be RGBA, got shape: {result_rgba.shape}"
+        return result_rgba
     return func
 
-def constant(color)->VideoType:
-    def func(frame:int):
-        return image_utils.constant(size=(720,576), color=color)
+def constant(color:Tuple[float, float, float, float])->VideoNodeType:
+    def func(frame:Time)->np.ndarray:
+        result = image_utils.constant(size=(720,512), color=color)
+        assert result.shape[2]==4, f"Input image must be RGBA, got shape: {result.shape}"
+        return result
     return func
 
-# class Operator:       
-#     def __init__(self, ...):
-#         ...
+class VideoOperator:       
+    def __init__(self, *args, **kwargs):
+        ...
 
-#     def __call__(self, frame):
-#         ...
+    def __call__(self, frame:Time)->np.ndarray:
+        ...
 
-def execute(video:VideoType, frame:int)->np.ndarray:
-    return video(frame)
+class VideoGraph(VideoOperator):
+    def __init__(self):
+        # self._nodes = []
+        self._output_node: VideoNodeType|None = None
+        self._cache = dict()
+
+    def node(self, factory, *factory_args, **factory_kwargs)->VideoNodeType:
+        # 1. Configuration Phase (happens once at graph build)
+        node = factory(*factory_args, **factory_kwargs)
+
+        # 2. Execution Phase (happens many times during __call__)
+        def cached_node(*request_args, **request_kwargs)->np.ndarray:
+            # We assume request_args are simple types (int, float, str) TODO: valiadate this. make a hashable key
+            key = (node, request_args, tuple(sorted(request_kwargs.items())))
+            if key not in self._cache:
+                self._cache[key] = node(*request_args, **request_kwargs)
+            return self._cache[key]
+        
+        # return
+        return cached_node
+    
+    def output(self, node:VideoNodeType):
+        self._output_node = node
+
+    def __call__(self, frame:Time)->np.ndarray:
+        print("Graph executing frame:", frame)
+        if self._output_node is None:
+            raise ValueError("Output node is not set.")
+        self._cache.clear()
+        return self._output_node(frame)
+    
+
 
 if __name__ == "__main__":
     import cv2
     import cv2
-    read_node = read(r"assets\SMPTE_Color_Bars_animation\SMPTE_Color_Bars_animation_%05d.png")
-    offset_node = time_offset(read_node, 5)
-    OUTPUT_NODE = offset_node
+
+    graph = VideoGraph()
+    read_node =       graph.node(read, r"assets\SMPTE_Color_Bars_animation\SMPTE_Color_Bars_animation_%05d.png")
+    transform_node =  graph.node(transform, read_node, translate=(50,50))
+    merge_over_transform = graph.node(merge, transform_node, read_node, mix=0.5)
+    offset_node =     graph.node(time_offset, read_node, 5)
+    merge_over_node = graph.node(merge, merge_over_transform, offset_node, mix=0.5)
+    graph.output(merge_over_node)
+
+
+
+    # read_node = read(r"assets\SMPTE_Color_Bars_animation\SMPTE_Color_Bars_animation_%05d.png")
+    # transform_node = transform(read_node, translate=(50,50))
+    # offset_node = time_offset(read_node, 5)
+    # merge_node = merge(transform_node, offset_node, mix=0.5)
+    # OUTPUT_NODE = merge_node
     
     # result_cache_node = Cache(merge_over_node)
 
@@ -64,7 +127,7 @@ if __name__ == "__main__":
     def show_frame(frame_idx):
         # frame_request = _VideoFrameRequest(frame=frame_idx, roi=None)
         # img = OUTPUT_NODE.process(frame_request)
-        img = execute(OUTPUT_NODE, frame_idx)
+        img = graph(frame_idx)
         cv2.imshow(window_name, img)
         print(f"Showing frame: {frame_idx}")
 
