@@ -35,6 +35,14 @@ def time_offset(A:VideoNodeType, offset:Time)->VideoNodeType:
 
     return func
 
+def cache(video:VideoNodeType)->VideoNodeType:
+    _cache = dict()
+    def func(frame:Time)->np.ndarray:
+        if frame not in _cache:
+            _cache[frame] = video(frame)
+        return _cache[frame]
+    return func
+
 def merge(fg:VideoNodeType, bg:VideoNodeType, mix:float)->VideoNodeType:
     def func(frame:Time)->np.ndarray:
         # return fg(frame) * (1 - mix) + bg(frame) * mix
@@ -107,7 +115,8 @@ if __name__ == "__main__":
     merge_over_transform = graph.node(merge, transform_node, read_node, mix=0.5)
     offset_node =     graph.node(time_offset, read_node, 5)
     merge_over_node = graph.node(merge, merge_over_transform, offset_node, mix=0.5)
-    graph.output(merge_over_node)
+    cache_node =      graph.node(cache, merge_over_node)
+    graph.output(cache_node)
 
 
 
