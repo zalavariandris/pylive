@@ -4,14 +4,15 @@ import imageio
 import time
 import image_utils
 
+from image_utils import ImageRGBA
 
-
-type Time = int
+Time = int
 VideoNodeType = Callable[[Time], image_utils.ImageRGBA]
 
+from functools import lru_cache, cache
 
-def read(path:str)->VideoNodeType:
-    def func(frame:Time)->np.ndarray:
+def Read(path:str)->VideoNodeType:
+    def read(frame:Time)->np.ndarray:
         print("reading frame from disc:", frame)
         try:
             img = image_utils.read_image(path%frame)
@@ -19,32 +20,53 @@ def read(path:str)->VideoNodeType:
             return img
         except FileNotFoundError:
             return image_utils.constant(size=(720,512), color=(0,1,1,1))
-    return func
+    return read
 
-def transform(video:VideoNodeType, translate:Tuple[int, int])->VideoNodeType:
-    def func(frame:Time)->np.ndarray:
+def Transform(video:VideoNodeType, translate:Tuple[int, int])->VideoNodeType:
+    def transform(frame:Time)->np.ndarray:
         source = video(frame)
         assert source.shape[2]==4, f"Input image must be RGBA, got shape: {source.shape}"
         result = image_utils.transform(source, translate)
         return result
-    return func
+    return transform
 
-def time_offset(A:VideoNodeType, offset:Time)->VideoNodeType:
-    def func(frame:Time)->np.ndarray:
+def TimeOffset(A:VideoNodeType, offset:Time)->VideoNodeType:
+    def time_offset(frame:Time)->np.ndarray:
         return A(frame+offset)
 
-    return func
+    return time_offset
 
-def cache(video:VideoNodeType)->VideoNodeType:
+def Cache(video:VideoNodeType)->VideoNodeType:
     _cache = dict()
-    def func(frame:Time)->np.ndarray:
+    def cache(frame:Time)->np.ndarray:
         if frame not in _cache:
             _cache[frame] = video(frame)
         return _cache[frame]
-    return func
+    return cache
 
-def merge(fg:VideoNodeType, bg:VideoNodeType, mix:float)->VideoNodeType:
-    def func(frame:Time)->np.ndarray:
+import os
+def DiskCache(video: VideoNodeType, cache_dir: str = ".cache") -> VideoNodeType:
+    if not os.path.exists(cache_dir):
+        os.makedirs(cache_dir)
+
+    def disk_cache(frame: Time) -> ImageRGBA:
+        # Generate a unique filename based on the frame number
+        cache_path = os.path.join(cache_dir, f"frame_{frame:06d}.npy")
+        
+        if os.path.exists(cache_path):
+            return np.load(cache_path)
+        
+        # Pull data from upstream if not cached
+        img = video(frame)
+        
+        # Save for next time
+        np.save(cache_path, img)
+        return img
+        
+    return disk_cache
+
+def Merge(fg:VideoNodeType, bg:VideoNodeType, mix:float)->VideoNodeType:
+    def merge(frame:Time)->np.ndarray:
         # return fg(frame) * (1 - mix) + bg(frame) * mix
         fg_img = fg(frame)
         assert fg_img.shape[2]==4, f"Input image must be RGBA, got shape: {fg_img.shape}"
@@ -56,14 +78,14 @@ def merge(fg:VideoNodeType, bg:VideoNodeType, mix:float)->VideoNodeType:
         result_rgba = np.concatenate([rgb_result, a], axis=-1)
         assert result_rgba.shape[2]==4, f"Input image must be RGBA, got shape: {result_rgba.shape}"
         return result_rgba
-    return func
+    return merge
 
-def constant(color:Tuple[float, float, float, float])->VideoNodeType:
-    def func(frame:Time)->np.ndarray:
+def Constant(color:Tuple[float, float, float, float])->VideoNodeType:
+    def constant(frame:Time)->np.ndarray:
         result = image_utils.constant(size=(720,512), color=color)
         assert result.shape[2]==4, f"Input image must be RGBA, got shape: {result.shape}"
         return result
-    return func
+    return constant
 
 class VideoOperator:       
     def __init__(self, *args, **kwargs):
@@ -91,7 +113,7 @@ class VideoGraph(VideoOperator):
             return self._cache[key]
         
         # return
-        return cached_node
+        return node
     
     def output(self, node:VideoNodeType):
         self._output_node = node
@@ -110,13 +132,13 @@ if __name__ == "__main__":
     import cv2
 
     graph = VideoGraph()
-    read_node =            graph.node(read, r"assets\SMPTE_Color_Bars_animation\SMPTE_Color_Bars_animation_%05d.png")
-    transform_node =       graph.node(transform, read_node, translate=(50,50))
-    merge_over_transform = graph.node(merge, transform_node, read_node, mix=0.5)
-    offset_node =          graph.node(time_offset, read_node, 5)
-    merge_over_node =      graph.node(merge, merge_over_transform, offset_node, mix=0.5)
-    cache_node =           graph.node(cache, merge_over_node)
-    graph.output(cache_node)
+    read_node =            graph.node(Read, r"assets\SMPTE_Color_Bars_animation\SMPTE_Color_Bars_animation_%05d.png")
+    transform_node =       graph.node(Transform, read_node, translate=(50,50))
+    merge_over_transform = graph.node(Merge, transform_node, read_node, mix=0.5)
+    offset_node =          graph.node(TimeOffset, read_node, 5)
+    merge_over_node =      graph.node(Merge, merge_over_transform, offset_node, mix=0.5)
+    # cache_node =           graph.node(Cache, merge_over_node)
+    graph.output(merge_over_node)
 
 
     # Assume 100 frames for demo, adjust as needed
