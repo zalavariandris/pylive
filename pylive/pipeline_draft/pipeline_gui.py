@@ -50,8 +50,6 @@ class Viewer(Video):
     def __call__(self, frame: Time) -> np.ndarray:
         # Placeholder implementation
         return self.source(frame)
-    
-
 
 import inspect
 links = []
@@ -97,6 +95,8 @@ def gui():
         imgui.text('out')
         ed.end_pin()
         ed.end_node()
+
+
 
     # # Read
     # ed.begin_node(ed.NodeId(1))
@@ -170,9 +170,9 @@ def gui():
         ed.end_delete()
     ed.end()
 
-    imgui.begin_child()
-    imgui.image(...)
-    imgui.end_child()
+    imgui.begin("Viewer")
+    imgui.text("[Viewer]")
+    imgui.end()
 
 if __name__ == "__main__":
     immapp.run(gui, with_node_editor=True)
