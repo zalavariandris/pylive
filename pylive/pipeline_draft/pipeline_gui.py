@@ -72,7 +72,7 @@ class Viewer(Video):
         return self.source(frame)
 
 
-availabe_factories = [
+available_factories = [
     Read,
     Transform,
     Merge,
@@ -176,6 +176,19 @@ def string_to_int64(s: str) -> int:
 
 def show_graph(state:State):
     imgui.begin("Pipeline Graph")
+    style = ed.get_style()
+    # Adjust how "curvy" the Bezier lines are
+    style.link_strength = 100.0  # Higher = more curved, Lower = straighter
+    # Adjust the thickness of the selection highlight ring
+    style.source_direction = imgui.ImVec2(0.0, 1.0)
+    style.target_direction = imgui.ImVec2(0.0, -1.0)
+
+    # style.pin_arrow_size = 10.0
+    style.pin_radius = 0.0           #left top  right bottom
+    style.node_padding = imgui.ImVec4(10.0, 5.0, 10.0, -0.0)
+    # style.pin_arrow_width = 10.0
+
+
     ed.begin("Node Editor")
 
 
@@ -187,48 +200,75 @@ def show_graph(state:State):
         node_mapping[string_to_int64(n)] = n
         ed.begin_node(ed.NodeId(string_to_int64(n)))
         factory = state.graph.nodes[n]['factory']
-        imgui.text(f"{n}")
-        imgui.same_line()
-        imgui.text(f"({state.graph.nodes[n]['factory'].__name__})")
+
 
         # imgui.same_line()
 
-        imgui.begin_group()
         sig = inspect.signature(factory.__init__)
         for param_name, param in sig.parameters.items():
             if param_name == 'self':
                 continue
 
             if param.annotation == Video:
+                        
+                ed.push_style_var(ed.StyleVar.pin_arrow_size, 10.0)
+                ed.push_style_var(ed.StyleVar.pin_arrow_width, 10.0)
                 ed.begin_pin(ed.PinId(string_to_int64(f"{n}-{param_name}")), ed.PinKind.input)
-                ed.pin_pivot_alignment(imgui.ImVec2(0.0, 0.5))
+                ed.pin_pivot_alignment(imgui.ImVec2(0.5, 0.0))
                 imgui.text(param_name)
                 ed.end_pin()
+                ed.pop_style_var(2)
                 inlet_mapping[string_to_int64(f"{n}-{param_name}")] = (n, param_name)
+                imgui.same_line()
 
-        imgui.end_group()
-
+        imgui.new_line()
+        imgui.text(f"{n}")
         imgui.same_line()
-        imgui.dummy(imgui.ImVec2(20, 1)) # Horizontal gap between In and Out
-        imgui.same_line()
+        imgui.text(f"({state.graph.nodes[n]['factory'].__name__})")
 
-        imgui.begin_group()
+
         ed.begin_pin(ed.PinId(string_to_int64(f"{n}->out")), ed.PinKind.output)
         outlet_mapping[string_to_int64(f"{n}->out")] = (n, "out")
-        ed.pin_pivot_alignment(imgui.ImVec2(1.0, 0.5))
-        imgui.text('out')
+        ed.pin_pivot_alignment(imgui.ImVec2(0.5, 1.0))
+
+        pos = imgui.get_cursor_screen_pos()
+        r = 5
+        imgui.get_window_draw_list().add_circle_filled(pos+imgui.ImVec2(r, r), r-1, imgui.color_convert_float4_to_u32(imgui.ImVec4(1, 1, 1, 1)))
+        imgui.dummy(imgui.ImVec2(r*2, r*2))
         ed.end_pin()
-        imgui.end_group()
 
         ed.end_node()
 
     # --- Show Edges ---
+    link_id_to_edge = {}
     for n1, n2, key, data in state.graph.edges(keys=True, data=True):
         outlet, inlet = key
         from_pin = ed.PinId(string_to_int64(f"{n1}->{outlet}"))
         to_pin =   ed.PinId(string_to_int64(f"{n2}-{inlet}"))
         link_id =  ed.LinkId(string_to_int64(f"{n1}->{n2}:{outlet}->{inlet}"))
-        ed.link(link_id, from_pin, to_pin)
+        link_id_to_edge[link_id.id()] = (n1, n2, key)
+        # Highlight selected links
+        selected_links = [l.id() for l in ed.get_selected_links()]
+        if link_id.id() in selected_links:
+            ed.link(link_id, from_pin, to_pin, color=(1.0, 1.0, 1.0, 1.0), thickness=3.0)
+        else:
+            ed.link(link_id, from_pin, to_pin)
+
+    # --- Link Context Menu for Deletion ---
+    # ed.suspend()
+    # if ed.show_link_context_menu():
+    #     imgui.open_popup("link_context_menu")
+    # if imgui.begin_popup("link_context_menu"):
+    #     clicked, _ = imgui.menu_item("Delete Link", '', False, True)
+    #     if clicked:
+    #         for link in ed.get_selected_links():
+    #             edge = link_id_to_edge.get(link.id())
+    #             if edge:
+    #                 n1, n2, key = edge
+    #                 if state.graph.has_edge(n1, n2, key=key):
+    #                     state.graph.remove_edge(n1, n2, key=key)
+    #     imgui.end_popup()
+    # ed.resume()
 
     # --- Create links ---
     if ed.begin_create():
@@ -256,21 +296,12 @@ def show_graph(state:State):
 
         ed.end_create()
 
-    # # --- Delete links ---
-    # if ed.begin_delete():
-    #     link_id = ed.LinkId()
-    #     while ed.query_deleted_link(link_id):
-    #         ed.accept_deleted_item()
-    #         links[:] = [l for l in links if l[0] != link_id]
-    #     ed.end_delete()
-
-    # --- Interaction & Context Menu ---
-
 
     # --- Update Selection ---
     state.selection = [node_mapping[node_id.id()] for node_id in ed.get_selected_nodes() if node_id.id() in node_mapping]
     state.current = state.selection[-1] if len(state.selection) > 0 else None
 
+    # --- Interaction & Context Menu ---
     # Check for right-click on background
     ed.suspend()
     if ed.show_background_context_menu():
@@ -281,22 +312,27 @@ def show_graph(state:State):
     if popup_open:
         # Example: Adding a node based on a specific factory
         if imgui.begin_menu("Add Node"):
-            for factory in availabe_factories:
+            for factory in available_factories:
                 selected = False
                 clicked, selected = imgui.menu_item(f"{factory.__name__}", '', selected, True)
                 if clicked:
-                    new_id = unique.make_unique_name(factory.__name__, names=state.graph.nodes)
+                    new_id = unique.make_unique_name(factory.__name__.lower(), names=state.graph.nodes)
                     # Logic to update your backend graph:
                     state.graph.add_node(new_id, factory=factory)
             imgui.end_menu()
         clicked, selected = imgui.menu_item(f"Delete", '', False, True)
         if clicked:
+            for link in ed.get_selected_links():
+                edge = link_id_to_edge.get(link.id())
+                if edge:
+                    n1, n2, key = edge
+                    if state.graph.has_edge(n1, n2, key=key):
+                        state.graph.remove_edge(n1, n2, key=key)
             for node_name in state.selection:
                 state.graph.remove_node(node_name)
                 state.selection.remove(node_name)
                 if state.current == node_name:
                     state.current = None
-                    
         imgui.end_popup()
     ed.resume()
 
