@@ -72,6 +72,13 @@ class Viewer(Video):
         return self.source(frame)
 
 
+availabe_factories = [
+    Read,
+    Transform,
+    Merge,
+    Cache,
+    Viewer,
+]
 
 # # create_pipeline
 # read_node = Read(r"./assets/SMPTE_Color_Bars_animation/SMPTE_Color_Bars_animation_%05d.png")
@@ -91,7 +98,7 @@ class Data:
 from functools import lru_cache
 
 @lru_cache(maxsize=1) #TODO: this is a temporary fix to speed up the bake process during GUI interaction, but probably this si exaclt what we want, in a different place.
-def bake(engine_graph: nx.MultiDiGraph, target_node: str) -> Callable:
+def bake(engine_graph: nx.MultiDiGraph, target_node: str) -> Callable | None:
     """Realize the graph into an actual callable Video pipeline for a specific node."""
     
     # 1. Get all nodes required for the target (ancestors + the node itself)
@@ -99,7 +106,7 @@ def bake(engine_graph: nx.MultiDiGraph, target_node: str) -> Callable:
     required_nodes.add(target_node)
     
     # 2. Create a subgraph to ensure we only iterate over necessary nodes
-    subgraph= cast(nx.MultiDiGraph, engine_graph.subgraph(required_nodes))
+    subgraph= cast(nx.MultiDiGraph, state.graph.subgraph(required_nodes))
     
     instances = {}
     
@@ -118,8 +125,12 @@ def bake(engine_graph: nx.MultiDiGraph, target_node: str) -> Callable:
                 inputs[to_pin] = instances[pred]
         
         # 5. Bake the closure
-        instance = factory(**inputs, **parameters)
-        instances[node_id] = instance
+        try:
+            instance = factory(**inputs, **parameters)
+            instances[node_id] = instance
+        except Exception as e:
+            instances[node_id] = None
+            print(f"Error creating instance for node {node_id}: {e}")
         
     return instances[target_node]
 
@@ -167,15 +178,18 @@ def show_graph(state:State):
     imgui.begin("Pipeline Graph")
     ed.begin("Node Editor")
 
-    # --- Create nodes ---
-    mapping: Dict[int, str] = {}
-    for n in engine_graph.nodes:
-        mapping[string_to_int64(n)] = n
+
+    # --- Collect and Show Nodes ---
+    node_mapping: Dict[int, str] = {}
+    inlet_mapping:  Dict[int, Tuple[str, str]] = {}
+    outlet_mapping: Dict[int, Tuple[str, str]] = {}
+    for n in state.graph.nodes:
+        node_mapping[string_to_int64(n)] = n
         ed.begin_node(ed.NodeId(string_to_int64(n)))
-        factory = engine_graph.nodes[n]['factory']
+        factory = state.graph.nodes[n]['factory']
         imgui.text(f"{n}")
         imgui.same_line()
-        imgui.text(f"({engine_graph.nodes[n]['factory'].__name__})")
+        imgui.text(f"({state.graph.nodes[n]['factory'].__name__})")
 
         # imgui.same_line()
 
@@ -186,10 +200,11 @@ def show_graph(state:State):
                 continue
 
             if param.annotation == Video:
-                ed.begin_pin(ed.PinId(string_to_int64(f"{n}.{param_name}")), ed.PinKind.input)
+                ed.begin_pin(ed.PinId(string_to_int64(f"{n}-{param_name}")), ed.PinKind.input)
                 ed.pin_pivot_alignment(imgui.ImVec2(0.0, 0.5))
                 imgui.text(param_name)
                 ed.end_pin()
+                inlet_mapping[string_to_int64(f"{n}-{param_name}")] = (n, param_name)
 
         imgui.end_group()
 
@@ -199,36 +214,47 @@ def show_graph(state:State):
 
         imgui.begin_group()
         ed.begin_pin(ed.PinId(string_to_int64(f"{n}->out")), ed.PinKind.output)
+        outlet_mapping[string_to_int64(f"{n}->out")] = (n, "out")
         ed.pin_pivot_alignment(imgui.ImVec2(1.0, 0.5))
         imgui.text('out')
         ed.end_pin()
         imgui.end_group()
+
         ed.end_node()
 
-    for n1, n2, key, data in engine_graph.edges(keys=True, data=True):
+    # --- Show Edges ---
+    for n1, n2, key, data in state.graph.edges(keys=True, data=True):
         outlet, inlet = key
         from_pin = ed.PinId(string_to_int64(f"{n1}->{outlet}"))
-        to_pin = ed.PinId(string_to_int64(f"{n2}.{inlet}"))
-        link_id = ed.LinkId(string_to_int64(f"{n1}->{n2}:{outlet}->{inlet}"))
+        to_pin =   ed.PinId(string_to_int64(f"{n2}-{inlet}"))
+        link_id =  ed.LinkId(string_to_int64(f"{n1}->{n2}:{outlet}->{inlet}"))
         ed.link(link_id, from_pin, to_pin)
 
     # --- Create links ---
-    # # Draw existing links
-    # for link_id, out_pin, in_pin in links:
-    #     ed.link(link_id, out_pin, in_pin)
+    if ed.begin_create():
+        end_pin = ed.PinId()
+        start_pin = ed.PinId()
+        if ed.query_new_link(start_pin, end_pin):
+            if start_pin.id() == end_pin.id():
+                ed.reject_new_item()
 
-    # # --- Create links ---
-    # if ed.begin_create():
-    #     in_pin = ed.PinId()
-    #     out_pin = ed.PinId()
-    #     if ed.query_new_link(in_pin, out_pin):
-    #         if in_pin and out_pin:
-    #             ed.accept_new_item()
-    #             links.append(
-    #                 (ed.LinkId(next_link_id), out_pin, in_pin)
-    #             )
-    #             next_link_id += 1
-    #     ed.end_create()
+            if start_pin.id() in inlet_mapping and end_pin.id() in outlet_mapping:
+                in_node, in_name = inlet_mapping[start_pin.id()]
+                out_node, out_name = outlet_mapping[end_pin.id()]
+                if ed.accept_new_item():
+                    print(f"Creating link from {out_node}.{out_name} to {in_node}.{in_name}")
+                    state.graph.add_edge(out_node, in_node, key=(out_name, in_name))
+            elif end_pin.id() in inlet_mapping and start_pin.id() in outlet_mapping:
+                in_node, in_name = inlet_mapping[end_pin.id()]
+                out_node, out_name = outlet_mapping[start_pin.id()]
+                if ed.accept_new_item():
+                    print(f"Creating link from {out_node}.{out_name} to {in_node}.{in_name}")
+                    state.graph.add_edge(out_node, in_node, key=(out_name, in_name))
+            else:
+                ed.reject_new_item()
+
+
+        ed.end_create()
 
     # # --- Delete links ---
     # if ed.begin_delete():
@@ -237,9 +263,54 @@ def show_graph(state:State):
     #         ed.accept_deleted_item()
     #         links[:] = [l for l in links if l[0] != link_id]
     #     ed.end_delete()
-    state.selection = [mapping[node_id.id()] for node_id in ed.get_selected_nodes()]
+
+    # --- Interaction & Context Menu ---
+
+
+    # --- Update Selection ---
+    state.selection = [node_mapping[node_id.id()] for node_id in ed.get_selected_nodes() if node_id.id() in node_mapping]
     state.current = state.selection[-1] if len(state.selection) > 0 else None
+
+    # Check for right-click on background
+    ed.suspend()
+    if ed.show_background_context_menu():
+        imgui.open_popup("node_context_menu")
+    
+    from pylive.utils import unique
+    popup_open = imgui.begin_popup("node_context_menu")
+    if popup_open:
+        # Example: Adding a node based on a specific factory
+        if imgui.begin_menu("Add Node"):
+            for factory in availabe_factories:
+                selected = False
+                clicked, selected = imgui.menu_item(f"{factory.__name__}", '', selected, True)
+                if clicked:
+                    new_id = unique.make_unique_name(factory.__name__, names=state.graph.nodes)
+                    # Logic to update your backend graph:
+                    state.graph.add_node(new_id, factory=factory)
+            imgui.end_menu()
+        clicked, selected = imgui.menu_item(f"Delete", '', False, True)
+        if clicked:
+            for node_name in state.selection:
+                state.graph.remove_node(node_name)
+                state.selection.remove(node_name)
+                if state.current == node_name:
+                    state.current = None
+                    
+        imgui.end_popup()
+    ed.resume()
+
     ed.end()
+    imgui.end()
+
+def show_nodes(state:State):
+    imgui.begin("Nodes")
+    for node_name in state.graph.nodes:
+        imgui.text(f"Node: {node_name}")
+    
+    for source, target, key in state.graph.edges(keys=True):
+        outlet, inlet = key
+        imgui.text(f"Edge: {source}.{outlet} -> {target}.{inlet}")
     imgui.end()
 
 def show_inspector(state:State):
@@ -247,7 +318,10 @@ def show_inspector(state:State):
     imgui.begin("Inspector")
     for node_name in state.selection:
         imgui.text(f"Selected Node: {node_name}")
-        engine_graph_node = engine_graph.nodes[node_name]
+        engine_graph_node = state.graph.nodes.get(node_name)
+        if engine_graph_node is None:
+            imgui.text(f"Node '{node_name}' not found in graph.")
+            continue
         factory = engine_graph_node['factory']
         imgui.text(f"Factory: {factory.__name__}")
         parameters = engine_graph_node.get('parameters', {})
@@ -281,7 +355,7 @@ def show_inspector(state:State):
                     imgui.text(f"Unsupported parameter type: {type(value)}")
 
             if changed:
-                engine_graph.nodes[node_name]["parameters"][param_name] = new_value
+                state.graph.nodes[node_name]["parameters"][param_name] = new_value
 
     imgui.end()
 
@@ -330,24 +404,29 @@ def gui():
     # get read_node input nodes from the by inspecting the class __init__ method, and check their values
     show_graph(state)
     show_inspector(state)
+    show_nodes(state)
 
     # --- Render the Pipeline ---
     # bake the pipeline
 
     if state.current is not None:
-        start_processing_time = time.time()
+        start_bake_time = time.perf_counter()
         pipeline = bake(engine_graph, state.current)
-        end_processing_time = time.time()
-        fps = 1.0 / (end_processing_time - start_processing_time)
-        imgui.text(f"Bake time: {end_processing_time - start_processing_time:.4f} seconds / {fps:.2f} FPS")
+        end_bake_time = time.perf_counter()
+        delta_bake_time = end_bake_time - start_bake_time
+        imgui.text(f"Bake time: {delta_bake_time:.4f} seconds")
 
         # run the pipeline
         try:
-            start_processing_time = time.time()
+            start_processing_time = time.perf_counter()
             state.current_result = pipeline(frame=state.frame)
-            end_processing_time = time.time()
-            fps = 1.0 / (end_processing_time - start_processing_time)
-            imgui.text(f"Processing time: {end_processing_time - start_processing_time:.4f} seconds / {fps:.2f} FPS")
+            end_processing_time = time.perf_counter()
+            delta_processing_time = end_processing_time - start_processing_time
+            if delta_processing_time == 0:
+                fps = float('inf')
+            else:
+                fps = 1.0 / delta_processing_time
+            imgui.text(f"Processing time: {delta_processing_time:.4f} seconds / {fps if fps != float('inf') else 'inf'} FPS")
             error_msg = ""
         except Exception as e:
             state.current_result = None
