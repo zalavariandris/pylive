@@ -212,10 +212,16 @@ def show_node_style_editor():
     if change:
         style.pin_corners = new_pin_corners
 
+    # colors
+    style.node_border_width = 0.0
+    style.node_rounding = 0.0
+    
+    # style.set_color_(ed.StyleColor.pin_rect, imgui.ImVec4(1.0, 0.0, 1.0, 1.0))
+    # style.set_color_(ed.StyleColor.pin_rect_border, imgui.ImVec4(0.0, 1.0, 1.0, 1.0))
+    # style.set_color_(ed.StyleColor.pin_rect_border, imgui.ImVec4(0.0, 1.0, 1.0, 1.0))
     style.source_direction = imgui.ImVec2(0.0, 1.0)
     style.target_direction = imgui.ImVec2(0.0, -1.0)
-
-
+    
 
     config = ed.get_config()
 
@@ -223,12 +229,15 @@ def show_node_style_editor():
     imgui.end()
 
 def show_graph(state:State):
+    
     imgui.begin("Pipeline Graph")
+    
 
 
     show_node_style_editor()
 
     ed.begin("Node Editor")
+    imgui.push_style_var(imgui.StyleVar_.item_spacing, imgui.ImVec2(8.0, 0.0))
     ed.suspend()
     
     ed.resume()
@@ -241,7 +250,7 @@ def show_graph(state:State):
         pos = imgui.get_cursor_screen_pos()
         r = imgui.get_style().font_size_base / 4
         draw_list = imgui.get_window_draw_list()
-        draw_list.add_circle_filled(pos+imgui.ImVec2(r, r), r-1, imgui.color_convert_float4_to_u32(imgui.ImVec4(1, 1, 1, 1)))
+        draw_list.add_circle_filled(pos+imgui.ImVec2(r-2, r-2), r-1, imgui.color_convert_float4_to_u32(imgui.ImVec4(1, 1, 1, 1)))
         imgui.dummy(imgui.ImVec2(r*2, r*2))
         # imgui.text(f"{param_name}")
         ed.end_pin()
@@ -249,13 +258,14 @@ def show_graph(state:State):
         # imgui.set_tooltip(f"Inlet: {param_name}")
         if imgui.is_item_hovered():
             draw_list.add_text(pos+imgui.ImVec2(0,-14), imgui.color_convert_float4_to_u32(imgui.ImVec4(1, 1, 1, 1)), f"{param_name}")
+    
 
     def show_outlet(node_name: str):
         ed.begin_pin(ed.PinId(string_to_int64(f"{node_name}->out")), ed.PinKind.output)
         ed.pin_pivot_alignment(imgui.ImVec2(0.5, 0.5))
         pos = imgui.get_cursor_screen_pos()
         r = imgui.get_style().font_size_base / 4
-        imgui.get_window_draw_list().add_circle_filled(pos+imgui.ImVec2(r, r), r-1, imgui.color_convert_float4_to_u32(imgui.ImVec4(1, 1, 1, 1)))
+        imgui.get_window_draw_list().add_circle_filled(pos+imgui.ImVec2(r-2, r-2), r-1, imgui.color_convert_float4_to_u32(imgui.ImVec4(1, 1, 1, 1)))
         imgui.dummy(imgui.ImVec2(r*2, r*2))
         ed.end_pin()
 
@@ -341,6 +351,7 @@ def show_graph(state:State):
     state.selection = [node_mapping[node_id.id()] for node_id in ed.get_selected_nodes() if node_id.id() in node_mapping]
     state.current = state.selection[-1] if len(state.selection) > 0 else None
 
+    imgui.pop_style_var()
     # --- Interaction & Context Menu ---
     ed.suspend()
     if ed.show_background_context_menu():
@@ -374,7 +385,7 @@ def show_graph(state:State):
                     state.current = None
         imgui.end_popup()
     ed.resume()
-
+    
     ed.end()
     imgui.end()
 
@@ -394,27 +405,25 @@ def show_inspector(state:State):
     for node_name in state.selection:
         imgui.text(f"Selected Node: {node_name}")
         engine_graph_node = state.graph.nodes.get(node_name)
+        
         if engine_graph_node is None:
             imgui.text(f"Node '{node_name}' not found in graph.")
             continue
+        
         factory = engine_graph_node['factory']
+        imgui.same_line()
         imgui.text(f"Factory: {factory.__name__}")
         parameters = engine_graph_node.get('parameters', {})
-        imgui.text("Parameters:")
+
         sig = inspect.signature(factory.__init__)
         for param_name, param in sig.parameters.items():
             if param_name == 'self':
                 continue
             if param.annotation == Video:
                 continue
-            imgui.text(f"{param_name}: ")
-            imgui.same_line()
-            imgui.text(f"({param.annotation.__name__})")
-            imgui.same_line()
 
             changed = False
             new_value = None
-
             value = parameters.get(param_name, "")
             match value:
                 case int():
