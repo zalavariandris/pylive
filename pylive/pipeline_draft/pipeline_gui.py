@@ -137,8 +137,6 @@ def bake(engine_graph: nx.MultiDiGraph, target_node: str) -> Callable | None:
 print(f"working directory: {Path().cwd()}")
 
 
-
-
 engine_graph = nx.MultiDiGraph()
 engine_graph.add_node("read", factory=Read, inputs=[], parameters={"path": r"./assets/SMPTE_Color_Bars_animation/SMPTE_Color_Bars_animation_%05d.png"})
 engine_graph.add_node("transform", factory=Transform, inputs=['source'], parameters={"translate": (100, 50)})
@@ -172,25 +170,122 @@ def string_to_int64(s: str) -> int:
         digest_size=8  # 64 bits
     ).digest()
     return int.from_bytes(h, byteorder="little", signed=False)
-    
 
-def show_graph(state:State):
-    imgui.begin("Pipeline Graph")
+def show_node_style_editor():
+    imgui.begin("Node Editor Style Editor")
     style = ed.get_style()
-    # Adjust how "curvy" the Bezier lines are
-    style.link_strength = 100.0  # Higher = more curved, Lower = straighter
-    # Adjust the thickness of the selection highlight ring
+
+    changed, new_node_padding = imgui.input_float4("Node Padding", [style.node_padding.x, style.node_padding.y, style.node_padding.z, style.node_padding.w])
+    if changed:
+        style.node_padding = imgui.ImVec4(new_node_padding[0], new_node_padding[1], new_node_padding[2], new_node_padding[3])
+    # style.node_padding = imgui.ImVec4(8.0, 0.0, 8.0, 0.0)
+
+    changed, new_pin_radius = imgui.input_float("Pin Radius", style.pin_radius)
+    if changed:
+        style.pin_radius = new_pin_radius
+
+    changed, new_link_strength = imgui.input_float("Link Strength", style.link_strength)
+    if changed:
+        style.link_strength = new_link_strength
+
+    changed, new_pin_arrow_size = imgui.input_float("Pin Arrow Size", style.pin_arrow_size)
+    if changed:
+        style.pin_arrow_size = new_pin_arrow_size
+
+    changed, new_pin_arrow_width = imgui.input_float("Pin Arrow Width", style.pin_arrow_width)
+    if changed:
+        style.pin_arrow_width = new_pin_arrow_width
+
+    changed, new_pin_border_width = imgui.input_float("Pin Border Width", style.pin_border_width)
+    if changed:
+        style.pin_border_width = new_pin_border_width
+
+    changed, new_pivot_size = imgui.input_float2("Pivot Size", [style.pivot_size.x, style.pivot_size.y])
+    if changed:
+        style.pivot_size = imgui.ImVec2(new_pivot_size[0], new_pivot_size[1])
+
+    changed, new_pivot_scale = imgui.input_float2("Pivot Scale", [style.pivot_scale.x, style.pivot_scale.y])
+    if changed:
+        style.pivot_scale = imgui.ImVec2(new_pivot_scale[0], new_pivot_scale[1])
+
+    change, new_pin_corners = imgui.input_float("Pivot Corners", style.pin_corners)
+    if change:
+        style.pin_corners = new_pin_corners
+
     style.source_direction = imgui.ImVec2(0.0, 1.0)
     style.target_direction = imgui.ImVec2(0.0, -1.0)
 
-    # style.pin_arrow_size = 10.0
-    style.pin_radius = 0.0           #left top  right bottom
-    style.node_padding = imgui.ImVec4(10.0, 5.0, 10.0, -0.0)
-    # style.pin_arrow_width = 10.0
 
+
+    config = ed.get_config()
+
+
+    imgui.end()
+
+def show_graph(state:State):
+    imgui.begin("Pipeline Graph")
+
+
+    show_node_style_editor()
 
     ed.begin("Node Editor")
+    ed.suspend()
+    
+    ed.resume()
+    def show_inlet(node_name: str, param_name: str):
+        ed.push_style_var(ed.StyleVar.pin_arrow_size, 10.0)
+        ed.push_style_var(ed.StyleVar.pin_arrow_width, 10.0)
+        ed.begin_pin(ed.PinId(string_to_int64(f"{node_name}-{param_name}")), ed.PinKind.input)
+        ed.pin_pivot_alignment(imgui.ImVec2(0.5, 0.5))
+        # imgui.text(param_name)
+        pos = imgui.get_cursor_screen_pos()
+        r = imgui.get_style().font_size_base / 4
+        draw_list = imgui.get_window_draw_list()
+        draw_list.add_circle_filled(pos+imgui.ImVec2(r, r), r-1, imgui.color_convert_float4_to_u32(imgui.ImVec4(1, 1, 1, 1)))
+        imgui.dummy(imgui.ImVec2(r*2, r*2))
+        # imgui.text(f"{param_name}")
+        ed.end_pin()
+        ed.pop_style_var(2)
+        # imgui.set_tooltip(f"Inlet: {param_name}")
+        if imgui.is_item_hovered():
+            draw_list.add_text(pos+imgui.ImVec2(0,-14), imgui.color_convert_float4_to_u32(imgui.ImVec4(1, 1, 1, 1)), f"{param_name}")
 
+    def show_outlet(node_name: str):
+        ed.begin_pin(ed.PinId(string_to_int64(f"{node_name}->out")), ed.PinKind.output)
+        ed.pin_pivot_alignment(imgui.ImVec2(0.5, 0.5))
+        pos = imgui.get_cursor_screen_pos()
+        r = imgui.get_style().font_size_base / 4
+        imgui.get_window_draw_list().add_circle_filled(pos+imgui.ImVec2(r, r), r-1, imgui.color_convert_float4_to_u32(imgui.ImVec4(1, 1, 1, 1)))
+        imgui.dummy(imgui.ImVec2(r*2, r*2))
+        ed.end_pin()
+
+    def show_node(node_name: str):
+        ed.begin_node(ed.NodeId(string_to_int64(node_name)))
+        factory = state.graph.nodes[node_name]['factory']
+        sig = inspect.signature(factory.__init__)
+        has_inlets = False
+        for param_name, param in sig.parameters.items():
+            if param_name == 'self':
+                continue
+
+            if param.annotation == Video:
+                inlet_mapping[string_to_int64(f"{n}-{param_name}")] = (node_name, param_name)
+                show_inlet(node_name, param_name)
+                imgui.same_line()
+                has_inlets = True
+        
+        if has_inlets:
+            imgui.new_line()
+
+        imgui.text(f"{n}")
+        imgui.same_line()
+        imgui.text(f"({state.graph.nodes[n]['factory'].__name__})")
+
+        outlet_mapping[string_to_int64(f"{n}->out")] = (node_name, "out")
+        show_outlet(node_name)
+
+
+        ed.end_node()
 
     # --- Collect and Show Nodes ---
     node_mapping: Dict[int, str] = {}
@@ -198,46 +293,7 @@ def show_graph(state:State):
     outlet_mapping: Dict[int, Tuple[str, str]] = {}
     for n in state.graph.nodes:
         node_mapping[string_to_int64(n)] = n
-        ed.begin_node(ed.NodeId(string_to_int64(n)))
-        factory = state.graph.nodes[n]['factory']
-
-
-        # imgui.same_line()
-
-        sig = inspect.signature(factory.__init__)
-        for param_name, param in sig.parameters.items():
-            if param_name == 'self':
-                continue
-
-            if param.annotation == Video:
-                        
-                ed.push_style_var(ed.StyleVar.pin_arrow_size, 10.0)
-                ed.push_style_var(ed.StyleVar.pin_arrow_width, 10.0)
-                ed.begin_pin(ed.PinId(string_to_int64(f"{n}-{param_name}")), ed.PinKind.input)
-                ed.pin_pivot_alignment(imgui.ImVec2(0.5, 0.0))
-                imgui.text(param_name)
-                ed.end_pin()
-                ed.pop_style_var(2)
-                inlet_mapping[string_to_int64(f"{n}-{param_name}")] = (n, param_name)
-                imgui.same_line()
-
-        imgui.new_line()
-        imgui.text(f"{n}")
-        imgui.same_line()
-        imgui.text(f"({state.graph.nodes[n]['factory'].__name__})")
-
-
-        ed.begin_pin(ed.PinId(string_to_int64(f"{n}->out")), ed.PinKind.output)
-        outlet_mapping[string_to_int64(f"{n}->out")] = (n, "out")
-        ed.pin_pivot_alignment(imgui.ImVec2(0.5, 1.0))
-
-        pos = imgui.get_cursor_screen_pos()
-        r = 5
-        imgui.get_window_draw_list().add_circle_filled(pos+imgui.ImVec2(r, r), r-1, imgui.color_convert_float4_to_u32(imgui.ImVec4(1, 1, 1, 1)))
-        imgui.dummy(imgui.ImVec2(r*2, r*2))
-        ed.end_pin()
-
-        ed.end_node()
+        show_node(n)
 
     # --- Show Edges ---
     link_id_to_edge = {}
@@ -254,22 +310,6 @@ def show_graph(state:State):
         else:
             ed.link(link_id, from_pin, to_pin)
 
-    # --- Link Context Menu for Deletion ---
-    # ed.suspend()
-    # if ed.show_link_context_menu():
-    #     imgui.open_popup("link_context_menu")
-    # if imgui.begin_popup("link_context_menu"):
-    #     clicked, _ = imgui.menu_item("Delete Link", '', False, True)
-    #     if clicked:
-    #         for link in ed.get_selected_links():
-    #             edge = link_id_to_edge.get(link.id())
-    #             if edge:
-    #                 n1, n2, key = edge
-    #                 if state.graph.has_edge(n1, n2, key=key):
-    #                     state.graph.remove_edge(n1, n2, key=key)
-    #     imgui.end_popup()
-    # ed.resume()
-
     # --- Create links ---
     if ed.begin_create():
         end_pin = ed.PinId()
@@ -278,6 +318,8 @@ def show_graph(state:State):
             if start_pin.id() == end_pin.id():
                 ed.reject_new_item()
 
+            print("Creating link from pin", start_pin.id(), "to pin", end_pin.id())
+
             if start_pin.id() in inlet_mapping and end_pin.id() in outlet_mapping:
                 in_node, in_name = inlet_mapping[start_pin.id()]
                 out_node, out_name = outlet_mapping[end_pin.id()]
@@ -285,6 +327,7 @@ def show_graph(state:State):
                     print(f"Creating link from {out_node}.{out_name} to {in_node}.{in_name}")
                     state.graph.add_edge(out_node, in_node, key=(out_name, in_name))
             elif end_pin.id() in inlet_mapping and start_pin.id() in outlet_mapping:
+
                 in_node, in_name = inlet_mapping[end_pin.id()]
                 out_node, out_name = outlet_mapping[start_pin.id()]
                 if ed.accept_new_item():
@@ -292,17 +335,13 @@ def show_graph(state:State):
                     state.graph.add_edge(out_node, in_node, key=(out_name, in_name))
             else:
                 ed.reject_new_item()
-
-
         ed.end_create()
-
 
     # --- Update Selection ---
     state.selection = [node_mapping[node_id.id()] for node_id in ed.get_selected_nodes() if node_id.id() in node_mapping]
     state.current = state.selection[-1] if len(state.selection) > 0 else None
 
     # --- Interaction & Context Menu ---
-    # Check for right-click on background
     ed.suspend()
     if ed.show_background_context_menu():
         imgui.open_popup("node_context_menu")
@@ -438,6 +477,7 @@ def show_timeline(state:State):
 
 def gui():
     # get read_node input nodes from the by inspecting the class __init__ method, and check their values
+    
     show_graph(state)
     show_inspector(state)
     show_nodes(state)
