@@ -1,4 +1,4 @@
-from typing import Any, Callable, Protocol, Tuple, List, Dict, cast
+from typing import Any, Callable, Hashable, Protocol, Tuple, List, Dict, cast
 from imgui_bundle import imgui, immapp
 from imgui_bundle import imgui_node_editor as ed
 
@@ -87,12 +87,27 @@ available_factories = [
 # cache_node = Cache(merge_node)
 # viewer_node = Viewer(cache_node)
 
-
-
 @dataclass
 class Data:
-    """ the data file describing the timeline"""
     ...
+
+
+
+print(f"working directory: {Path().cwd()}")
+
+
+engine_graph = nx.MultiDiGraph()
+engine_graph.add_node("read", factory=Read, inputs=[], parameters={"path": r"./assets/SMPTE_Color_Bars_animation/SMPTE_Color_Bars_animation_%05d.png"})
+engine_graph.add_node("transform", factory=Transform, inputs=['source'], parameters={"translate": (100, 50)})
+engine_graph.add_node("merge", factory=Merge, inputs=['foreground', 'background'], parameters={"mix": 0.5})
+engine_graph.add_node("cache", factory=Cache, inputs=['source'])
+engine_graph.add_node("viewer", factory=Viewer, inputs=['source'])
+
+engine_graph.add_edge("read", "transform", key=("out", "source"))
+engine_graph.add_edge("transform", "merge", key=("out", "foreground"))
+engine_graph.add_edge("read", "merge", key=("out", "background"))
+engine_graph.add_edge("merge", "cache", key=("out", "source"))
+engine_graph.add_edge("cache", "viewer", key=("out", "source"))
 
 
 from functools import lru_cache
@@ -119,7 +134,7 @@ def bake(engine_graph: nx.MultiDiGraph, target_node: str) -> Callable | None:
         # 4. Gather the baked closures from predecessors
         inputs = {}
         for pred in subgraph.predecessors(node_id):
-            edge_data = subgraph.get_edge_data(pred, node_id)
+            edge_data:Dict[Hashable, Any] = subgraph.get_edge_data(pred, node_id)
             for key_tuple, data in edge_data.items():
                 from_pin, to_pin = key_tuple
                 inputs[to_pin] = instances[pred]
@@ -134,21 +149,6 @@ def bake(engine_graph: nx.MultiDiGraph, target_node: str) -> Callable | None:
         
     return instances[target_node]
 
-print(f"working directory: {Path().cwd()}")
-
-
-engine_graph = nx.MultiDiGraph()
-engine_graph.add_node("read", factory=Read, inputs=[], parameters={"path": r"./assets/SMPTE_Color_Bars_animation/SMPTE_Color_Bars_animation_%05d.png"})
-engine_graph.add_node("transform", factory=Transform, inputs=['source'], parameters={"translate": (100, 50)})
-engine_graph.add_node("merge", factory=Merge, inputs=['foreground', 'background'], parameters={"mix": 0.5})
-engine_graph.add_node("cache", factory=Cache, inputs=['source'])
-engine_graph.add_node("viewer", factory=Viewer, inputs=['source'])
-
-engine_graph.add_edge("read", "transform", key=("out", "source"))
-engine_graph.add_edge("transform", "merge", key=("out", "foreground"))
-engine_graph.add_edge("read", "merge", key=("out", "background"))
-engine_graph.add_edge("merge", "cache", key=("out", "source"))
-engine_graph.add_edge("cache", "viewer", key=("out", "source"))
 
 @dataclass
 class State:
