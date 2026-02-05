@@ -1,5 +1,5 @@
 # --- Concrete Example ---
-from core import Graph, Node
+from pylive.pipeline_draft.pypulse_push.core_classbased import Graph, Node
 import cv2
 import numpy as np
 import warnings
@@ -53,3 +53,4 @@ while True:
         break
 
 cv2.destroyAllWindows()
+

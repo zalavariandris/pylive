@@ -1,4 +1,5 @@
 from typing import Any, Callable, Hashable, Protocol, Self, Tuple, List, Dict, cast
+import cv2
 from imgui_bundle import imgui, immapp
 from imgui_bundle import imgui_node_editor as ed
 
@@ -156,6 +157,35 @@ engine_graph.add_edge("transform", "merge",     key=("out", "foreground"))
 engine_graph.add_edge("read",      "merge",     key=("out", "background"))
 engine_graph.add_edge("merge",     "cache",     key=("out", "source"))
 engine_graph.add_edge("cache",     "viewer",    key=("out", "source"))
+
+from functools import wraps
+
+class Graph:
+    def __enter__(self):
+        # Setup code if needed
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        # Cleanup code if needed
+        pass
+
+    def node(self, factory: Callable[..., Any]) -> Callable[..., Any]:
+        @wraps(factory)
+        def create_node(*args, **kwargs):
+            node_id = f"{factory.__name__}_{len(engine_graph.nodes)}"
+            engine_graph.add_node(node_id, factory=factory, parameters=kwargs)
+            return node_id
+        return create_node
+    
+
+
+
+
+read_node = ReadVideo(path=r"./assets/SMPTE_Color_Bars_animation/SMPTE_Color_Bars_animation_%05d.png")
+transform_node = TransformVideo(source=read_node, translate=(100, 50))
+merge_node =     MergeVideo(foreground=transform_node, background=read_node, mix=0.5)
+cache_node =     CacheVideo(source=merge_node)
+viewer_node =    ViewerVideo(source=cache_node)
 
 
 from functools import lru_cache
