@@ -1,22 +1,22 @@
-from typing import Self, Callable, List, Optional
-import cv2
-import numpy as np
 import threading
 import heapq
+import cv2
+import numpy as np
+from typing import Self, Callable, List, Optional, Dict, Any
 
 class Graph:
     _storage = threading.local()
 
     def __init__(self, name="PyPulse"):
         self._nodes = set()
-        self.name = name
-        self._batch_depth = 0
         self._dirty_nodes = set()
+        self._batch_depth = 0
+        self.name = name
 
     @classmethod
     def current(cls) -> Optional['Graph']:
         return getattr(cls._storage, 'active_graph', None)
-    
+
     def add_node(self, node: 'Node'):
         self._nodes.add(node)
         node.subscribe(self.on_node_change)
@@ -29,94 +29,98 @@ class Graph:
     def __exit__(self, exc_type, exc_val, exc_tb):
         Graph._storage.active_graph = self._old_context
         if not exc_type:
-            # Ignition: Mark roots as dirty to start the first flow
-            for node in self._nodes:
-                if not node.inputs:
-                    self._dirty_nodes.add(node)
-            self._execute_()
-
-    def batch(self):
-        class BatchContext:
-            def __init__(self, g):
-                self.g = g
-                
-            def __enter__(self):
-                self.g._batch_depth += 1
-
-            def __exit__(self, *args):
-                self.g._batch_depth -= 1
-                if self.g._batch_depth == 0: self.g._execute_()
-
-        return BatchContext(self)
+            # First-time ignition: everything is dirty
+            self._dirty_nodes.update(self._nodes)
+            self._execute()
 
     def on_node_change(self, node: 'Node', changes: dict):
         self._dirty_nodes.add(node)
         if self._batch_depth == 0:
-            self._execute_()
+            self._execute()
 
-    def _execute_(self):
+    def _execute(self):
         if not self._dirty_nodes:
             return
 
-        queue = []
-        seen = set()
+        # 1. JIT ADJACENCY BUILD
+        # We build the map of who is listening to whom right now
+        adj = {n: set() for n in self._nodes}
+        in_degree = {n: 0 for n in self._nodes}
+        
+        for downstream in self._nodes:
+            for val in downstream._inputs.values():
+                if isinstance(val, Node):
+                    adj[val].add(downstream)
+                    in_degree[downstream] += 1
 
-        def add_to_queue(n):
-            if n not in seen:
-                # level ensures topological order, id(n) breaks ties
-                heapq.heappush(queue, (n.level, id(n), n))
-                seen.add(n)
+        # 2. TOPOLOGICAL SORT (Kahn's)
+        # Determines the correct mathematical order of operations
+        queue = [n for n in self._nodes if in_degree[n] == 0]
+        order = []
+        while queue:
+            u = queue.pop(0)
+            order.append(u)
+            for v in adj[u]:
+                in_degree[v] -= 1
+                if in_degree[v] == 0:
+                    queue.append(v)
 
+        if len(order) < len(self._nodes):
+            raise RuntimeError("Cycle detected in graph logic!")
+
+        # 3. SELECTIVE EXECUTION
+        # Only process nodes that are dirty or downstream of dirty nodes
+        lookup = {node: i for i, node in enumerate(order)}
+        exec_queue = []
+        
         for node in self._dirty_nodes:
-            add_to_queue(node)
+            heapq.heappush(exec_queue, (lookup[node], id(node), node))
         
         self._dirty_nodes.clear()
+        processed = set()
 
-        while queue:
-            _, _, node = heapq.heappop(queue)
+        while exec_queue:
+            priority, _, node = heapq.heappop(exec_queue)
+            if node in processed: continue
             
-            input_vals = [i.value for i in node.inputs]
+            # Resolve Inputs (Constants vs Nodes)
+            resolved = {k: (v.value if isinstance(v, Node) else v) 
+                       for k, v in node._inputs.items()}
             
-            # Guard against cold starts/empty inputs
-            if any(v is None for v in input_vals) and node.inputs:
-                continue
+            # Execute
+            node.value = node.execute(**resolved)
+            processed.add(node)
 
-            node.value = node.execute(input_vals)
-            
-            # Propagate to children
-            if node.value is not None:
-                for out in node.outputs:
-                    add_to_queue(out)
+            # Propagate to children in the JIT map
+            for child in adj[node]:
+                heapq.heappush(exec_queue, (lookup[child], id(child), child))
+
+    def batch(self):
+        class BatchContext:
+            def __init__(self, g): self.g = g
+            def __enter__(self): self.g._batch_depth += 1
+            def __exit__(self, *args):
+                self.g._batch_depth -= 1
+                if self.g._batch_depth == 0: self.g._execute()
+        return BatchContext(self)
+
 
 class Node:
-    def __init__(self, inputs: Optional[List['Node']] = None):
-        current = Graph.current()
-        if not current:
-            raise RuntimeError("Nodes must be created inside a 'with Graph():' block.")
-        
-        self.graph = current
-        # Fix: Standardize inputs as a list
-        self.inputs = inputs if isinstance(inputs, list) else ([inputs] if inputs else [])
-        self.outputs = []
+    def __init__(self, **inputs):
+        self._inputs = inputs
+        self._observers = []
         self.value = None
-        self._observers: List[Callable] = []
+        if g := Graph.current(): g.add_node(self)
 
-        # Fix: Level calculation
-        self.level = max([i.level for i in self.inputs], default=-1) + 1
+    def set_inputs(self, **inputs):
+        self._inputs.update(inputs)
+        self.notify()
 
-        for i in self.inputs:
-            i.outputs.append(self)
-
-        self.graph.add_node(self)
-
-    def subscribe(self, callback: Callable[[Self, dict], None]):
+    def subscribe(self, callback):
         self._observers.append(callback)
 
-    def notify(self, changes: Optional[dict] = None):
-        """Triggers the graph update via the subscription."""
-        changes = changes or {}
-        for callback in self._observers:
-            callback(self, changes)
+    def notify(self): 
+        for cb in self._observers: cb(self, {})
 
-    def execute(self, inputs: list):
+    def render(self, **inputs):
         raise NotImplementedError
