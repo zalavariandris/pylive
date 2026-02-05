@@ -1,4 +1,4 @@
-from typing import Any, Callable, Hashable, Protocol, Tuple, List, Dict, cast
+from typing import Any, Callable, Hashable, Protocol, Self, Tuple, List, Dict, cast
 from imgui_bundle import imgui, immapp
 from imgui_bundle import imgui_node_editor as ed
 
@@ -13,6 +13,28 @@ from OpenGL.GL import *
 import time
 import networkx as nx
 
+class PushGraph:
+    def __init__(self):
+        self.graph = nx.MultiDiGraph()
+
+    def add_node(self, name: str, factory: Callable[..., Any], parameters: Dict[str, Any] = {}):
+        self.graph.add_node(name, factory=factory, parameters=parameters)
+
+    def remove_node(self, name: str):
+        self.graph.remove_node(name)
+
+    def add_edge(self, from_node: str, to_node: str, key: Tuple[str, str]):
+        self.graph.add_edge(from_node, to_node, key=key)
+
+    def remove_edge(self, from_node: str, to_node: str, key: Tuple[str, str]):
+        self.graph.remove_edge(from_node, to_node, key=key)
+
+    def set_node_parameter(self, node_name: str, param_name: str, value: Any):
+        if node_name in self.graph.nodes:
+            self.graph.nodes[node_name]['parameters'][param_name] = value
+        else:
+            raise ValueError(f"Node '{node_name}' not found in graph.")
+
 # --- TYPES ---
 Time = int
 # Video = Callable[[Time], image_utils.ImageRGBA]
@@ -22,7 +44,7 @@ class Video(Protocol):
         ...
 
 
-class Read(Video):
+class ReadVideo(Video):
     def __init__(self, path: str):
         self.path = path
 
@@ -31,7 +53,7 @@ class Read(Video):
         return image_utils.read_image(self.path % frame)
     
 
-class Transform(Video):
+class TransformVideo(Video):
     def __init__(self, source:Video, translate:Tuple[int, int]):
         self.source = source
         self.translate = translate
@@ -41,7 +63,7 @@ class Transform(Video):
         return image_utils.transform(self.source(frame), self.translate)
     
 
-class Merge(Video):
+class MergeVideo(Video):
     def __init__(self, foreground:Video, background:Video, mix:float):
         self.foreground = foreground
         self.background = background
@@ -52,7 +74,7 @@ class Merge(Video):
         return image_utils.merge_over(self.foreground(frame), self.background(frame), self.mix)
     
 
-class Cache(Video):
+class CacheVideo(Video):
     def __init__(self, source:Video):
         self.source = source
         self.cache = {}
@@ -61,9 +83,10 @@ class Cache(Video):
         if frame not in self.cache:
             self.cache[frame] = self.source(frame)
         return self.cache[frame]
-    
 
-class Viewer(Video):
+
+
+class ViewerVideo(Video):
     def __init__(self, source:Video):
         self.source = source
 
@@ -73,81 +96,27 @@ class Viewer(Video):
 
 
 available_factories = [
-    Read,
-    Transform,
-    Merge,
-    Cache,
-    Viewer,
+    ReadVideo,
+    TransformVideo,
+    MergeVideo,
+    CacheVideo,
+    ViewerVideo,
 ]
 
-# # create_pipeline
-# read_node = Read(r"./assets/SMPTE_Color_Bars_animation/SMPTE_Color_Bars_animation_%05d.png")
-# transform_node = Transform(read_node, (100, 50))
-# merge_node = Merge(transform_node, read_node, 0.5)
-# cache_node = Cache(merge_node)
-# viewer_node = Viewer(cache_node)
-
-@dataclass
-class Data:
-    ...
 
 
+engine_graph.add_node("read",      ReadVideo,      inputs=[], parameters={"path": r"./assets/SMPTE_Color_Bars_animation/SMPTE_Color_Bars_animation_%05d.png"})
+engine_graph.add_node("transform", TransformVideo, inputs=['source'], parameters={"translate": (100, 50)})
+engine_graph.add_node("merge",     MergeVideo,     inputs=['foreground', 'background'], parameters={"mix": 0.5})
+engine_graph.add_node("cache",     CacheVideo,     inputs=['source'])
+engine_graph.add_node("viewer",    ViewerVideo,    inputs=['source'])
 
-print(f"working directory: {Path().cwd()}")
+engine_graph.add_edge("read",      "transform", key=("out", "source"))
+engine_graph.add_edge("transform", "merge",     key=("out", "foreground"))
+engine_graph.add_edge("read",      "merge",     key=("out", "background"))
+engine_graph.add_edge("merge",     "cache",     key=("out", "source"))
+engine_graph.add_edge("cache",     "viewer",    key=("out", "source"))
 
-
-engine_graph = nx.MultiDiGraph()
-engine_graph.add_node("read", factory=Read, inputs=[], parameters={"path": r"./assets/SMPTE_Color_Bars_animation/SMPTE_Color_Bars_animation_%05d.png"})
-engine_graph.add_node("transform", factory=Transform, inputs=['source'], parameters={"translate": (100, 50)})
-engine_graph.add_node("merge", factory=Merge, inputs=['foreground', 'background'], parameters={"mix": 0.5})
-engine_graph.add_node("cache", factory=Cache, inputs=['source'])
-engine_graph.add_node("viewer", factory=Viewer, inputs=['source'])
-
-engine_graph.add_edge("read", "transform", key=("out", "source"))
-engine_graph.add_edge("transform", "merge", key=("out", "foreground"))
-engine_graph.add_edge("read", "merge", key=("out", "background"))
-engine_graph.add_edge("merge", "cache", key=("out", "source"))
-engine_graph.add_edge("cache", "viewer", key=("out", "source"))
-
-
-from functools import lru_cache
-
-@lru_cache(maxsize=1) #TODO: this is a temporary fix to speed up the bake process during GUI interaction, but probably this si exaclt what we want, in a different place.
-def bake(engine_graph: nx.MultiDiGraph, target_node: str) -> Callable | None:
-    """Realize the graph into an actual callable Video pipeline for a specific node."""
-    
-    # 1. Get all nodes required for the target (ancestors + the node itself)
-    required_nodes = nx.ancestors(engine_graph, target_node)
-    required_nodes.add(target_node)
-    
-    # 2. Create a subgraph to ensure we only iterate over necessary nodes
-    subgraph= cast(nx.MultiDiGraph, state.graph.subgraph(required_nodes))
-    
-    instances = {}
-    
-    # 3. Process only the required nodes in topological order
-    for node_id in nx.topological_sort(subgraph):
-        node_data = subgraph.nodes[node_id]
-        factory = node_data['factory']
-        parameters = node_data.get('parameters', {})
-        
-        # 4. Gather the baked closures from predecessors
-        inputs = {}
-        for pred in subgraph.predecessors(node_id):
-            edge_data:Dict[Hashable, Any] = subgraph.get_edge_data(pred, node_id)
-            for key_tuple, data in edge_data.items():
-                from_pin, to_pin = key_tuple
-                inputs[to_pin] = instances[pred]
-        
-        # 5. Bake the closure
-        try:
-            instance = factory(**inputs, **parameters)
-            instances[node_id] = instance
-        except Exception as e:
-            instances[node_id] = None
-            print(f"Error creating instance for node {node_id}: {e}")
-        
-    return instances[target_node]
 
 
 @dataclass
@@ -231,8 +200,6 @@ def show_node_style_editor():
 def show_graph(state:State):
     
     imgui.begin("Pipeline Graph")
-    
-
 
     show_node_style_editor()
 

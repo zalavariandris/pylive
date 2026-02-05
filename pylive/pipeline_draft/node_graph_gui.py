@@ -17,67 +17,103 @@ import networkx as nx
 Time = int
 # Video = Callable[[Time], image_utils.ImageRGBA]
 
+class VideoNode:
+    def __init__(self):
+        self._inlets = {}
 
-class VideoNode(Protocol):
-    def evaluate(self) -> Callable[[Time], np.ndarray]:
+    def set_inlet(self, name: str, value: Any):
+        self._inlets[name] = value
+
+    def get_inlet(self, name: str) -> Any:
+        return self._inlets[name]
+
+    def evaluate(self) -> Any:
         ...
 
 
 class ReadNode(VideoNode):
     def __init__(self, path: str):
-        self.path = path
+        super().__init__()
+        self._inlets["path"] = path
 
     def evaluate(self) -> Callable[[Time], np.ndarray]:
         def read_video(frame:Time) -> np.ndarray:
-            return image_utils.read_image(self.path % frame)
+            return image_utils.read_image(self.get_inlet("path") % frame)
         
         return read_video
 
     
 class TransformNode(VideoNode):
     def __init__(self, source:VideoNode, translate:Tuple[int, int]):
-        self.source = source
-        self.translate = translate
+        super().__init__()
+        self._inlets["source"] = source
+        self._inlets["translate"] = translate
+
+    def set_inlet(self, name: str, value: Any):
+        self._inlets[name] = value
+
+    def get_inlet(self, name: str) -> Any:
+        return self._inlets[name]
 
     def evaluate(self) -> Callable[[Time], np.ndarray]:
         def transform_video(frame:Time) -> np.ndarray:
-            return image_utils.transform(self.source.evaluate()(frame), self.translate)
+            return image_utils.transform(self.get_inlet("source").evaluate()(frame), self.get_inlet("translate"))
         return transform_video
     
 
 class MergeNode(VideoNode):
     def __init__(self, foreground:VideoNode, background:VideoNode, mix:float):
-        self.foreground = foreground
-        self.background = background
-        self.mix = mix
+        super().__init__()
+        self._inlets["foreground"] = foreground
+        self._inlets["background"] = background
+        self._inlets["mix"] = mix
+
+    def set_inlet(self, name: str, value: Any):
+        self._inlets[name] = value
+
+    def get_inlet(self, name: str) -> Any:
+        return self._inlets[name]
 
     def evaluate(self) -> Callable[[Time], np.ndarray]:
         def merge_video(frame:Time) -> np.ndarray:
-            return image_utils.merge_over(self.foreground.evaluate()(frame), self.background.evaluate()(frame), self.mix)
+            return image_utils.merge_over(self.get_inlet("foreground").evaluate()(frame), self.get_inlet("background").evaluate()(frame), self.get_inlet("mix"))
         return merge_video
+
+def merge_image(foreground:np.ndarray, background:np.ndarray, mix:float)-> np.ndarray:
+    return image_utils.merge_over(foreground, background, mix)
+
+def merge_video(foreground:Callable[[Time], np.ndarray], background:Callable[[Time], np.ndarray], mix:float) -> Callable[[Time], np.ndarray]:
+    def func(frame:Time) -> np.ndarray:
+        return merge_image(foreground(frame), background(frame), mix)
+    return func
+
+
+
     
 
 class CacheNode(VideoNode):
     def __init__(self, source:VideoNode):
-        self.source = source
-        self.cache = {}
+        super().__init__()
+        self._inlets["source"] = source
+        self.cache:Dict[Time, np.ndarray] = {} 
 
     def evaluate(self) -> Callable[[Time], np.ndarray]:
         def cache_video(frame:Time) -> np.ndarray:
             if frame not in self.cache:
-                self.cache[frame] = self.source.evaluate()(frame)
+                self.cache[frame] = self.get_inlet("source").evaluate()(frame)
             return self.cache[frame]
         
         return cache_video
     
 
-class ViewerNode:
+class ViewerNode(VideoNode):
     def __init__(self, source:VideoNode, frame):
-        self.source = source
-        self.frame = frame
+        super().__init__()
+        self._inlets["source"] = source
+        self._inlets["frame"] = frame
 
     def evaluate(self) -> np.ndarray:
-        return self.source.evaluate()(self.frame)
+        return self.get_inlet("source").evaluate()(self.get_inlet("frame"))
         # Placeholder implementation
 
 
