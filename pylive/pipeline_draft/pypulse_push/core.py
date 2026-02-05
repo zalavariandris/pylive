@@ -31,14 +31,14 @@ class Graph:
         if not exc_type:
             # First-time ignition: everything is dirty
             self._dirty_nodes.update(self._nodes)
-            self._execute()
+            self._render()
 
     def on_node_change(self, node: 'Node', changes: dict):
         self._dirty_nodes.add(node)
         if self._batch_depth == 0:
-            self._execute()
+            self._render()
 
-    def _execute(self):
+    def _render(self):
         if not self._dirty_nodes:
             return
 
@@ -88,7 +88,7 @@ class Graph:
                        for k, v in node._inputs.items()}
             
             # Execute
-            node.value = node.execute(**resolved)
+            node.value = node.render(**resolved)
             processed.add(node)
 
             # Propagate to children in the JIT map
