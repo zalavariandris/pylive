@@ -256,8 +256,6 @@ def get_current_viewer() -> ViewerWidget|None:
         return None
     return registry.viewers.get(registry.current_viewer_name, None)
 
-
-
 def set_current_viewer(name:str|None):
     registry = get_registry()
     registry.current_viewer_name = name
@@ -376,7 +374,7 @@ def begin_viewer(name: str,
         current_viewport.interactive_pan_and_zoom = glm.translate(current_viewport.interactive_pan_and_zoom, -offset)
 
     imgui.set_cursor_pos(imgui.get_style().window_padding)
-    imgui.new_line() # let some room for the viewer name
+    imgui.new_line() # leave some room for the viewer name
     return ret
 
 def end_viewer():
