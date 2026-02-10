@@ -1,7 +1,7 @@
 
 import threading
 import time
-from core_sink import Node
+from pylive.pipeline_draft.pypulse_with_sink.core import Node
 import cv2
 
 class LiveNode(Node):
