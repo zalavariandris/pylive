@@ -1,349 +1,227 @@
-# Standard library imports
 import os
-
-
 from pathlib import Path
-from typing import Dict, Generic, Literal, Tuple, List, Iterable, Iterator, TypeVar, cast
-import math
+from typing import Dict, Literal, Tuple, List
 from pyglm import glm
-# ########### #
-# Application #
-# ########### #
 from imgui_bundle import imgui, immapp
 from dataclasses import dataclass, field
-from utils import create_grid_lines
 
+# --- Utility: Grid Generation ---
+def create_grid_lines(w, h, step=50.0):
+    lines = []
+    for x in range(int(-w), int(w), int(step)):
+        lines.append(((x, -h), (x, h)))
+    for y in range(int(-h), int(h), int(step)):
+        lines.append(((-w, y), (w, y)))
+    return lines
 
-# - Canvas Registry -
+# --- Canvas State Registry ---
 @dataclass
 class CanvasWidget:
-    content_size: imgui.ImVec2 = field(default_factory=lambda: imgui.ImVec2(400, 400))
-    coordinate_system: Literal['top-left', 'bottom-left'] = 'bottom-left'
     pan_zoom: glm.mat4 = field(default_factory=lambda: glm.identity(glm.mat4))
     window_pos: imgui.ImVec2 = field(default_factory=lambda: imgui.ImVec2(0, 0))
     window_size: imgui.ImVec2 = field(default_factory=lambda: imgui.ImVec2(0, 0))
-    origin_screen: imgui.ImVec2 = field(default_factory=lambda: imgui.ImVec2(0, 0))
+    
+    # Internal state for transformation
     vtx0: int = 0
-    idx0: int = 0
     cmd0: int = 0
     _mouse_backup: imgui.ImVec2 = field(default_factory=lambda: imgui.ImVec2(0, 0))
-
-
-_canvas_registry:Dict[str, CanvasWidget] = {}
-_current_canvas_name:str|None = None
-
-def create_canvas(name:str) -> CanvasWidget:
-    global _canvas_registry
-    if name in _canvas_registry:
-        raise ValueError(f"Canvas with name '{name}' already exists")
+    _backup_window_pos: imgui.ImVec2 = field(default_factory=lambda: imgui.ImVec2(0, 0))
     
-    canvas = CanvasWidget()
-    _canvas_registry[name] = canvas
-    return canvas
+    # Hitbox backups (Corners)
+    _backup_inner_min: imgui.ImVec2 = field(default_factory=lambda: imgui.ImVec2(0, 0))
+    _backup_inner_max: imgui.ImVec2 = field(default_factory=lambda: imgui.ImVec2(0, 0))
+    _backup_outer_min: imgui.ImVec2 = field(default_factory=lambda: imgui.ImVec2(0, 0))
+    _backup_outer_max: imgui.ImVec2 = field(default_factory=lambda: imgui.ImVec2(0, 0))
 
-def get_current_canvas() -> CanvasWidget|None:
-    global _canvas_registry, _current_canvas_name
-    if _current_canvas_name is None:
-        return None
-    
-    return _canvas_registry.get(_current_canvas_name, None)
+_canvas_registry: Dict[str, CanvasWidget] = {}
+_current_canvas_name: str | None = None
 
-def set_current_canvas(name:str|None):
-    global _canvas_registry, _current_canvas_name
-    _current_canvas_name = name
+def get_current_canvas() -> CanvasWidget | None:
+    return _canvas_registry.get(_current_canvas_name) if _current_canvas_name else None
 
-
-# ---------------------------
-# Transform helpers
-# ---------------------------
-def canvas_local_to_screen(canvas: CanvasWidget, p: imgui.ImVec2) -> imgui.ImVec2:
-    v = glm.vec4(p.x, p.y, 0.0, 1.0)
-    out = canvas.pan_zoom * v
-    return imgui.ImVec2(canvas.origin_screen.x + out.x, canvas.origin_screen.y + out.y)
+# --- Coordinate Helpers ---
+# origin is always window_pos — the top-left of the child window in screen space.
+# pan_zoom transforms canvas-local coords to screen coords relative to that origin.
 
 def screen_to_canvas_local(canvas: CanvasWidget, p: imgui.ImVec2) -> imgui.ImVec2:
     inv = glm.inverse(canvas.pan_zoom)
-    v = glm.vec4(p.x - canvas.origin_screen.x, p.y - canvas.origin_screen.y, 0.0, 1.0)
+    # Offset by window_pos so we work in window-relative screen space
+    v = glm.vec4(p.x - canvas.window_pos.x, p.y - canvas.window_pos.y, 0.0, 1.0)
     out = inv * v
     return imgui.ImVec2(out.x, out.y)
 
 def get_canvas_zoom(canvas: CanvasWidget) -> float:
-    # assuming uniform scale
     return float(canvas.pan_zoom[0][0])
 
-# ---------------------------
-# IO remap (the important part)
-# ---------------------------
+# --- Canvas Logic ---
 
-# ---------------------------
-# Canvas widget
-# ---------------------------
-
-def begin_canvas(
-        name:str, 
-        size:imgui.ImVec2|None=None, 
-        content_size:imgui.ImVec2|None = None, 
-        coordinate_system:Literal['top-left', 'bottom-left']='bottom-left'
-)->bool:
-    global _canvas_registry, _current_canvas_name
-
-    window = imgui.internal.get_current_window()
-    window.skip_items = False
-
+def begin_canvas(name: str, size: imgui.ImVec2) -> bool:
+    global _current_canvas_name
     if name not in _canvas_registry:
-        print("create canvas", name)
-        create_canvas(name)
+        _canvas_registry[name] = CanvasWidget()
     
-    set_current_canvas(name)
-    canvas = get_current_canvas()
-    if canvas is None:
-        raise RuntimeError("Canvas should have been created above")
+    _current_canvas_name = name
+    canvas = _canvas_registry[name]
+    
+    imgui.begin_child(name, size, imgui.ChildFlags_.borders,
+                      imgui.WindowFlags_.no_scrollbar | imgui.WindowFlags_.no_scroll_with_mouse)
 
-    if size is None:
-        size = imgui.ImVec2(-1, -1)
-
-    # ret = imgui.begin_child(
-    #     name, 
-    #     size, 
-    #     imgui.ChildFlags_.borders,
-    #     imgui.WindowFlags_.no_scrollbar | imgui.WindowFlags_.no_scroll_with_mouse
-    # )
-
-    canvas.content_size = content_size
-    canvas.coordinate_system = coordinate_system
+    # Capture window_pos immediately — this is our stable screen-space origin.
     canvas.window_pos = imgui.get_window_pos()
     canvas.window_size = imgui.get_window_size()
 
-    # This is the screen-space origin of our canvas-local (0,0)
-    # We use cursor screen pos so padding is included.
-    canvas.origin_screen = imgui.get_cursor_screen_pos()
-
-    # ---------------------------
-    # Input area for pan/zoom
-    # ---------------------------
-
-
-    # Put an invisible button covering the whole child window
+    # Pan: middle-mouse drag
     imgui.set_cursor_screen_pos(canvas.window_pos)
-    imgui.set_next_item_allow_overlap()
-
+    imgui.invisible_button("##vport", canvas.window_size, imgui.ButtonFlags_.mouse_button_middle)
+    
     io = imgui.get_io()
-    if imgui.is_key_down(imgui.Key.mod_alt):
-        button_flags = imgui.ButtonFlags_.mouse_button_left
-    else:
-        button_flags = imgui.ButtonFlags_.mouse_button_middle
-
-    imgui.invisible_button("##canvas_viewport", canvas.window_size, button_flags)
-
-    # Pan
-    if imgui.is_item_active() and (abs(io.mouse_delta.x) > 0.0 or abs(io.mouse_delta.y) > 0.0):
+    if imgui.is_item_active() and (io.mouse_delta.x != 0 or io.mouse_delta.y != 0):
         zoom = get_canvas_zoom(canvas)
-        # Convert screen mouse delta -> local delta
-        local_dx = io.mouse_delta.x / zoom
-        local_dy = io.mouse_delta.y / zoom
-        canvas.pan_zoom = glm.translate(canvas.pan_zoom, glm.vec3(local_dx, local_dy, 0.0))
+        # Pan in canvas-local units so it stays consistent with zoom level
+        canvas.pan_zoom = glm.translate(canvas.pan_zoom,
+                                        glm.vec3(io.mouse_delta.x / zoom,
+                                                 io.mouse_delta.y / zoom, 0.0))
 
-    # Zoom (only when hovered and nothing else is active)
-    elif (
-        imgui.is_window_hovered(imgui.HoveredFlags_.child_windows)
-        and not imgui.is_any_item_active()
-        and not imgui.is_any_item_focused()
-        and abs(io.mouse_wheel) > 0.0
-    ):
-        zoom_speed = 0.12
-        scale_factor = 1.0 + io.mouse_wheel * zoom_speed
-
-        # Mouse in screen space (absolute)
-        mouse_screen = imgui.get_mouse_pos()
-
-        # Convert to canvas-local coordinates (before zoom)
-        mouse_local = screen_to_canvas_local(canvas, mouse_screen)
-
-        # Build translation matrices
-        # 1. Translate so mouse_local is at origin
-        T1 = glm.translate(glm.identity(glm.mat4), glm.vec3(-mouse_local.x, -mouse_local.y, 0.0))
-        # 2. Scale around origin
-        S = glm.scale(glm.identity(glm.mat4), glm.vec3(scale_factor, scale_factor, 1.0))
-        # 3. Translate back
-        T2 = glm.translate(glm.identity(glm.mat4), glm.vec3(mouse_local.x, mouse_local.y, 0.0))
-
-        # Compose: zoom happens in canvas-local space, so multiply on the right
-        # pan_zoom = pan_zoom * (T2 * S * T1)
-        canvas.pan_zoom = cast(glm.mat4, canvas.pan_zoom * T2 * S * T1)
-
-    # Restore cursor for content submission
-    imgui.set_cursor_screen_pos(canvas.origin_screen)
+    # Zoom: scroll wheel, zooming toward the mouse cursor
+    elif imgui.is_window_hovered() and io.mouse_wheel != 0:
+        mouse_local = screen_to_canvas_local(canvas, io.mouse_pos)
+        zoom_fact = 1.1 if io.mouse_wheel > 0 else 0.9
+        # Compose: translate pivot to origin → scale → translate back
+        # Order must match: pan_zoom is applied as (pan_zoom * local_point),
+        # so new = pan_zoom * T2 * S * T1
+        T1 = glm.translate(glm.mat4(1), glm.vec3(-mouse_local.x, -mouse_local.y, 0))
+        S  = glm.scale(glm.mat4(1), glm.vec3(zoom_fact, zoom_fact, 1))
+        T2 = glm.translate(glm.mat4(1), glm.vec3(mouse_local.x, mouse_local.y, 0))
+        canvas.pan_zoom = canvas.pan_zoom * T2 * S * T1
 
     return True
 
-_debug_frame = [0]
-
 def begin_canvas_content():
-    """
-    Remap mouse into canvas-local space so ImGui widgets do correct hit-testing.
-    Must be called AFTER begin_canvas() and BEFORE submitting widgets.
-    """
-    global _debug_frame
-    _debug_frame[0] += 1
-    
     canvas = get_current_canvas()
-    if canvas is None:
-        raise RuntimeError("begin_canvas_content called without begin_canvas")
-    
-    # Capture draw ranges *now*
-    draw_list = imgui.get_window_draw_list()
-    canvas.vtx0 = draw_list.vtx_buffer.size()
-    canvas.idx0 = draw_list.idx_buffer.size()
-    canvas.cmd0 = draw_list.cmd_buffer.size()
-    
-    # Backup mouse pos
-    io = imgui.get_io()
-    canvas._mouse_backup = imgui.ImVec2(io.mouse_pos.x, io.mouse_pos.y)
-
-    # Remap
-    mouse_local = screen_to_canvas_local(canvas, io.mouse_pos)
-    io.mouse_pos = mouse_local
-
-    imgui.push_item_width(250) # for demo purposes, so slider isn't super long
-
-    canvas_pos = canvas.origin_screen
-    canvas_size = canvas.content_size
-    imgui.push_clip_rect(
-        imgui.ImVec2(-999999, -999999),
-        imgui.ImVec2(+999999, +999999),
-        True
-    )
-    
-    # Expand window's internal clip rects AFTER push_clip_rect to prevent ImGui
-    # from skipping widgets at negative cursor positions. push_clip_rect with
-    # intersect_with_current_clip_rect=True resets window.clip_rect, so we must
-    # override it afterwards.
     window = imgui.internal.get_current_window()
-    big = imgui.internal.ImRect(-100000, -100000, 100000, 100000)
-    window.clip_rect = big
-    window.inner_clip_rect = big
-    window.work_rect = big
-    window.content_region_rect = big
-    window.inner_rect = big
-    window.skip_items = False
-    
-    if _debug_frame[0] % 60 == 1:
-        print(f"[begin_canvas_content] vtx0={canvas.vtx0}, clip_rect.min={window.clip_rect.min.x}")
- 
-def end_canvas_content():
-    global _debug_frame
-    draw_list = imgui.get_window_draw_list()
-    canvas = get_current_canvas()
-    if canvas is None:
-        raise RuntimeError("end_canvas_content called without begin_canvas")
-    
-    # 1. Transform Vertices (Your existing code)
-    vtx1 = draw_list.vtx_buffer.size()
-    vtx_count = vtx1 - canvas.vtx0
-    
-    if _debug_frame[0] % 60 == 1:
-        print(f"[end_canvas_content] vtx_count={vtx_count} (vtx0={canvas.vtx0}, vtx1={vtx1})")
-    
-    for i in range(canvas.vtx0, vtx1):
-        vert = draw_list.vtx_buffer[i]
-        local = glm.vec4(vert.pos.x, vert.pos.y, 0.0, 1.0)
-        out = canvas.pan_zoom * local
-        vert.pos.x = canvas.origin_screen.x + out.x
-        vert.pos.y = canvas.origin_screen.y + out.y
-
-    # 2. Set all canvas draw command clip_rects to the canvas window bounds.
-    # Since we expanded the clip_rect to huge values to prevent widget skipping,
-    # the original clip_rect values are meaningless. We just clip to the visible
-    # canvas area in screen space.
-    clip_min_x = canvas.window_pos.x
-    clip_min_y = canvas.window_pos.y
-    clip_max_x = canvas.window_pos.x + canvas.window_size.x
-    clip_max_y = canvas.window_pos.y + canvas.window_size.y
-
-    cmd1 = draw_list.cmd_buffer.size()
-    for i in range(canvas.cmd0, cmd1):
-        cmd = draw_list.cmd_buffer[i]
-        cmd.clip_rect.x = clip_min_x
-        cmd.clip_rect.y = clip_min_y
-        cmd.clip_rect.z = clip_max_x
-        cmd.clip_rect.w = clip_max_y
-
-    imgui.pop_clip_rect()
-
-    # 3. Restore Mouse/UI State
-    imgui.pop_item_width()
     io = imgui.get_io()
-    io.mouse_pos = canvas._mouse_backup
+
+    # 1. Backup mouse and window origin
+    canvas._mouse_backup = imgui.ImVec2(io.mouse_pos.x, io.mouse_pos.y)
+    canvas._backup_window_pos = imgui.ImVec2(window.pos.x, window.pos.y)
+
+    # 2. Remap mouse from screen space → canvas-local space.
+    #    Widgets inside will then receive canvas-local coords naturally.
+    remapped = screen_to_canvas_local(canvas, io.mouse_pos)
+    io.mouse_pos = remapped
+
+    # 3. Zero the window origin so that set_cursor_screen_pos(local_pos)
+    #    places items at their canvas-local position directly.
+    window.pos = imgui.ImVec2(0, 0)
+
+    # 4. Backup and expand all hitboxes to "infinite" so nothing gets culled
+    canvas._backup_inner_min = imgui.ImVec2(window.inner_rect.min.x, window.inner_rect.min.y)
+    canvas._backup_inner_max = imgui.ImVec2(window.inner_rect.max.x, window.inner_rect.max.y)
+    canvas._backup_outer_min = imgui.ImVec2(window.outer_rect_clipped.min.x, window.outer_rect_clipped.min.y)
+    canvas._backup_outer_max = imgui.ImVec2(window.outer_rect_clipped.max.x, window.outer_rect_clipped.max.y)
+
+    huge_min = imgui.ImVec2(-100000, -100000)
+    huge_max = imgui.ImVec2(100000, 100000)
+    window.inner_rect.min, window.inner_rect.max = huge_min, huge_max
+    window.outer_rect_clipped.min, window.outer_rect_clipped.max = huge_min, huge_max
+    window.work_rect.min, window.work_rect.max = huge_min, huge_max
+    window.clip_rect.min, window.clip_rect.max = huge_min, huge_max
+    window.content_region_rect.min, window.content_region_rect.max = huge_min, huge_max
+    window.skip_items = False
+
+    # 5. Prepare draw list — record where our vertices start
+    dl = imgui.get_window_draw_list()
+    canvas.vtx0 = dl.vtx_buffer.size()
+    canvas.cmd0 = dl.cmd_buffer.size()
+    imgui.push_clip_rect(huge_min, huge_max, False)
+
+def end_canvas_content():
+    canvas = get_current_canvas()
+    window = imgui.internal.get_current_window()
+    dl = imgui.get_window_draw_list()
+
+    # 1. Transform all new vertices: canvas-local → window-relative screen space.
+    #    We add window_pos (the screen origin) after the pan_zoom transform.
+    vtx1 = dl.vtx_buffer.size()
+    for i in range(canvas.vtx0, vtx1):
+        v = dl.vtx_buffer[i]
+        local = glm.vec4(v.pos.x, v.pos.y, 0.0, 1.0)
+        world = canvas.pan_zoom * local
+        # Add window_pos to land in actual screen space
+        v.pos.x = canvas.window_pos.x + world.x
+        v.pos.y = canvas.window_pos.y + world.y
+
+    # 2. Restore clipping rect for each draw command to the window bounds
+    clip = imgui.ImVec4(canvas.window_pos.x, canvas.window_pos.y,
+                        canvas.window_pos.x + canvas.window_size.x,
+                        canvas.window_pos.y + canvas.window_size.y)
+    for i in range(canvas.cmd0, dl.cmd_buffer.size()):
+        dl.cmd_buffer[i].clip_rect = clip
+
+    # 3. Restore everything
+    imgui.pop_clip_rect()
+    window.pos = canvas._backup_window_pos
+    window.inner_rect.min, window.inner_rect.max = canvas._backup_inner_min, canvas._backup_inner_max
+    window.outer_rect_clipped.min, window.outer_rect_clipped.max = canvas._backup_outer_min, canvas._backup_outer_max
+    window.work_rect.min, window.work_rect.max = canvas._backup_inner_min, canvas._backup_inner_max
+    imgui.get_io().mouse_pos = canvas._mouse_backup
 
 def end_canvas():
-    canvas = get_current_canvas()
-    if canvas is None:
-        raise RuntimeError("end_canvas called without begin_canvas")
+    imgui.end_child()
 
-    draw_list = imgui.get_window_draw_list()
+# --- Node Interface ---
 
-    # --- Draw grid in local space (it will be transformed by vertex transform) ---
-    begin_canvas_content() # <-- important for input remapping
-    for A, B in create_grid_lines(600, 600, origin=(0.0, 0.0), step=40.0):
-        draw_list.add_line(
-            imgui.ImVec2(A[0], A[1]),
-            imgui.ImVec2(B[0], B[1]),
-            imgui.color_convert_float4_to_u32((0.5, 0.5, 0.5, 1.0)),
-            thickness=1.0,
-        )
-    end_canvas_content() # <-- important for input remapping
-    set_current_canvas(None)
-    # imgui.end_child()
-
-def begin_node(name:str, pos:imgui.ImVec2) -> Tuple[bool, imgui.ImVec2]:
+def begin_node(name: str, pos: imgui.ImVec2) -> Tuple[bool, imgui.ImVec2]:
     imgui.set_cursor_screen_pos(pos)
-    # imgui.begin_group()
-    
-    imgui.button(f"{name} ({pos.x},{pos.y}) ###{name}", imgui.ImVec2(200, 50))
+    imgui.begin_group()
+    imgui.button(f"Node: {name}")
+    imgui.text(f"Pos: {int(pos.x)}, {int(pos.y)}")
+    imgui.end_group()
 
-    if imgui.is_item_active():
+    if imgui.is_item_active() and imgui.is_mouse_dragging(imgui.MouseButton.left):
         io = imgui.get_io()
-        return True, imgui.ImVec2(pos.x + io.mouse_delta.x, pos.y + io.mouse_delta.y)
+        zoom = get_canvas_zoom(get_current_canvas())
+        return True, imgui.ImVec2(pos.x + io.mouse_delta.x / zoom,
+                                  pos.y + io.mouse_delta.y / zoom)
     return False, pos
 
-def end_node():
-    ...
-    # imgui.end_group()
+# --- Main App ---
 
 state = {
-    "my_value": 0.5,
     'nodes': {
-        'Node1': imgui.ImVec2(50, 50),
-        'Node2': imgui.ImVec2(50, 100),
+        'A': imgui.ImVec2(100, 100),
+        'B': imgui.ImVec2(-300, -300),
     }
 }
+
 def gui():
-    imgui.text("Hello, world!")
-    # _, state['my_value'] = imgui.slider_float("slider1", state['my_value'], 0.0, 1.0)
+    imgui.text("Canvas Interaction: Positive and Negative Coordinates")
+    
+    if begin_canvas("MainCanvas", imgui.ImVec2(0, 0)):
+        begin_canvas_content()
 
-    begin_canvas("MyCanvas", imgui.ImVec2(720, 540))
+        dl = imgui.get_window_draw_list()
 
-    # begin_canvas_content() # <-- important for input remapping
-    # imgui.text("This is a canvas area.")
-    # imgui.button("A Button")
-    # _, state['my_value'] = imgui.slider_float("slider_canvas", state['my_value'], 0.0, 1.0)
-    # end_canvas_content()
+        # Grid
+        for A, B in create_grid_lines(3000, 3000, step=100):
+            dl.add_line(imgui.ImVec2(*A), imgui.ImVec2(*B),
+                        imgui.get_color_u32(imgui.Col_.separator, 0.4))
 
-    begin_canvas_content() # <-- important for input remapping
-    nodes = state['nodes']
-    for node in nodes:
-        _, nodes[node] = begin_node(node, nodes[node])
-        end_node()
-    end_canvas_content()
+        # Axes
+        dl.add_line(imgui.ImVec2(-10000, 0), imgui.ImVec2(10000, 0),
+                    imgui.get_color_u32((1, 0, 0, 0.5)), 2)
+        dl.add_line(imgui.ImVec2(0, -10000), imgui.ImVec2(0, 10000),
+                    imgui.get_color_u32((0, 1, 0, 0.5)), 2)
 
+        # Nodes
+        nodes = state['nodes']
+        for node_id in list(nodes.keys()):
+            imgui.push_id(node_id)
+            _, nodes[node_id] = begin_node(node_id, nodes[node_id])
+            imgui.pop_id()
 
-    imgui.text("Outside the canvas again, so it won't be transformed by the pan/zoom.")
-
-    begin_canvas_content() # <-- important for input remapping
-    imgui.text("This is also inside the canvas, so it will be transformed by pan/zoom.")
-    end_canvas_content()
-
-    end_canvas()
+        end_canvas_content()
+        end_canvas()
 
 if __name__ == "__main__":
-    immapp.run(gui)
+    immapp.run(gui, window_size=(1280, 720))
