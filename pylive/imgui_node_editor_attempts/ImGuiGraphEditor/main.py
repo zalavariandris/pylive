@@ -13,9 +13,22 @@ import networkx as nx
 
 @dataclass
 class State:
-    graph = nx.MultiDiGraph()
+    _graph = nx.MultiDiGraph()
     current: str|None = None
-    pending_link_pin: int|None = None  # pin_id that was dragged to empty space
+
+    def add_node(self, name: str, pos:Tuple[float, float], inputs: List[str], outputs: List[str]):
+        self._graph.add_node(name, pos=pos, inputs=inputs, outputs=outputs)
+
+    def remove_node(self, name: str):
+        self._graph.remove_node(name)
+
+    def add_edge(self, source: str, target: str, outlet:str, inlet:str):
+        key = (outlet, inlet)
+        self._graph.add_edge(source, target, key=key)
+
+    def remove_edge(self, source: str, target: str, outlet:str, inlet:str):
+        key = (outlet, inlet)
+        self._graph.remove_edge(source, target, key=key)
 
 
 done_setup = False
@@ -31,7 +44,6 @@ def setup():
     style.set_color_(ed.StyleColor.pin_rect, imgui.ImVec4(0.8, 0.8, 0.8, 1.0))
     done_setup = True
 
-    
 def show_graph(state: State):
     ed.begin("My Graph Editor")
     style = ed.get_style()
@@ -40,15 +52,19 @@ def show_graph(state: State):
     imgui.push_style_var(imgui.StyleVar_.item_spacing, imgui.ImVec2(8.0, 0.0))
     ed.push_style_var(ed.StyleVar.node_padding, imgui.ImVec4(8.0, 0.0, 8.0, 0.0))
 
+    # -- Render Nodes --
     node_map = dict()
     pin_id_to_node_port = dict()
     node_port_to_pin_id = dict()  # (node_name, port_name, port_type) -> pin_id
     node_id_to_name = dict()  # node_id -> node_name
     item_id = 1
-    for node_name, node in state.graph.nodes(data=True):
+    for node_name, node in state._graph.nodes(data=True):
         node_map[node_name] = node
         node_id = item_id
         node_id_to_name[node_name] = node_id
+        # Push state position to editor on first appearance
+
+
         ed.begin_node(ed.NodeId(item_id))
         item_id += 1
         imgui.begin_horizontal(f"node_content_{node_name}")
@@ -58,7 +74,7 @@ def show_graph(state: State):
             pin_id_to_node_port[item_id] = (node_name, input_name, "input")
             node_port_to_pin_id[(node_name, input_name, "input")] = item_id
             item_id += 1
-            imgui.dummy(imgui.ImVec2(12, 6 ))
+            imgui.dummy(imgui.ImVec2(12, 6))
             if imgui.is_item_hovered():
                 fg_dl = imgui.get_foreground_draw_list()
                 rect_min_screen = ed.canvas_to_screen(imgui.get_item_rect_min())
@@ -77,7 +93,7 @@ def show_graph(state: State):
 
         imgui.begin_horizontal(f"node_title_{node_name}")
         imgui.spring(0.5)
-        imgui.text(f"{node_name}")
+        imgui.text(f"{node_name} ({node['pos'][0]:.1f}, {node['pos'][1]:.1f})")
         imgui.spring(0.5)
         imgui.end_horizontal()
 
@@ -106,10 +122,10 @@ def show_graph(state: State):
         imgui.end_horizontal()
         ed.end_node()
 
-    # Render existing links
+    # -- Render Links --
     link_id = 1000  # Start link IDs at a higher number to avoid conflicts
     link_id_to_edge = dict()  # link_id -> (source_node, target_node, edge_key)
-    for source_node, target_node, edge_key in state.graph.edges(keys=True):
+    for source_node, target_node, edge_key in state._graph.edges(keys=True):
         output_pin_name, input_pin_name = edge_key
         # Get pin IDs for this link
         source_pin_id = node_port_to_pin_id.get((source_node, output_pin_name, "output"))
@@ -119,6 +135,11 @@ def show_graph(state: State):
             ed.link(ed.LinkId(link_id), ed.PinId(source_pin_id), ed.PinId(target_pin_id))
             link_id_to_edge[link_id] = (source_node, target_node, edge_key)
             link_id += 1
+
+    # Read editor positions back to state (keeps state in sync when user drags nodes)
+    for node_name, node_id in node_id_to_name.items():
+        pos = ed.get_node_position(ed.NodeId(node_id))
+        state._graph.nodes[node_name]['pos'] = (pos.x, pos.y)
 
     # Handle link creation
     if ed.begin_create():
@@ -139,25 +160,38 @@ def show_graph(state: State):
                     if ed.accept_new_item():
                         # Create the link (ensure start is output, end is input)
                         if start_type == "output":
-                            state.graph.add_edge(start_node, end_node, key=(start_pin_name, end_pin_name))
+                            state.add_edge(start_node, end_node, outlet=start_pin_name, inlet=end_pin_name)
                         else:
-                            state.graph.add_edge(end_node, start_node, key=(end_pin_name, start_pin_name))
+                            state.add_edge(end_node, start_node, outlet=end_pin_name, inlet=start_pin_name)
                 else:
                     ed.reject_new_item()
             else:
                 ed.reject_new_item()
 
-        # Handle dragging a pin to empty space -> create a new node
+        # Link Dragged to empty space -> create new node and link to it
         new_node_pin = ed.PinId()
         if ed.query_new_node(new_node_pin):
             if ed.accept_new_item():
-                new_pin_id = new_node_pin.id()
-                if new_pin_id in pin_id_to_node_port:
-                    state.pending_link_pin = new_pin_id
+                
+                if new_node_pin.id() not in pin_id_to_node_port:
+                    raise Exception("New node pin ID not found in mapping")
+                
+                source_node, source_pin_name, source_type = pin_id_to_node_port[new_node_pin.id()]
+                new_node_name = f"Node{len(state._graph.nodes)}"
+                pos = imgui.get_mouse_pos()
+                pos = ed.screen_to_canvas(pos)
+                if source_type == "output":
+                    # Dragged from output -> create node with input and link to it
+                    state.add_node(new_node_name, pos=(pos.x, pos.y), inputs=["in1"], outputs=["out1"])
+                    state.add_edge(source_node, new_node_name, outlet=source_pin_name, inlet="in1")
+                else:
+                    # Dragged from input -> create node with output and link from it
+                    state.add_node(new_node_name, pos=(pos.x, pos.y), inputs=["in1"], outputs=["out1"])
+                    state.add_edge(new_node_name, source_node, outlet="out1", inlet=source_pin_name)
 
         ed.end_create()
 
-    # Handle link (and node) deletion
+    # Handle Delete selected nodes and links
     if ed.begin_delete():
         # Delete links
         deleted_link_id = ed.LinkId()
@@ -166,7 +200,8 @@ def show_graph(state: State):
                 lid = deleted_link_id.id()
                 if lid in link_id_to_edge:
                     src, tgt, key = link_id_to_edge[lid]
-                    state.graph.remove_edge(src, tgt, key=key)
+                    outlet, inlet = key
+                    state.remove_edge(src, tgt, outlet=outlet, inlet=inlet)
 
         # Delete nodes
         deleted_node_id = ed.NodeId()
@@ -176,38 +211,23 @@ def show_graph(state: State):
                 # Find the node name from the node id
                 for node_name, mapping_id in node_id_to_name.items():
                     if mapping_id == nid:
-                        state.graph.remove_node(node_name)
+                        state.remove_node(node_name)
                         break
         ed.end_delete()
 
     imgui.pop_style_var()
-
     ed.end()
 
+    # -- new node on background double-click --
     if ed.is_background_double_clicked():
-        state.graph.add_node(f"Node{len(state.graph.nodes)}", inputs=["in1"], outputs=["out1"])
-
-    # Handle deferred node creation from dragging pin to empty space
-    if state.pending_link_pin is not None:
-        pin_id = state.pending_link_pin
-        state.pending_link_pin = None
-        if pin_id in pin_id_to_node_port:
-            source_node, source_pin_name, source_type = pin_id_to_node_port[pin_id]
-            new_node_name = f"Node{len(state.graph.nodes)}"
-            if source_type == "output":
-                # Dragged from output -> create node with input and link to it
-                state.graph.add_node(new_node_name, inputs=["in1"], outputs=["out1"])
-                state.graph.add_edge(source_node, new_node_name, key=(source_pin_name, "in1"))
-            else:
-                # Dragged from input -> create node with output and link from it
-                state.graph.add_node(new_node_name, inputs=["in1"], outputs=["out1"])
-                state.graph.add_edge(new_node_name, source_node, key=("out1", source_pin_name))
-
+        pos = imgui.get_mouse_pos()
+        pos = ed.screen_to_canvas(pos)
+        state.add_node(f"Node{len(state._graph.nodes)}", inputs=["in1"], outputs=["out1"], pos=(pos.x, pos.y))
 
 
 state = State()
-state.graph.add_node("A", inputs=["in1", "in2"], outputs=["out1"])
-state.graph.add_node("B", inputs=["in1"], outputs=["out1", "out2"])
+state.add_node("A", pos=(0, 0), inputs=["in1", "in2"], outputs=["out1"])
+state.add_node("B", pos=(200, 0), inputs=["in1"], outputs=["out1", "out2"])
 
 def gui():
     global state
