@@ -3,8 +3,6 @@ from typing import *
 def sample_function(a: int, b: str, c: float = 5.0, props:List=[]) -> bool:
 	return True
 
-
-
 def format_type(annotation):
 	"""Helper function to format type annotations as readable strings."""
 	if hasattr(annotation, '__name__'):  # For built-in types like int, float
@@ -50,3 +48,6 @@ def format_signature(fn):
 	
 	return text
 	
+if __name__ == "__main__":
+	sig_text = format_signature(sample_function)
+	print(sig_text)
